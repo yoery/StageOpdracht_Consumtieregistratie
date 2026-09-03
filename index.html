@@ -1,0 +1,111 @@
+<!-- Dit document bevat de volledige structuur en inhoud van de website. -->
+<!doctype html>
+<html lang="nl">
+<head>
+  <!-- Deze instellingen zorgen ervoor dat de pagina correct werkt op alle schermformaten. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Blikjesregistratie voor medewerkers en administratie.">
+  <title>Blikjesregistratie | TVB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Het CSS-bestand bepaalt de kleuren, afstanden en vormgeving van de website. -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- SheetJS maakt het mogelijk om de gegevens naar een Excelbestand te exporteren. -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- De app-shell is de buitenste container van de hele applicatie. -->
+  <div class="app-shell">
+    <!-- Bovenbalk met het logo, de systeemstatus en de admin-knop. -->
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="TVB blikjesregistratie home">
+        <span class="brand-mark" aria-hidden="true">TVB</span>
+        <span><strong>Blikjesregistratie</strong><small>Technische Verenigde Bedrijven</small></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="status-pill"><i></i> Systeem actief</span>
+        <button class="avatar-button" id="adminOpenButton" title="Open beheerdersomgeving" aria-label="Beheerdersomgeving">
+          <span class="avatar">A</span><span class="admin-label">Beheerder</span><span class="chevron">⌄</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Het hero-gedeelte verwelkomt de gebruiker en legt het doel van de pagina uit. -->
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Vandaag · <span id="todayLabel"></span></p>
+          <h1>Wie heeft er vandaag<br><em>een blikje gepakt?</em></h1>
+          <p class="hero-copy">Registreer je blikje snel. Zo houden we samen zicht op ons verbruik.</p>
+        </div>
+        <div class="hero-shape" aria-hidden="true"><span>♻</span></div>
+      </section>
+
+      <!-- Hier staan de medewerkerlijst en de samenvatting naast elkaar. -->
+      <section class="content-grid">
+        <div class="directory-card card">
+          <div class="card-heading">
+            <div><p class="section-kicker">Medewerkers</p><h2>Registreer je blikje</h2></div>
+            <span class="count-badge" id="employeeCount"></span>
+          </div>
+          <!-- De zoekbalk wordt door JavaScript gebruikt om medewerkers direct te filteren. -->
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
+            <kbd>⌘ K</kbd>
+          </label>
+          <div class="employee-list" id="employeeList" aria-live="polite"></div>
+          <div class="empty-state hidden" id="emptyState"><span>◌</span><strong>Geen medewerker gevonden</strong><p>Probeer een andere zoekterm.</p></div>
+        </div>
+
+        <!-- Deze kaarten tonen de totalen van vandaag en deze maand. -->
+        <aside class="summary-column">
+          <div class="stat-card stat-green">
+            <div class="stat-icon">▣</div><div><span>Vandaag geregistreerd</span><strong id="todayTotal">0</strong><small>blikjes</small></div>
+          </div>
+          <div class="stat-card stat-blue">
+            <div class="stat-icon">◷</div><div><span>Deze maand</span><strong id="monthTotal">0</strong><small>blikjes totaal</small></div>
+          </div>
+          <div class="tip-card"><span class="tip-icon">✦</span><div><strong>Goed bezig!</strong><p>Elke registratie helpt ons bewuster om te gaan met verbruik.</p></div></div>
+        </aside>
+      </section>
+
+      <!-- In dit gedeelte komen de vijf meest recente registraties te staan. -->
+      <section class="recent-section">
+        <div class="section-heading"><div><p class="section-kicker">Activiteit</p><h2>Recente registraties</h2></div><button class="text-button" id="viewAllButton">Bekijk alles <span>→</span></button></div>
+        <div class="activity-card card" id="recentRegistrations"></div>
+      </section>
+    </main>
+    <footer><span>TVB · Blikjesregistratie</span><span>Bewust drinken, samen geregeld.</span></footer>
+  </div>
+
+  <!-- De modal bevat zowel het admin-loginformulier als het dashboard. -->
+  <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal">
+      <!-- Deze knop sluit de modal zonder de gebruiker uit te loggen. -->
+      <button class="modal-close" data-close-modal aria-label="Sluiten">×</button>
+      <!-- Loginweergave die zichtbaar is voordat de beheerder is ingelogd. -->
+      <div id="loginView">
+        <div class="modal-icon">⚙</div><p class="section-kicker">Beheerdersomgeving</p><h2 id="adminTitle">Welkom terug</h2><p class="muted">Log in om registraties en medewerkers te beheren.</p>
+        <form id="loginForm"><label>E-mailadres<input type="email" id="loginEmail" value="admin@tvb.nl" required></label><label>Wachtwoord<input type="password" id="loginPassword" placeholder="••••••••" required></label><p class="login-hint">Demo: elk ingevuld wachtwoord werkt.</p><button class="primary-button full-width" type="submit">Inloggen <span>→</span></button><p class="form-error hidden" id="loginError">Vul een e-mailadres en wachtwoord in.</p></form>
+      </div>
+      <!-- Dashboardweergave voor registraties en medewerkersbeheer. -->
+      <div id="adminView" class="hidden">
+        <div class="admin-header"><div><p class="section-kicker">Beheer</p><h2>Overzicht</h2></div><button class="secondary-button" id="logoutButton">Uitloggen</button></div>
+        <div class="admin-tabs"><button class="tab active" data-tab="registrations">Registraties</button><button class="tab" data-tab="employees">Medewerkers</button></div>
+        <div id="registrationsTab">
+          <div class="filter-row"><label>Medewerker<select id="filterEmployee"><option value="all">Alle medewerkers</option></select></label><label>Maand<select id="filterMonth"><option value="all">Alle maanden</option></select></label><button class="secondary-button export-button" id="exportButton">⇩ Excel exporteren</button></div>
+          <div class="admin-table-wrap"><table><thead><tr><th>Medewerker</th><th>Aantal</th><th>Datum & tijd</th><th>Actie</th></tr></thead><tbody id="adminTableBody"></tbody></table></div>
+        </div>
+        <div id="employeesTab" class="hidden"><form class="add-employee-form" id="employeeForm"><input id="newEmployeeName" placeholder="Naam nieuwe medewerker" required><button class="primary-button" type="submit">+ Toevoegen</button></form><div id="adminEmployeeList" class="admin-employee-list"></div></div>
+      </div>
+    </div>
+  </div>
+  <!-- Tijdelijke melding die verschijnt nadat een actie is uitgevoerd. -->
+  <div class="toast hidden" id="toast" role="status"></div>
+  <!-- Het JavaScript-bestand koppelt de knoppen en gegevens aan de HTML. -->
+  <script src="app.js"></script>
+</body>
+</html>
