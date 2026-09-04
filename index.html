@@ -1,8 +1,7 @@
-<!-- Dit document bevat de volledige structuur en inhoud van de website. -->
 <!doctype html>
 <html lang="nl">
 <head>
-  <!-- Deze instellingen zorgen ervoor dat de pagina correct werkt op alle schermformaten. -->
+  <!-- Metadata bepaalt de taal, tekenset, schaal op mobiel en browserinformatie. -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Blikjesregistratie voor medewerkers en administratie.">
@@ -10,101 +9,199 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <!-- Het CSS-bestand bepaalt de kleuren, afstanden en vormgeving van de website. -->
+  <!-- Externe stylesheet met alle kleuren, layouts en componentstijlen. -->
   <link rel="stylesheet" href="styles.css">
-  <!-- SheetJS maakt het mogelijk om de gegevens naar een Excelbestand te exporteren. -->
+  <!-- SheetJS is de externe bibliotheek voor het maken van Excelbestanden. -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <!-- De app-shell is de buitenste container van de hele applicatie. -->
   <div class="app-shell">
-    <!-- Bovenbalk met het logo, de systeemstatus en de admin-knop. -->
+    <!-- Header met merknaam, systeemstatus en toegang tot de beheeromgeving. -->
     <header class="topbar">
       <a class="brand" href="#" aria-label="TVB blikjesregistratie home">
         <span class="brand-mark" aria-hidden="true">TVB</span>
-        <span><strong>Blikjesregistratie</strong><small>Technische Verenigde Bedrijven</small></span>
+        <span>
+          <strong>Blikjesregistratie</strong>
+          <small>Technische Verenigde Bedrijven</small>
+        </span>
       </a>
       <div class="topbar-actions">
-        <span class="status-pill"><i></i> Systeem actief</span>
+        <span class="status-pill"><i aria-hidden="true"></i> Systeem actief</span>
         <button class="avatar-button" id="adminOpenButton" title="Open admin login" aria-label="Admin login">
-          <span class="avatar">A</span><span class="admin-label">Admin login</span>
+          <span class="avatar" aria-hidden="true">A</span>
+          <span class="admin-label">Admin login</span>
         </button>
       </div>
     </header>
 
     <main>
-      <!-- Het hero-gedeelte verwelkomt de gebruiker en legt het doel van de pagina uit. -->
+      <!-- Hero-banner met datum, uitleg en een decoratief recycling-symbool. -->
       <section class="hero">
         <div>
           <p class="eyebrow">Vandaag · <span id="todayLabel"></span></p>
           <h1>Wie heeft er vandaag<br><em>een blikje gepakt?</em></h1>
           <p class="hero-copy">Registreer je blikje snel. Zo houden we samen zicht op ons verbruik.</p>
         </div>
-        <div class="hero-shape" aria-hidden="true"><span>♻</span></div>
+        <div class="hero-shape" aria-hidden="true">
+          <span>♻</span>
+        </div>
       </section>
 
-      <!-- Hier staan de medewerkerlijst en de samenvatting naast elkaar. -->
+      <!-- Hoofdgebied met de medewerkerlijst en de statistiekkaarten. -->
       <section class="content-grid">
         <div class="directory-card card">
+          <!-- Koptekst en dynamische teller van het aantal medewerkers. -->
           <div class="card-heading">
-            <div><p class="section-kicker">Medewerkers</p><h2>Registreer je blikje</h2></div>
+            <div>
+              <p class="section-kicker">Medewerkers</p>
+              <h2>Registreer je blikje</h2>
+            </div>
             <span class="count-badge" id="employeeCount"></span>
           </div>
-          <!-- De zoekbalk wordt door JavaScript gebruikt om medewerkers direct te filteren. -->
+          <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
           <label class="search-box">
             <span aria-hidden="true">⌕</span>
             <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
             <kbd>⌘ K</kbd>
           </label>
+          <!-- JavaScript plaatst hier de actuele medewerkers en plusknoppen. -->
           <div class="employee-list" id="employeeList" aria-live="polite"></div>
-          <div class="empty-state hidden" id="emptyState"><span>◌</span><strong>Geen medewerker gevonden</strong><p>Probeer een andere zoekterm.</p></div>
+          <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
+          <div class="empty-state hidden" id="emptyState">
+            <span aria-hidden="true">◌</span>
+            <strong>Geen medewerker gevonden</strong>
+            <p>Probeer een andere zoekterm.</p>
+          </div>
         </div>
 
-        <!-- Deze kaarten tonen de totalen van vandaag en deze maand. -->
         <aside class="summary-column">
+          <!-- Statistiekkaart met het aantal registraties van vandaag. -->
           <div class="stat-card stat-green">
-            <div class="stat-icon">▣</div><div><span>Vandaag gepakt</span><strong id="todayTotal">0</strong><small>blikjes</small></div>
+            <div class="stat-icon" aria-hidden="true">▣</div>
+            <div>
+              <span>Vandaag gepakt</span>
+              <strong id="todayTotal">0</strong>
+              <small>blikjes</small>
+            </div>
           </div>
+          <!-- Statistiekkaart met het aantal registraties van deze maand. -->
           <div class="stat-card stat-blue">
-            <div class="stat-icon">◷</div><div><span>Deze maand</span><strong id="monthTotal">0</strong><small>blikjes totaal</small></div>
+            <div class="stat-icon" aria-hidden="true">◷</div>
+            <div>
+              <span>Deze maand</span>
+              <strong id="monthTotal">0</strong>
+              <small>blikjes totaal</small>
+            </div>
           </div>
-          <div class="tip-card"><span class="tip-icon">✦</span><div><strong>Goed bezig!</strong><p>Elke registratie helpt ons bewuster om te gaan met verbruik.</p></div></div>
+          <!-- Korte informatieve boodschap voor gebruikers. -->
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">✦</span>
+            <div>
+              <strong>Goed bezig!</strong>
+              <p>Elke registratie helpt ons bewuster om te gaan met verbruik.</p>
+            </div>
+          </div>
         </aside>
       </section>
-
     </main>
-    <footer><span>TVB · Blikjesregistratie</span><span>Bewust drinken, samen geregeld.</span></footer>
+
+    <!-- Voettekst met de organisatie en een korte slogan. -->
+    <footer>
+      <span>TVB · Blikjesregistratie</span>
+      <span>Bewust drinken, samen geregeld.</span>
+    </footer>
   </div>
 
-  <!-- De modal bevat zowel het admin-loginformulier als het dashboard. -->
+  <!-- Modal voor admin-login en het beheerdashboard. -->
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal">
-      <!-- Deze knop sluit de modal zonder de gebruiker uit te loggen. -->
+      <!-- Sluit alleen de modal; de admin blijft ingelogd zolang de pagina open is. -->
       <button class="modal-close" data-close-modal aria-label="Sluiten">×</button>
-      <!-- Loginweergave die zichtbaar is voordat de beheerder is ingelogd. -->
+
+      <!-- Loginweergave die zichtbaar is wanneer de admin nog niet is ingelogd. -->
       <div id="loginView">
-        <!-- Dit ingebouwde sloticoon maakt duidelijk dat dit het beveiligde admin-login is. -->
-        <div class="modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12a1 1 0 0 1 1 1v9H5v-9a1 1 0 0 1 1-1Zm6 4v3"/></svg></div><p class="section-kicker">Beheerdersomgeving</p><h2 id="adminTitle">Welkom terug</h2><p class="muted">Log in om registraties en medewerkers te beheren.</p>
-        <form id="loginForm"><label>E-mailadres<input type="email" id="loginEmail" value="admin@tvb.nl" required></label><label>Wachtwoord<input type="password" id="loginPassword" placeholder="••••••••" required></label><p class="login-hint">Demo: elk ingevuld wachtwoord werkt.</p><button class="primary-button full-width" type="submit">Inloggen <span>→</span></button><p class="form-error hidden" id="loginError">Vul een e-mailadres en wachtwoord in.</p></form>
-      </div>
-      <!-- Dashboardweergave voor registraties en medewerkersbeheer. -->
-      <div id="adminView" class="hidden">
-        <div class="admin-header"><div><p class="section-kicker">Beheer</p><h2>Overzicht</h2></div><button class="secondary-button" id="logoutButton">Uitloggen</button></div>
-        <div class="admin-tabs"><button class="tab active" data-tab="registrations">Registraties</button><button class="tab" data-tab="employees">Medewerkers</button></div>
-        <div id="registrationsTab">
-          <div class="filter-row"><label>Medewerker<select id="filterEmployee"><option value="all">Alle medewerkers</option></select></label><label>Maand<select id="filterMonth"><option value="all">Alle maanden</option></select></label><button class="secondary-button export-button" id="exportButton">⇩ Excel exporteren</button></div>
-          <!-- De beheerder zoekt hier eerst een medewerker op voordat een correctie wordt uitgevoerd. -->
-          <label class="admin-search"><span>Medewerker corrigeren</span><input type="search" id="adminEmployeeSearch" placeholder="Zoek een medewerker..." autocomplete="off"></label>
-          <div id="adminCorrectionList" class="admin-correction-list"></div>
-          <div class="admin-table-wrap"><table><thead><tr><th>Medewerker</th><th>Aantal</th><th>Datum & tijd</th></tr></thead><tbody id="adminTableBody"></tbody></table></div>
+        <div class="modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12a1 1 0 0 1 1 1v9H5v-9a1 1 0 0 1 1-1Zm6 4v3"/>
+          </svg>
         </div>
-        <div id="employeesTab" class="hidden"><form class="add-employee-form" id="employeeForm"><input id="newEmployeeName" placeholder="Naam nieuwe medewerker" required><button class="primary-button" type="submit">+ Toevoegen</button></form><label class="admin-search employee-management-search"><span>Medewerker verwijderen</span><input type="search" id="employeeManagementSearch" placeholder="Zoek een medewerker..." autocomplete="off"></label><div id="adminEmployeeList" class="admin-employee-list"></div></div>
+        <p class="section-kicker">Beheerdersomgeving</p>
+        <h2 id="adminTitle">Welkom terug</h2>
+        <p class="muted">Log in om registraties en medewerkers te beheren.</p>
+        <form id="loginForm">
+          <label>E-mailadres
+            <input type="email" id="loginEmail" value="admin@tvb.nl" required>
+          </label>
+          <label>Wachtwoord
+            <input type="password" id="loginPassword" placeholder="••••••••" required>
+          </label>
+          <p class="login-hint">Demo: elk ingevuld wachtwoord werkt.</p>
+          <button class="primary-button full-width" type="submit">Inloggen <span>→</span></button>
+          <p class="form-error hidden" id="loginError">Vul een e-mailadres en wachtwoord in.</p>
+        </form>
+      </div>
+
+      <!-- Dashboardweergave met registraties, correcties en medewerkersbeheer. -->
+      <div id="adminView" class="hidden">
+        <div class="admin-header">
+          <div>
+            <p class="section-kicker">Beheer</p>
+            <h2>Overzicht</h2>
+          </div>
+          <button class="secondary-button" id="logoutButton">Uitloggen</button>
+        </div>
+        <!-- Tabs waarmee tussen registratiebeheer en medewerkersbeheer wordt gewisseld. -->
+        <nav class="admin-tabs" aria-label="Beheerderssecties">
+          <button class="tab active" data-tab="registrations">Registraties</button>
+          <button class="tab" data-tab="employees">Medewerkers</button>
+        </nav>
+        <div id="registrationsTab">
+          <!-- Filters bepalen welke registraties in de tabel en export verschijnen. -->
+          <div class="filter-row">
+            <label>Medewerker
+              <select id="filterEmployee"><option value="all">Alle medewerkers</option></select>
+            </label>
+            <label>Maand
+              <select id="filterMonth"><option value="all">Alle maanden</option></select>
+            </label>
+            <button class="secondary-button export-button" id="exportButton">⇩ Excel exporteren</button>
+          </div>
+          <!-- Zoekveld voor gerichte correcties per medewerker. -->
+          <label class="admin-search">
+            <span>Medewerker corrigeren</span>
+            <input type="search" id="adminEmployeeSearch" placeholder="Zoek een medewerker..." autocomplete="off">
+          </label>
+          <!-- JavaScript plaatst hier de + en - correctieacties. -->
+          <div id="adminCorrectionList" class="admin-correction-list"></div>
+          <!-- Alleen-lezen tabel met de afzonderlijke registraties. -->
+          <div class="admin-table-wrap">
+            <table>
+              <thead><tr><th>Medewerker</th><th>Aantal</th><th>Datum & tijd</th></tr></thead>
+              <tbody id="adminTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="employeesTab" class="hidden">
+          <!-- Formulier om een nieuwe medewerker aan de administratie toe te voegen. -->
+          <form class="add-employee-form" id="employeeForm">
+            <input id="newEmployeeName" placeholder="Naam nieuwe medewerker" required>
+            <button class="primary-button" type="submit">+ Toevoegen</button>
+          </form>
+          <!-- Zoekveld om eerst de juiste medewerker te vinden voordat die wordt verwijderd. -->
+          <label class="admin-search employee-management-search">
+            <span>Medewerker verwijderen</span>
+            <input type="search" id="employeeManagementSearch" placeholder="Zoek een medewerker..." autocomplete="off">
+          </label>
+          <!-- JavaScript plaatst hier de gevonden medewerkers met verwijderknop. -->
+          <div id="adminEmployeeList" class="admin-employee-list"></div>
+        </div>
       </div>
     </div>
   </div>
-  <!-- Tijdelijke melding die verschijnt nadat een actie is uitgevoerd. -->
+
+  <!-- Tijdelijke statusmelding na acties zoals opslaan of verwijderen. -->
   <div class="toast hidden" id="toast" role="status"></div>
-  <!-- Het JavaScript-bestand koppelt de knoppen en gegevens aan de HTML. -->
+  <!-- Applicatielogica die model, view en gebruikersacties koppelt. -->
   <script src="app.js"></script>
 </body>
 </html>

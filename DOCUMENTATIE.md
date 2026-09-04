@@ -15,6 +15,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `app.js` | De interactieve werking, berekeningen, opslag en Excel-export |
 | `README.md` | Korte startinformatie voor het project |
 | `DOCUMENTATIE.md` | Deze uitgebreide uitleg |
+| `DOCUMENTATIE-WORD.doc` | Word-compatibele versie van deze documentatie |
 
 ## 3. De website starten
 
@@ -89,7 +90,7 @@ Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft in
 Het bestand bevat twee werkbladen:
 
 1. `Registraties`: medewerker, aantal blikjes en registratiedatum.
-2. `Maandtotalen`: totaal per medewerker en een totaalregel voor alle geselecteerde medewerkers.
+2. `Maandtotalen` wanneer één maand is gekozen, of `Periode-totalen` wanneer alle maanden zijn gekozen. Dit bevat het totaal per medewerker en een totaalregel voor alle geselecteerde medewerkers.
 
 De gekozen filters worden toegepast op de export.
 
@@ -115,6 +116,8 @@ De `.topbar` bevat:
 - De naam van de applicatie.
 - De status `Systeem actief`.
 - De knop waarmee het admin-dashboard wordt geopend.
+
+De HTML is ingedeeld in herkenbare componentblokken: `header` voor navigatie, `main` voor de hoofdinhoud, `section` voor inhoudelijke onderdelen, `aside` voor samenvattingen en `footer` voor de afsluiting. De admin-modal bevat afzonderlijke componenten voor login, tabs, filters en beheeracties. JavaScript gebruikt de `id`-waarden als koppeling met deze componenten.
 
 ### Hero-gedeelte
 
@@ -167,6 +170,16 @@ In `:root` staan herbruikbare variabelen:
 - `--shadow`: standaard schaduw.
 
 Als het organisatiepalet later verandert, kunnen de kleuren centraal worden aangepast.
+
+De stylesheet is geordend van algemeen naar specifiek:
+
+1. Globale variabelen en reset.
+2. Basislayout en navigatie.
+3. Hoofdcomponenten zoals hero, kaarten en medewerkerregels.
+4. Admincomponenten, tabellen en meldingen.
+5. Responsive regels voor kleinere schermen.
+
+Herbruikbare stijlen staan gegroepeerd in componentselectors, bijvoorbeeld `.card`, `.primary-button`, `.stat-card` en `.admin-search`. Hierdoor blijft de styling centraal beheerd en hoeft dezelfde stijl niet op meerdere plekken te worden gekopieerd.
 
 ### Layout
 
@@ -223,19 +236,34 @@ De status heeft deze structuur:
 }
 ```
 
-### Hulpfuncties
+### Objectgeoriënteerde structuur
 
-- `$`: zoekt een HTML-element op basis van een CSS-selector.
-- `dateNow`: geeft de huidige datum en tijd.
-- `monthKey`: maakt een vergelijkbare sleutel zoals `2026-09`.
-- `save`: serialiseert de status naar `localStorage`.
-- `initials`: maakt initialen voor de avatar.
-- `formatDate`: zet ISO-datums om naar Nederlandse datum- en tijdnotatie.
-- `escapeHtml`: voorkomt dat namen als HTML-code worden geïnterpreteerd.
+De JavaScript-code is opgedeeld in vier classes. Iedere class heeft één duidelijke verantwoordelijkheid.
+
+#### `DataStore`
+
+Verzorgt het lezen en opslaan van gegevens. JSON-validatie en fouten van `localStorage` worden hier afgehandeld. Als later een database wordt gebruikt, kan deze opslaglaag worden vervangen zonder de interface en bedrijfsregels opnieuw te schrijven.
+
+#### `RegistrationModel`
+
+Beheert medewerkers en registraties. Deze class bevat de domeinregels, zoals:
+
+- Een registratie toevoegen of het laatst toegevoegde blikje verwijderen.
+- Medewerkers toevoegen en verwijderen.
+- Totalen per medewerker, dag en maand berekenen.
+- Een veilige snapshot maken en herstellen wanneer opslaan mislukt.
+
+#### `RegistrationView`
+
+Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerlijst, statistieken, admin-tabellen, filters en toastmeldingen. Ook worden namen veilig als HTML weergegeven.
+
+#### `RegistrationApp`
+
+Vormt de controller van de applicatie. Deze class koppelt klik- en formulier-events aan het model en laat daarna de view opnieuw renderen. De methode `persist` zorgt dat iedere wijziging wordt opgeslagen of automatisch wordt teruggedraaid bij een opslagfout.
 
 ### `renderEmployees`
 
-Deze functie:
+De methode `RegistrationView.renderEmployees`:
 
 1. Leest de zoekterm.
 2. Vergelijkt de zoekterm met alle namen.
@@ -247,7 +275,7 @@ De `data-add`-waarde bevat de unieke medewerker-id. Daardoor weet de klikhandler
 
 ### `renderStats`
 
-Deze functie vergelijkt de datum van iedere registratie met:
+De methode `RegistrationView.renderStats` vergelijkt de datum van iedere registratie met:
 
 - De datum van vandaag.
 - De sleutel van de huidige maand.
@@ -256,7 +284,7 @@ Daarna worden de twee totalen in de statistiekkaarten geplaatst.
 
 ### `addRegistration`
 
-Deze functie wordt uitgevoerd na een klik op `+`.
+De methode `RegistrationApp.addRegistration` wordt uitgevoerd na een klik op `+`.
 
 Er wordt een object toegevoegd met:
 
@@ -264,15 +292,19 @@ Er wordt een object toegevoegd met:
 - De medewerker-id.
 - De huidige datum en tijd in ISO-formaat.
 
-Daarna worden de gegevens opgeslagen en alle zichtbare onderdelen opnieuw getekend.
+Daarna worden de gegevens via `persist` opgeslagen en alle zichtbare onderdelen opnieuw getekend.
 
 ### `renderAll`
 
-Deze functie voert `renderEmployees` en `renderStats` achter elkaar uit. Zo blijven de medewerkerlijst en totalen gelijktijdig actueel.
+De methode `RegistrationView.renderAll` voert `renderEmployees` en `renderStats` achter elkaar uit. Zo blijven de medewerkerlijst en totalen gelijktijdig actueel.
 
 ### `showToast`
 
-Toont een korte melding zoals `Blikje direct opgeslagen`. Na 2,5 seconden verdwijnt deze melding automatisch.
+De methode `RegistrationView.showToast` toont een korte melding zoals `Blikje direct opgeslagen`. Na 2,5 seconden verdwijnt deze melding automatisch.
+
+### Opslagfouten en terugdraaien
+
+Iedere wijziging loopt via `RegistrationApp.persist`. Eerst wordt een snapshot van de vorige status gemaakt. Daarna wordt de wijziging uitgevoerd en probeert `DataStore.save` de gegevens op te slaan. Als de browseropslag mislukt, wordt de vorige status teruggezet en krijgt de gebruiker een foutmelding. Zo lijkt een mislukte opslag niet toch succesvol.
 
 ### Adminfuncties
 
@@ -341,6 +373,8 @@ De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 
 Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. Dit sluit aan bij het voorgestelde datamodel waarin `Aantal` standaard 1 is.
 
+Wanneer een medewerker wordt verwijderd, blijven bestaande registraties behouden voor de administratie. In het admin-overzicht wordt bij zulke historische regels `Verwijderd` getoond.
+
 Voor de Excel-export geldt een vaste prijs van €0,69 per blikje. Het werkblad `Registraties` bevat de prijs per blikje. Het werkblad `Maandtotalen` bevat per medewerker het maandtotaal en de totale prijs.
 
 ## 9. Belangrijke demo-beperkingen
@@ -358,7 +392,18 @@ Deze versie is bedoeld als prototype:
 
 Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig.
 
-## 10. Mogelijke vervolgstappen
+## 10. Code uitleggen tijdens een presentatie
+
+De applicatie volgt het principe van separation of concerns:
+
+1. `DataStore` weet hoe gegevens worden opgeslagen.
+2. `RegistrationModel` weet welke gegevens en bedrijfsregels gelden.
+3. `RegistrationView` weet hoe gegevens in HTML worden getoond.
+4. `RegistrationApp` weet welke actie bij een klik of formulier hoort.
+
+De HTML bevat de componenten en vaste ankerpunten met `id`-waarden. De CSS bepaalt uitsluitend de presentatie. JavaScript koppelt de componenten aan gedrag. Daardoor kan bijvoorbeeld de opslag worden vervangen door een database zonder de volledige gebruikersinterface opnieuw te bouwen.
+
+## 11. Mogelijke vervolgstappen
 
 1. Kies een backend, bijvoorbeeld PHP, Node.js of een beheerde dienst.
 2. Maak tabellen `Medewerkers` en `Registraties`.

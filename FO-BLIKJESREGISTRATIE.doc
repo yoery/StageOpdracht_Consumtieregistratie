@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Functioneel Ontwerp Blikjesregistratie</title>
+<style>
+body{font-family:Arial,sans-serif;color:#163540;line-height:1.45;margin:40px}
+h1{color:#087252;border-bottom:3px solid #159a72;padding-bottom:10px}
+h2{color:#176b8b;margin-top:28px}
+h3{color:#087252;margin-top:20px}
+code{background:#eef5f2;padding:2px 4px}
+pre{background:#f3f7f6;padding:12px;white-space:pre-wrap}
+table{border-collapse:collapse;width:100%;margin:12px 0}
+th,td{border:1px solid #cbdad7;padding:7px;text-align:left;vertical-align:top}
+th{background:#e8f5ee}
+.note{background:#e8f2f6;padding:12px;border-left:4px solid #176b8b}
+</style>
+</head>
+<body>
+<h1>Functioneel Ontwerp (FO)</h1>
+<p><strong>Project:</strong> Blikjesregistratie TVB<br><strong>Versie:</strong> 1.0<br><strong>Datum:</strong> 4 september 2026<br><strong>Status:</strong> frontend-demo met localStorage</p>
+
+<h2>1. Doel en doelgroep</h2>
+<p>De applicatie registreert hoeveel blikjes medewerkers pakken. Medewerkers kunnen snel hun naam zoeken en met één klik een blikje registreren. Beheerders kunnen registraties controleren, corrigeren, medewerkers beheren en gegevens exporteren.</p>
+<ul><li><strong>Medewerkers:</strong> registreren een eigen blikje.</li><li><strong>Beheerders:</strong> beheren medewerkers, corrigeren registraties en exporteren rapportages.</li></ul>
+
+<h2>2. Functionele requirements</h2>
+<table><tr><th>ID</th><th>Omschrijving</th></tr>
+<tr><td>FR-01</td><td>Alle actieve medewerkers worden op voor- en achternaam getoond.</td></tr>
+<tr><td>FR-02</td><td>Medewerkers kunnen via een zoekbalk worden gevonden.</td></tr>
+<tr><td>FR-03</td><td>Een medewerker kan met + een blikje toevoegen.</td></tr>
+<tr><td>FR-04</td><td>Een medewerker kan zelf geen blikje verwijderen.</td></tr>
+<tr><td>FR-05</td><td>Een toevoeging wordt direct opgeslagen.</td></tr>
+<tr><td>FR-06</td><td>Het huidige aantal blikjes wordt per medewerker getoond.</td></tr>
+<tr><td>FR-07/18</td><td>Elke registratie krijgt automatisch een datum.</td></tr>
+<tr><td>FR-08</td><td>Een beheerder kan inloggen.</td></tr>
+<tr><td>FR-09/10</td><td>Een beheerder kan registraties per medewerker verhogen of verlagen.</td></tr>
+<tr><td>FR-11/12</td><td>Een beheerder kan registraties bekijken en filteren.</td></tr>
+<tr><td>FR-13/14/24/25</td><td>Een beheerder kan een Excel-export met details, totalen en prijzen maken.</td></tr>
+<tr><td>FR-15</td><td>Administratieve wijzigingen moeten in productie worden gelogd.</td></tr>
+<tr><td>FR-16/17</td><td>Een beheerder kan medewerkers toevoegen en verwijderen.</td></tr>
+<tr><td>FR-19</td><td>Elke registratie krijgt automatisch een tijdstip.</td></tr>
+<tr><td>FR-20/21/22/23</td><td>Maandtotalen en jaar-/maandselectie zijn voorzien als uitbreidingspunt voor de databaseversie.</td></tr>
+</table>
+
+<h2>3. Gebruikersflows</h2>
+<h3>Medewerker</h3>
+<ol><li>Open de website.</li><li>Zoek een naam.</li><li>Klik op de +-knop.</li><li>Bekijk de bijgewerkte teller en bevestigingsmelding.</li></ol>
+<h3>Beheerder</h3>
+<ol><li>Klik op Admin login.</li><li>Vul e-mailadres en wachtwoord in.</li><li>Bekijk registraties of open Medewerkers.</li><li>Filter, corrigeer, voeg toe, verwijder of exporteer gegevens.</li><li>Sluit het venster met × of beëindig de sessie met Uitloggen.</li></ol>
+
+<h2>4. Wireframes</h2>
+<h3>4.1 Low-fidelity</h3>
+<p>Deze versie toont alleen de globale structuur, zonder kleuren of visuele details.</p>
+<pre>+------------------------------------------------------+
+| TVB Blikjesregistratie                 [Admin login] |
++------------------------------------------------------+
+| Vandaag: [datum]                                     |
+| Wie heeft er vandaag een blikje gepakt?              |
+|------------------------------------------------------|
+| Medewerkers                         | Statistieken  |
+| [ Zoek medewerker................ ] | Vandaag:  12  |
+| [Naam medewerker................ +] | Deze maand: 30|
+| [Naam medewerker................ +] | Tip           |
+| [Naam medewerker................ +] |               |
++------------------------------------------------------+
+| TVB                                  Bewust drinken  |
++------------------------------------------------------+</pre>
+<h3>4.2 Mid-fidelity</h3>
+<p>Deze versie voegt groepering, knoppen, witruimte en visuele prioriteit toe.</p>
+<pre>+------------------------------------------------------+
+| [TVB] Blikjesregistratie       Systeem actief [ A ]  |
++------------------------------------------------------+
+| Vandaag · 4 september 2026                           |
+| Wie heeft er vandaag een blikje gepakt?              |
+| Registreer je blikje snel.                           |
++------------------------------------------------------+
+| Medewerkers                              8 totaal   |
+| [⌕ Zoek op voor- of achternaam...       ⌘ K]         |
+| [avatar] Mark Jansen                    [ + ]        |
+|          0 blikjes gepakt                             |
+| [avatar] Sophie de Boer                 [ + ]        |
+|          3 blikjes gepakt                             |
++------------------------------+-----------------------+
+| Vandaag gepakt: 5            | Deze maand: 5         |
+| Goed bezig! Elke registratie helpt                  |
++------------------------------+-----------------------+</pre>
+<h3>4.3 High-fidelity</h3>
+<p>Dit is de gerealiseerde interface met TVB-kleuren, kaarten, typografie, iconen, hover states, toastmeldingen en responsive gedrag.</p>
+<pre>+------------------------------------------------------+
+| [TVB] Blikjesregistratie       Systeem actief  [ A ] |
++------------------------------------------------------+
+|                  DONKERBLAUWE HERO                  |
+| Vandaag · 4 september 2026                           |
+| Wie heeft er vandaag een blikje gepakt?              |
+| Registreer je blikje snel.             [♻ decoratie] |
++----------------------------------+-------------------+
+| Medewerkers       [8 totaal]     | [▣] Vandaag       |
+| [⌕ Zoek................. ⌘ K]     |     5 blikjes     |
+| Mark Jansen                 [ + ]| [◷] Deze maand    |
+| 0 blikjes gepakt                 |     5 blikjes     |
+| Sophie de Boer              [ + ]| [✦] Goed bezig!  |
+| 3 blikjes gepakt                 |                   |
++----------------------------------+-------------------+</pre>
+
+<h2>5. Toelichting op designerkeuzes</h2>
+<table><tr><th>Keuze</th><th>Toelichting</th><th>Nielsen-heuristiek</th></tr>
+<tr><td>Eén duidelijke +-knop per medewerker</td><td>De belangrijkste actie is direct zichtbaar en vereist geen extra scherm.</td><td>H1 Visibility of system status; H6 Recognition rather than recall</td></tr>
+<tr><td>Zoekbalk boven de lijst</td><td>Bij veel medewerkers is zoeken sneller dan scrollen.</td><td>H6 Recognition rather than recall; H7 Flexibility and efficiency of use</td></tr>
+<tr><td>Groen en blauw als hoofdpalet</td><td>Sluit aan op de organisatie en geeft groen een positieve actiebetekenis.</td><td>H4 Consistency and standards</td></tr>
+<tr><td>Teller naast iedere naam</td><td>De gebruiker ziet direct het actuele resultaat.</td><td>H1 Visibility of system status</td></tr>
+<tr><td>Toast na opslaan</td><td>Geeft onmiddellijk feedback dat de registratie is verwerkt.</td><td>H1 Visibility of system status</td></tr>
+<tr><td>Admin in een aparte modal</td><td>Beheerfuncties blijven uit beeld voor gewone gebruikers.</td><td>H8 Aesthetic and minimalist design</td></tr>
+<tr><td>Afzonderlijke × en Uitloggen</td><td>Sluiten en uitloggen zijn verschillende acties.</td><td>H3 User control and freedom; H5 Error prevention</td></tr>
+<tr><td>Admin-correctie per medewerker</td><td>De beheerder zoekt eerst de medewerker en corrigeert daarna gericht.</td><td>H5 Error prevention; H6 Recognition rather than recall</td></tr>
+<tr><td>Alleen de laatste registratie verwijderen</td><td>Voorkomt dat per ongeluk een willekeurige historische registratie wordt verwijderd.</td><td>H5 Error prevention</td></tr>
+<tr><td>Responsive layout</td><td>De kernactie blijft bruikbaar op kleinere schermen.</td><td>H7 Flexibility and efficiency of use</td></tr>
+<tr><td>Nederlandstalige labels</td><td>Sluit aan bij gebruikers en vermindert interpretatiefouten.</td><td>H4 Consistency and standards</td></tr>
+<tr><td>Historie bewaren als Verwijderd</td><td>Administratieve informatie gaat niet verloren na vertrek van een medewerker.</td><td>H1 Visibility of system status; H9 Help users recognize, diagnose, and recover from errors</td></tr>
+</table>
+
+<h2>6. Nielsen-heuristieken</h2>
+<ol><li><strong>Visibility of system status:</strong> totalen, datum en toastmelding tonen de actuele status.</li><li><strong>Match between system and the real world:</strong> termen sluiten aan bij de praktijk.</li><li><strong>User control and freedom:</strong> de modal kan worden gesloten zonder uit te loggen.</li><li><strong>Consistency and standards:</strong> vaste kleuren, knoppen en labels worden hergebruikt.</li><li><strong>Error prevention:</strong> gerichte correcties voorkomen fouten.</li><li><strong>Recognition rather than recall:</strong> namen, totalen en filters blijven zichtbaar.</li><li><strong>Flexibility and efficiency of use:</strong> zoeken, filters en Ctrl/Cmd+K versnellen gebruik.</li><li><strong>Aesthetic and minimalist design:</strong> de frontpage toont alleen noodzakelijke informatie.</li><li><strong>Help users recognize, diagnose, and recover from errors:</strong> lege zoekresultaten en opslagfouten krijgen een melding.</li><li><strong>Help and documentation:</strong> FO, TO en code-comments ondersteunen gebruikers en ontwikkelaars.</li></ol>
+
+<h2>7. Acceptatiecriteria</h2>
+<ul><li>Een medewerker kan snel een naam zoeken.</li><li>Eén klik op + verhoogt het aantal met precies één.</li><li>Datum en tijd worden automatisch opgeslagen.</li><li>Een mislukte opslag toont een foutmelding en draait terug.</li><li>Een beheerder kan een medewerker zoeken voor een correctie.</li><li>Oude registraties blijven zichtbaar bij een verwijderde medewerker.</li><li>De Excel-export bevat details, totalen en prijsinformatie.</li><li>De interface werkt op desktop en mobiel.</li></ul>
+
+<h2>8. Scope en vervolgstappen</h2>
+<div class="note">De huidige versie is een frontend-demo. De login is niet beveiligd en localStorage is niet gedeeld tussen computers. Voor productie zijn een backend, database, echte authenticatie, rollen, auditlog, server-side validatie en back-ups nodig.</div>
+</body>
+</html>
