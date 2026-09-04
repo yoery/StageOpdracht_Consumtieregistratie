@@ -14,5 +14,6 @@ Open [index.html](./index.html) in een moderne browser. Er is geen buildstap nod
 - Admin-overzicht met medewerker- en maandfilters.
 - Registraties corrigeren met `+` en `−`, medewerkers toevoegen/verwijderen.
 - Excel-export met registratiegegevens, maandtotalen en periode-totaal.
+- Uitgebreide documentatie in `DOCUMENTATIE.md` en een Word-compatibele export in `DOCUMENTATIE-WORD.doc`.
 
 De Excel-export gebruikt SheetJS via CDN; daarvoor is een internetverbinding nodig wanneer de pagina voor het eerst wordt geopend.

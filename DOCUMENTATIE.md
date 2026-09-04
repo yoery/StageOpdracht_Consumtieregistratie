@@ -2,7 +2,7 @@
 
 ## 1. Doel van de applicatie
 
-Blikjesregistratie is een eenvoudige website waarmee medewerkers kunnen aangeven dat zij een blikje hebben gepakt. Iedere klik op de `+`-knop maakt één registratie aan. De applicatie toont de huidige aantallen en geeft een beheerder extra functies voor correcties, medewerkers en Excel-export.
+Blikjesregistratie is een eenvoudige website waarmee medewerkers kunnen aangeven dat zij een blikje hebben gepakt. Iedere klik op de `+`-knop maakt één registratie aan. De applicatie toont de huidige aantallen en geeft een beheerder extra functies voor correcties, medewerkers en Excel-export. De Excel-export berekent ook de prijs: €0,69 per blikje.
 
 Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localStorage` van de gebruikte browser. Daardoor zijn de gegevens op één computer/browser beschikbaar, maar nog niet gedeeld tussen alle gebruikers van een bedrijfsnetwerk.
 
@@ -40,13 +40,12 @@ Met `Ctrl + K` op Windows of `Cmd + K` op macOS krijgt de zoekbalk automatisch d
 3. De registratie wordt direct toegevoegd.
 4. Het aantal van de medewerker wordt bijgewerkt.
 5. De totalen van vandaag en deze maand worden bijgewerkt.
-6. De registratie verschijnt bij recente activiteit.
 
 Iedere klik telt als één blikje. De datum en tijd worden automatisch toegevoegd.
 
 ### 4.3 Admin-dashboard openen
 
-1. Klik rechtsboven op `Beheerder`.
+1. Klik rechtsboven op `Admin login`.
 2. Vul een e-mailadres in.
 3. Vul een wachtwoord in.
 4. Klik op `Inloggen`.
@@ -60,9 +59,9 @@ In het tabblad `Registraties` ziet de beheerder:
 - De medewerker
 - Het aantal van de registratie
 - De datum en tijd
-- Actieknoppen
+- De zoekfunctie voor correcties
 
-Met `+` kan een beheerder een extra registratie toevoegen. Met `−` kan een foutieve registratie worden verwijderd.
+De beheerder gebruikt het zoekveld `Medewerker corrigeren` om eerst een medewerker op te zoeken. Daarna kan met `+` één blikje worden toegevoegd. Met `−` wordt het laatst toegevoegde blikje van die medewerker verwijderd. De losse registraties in de tabel zijn alleen ter inzage; correcties gebeuren dus altijd via de medewerkerzoekfunctie.
 
 De dropdowns boven de tabel filteren op medewerker of maand.
 
@@ -71,11 +70,16 @@ De dropdowns boven de tabel filteren op medewerker of maand.
 Open het tabblad `Medewerkers`.
 
 - Vul een naam in en klik op `+ Toevoegen` om een medewerker toe te voegen.
-- Klik op `×` om een medewerker uit de actieve lijst te verwijderen.
+- Zoek een medewerker met het zoekveld `Medewerker verwijderen`.
+- Klik daarna op `×` om de gevonden medewerker uit de actieve lijst te verwijderen.
 
 In deze demo worden namen als één tekst opgeslagen. In een echte database kunnen `Voornaam`, `Achternaam` en `Actief` afzonderlijke velden zijn.
 
-### 4.6 Excel exporteren
+### 4.6 Modal sluiten en uitloggen
+
+Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft ingelogd zolang de pagina open is. Met de knop `Uitloggen` wordt de adminsessie beëindigd en verschijnt bij het volgende openen opnieuw het loginformulier.
+
+### 4.7 Excel exporteren
 
 1. Open het admin-dashboard.
 2. Kies eventueel een medewerker en/of maand.
@@ -137,10 +141,6 @@ De elementen `todayTotal` en `monthTotal` worden door JavaScript gevuld met:
 - Het aantal registraties van vandaag.
 - Het aantal registraties van de huidige maand.
 
-### Recente registraties
-
-Het element `recentRegistrations` wordt dynamisch gevuld. Alleen de vijf nieuwste registraties worden getoond.
-
 ### Admin-modal
 
 De `.modal-backdrop` is een dialoogvenster over de website heen. De modal bevat twee toestanden:
@@ -148,7 +148,7 @@ De `.modal-backdrop` is een dialoogvenster over de website heen. De modal bevat 
 - `loginView`: loginformulier.
 - `adminView`: beheerdashboard.
 
-De knop met `data-close-modal` sluit de modal. Deze knop is bewust gescheiden van `Uitloggen`.
+De knop met `data-close-modal` sluit de modal. Deze knop is bewust gescheiden van `Uitloggen`. Een ingelogde beheerder kan de modal sluiten en later opnieuw openen zonder opnieuw in te loggen.
 
 ## 6. Uitleg van `styles.css`
 
@@ -185,7 +185,6 @@ De CSS bevat opmaak voor:
 - De hero-banner.
 - Kaarten en statistieken.
 - Medewerkerregels en plusknoppen.
-- Activiteitenlijst.
 - Admin-modal en tabbladen.
 - Tabellen en filters.
 - Toastmeldingen.
@@ -255,16 +254,6 @@ Deze functie vergelijkt de datum van iedere registratie met:
 
 Daarna worden de twee totalen in de statistiekkaarten geplaatst.
 
-### `renderRecent`
-
-Deze functie:
-
-1. Maakt een kopie van alle registraties.
-2. Sorteert de kopie van nieuw naar oud.
-3. Beperkt het resultaat tot vijf registraties.
-4. Zoekt de bijbehorende medewerker op.
-5. Toont naam, datum/tijd en hoeveelheid.
-
 ### `addRegistration`
 
 Deze functie wordt uitgevoerd na een klik op `+`.
@@ -279,7 +268,7 @@ Daarna worden de gegevens opgeslagen en alle zichtbare onderdelen opnieuw geteke
 
 ### `renderAll`
 
-Deze functie voert `renderEmployees`, `renderStats` en `renderRecent` achter elkaar uit. Zo blijven de medewerkerlijst, totalen en recente activiteit gelijktijdig actueel.
+Deze functie voert `renderEmployees` en `renderStats` achter elkaar uit. Zo blijven de medewerkerlijst en totalen gelijktijdig actueel.
 
 ### `showToast`
 
@@ -287,7 +276,9 @@ Toont een korte melding zoals `Blikje direct opgeslagen`. Na 2,5 seconden verdwi
 
 ### Adminfuncties
 
-`openAdmin` opent de modal en toont het loginformulier.
+`openAdmin` opent de modal. Als `adminLoggedIn` waar is, wordt het dashboard opnieuw getoond; anders verschijnt het loginformulier.
+
+De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige pagina open is.
 
 `renderAdmin`:
 
@@ -317,7 +308,7 @@ De event listeners koppelen gebruikersacties aan functies:
 
 - Typen in de zoekbalk → lijst filteren.
 - Klik op een plusknop → registratie toevoegen.
-- Klik op admin → modal openen.
+- Klik op `Admin login` → login of dashboard openen.
 - Loginformulier verzenden → dashboard tonen.
 - Klik op sluitknop → modal sluiten.
 - Klik op tabblad → juiste admin-tab tonen.
@@ -350,6 +341,8 @@ De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 
 Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. Dit sluit aan bij het voorgestelde datamodel waarin `Aantal` standaard 1 is.
 
+Voor de Excel-export geldt een vaste prijs van €0,69 per blikje. Het werkblad `Registraties` bevat de prijs per blikje. Het werkblad `Maandtotalen` bevat per medewerker het maandtotaal en de totale prijs.
+
 ## 9. Belangrijke demo-beperkingen
 
 Deze versie is bedoeld als prototype:
@@ -361,7 +354,7 @@ Deze versie is bedoeld als prototype:
 - Verwijderde medewerkers krijgen geen herstelmogelijkheid.
 - Er is geen server-side auditlog.
 - Excel-export is afhankelijk van de externe SheetJS-CDN.
-- De knop `Bekijk alles` is momenteel alleen visueel aanwezig.
+- Het admin-login is een demo en heeft geen echte server-side beveiliging.
 
 Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig.
 

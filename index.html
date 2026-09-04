@@ -26,8 +26,8 @@
       </a>
       <div class="topbar-actions">
         <span class="status-pill"><i></i> Systeem actief</span>
-        <button class="avatar-button" id="adminOpenButton" title="Open beheerdersomgeving" aria-label="Beheerdersomgeving">
-          <span class="avatar">A</span><span class="admin-label">Beheerder</span><span class="chevron">⌄</span>
+        <button class="avatar-button" id="adminOpenButton" title="Open admin login" aria-label="Admin login">
+          <span class="avatar">A</span><span class="admin-label">Admin login</span>
         </button>
       </div>
     </header>
@@ -63,7 +63,7 @@
         <!-- Deze kaarten tonen de totalen van vandaag en deze maand. -->
         <aside class="summary-column">
           <div class="stat-card stat-green">
-            <div class="stat-icon">▣</div><div><span>Vandaag geregistreerd</span><strong id="todayTotal">0</strong><small>blikjes</small></div>
+            <div class="stat-icon">▣</div><div><span>Vandaag gepakt</span><strong id="todayTotal">0</strong><small>blikjes</small></div>
           </div>
           <div class="stat-card stat-blue">
             <div class="stat-icon">◷</div><div><span>Deze maand</span><strong id="monthTotal">0</strong><small>blikjes totaal</small></div>
@@ -72,11 +72,6 @@
         </aside>
       </section>
 
-      <!-- In dit gedeelte komen de vijf meest recente registraties te staan. -->
-      <section class="recent-section">
-        <div class="section-heading"><div><p class="section-kicker">Activiteit</p><h2>Recente registraties</h2></div><button class="text-button" id="viewAllButton">Bekijk alles <span>→</span></button></div>
-        <div class="activity-card card" id="recentRegistrations"></div>
-      </section>
     </main>
     <footer><span>TVB · Blikjesregistratie</span><span>Bewust drinken, samen geregeld.</span></footer>
   </div>
@@ -88,7 +83,8 @@
       <button class="modal-close" data-close-modal aria-label="Sluiten">×</button>
       <!-- Loginweergave die zichtbaar is voordat de beheerder is ingelogd. -->
       <div id="loginView">
-        <div class="modal-icon">⚙</div><p class="section-kicker">Beheerdersomgeving</p><h2 id="adminTitle">Welkom terug</h2><p class="muted">Log in om registraties en medewerkers te beheren.</p>
+        <!-- Dit ingebouwde sloticoon maakt duidelijk dat dit het beveiligde admin-login is. -->
+        <div class="modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12a1 1 0 0 1 1 1v9H5v-9a1 1 0 0 1 1-1Zm6 4v3"/></svg></div><p class="section-kicker">Beheerdersomgeving</p><h2 id="adminTitle">Welkom terug</h2><p class="muted">Log in om registraties en medewerkers te beheren.</p>
         <form id="loginForm"><label>E-mailadres<input type="email" id="loginEmail" value="admin@tvb.nl" required></label><label>Wachtwoord<input type="password" id="loginPassword" placeholder="••••••••" required></label><p class="login-hint">Demo: elk ingevuld wachtwoord werkt.</p><button class="primary-button full-width" type="submit">Inloggen <span>→</span></button><p class="form-error hidden" id="loginError">Vul een e-mailadres en wachtwoord in.</p></form>
       </div>
       <!-- Dashboardweergave voor registraties en medewerkersbeheer. -->
@@ -97,9 +93,12 @@
         <div class="admin-tabs"><button class="tab active" data-tab="registrations">Registraties</button><button class="tab" data-tab="employees">Medewerkers</button></div>
         <div id="registrationsTab">
           <div class="filter-row"><label>Medewerker<select id="filterEmployee"><option value="all">Alle medewerkers</option></select></label><label>Maand<select id="filterMonth"><option value="all">Alle maanden</option></select></label><button class="secondary-button export-button" id="exportButton">⇩ Excel exporteren</button></div>
-          <div class="admin-table-wrap"><table><thead><tr><th>Medewerker</th><th>Aantal</th><th>Datum & tijd</th><th>Actie</th></tr></thead><tbody id="adminTableBody"></tbody></table></div>
+          <!-- De beheerder zoekt hier eerst een medewerker op voordat een correctie wordt uitgevoerd. -->
+          <label class="admin-search"><span>Medewerker corrigeren</span><input type="search" id="adminEmployeeSearch" placeholder="Zoek een medewerker..." autocomplete="off"></label>
+          <div id="adminCorrectionList" class="admin-correction-list"></div>
+          <div class="admin-table-wrap"><table><thead><tr><th>Medewerker</th><th>Aantal</th><th>Datum & tijd</th></tr></thead><tbody id="adminTableBody"></tbody></table></div>
         </div>
-        <div id="employeesTab" class="hidden"><form class="add-employee-form" id="employeeForm"><input id="newEmployeeName" placeholder="Naam nieuwe medewerker" required><button class="primary-button" type="submit">+ Toevoegen</button></form><div id="adminEmployeeList" class="admin-employee-list"></div></div>
+        <div id="employeesTab" class="hidden"><form class="add-employee-form" id="employeeForm"><input id="newEmployeeName" placeholder="Naam nieuwe medewerker" required><button class="primary-button" type="submit">+ Toevoegen</button></form><label class="admin-search employee-management-search"><span>Medewerker verwijderen</span><input type="search" id="employeeManagementSearch" placeholder="Zoek een medewerker..." autocomplete="off"></label><div id="adminEmployeeList" class="admin-employee-list"></div></div>
       </div>
     </div>
   </div>

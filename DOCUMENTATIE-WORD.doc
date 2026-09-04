@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Documentatie Blikjesregistratie</title>
+<style>
+body{font-family:Arial,sans-serif;color:#163540;line-height:1.45;margin:40px}
+h1{color:#087252;border-bottom:3px solid #159a72;padding-bottom:10px}
+h2{color:#176b8b;margin-top:28px}
+h3{color:#087252;margin-top:20px}
+code{background:#eef5f2;padding:2px 4px}
+table{border-collapse:collapse;width:100%;margin:12px 0}
+th,td{border:1px solid #cbdad7;padding:7px;text-align:left}
+th{background:#e8f5ee}
+.note{background:#e8f2f6;padding:12px;border-left:4px solid #176b8b}
+</style>
+</head>
+<body>
+<h1>Documentatie Blikjesregistratie</h1>
+<p><strong>Project:</strong> Blikjesregistratie TVB<br><strong>Versie:</strong> frontend-demo</p>
+
+<h2>1. Doel van de applicatie</h2>
+<p>Medewerkers kunnen aangeven dat zij een blikje hebben gepakt. Iedere klik op de <code>+</code>-knop maakt één registratie aan. De datum en tijd worden automatisch toegevoegd. Beheerders kunnen medewerkers en registraties beheren en gegevens naar Excel exporteren.</p>
+<div class="note"><strong>Belangrijk:</strong> deze demo bewaart gegevens in <code>localStorage</code> van de gebruikte browser. De gegevens zijn daarom nog niet gedeeld tussen verschillende computers.</div>
+
+<h2>2. Bestanden</h2>
+<table><tr><th>Bestand</th><th>Functie</th></tr>
+<tr><td>index.html</td><td>Structuur en zichtbare onderdelen van de website.</td></tr>
+<tr><td>styles.css</td><td>Kleuren, layout, knoppen, kaarten, tabel en mobiele weergave.</td></tr>
+<tr><td>app.js</td><td>Zoeken, registreren, adminfuncties, opslag, berekeningen en Excel-export.</td></tr>
+<tr><td>README.md</td><td>Korte startinformatie.</td></tr>
+<tr><td>DOCUMENTATIE.md</td><td>Uitgebreide technische documentatie.</td></tr>
+</table>
+
+<h2>3. Website starten</h2>
+<ol><li>Open de projectmap.</li><li>Open <code>index.html</code> in een moderne browser.</li><li>Er is geen buildproces nodig.</li></ol>
+<p>De Excel-export gebruikt SheetJS via een CDN en heeft daarom internet nodig als de bibliotheek nog niet geladen is.</p>
+
+<h2>4. Gebruik voor medewerkers</h2>
+<h3>Medewerker zoeken</h3>
+<p>Gebruik de zoekbalk om op voornaam, achternaam of een deel van een naam te zoeken. De lijst wordt direct aangepast. Met <code>Ctrl + K</code> of <code>Cmd + K</code> krijgt de zoekbalk focus.</p>
+<h3>Blikje toevoegen</h3>
+<ol><li>Zoek de juiste medewerker.</li><li>Klik op de groene <code>+</code>.</li><li>Het aantal gepakte blikjes, het dagtotaal en het maandtotaal worden bijgewerkt.</li></ol>
+<p>Iedere klik telt als één blikje. De registratie wordt direct in de browser opgeslagen.</p>
+
+<h2>5. Gebruik voor beheerders</h2>
+<h3>Admin login</h3>
+<p>Klik rechtsboven op <strong>Admin login</strong>. Vul een e-mailadres en wachtwoord in. In deze demo werkt elk ingevuld wachtwoord.</p>
+<h3>Overzicht sluiten en uitloggen</h3>
+<p>Het kruisje sluit alleen het overzicht. De beheerder blijft tijdens de huidige pagina-sessie ingelogd. Met <strong>Uitloggen</strong> wordt de sessie beëindigd en verschijnt de volgende keer het loginformulier.</p>
+<h3>Medewerkergerichte correcties</h3>
+<p>In het tabblad <strong>Registraties</strong> zoekt de beheerder eerst een medewerker met <strong>Medewerker corrigeren</strong>. Daarna kan:</p>
+<ul><li><code>+</code>: één blikje toevoegen.</li><li><code>−</code>: het laatst toegevoegde blikje van deze medewerker verwijderen.</li></ul>
+<p>De tabel eronder is alleen ter inzage; losse registraties kunnen daar niet meer per ongeluk worden verwijderd.</p>
+<h3>Medewerkers beheren</h3>
+<p>In het tabblad <strong>Medewerkers</strong> kan een beheerder een medewerker toevoegen. Met het zoekveld <strong>Medewerker verwijderen</strong> wordt de lijst gefilterd. Klik daarna op <code>×</code> bij de juiste medewerker om deze te verwijderen.</p>
+<h3>Excel exporteren</h3>
+<p>Kies optioneel een medewerker en maand en klik op <strong>Excel exporteren</strong>. Het bestand bevat:</p>
+<ul><li><strong>Registraties:</strong> medewerker, aantal blikjes, prijs per blikje (€0,69) en registratiedatum.</li><li><strong>Maandtotalen:</strong> totaal aantal blikjes en totale prijs per medewerker, plus een totaalregel.</li></ul>
+
+<h2>6. Technische werking</h2>
+<h3>index.html</h3>
+<p>HTML bevat de navigatiebalk, hero-banner, medewerkerlijst, zoekbalk, totalenkaarten, admin-modal, loginformulier, registratietabel, correctiezoekveld, medewerkersbeheer en toastmeldingen. Elementen krijgen een <code>id</code> zodat JavaScript ze kan bijwerken.</p>
+<h3>styles.css</h3>
+<p>De variabelen in <code>:root</code> bevatten het groene en blauwe TVB-kleurenpalet. Flexbox en CSS Grid zorgen voor de layout. De media query onder 720 pixels maakt de website geschikt voor telefoons.</p>
+<h3>app.js</h3>
+<p><code>state</code> bevat medewerkers en registraties. <code>save()</code> schrijft de state naar localStorage. <code>renderEmployees()</code> toont en filtert medewerkers. <code>renderStats()</code> berekent dag- en maandtotalen. <code>addRegistration()</code> maakt per klik een registratie met unieke id en ISO-datum.</p>
+<p><code>renderAdmin()</code> vult de administratietabel. <code>renderCorrectionEmployees()</code> filtert medewerkers voor correcties. <code>renderAdminEmployees()</code> filtert de verwijderlijst. <code>exportExcel()</code> maakt de twee Excel-werkbladen en berekent prijzen met <code>PRICE_PER_CAN = 0.69</code>.</p>
+
+<h2>7. Datamodel</h2>
+<h3>Medewerkers</h3>
+<table><tr><th>Veld</th><th>Betekenis</th></tr><tr><td>id</td><td>Unieke medewerker-id.</td></tr><tr><td>name</td><td>Volledige naam in de demo.</td></tr><tr><td>color</td><td>Avatar-kleur.</td></tr></table>
+<h3>Registraties</h3>
+<table><tr><th>Veld</th><th>Betekenis</th></tr><tr><td>id</td><td>Unieke registratie-id.</td></tr><tr><td>employeeId</td><td>Koppeling met een medewerker.</td></tr><tr><td>createdAt</td><td>Datum en tijd van de klik.</td></tr></table>
+<p>Het aantal is altijd 1, omdat iedere klik één registratie maakt. De prijs is €0,69 per blikje.</p>
+
+<h2>8. Demo-beperkingen</h2>
+<ul><li>localStorage is niet gedeeld tussen gebruikers.</li><li>De login is geen echte beveiliging.</li><li>Er is geen database, auditlog of server-back-up.</li><li>Excel-export is afhankelijk van de SheetJS-CDN.</li><li>Verwijderde medewerkers kunnen niet worden hersteld.</li></ul>
+<p>Voor productie is een backend nodig met gedeelde database, echte authenticatie, autorisatie, back-ups en logging.</p>
+
+<h2>9. Mogelijke vervolgstappen</h2>
+<ol><li>Backend en gedeelde database kiezen.</li><li>localStorage vervangen door API-aanroepen.</li><li>Admin-authenticatie en rollen toevoegen.</li><li>Auditlog, jaarfilters en periodefilters toevoegen.</li><li>Back-ups en testen met meerdere gebruikers instellen.</li></ol>
+</body>
+</html>
