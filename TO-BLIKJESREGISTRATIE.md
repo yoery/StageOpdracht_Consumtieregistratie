@@ -1,84 +1,106 @@
-# Technisch Ontwerp (TO)
-## Blikjesregistratie TVB
+# Technisch Ontwerp - Blikjesregistratie TVB
 
-**Versie:** 1.0  
-**Datum:** 4 september 2026  
-**Status:** frontend-demo, voorbereid op backendkoppeling
+**Versie:** 2.0
+**Datum:** 7 september 2026
+**Status:** demo van de website
 
-## 1. Technische scope
+## 1. Inleiding
 
-De applicatie bestaat momenteel uit een statische frontend:
+### Doel van het systeem
 
-- `index.html` bevat semantische UI-componenten.
-- `styles.css` bevat variabelen, componentstijlen en responsive regels.
-- `app.js` bevat de OOP-applicatielogica.
-- `localStorage` is de tijdelijke opslaglaag.
-- SheetJS maakt de Excel-export.
+Met dit systeem kunnen medewerkers eenvoudig registreren dat zij een blikje hebben gepakt. De beheerder kan de registraties bekijken, aanpassen en exporteren naar Excel.
 
-## 2. OOP-architectuur
+### Scope van het project
+
+In deze demo zitten de volgende onderdelen:
+
+- medewerkers bekijken en zoeken;
+- een blikje toevoegen met de `+`-knop;
+- datum en tijd automatisch opslaan;
+- inloggen als beheerder;
+- registraties corrigeren;
+- medewerkers toevoegen en verwijderen;
+- registraties filteren;
+- gegevens exporteren naar Excel;
+- gegevens opslaan in de browser met `localStorage`.
+
+De demo heeft nog geen echte database of echte beveiligde login. Dit kan later worden toegevoegd.
+
+### Verwijzing naar het functioneel ontwerp
+
+De eisen en gebruikersflows staan in het [functioneel ontwerp](./FO-BLIKJESREGISTRATIE.md). In dit technisch ontwerp leg ik uit hoe de website technisch is opgebouwd.
+
+## 2. Systeemarchitectuur
+
+### Huidige demo
 
 ```text
-RegistrationApp (controller)
-        |
-        +--> RegistrationModel (domeinregels en state)
-        |          |
-        |          +--> DataStore (localStorage / toekomstige API)
-        |
-        +--> RegistrationView (DOM-rendering en meldingen)
+Gebruiker
+    ↓
+Webbrowser
+    ↓
+HTML, CSS en JavaScript
+    ↓
+DataStore
+    ↓
+localStorage
+    ↓
+Excel-export met SheetJS
 ```
 
-### `DataStore`
+### Mogelijke productieversie
 
-Leest en schrijft JSON via `localStorage`. De class valideert opgeslagen data en vangt lees- en schrijffouten af. De interface `load()` en `save()` kan later worden vervangen door `fetch()`-aanroepen naar een backend.
+```text
+Gebruiker
+    ↓
+Webbrowser
+    ↓
+Webapplicatie
+    ↓
+Backend en API
+    ↓
+Gedeelde SQL-database
+    ↓
+Excel-export
+```
 
-### `RegistrationModel`
+### Opbouw van de JavaScript
 
-Beheert medewerkers en registraties. De class bevat functies voor:
+De JavaScript is verdeeld in vier classes:
 
-- toevoegen en verwijderen van registraties;
-- toevoegen en verwijderen van medewerkers;
-- tellen per medewerker, dag en maand;
-- snapshots maken en herstellen bij een opslagfout.
+- `DataStore` regelt het opslaan en ophalen van gegevens.
+- `RegistrationModel` bevat de gegevens en de regels van de applicatie.
+- `RegistrationView` zet de gegevens op het scherm.
+- `RegistrationApp` verwerkt klikken, formulieren en andere acties.
 
-### `RegistrationView`
+Door deze verdeling blijft de code overzichtelijk. Later kan bijvoorbeeld `localStorage` worden vervangen door een database zonder alles opnieuw te maken.
 
-Rendert de publieke lijst, statistieken, admin-tabel, filters, correcties, medewerkersbeheer en toastmeldingen. De view wijzigt de data niet rechtstreeks.
+## 3. Technologiestack
 
-### `RegistrationApp`
+### Gebruikte technieken in de demo
 
-Koppelt events aan model en view. De methode `persist()` voert een wijziging transactioneel uit: bij mislukte opslag wordt de vorige state hersteld.
+- **HTML5:** voor de structuur van de pagina.
+- **CSS3:** voor kleuren, layout en responsive design.
+- **JavaScript:** voor de werking van de website.
+- **OOP:** de JavaScript is verdeeld in classes.
+- **localStorage:** tijdelijke opslag in de browser.
+- **SheetJS:** maakt de Excel-export.
 
-## 3. HTML-componenten
+### Mogelijke technieken voor productie
 
-| Component | Functie |
-|---|---|
-| `.topbar` | Merknaam, status en admin-ingang |
-| `.hero` | Introductie en huidige datum |
-| `.directory-card` | Zoekbare medewerkerlijst |
-| `.summary-column` | Dag-, maand- en tipkaarten |
-| `#adminModal` | Login en dashboard |
-| `#registrationsTab` | Filters, correcties en registratie-overzicht |
-| `#employeesTab` | Medewerkers toevoegen en verwijderen |
-| `#toast` | Tijdelijke feedbackmeldingen |
+De backend en database zijn nog niet gekozen. Mogelijke keuzes zijn:
 
-De `id`-waarden vormen de koppeling tussen HTML en JavaScript. Dynamische acties gebruiken `data-*`-attributen, bijvoorbeeld `data-add` en `data-correction-minus`.
+- PHP, .NET of Node.js voor de backend;
+- SQL Server, PostgreSQL of MySQL voor de database;
+- een interne server of Azure voor de hosting.
 
-## 4. CSS-ontwerp
+De definitieve keuze moet samen met de IT-afdeling van TVB worden gemaakt.
 
-De stylesheet is opgebouwd in deze volgorde:
+## 4. Databaseontwerp
 
-1. CSS-variabelen en globale reset.
-2. Basislayout en navigatie.
-3. Hero, kaarten en publieke medewerkerlijst.
-4. Modal, dashboard, filters en tabellen.
-5. Meldingen en correctiecomponenten.
-6. Responsive regels onder 720 pixels.
+### Opslag in de huidige demo
 
-De belangrijkste ontwerpvariabelen zijn `--green`, `--green-dark`, `--blue`, `--blue-soft`, `--mint`, `--line` en `--shadow`. Hierdoor kunnen kleuren en algemene stijlkeuzes centraal worden aangepast.
-
-## 5. Datamodel
-
-### Huidige frontend-state
+De demo bewaart een JSON-object in `localStorage`:
 
 ```js
 {
@@ -93,116 +115,268 @@ De belangrijkste ontwerpvariabelen zijn `--green`, `--green-dark`, `--blue`, `--
     {
       id: "unieke-id",
       employeeId: "id-van-medewerker",
-      createdAt: "2026-09-04T08:00:00.000Z"
+      createdAt: "2026-09-07T08:00:00.000Z"
     }
   ]
 }
 ```
 
-Iedere registratie staat voor precies één blikje. Het aantal wordt daarom niet apart opgeslagen in de demo.
+Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd `1`.
 
-### Voorgesteld databaseschema
+### Tabel Medewerkers
 
-```text
-Medewerkers
-- MedewerkerID      PRIMARY KEY
-- Voornaam
-- Achternaam
-- Actief
+| Veld | Type | Uitleg |
+|---|---|---|
+| `MedewerkerID` | Integer of UUID | Uniek nummer van de medewerker |
+| `Voornaam` | Tekst | Voornaam van de medewerker |
+| `Achternaam` | Tekst | Achternaam van de medewerker |
+| `Actief` | Boolean | Geeft aan of de medewerker nog actief is |
 
-Registraties
-- RegistratieID     PRIMARY KEY
-- MedewerkerID      FOREIGN KEY -> Medewerkers
-- DatumTijd
-- Aantal            DEFAULT 1
-```
+### Tabel Registraties
 
-Voor auditlogging kan een extra tabel worden toegevoegd:
+| Veld | Type | Uitleg |
+|---|---|---|
+| `RegistratieID` | Integer of UUID | Uniek nummer van de registratie |
+| `MedewerkerID` | Integer of UUID | Koppeling met de medewerker |
+| `DatumTijd` | DateTime | Datum en tijd van de registratie |
+| `Aantal` | Integer | Aantal blikjes, standaard `1` |
 
-```text
-AdminLog
-- LogID             PRIMARY KEY
-- AdminID
-- Actie
-- MedewerkerID
-- RegistratieID
-- DatumTijd
-- Details
-```
+### Extra tabel voor adminacties
 
-## 6. Toekomstige backendkoppeling
+Voor een echte versie is een tabel `AdminLog` handig. Hierin kan worden opgeslagen wie een wijziging heeft gedaan en wanneer dit gebeurde.
 
-De frontend kan later een REST-API gebruiken:
+| Veld | Type | Uitleg |
+|---|---|---|
+| `LogID` | Integer of UUID | Uniek nummer van de logregel |
+| `AdminID` | Integer of UUID | Nummer van de beheerder |
+| `Actie` | Tekst | Bijvoorbeeld toevoegen of corrigeren |
+| `MedewerkerID` | Integer of UUID | Betrokken medewerker |
+| `DatumTijd` | DateTime | Moment van de actie |
+| `Details` | Tekst | Extra uitleg over de actie |
+
+In de productieversie is het beter om een medewerker op inactief te zetten in plaats van echt te verwijderen. Zo blijven oude registraties aan de juiste medewerker gekoppeld.
+
+## 5. Schermontwerpen
+
+### Medewerkersscherm
+
+Op dit scherm staan:
+
+- de naam van de medewerker;
+- een avatar;
+- het huidige aantal blikjes;
+- een zoekveld;
+- een `+`-knop;
+- het totaal van vandaag;
+- het totaal van deze maand;
+- een melding na het opslaan.
+
+Een gewone medewerker krijgt geen `−`-knop. Alleen de beheerder kan een registratie verlagen.
+
+### Admin-login
+
+Het loginvenster bevat:
+
+- een e-mailadres;
+- een wachtwoord;
+- een knop om in te loggen;
+- een melding bij verkeerde of lege invoer;
+- een sluitknop.
+
+In de demo werkt ieder ingevuld wachtwoord. Dit is alleen voor demonstratie en is niet veilig voor productie.
+
+### Beheerscherm
+
+De beheerder kan hier:
+
+- alle registraties bekijken;
+- filteren op medewerker en maand;
+- een medewerker zoeken voor een correctie;
+- een blikje toevoegen of verwijderen;
+- Excel exporteren;
+- medewerkers toevoegen;
+- medewerkers zoeken en verwijderen;
+- uitloggen.
+
+### Mobiele weergave
+
+Op een klein scherm komen de onderdelen onder elkaar te staan. Hierdoor blijven de knoppen en teksten goed leesbaar op een telefoon.
+
+## 6. Procesbeschrijvingen
+
+### Blikje registreren
+
+1. De gebruiker zoekt een medewerker.
+2. De gebruiker klikt op `+`.
+3. De applicatie maakt een nieuwe registratie.
+4. De datum en tijd worden automatisch toegevoegd.
+5. De registratie wordt opgeslagen.
+6. De teller wordt bijgewerkt.
+7. De gebruiker krijgt een bevestiging.
+
+Als opslaan niet lukt, wordt de wijziging teruggedraaid en krijgt de gebruiker een foutmelding.
+
+### Registratie corrigeren
+
+1. De beheerder logt in.
+2. De beheerder zoekt een medewerker.
+3. Met `+` wordt een registratie toegevoegd.
+4. Met `−` wordt de laatste registratie van deze medewerker verwijderd.
+5. Het overzicht wordt opnieuw geladen.
+
+### Medewerker toevoegen
+
+1. De beheerder opent het tabblad `Medewerkers`.
+2. De beheerder vult een naam in.
+3. De applicatie maakt een unieke id.
+4. De medewerker wordt opgeslagen en getoond.
+
+### Medewerker verwijderen
+
+1. De beheerder zoekt de medewerker.
+2. De beheerder klikt op verwijderen.
+3. De medewerker verdwijnt uit de actieve lijst.
+4. Oude registraties blijven bewaard.
+5. In het overzicht staat bij deze oude registraties `Verwijderd`.
+
+### Excel exporteren
+
+1. De beheerder kiest eventueel een medewerker en maand.
+2. De applicatie verzamelt de juiste registraties.
+3. Er wordt een tabblad met registraties gemaakt.
+4. Er wordt een tabblad met totalen gemaakt.
+5. De prijs wordt berekend met €0,69 per blikje.
+6. Het Excelbestand wordt gedownload.
+
+## 7. Interfaces
+
+### Excel
+
+De applicatie gebruikt SheetJS om een Excelbestand te maken. Het bestand bevat:
+
+- de medewerker;
+- het aantal blikjes;
+- de prijs per blikje;
+- de datum en tijd;
+- totalen per medewerker;
+- het totaalbedrag.
+
+### Mogelijke API
 
 | Methode | Endpoint | Doel |
 |---|---|---|
-| `GET` | `/api/employees` | Actieve medewerkers ophalen |
-| `POST` | `/api/registrations` | Eén blikje registreren |
-| `GET` | `/api/registrations` | Registraties met filters ophalen |
-| `POST` | `/api/admin/login` | Adminsessie starten |
-| `POST` | `/api/admin/corrections` | Correctie vastleggen |
+| `GET` | `/api/employees` | Medewerkers ophalen |
+| `POST` | `/api/registrations` | Registratie toevoegen |
+| `GET` | `/api/registrations` | Registraties ophalen met filters |
+| `POST` | `/api/admin/login` | Beheerder inloggen |
+| `POST` | `/api/admin/corrections` | Correctie opslaan |
 | `POST` | `/api/employees` | Medewerker toevoegen |
 | `PATCH` | `/api/employees/{id}` | Medewerker inactief maken |
-| `GET` | `/api/export` | Gefilterde Excel-export maken |
+| `GET` | `/api/export` | Export maken |
 
-De frontend moet in die situatie geen wachtwoorden of autorisatie zelf bepalen. Authenticatie, autorisatie, validatie, logging en transacties horen op de server plaats te vinden.
+Een koppeling met Active Directory of Microsoft Entra ID kan later worden onderzocht. Deze koppeling zit niet in de demo.
 
-## 7. Foutafhandeling en gegevensbehoud
+## 8. Beveiliging
 
-- Beschadigde JSON wordt niet gebruikt; de demo start met voorbeelddata.
-- Een opslagfout wordt gelogd in de console en aan de gebruiker gemeld.
-- Mislukte wijzigingen worden via een snapshot teruggedraaid.
-- Verwijderde medewerkers worden uit de actieve lijst gehaald.
-- Historische registraties blijven bestaan en worden als `Verwijderd` weergegeven.
-- Een ontbrekende SheetJS-bibliotheek toont een foutmelding in plaats van een crash.
+### Authenticatie
 
-## 8. Export
+De login in de demo is niet echt beveiligd. Elk ingevuld wachtwoord wordt geaccepteerd. In productie moet een echte login met veilige wachtwoorden worden gebruikt.
 
-De export maakt twee werkbladen:
+### Autorisatie
 
-1. `Registraties`: medewerker, aantal, prijs per blikje en registratiedatum.
-2. `Maandtotalen` of `Periode-totalen`: totalen per medewerker en een totaalregel.
+- **Medewerker:** kan een blikje registreren.
+- **Beheerder:** kan registreren, corrigeren, medewerkers beheren en exporteren.
+- **Systeembeheerder:** kan rollen en instellingen beheren.
 
-De prijs wordt intern berekend als 69 cent per blikje en afgerond op twee decimalen.
+Voor productie zijn ook HTTPS, gehashte wachtwoorden, sessies, server-side controle, logging en back-ups nodig.
 
-## 9. Beveiliging voor productie
+## 9. Niet-functionele eisen (NFR's)
 
-De demo-login accepteert elk ingevuld wachtwoord en is niet geschikt voor productie. Voor een echte uitrol zijn minimaal nodig:
+| Eis | Uitleg | Doel |
+|---|---|---|
+| Beschikbaarheid | De website moet tijdens werktijd werken | 99% in productie |
+| Gebruiksgemak | Een registratie moet snel kunnen | Binnen 5 seconden |
+| Performance | De pagina moet snel laden | Binnen 2 seconden |
+| Responsive | De website werkt op desktop en mobiel | Alle normale schermen |
+| Gegevensbehoud | Oude registraties mogen niet verdwijnen | Ook na vertrek medewerker |
+| Beveiliging | Alleen admins mogen beheren | Controle op de server |
+| Onderhoudbaarheid | Onderdelen zijn gescheiden | Classes met eigen taak |
+| Herstelbaarheid | Gegevens moeten teruggezet kunnen worden | Back-ups maken |
 
-- HTTPS;
-- gehashte wachtwoorden;
-- sessies of beveiligde tokens;
-- rollen en autorisaties;
-- server-side inputvalidatie;
-- auditlogging;
-- rate limiting;
-- databaseback-ups;
-- bescherming tegen CSRF en ongewenste exports.
+## 10. Exportontwerp
 
-## 10. Test- en acceptatieplan
+### Werkblad Registraties
+
+Dit werkblad bevat:
+
+- naam medewerker;
+- aantal blikjes;
+- prijs per blikje;
+- datum en tijd.
+
+### Werkblad Maandtotalen of Periode-totalen
+
+Dit werkblad bevat:
+
+- totaal per medewerker;
+- totaal aantal blikjes;
+- totale prijs per medewerker;
+- totaal van alle medewerkers.
+
+### Exportopties
+
+De huidige export kan filteren op:
+
+- alle medewerkers;
+- één medewerker;
+- één maand;
+- alle beschikbare maanden.
+
+Week- en jaarfilters kunnen later worden toegevoegd.
+
+## 11. Foutafhandeling
+
+| Situatie | Wat doet het systeem? |
+|---|---|
+| Beschadigde JSON | De demo start opnieuw met voorbeelddata |
+| Opslaan lukt niet | De wijziging wordt teruggedraaid |
+| Ongeldige invoer | De gebruiker krijgt een melding |
+| Medewerker niet gevonden | De zoeklijst toont een melding |
+| Geen registratie om te verwijderen | De gebruiker krijgt een informatiemelding |
+| SheetJS ontbreekt | De export wordt niet gestart |
+| Export mislukt | De gebruiker krijgt een foutmelding |
+| Onbevoegde actie | De actie wordt geweigerd en gelogd |
+
+## 12. Testscenario's
 
 | Test | Verwacht resultaat |
 |---|---|
-| Zoek een bestaande medewerker | Alleen passende namen verschijnen |
-| Zoek een onbekende naam | Melding “Geen medewerker gevonden” verschijnt |
-| Klik op publieke `+` | Eén registratie wordt toegevoegd en opgeslagen |
-| Herlaad de pagina | De registratie blijft aanwezig |
-| Sla beschadigde JSON op | De demo valt terug op voorbeelddata |
-| Open admin zonder login | Loginformulier verschijnt |
-| Corrigeer met admin `+` en `−` | Alleen de gekozen medewerker wijzigt |
-| Verwijder medewerker | Medewerker verdwijnt, historie blijft zichtbaar |
-| Exporteer met filters | Alleen geselecteerde data staat in Excel |
-| Open op mobiel formaat | Componenten stapelen en blijven bruikbaar |
+| Medewerker zoeken | Alleen passende medewerkers verschijnen |
+| Onbekende naam zoeken | De melding “Geen medewerker gevonden” verschijnt |
+| Blikje toevoegen | Het aantal stijgt met 1 |
+| Pagina herladen | De registratie blijft aanwezig |
+| Beschadigde opslag openen | De demo gebruikt voorbeelddata |
+| Medewerker zelf laten verlagen | Er is geen `−`-knop zichtbaar |
+| Admin inloggen | Het dashboard verschijnt |
+| Admin `+` gebruiken | De gekozen medewerker krijgt één registratie |
+| Admin `−` gebruiken | De laatste registratie wordt verwijderd |
+| Filter gebruiken | Alleen de gekozen gegevens verschijnen |
+| Medewerker toevoegen | De nieuwe medewerker verschijnt |
+| Medewerker verwijderen | De medewerker verdwijnt, historie blijft |
+| Excel exporteren | Een `.xlsx`-bestand wordt gedownload |
+| Modal sluiten | De modal sluit zonder uit te loggen |
+| Uitloggen | Het loginvenster verschijnt opnieuw |
+| Mobiel bekijken | De layout blijft bruikbaar |
 
-## 11. Onderhoud
+## 13. Onderhoud en toekomst
 
-Bij wijzigingen moet de verantwoordelijkheidsverdeling behouden blijven:
+Bij nieuwe code moet de verdeling hetzelfde blijven:
 
 - opslag in `DataStore`;
-- bedrijfsregels in `RegistrationModel`;
-- DOM en presentatie in `RegistrationView`;
-- events en workflows in `RegistrationApp`;
+- regels in `RegistrationModel`;
+- HTML-weergave in `RegistrationView`;
+- acties in `RegistrationApp`;
 - vormgeving in `styles.css`;
-- vaste structuur in `index.html`.
+- vaste paginaopbouw in `index.html`.
 
-Deze scheiding voorkomt dat database-, gebruikersinterface- en presentatielogica door elkaar raken.
+De belangrijkste volgende stap is een backend met een gedeelde database, echte login, autorisatie, auditlog en back-ups.

@@ -2,96 +2,80 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<title>Technisch Ontwerp Blikjesregistratie</title>
+<title>Technisch Ontwerp - Blikjesregistratie TVB</title>
 <style>
 body{font-family:Arial,sans-serif;color:#163540;line-height:1.45;margin:40px}
 h1{color:#087252;border-bottom:3px solid #159a72;padding-bottom:10px}
-h2{color:#176b8b;margin-top:28px}
-h3{color:#087252;margin-top:20px}
-code{background:#eef5f2;padding:2px 4px}
-pre{background:#f3f7f6;padding:12px;white-space:pre-wrap}
-table{border-collapse:collapse;width:100%;margin:12px 0}
-th,td{border:1px solid #cbdad7;padding:7px;text-align:left}
-th{background:#e8f5ee}
-.note{background:#e8f2f6;padding:12px;border-left:4px solid #176b8b}
+h2{color:#176b8b;margin-top:28px} h3{color:#087252;margin-top:20px}
+code{background:#eef5f2;padding:2px 4px} pre{background:#f3f7f6;padding:12px;white-space:pre-wrap}
+table{border-collapse:collapse;width:100%;margin:12px 0} th,td{border:1px solid #e6e6e6;padding:7px;text-align:left;vertical-align:top}
+th{background-color:#f5f5f5}
 </style>
 </head>
 <body>
-<h1>Technisch Ontwerp (TO)</h1>
-<p><strong>Project:</strong> Blikjesregistratie TVB<br><strong>Versie:</strong> 1.0<br><strong>Datum:</strong> 4 september 2026<br><strong>Status:</strong> frontend-demo, voorbereid op backendkoppeling</p>
+<h1>Technisch Ontwerp - Blikjesregistratie TVB</h1>
+<p><strong>Versie:</strong> 2.0<br><strong>Datum:</strong> 7 september 2026<br><strong>Status:</strong> demo van de website</p>
 
-<h2>1. Technische scope</h2>
-<ul><li><code>index.html</code> bevat de semantische UI-componenten.</li><li><code>styles.css</code> bevat variabelen, componentstijlen en responsive regels.</li><li><code>app.js</code> bevat de OOP-applicatielogica.</li><li><code>localStorage</code> is de tijdelijke opslaglaag.</li><li>SheetJS maakt de Excel-export.</li></ul>
+<h2>1. Inleiding</h2>
+<h3>Doel van het systeem</h3>
+<p>Met dit systeem kunnen medewerkers eenvoudig registreren dat zij een blikje hebben gepakt. De beheerder kan registraties bekijken, aanpassen en exporteren naar Excel.</p>
+<h3>Scope</h3>
+<p>De demo bevat zoeken, registreren, automatische datum en tijd, adminfuncties, correcties, medewerkersbeheer, filters, Excel-export en localStorage. Een echte database en veilige login kunnen later worden toegevoegd.</p>
+<h3>Verwijzing naar het functioneel ontwerp</h3>
+<p>De eisen, gebruikersflows, wireframes en ontwerpkeuzes staan in <code>FO-BLIKJESREGISTRATIE.md</code> en <code>FO-BLIKJESREGISTRATIE.doc</code>.</p>
 
-<h2>2. OOP-architectuur</h2>
-<pre>RegistrationApp (controller)
-        |
-        +--&gt; RegistrationModel (domeinregels en state)
-        |       |
-        |       +--&gt; DataStore (localStorage / toekomstige API)
-        |
-        +--&gt; RegistrationView (DOM-rendering en meldingen)</pre>
-<h3>DataStore</h3>
-<p>Leest en schrijft JSON via <code>localStorage</code>, valideert opgeslagen data en vangt lees- en schrijffouten af. De methodes <code>load()</code> en <code>save()</code> kunnen later worden vervangen door API-aanroepen.</p>
-<h3>RegistrationModel</h3>
-<p>Beheert medewerkers, registraties, totalen en snapshots. De class bevat de bedrijfsregels voor toevoegen, corrigeren en verwijderen.</p>
-<h3>RegistrationView</h3>
-<p>Rendert de publieke lijst, statistieken, admin-tabel, filters, correcties, medewerkersbeheer en meldingen. De view wijzigt de data niet rechtstreeks.</p>
-<h3>RegistrationApp</h3>
-<p>Koppelt events aan model en view. <code>persist()</code> voert wijzigingen veilig uit en herstelt de vorige status als opslaan mislukt.</p>
+<h2>2. Systeemarchitectuur</h2>
+<pre>Gebruiker → Webbrowser → HTML, CSS en JavaScript → DataStore → localStorage → Excel</pre>
+<p>In een productieversie wordt localStorage vervangen door een backend en een gedeelde SQL-database.</p>
+<p>De JavaScript bestaat uit vier classes: <code>DataStore</code> voor opslag, <code>RegistrationModel</code> voor gegevens en regels, <code>RegistrationView</code> voor het scherm en <code>RegistrationApp</code> voor acties.</p>
 
-<h2>3. HTML-componenten</h2>
-<table><tr><th>Component</th><th>Functie</th></tr><tr><td><code>.topbar</code></td><td>Merknaam, status en admin-ingang</td></tr><tr><td><code>.hero</code></td><td>Introductie en huidige datum</td></tr><tr><td><code>.directory-card</code></td><td>Zoekbare medewerkerlijst</td></tr><tr><td><code>.summary-column</code></td><td>Dag-, maand- en tipkaarten</td></tr><tr><td><code>#adminModal</code></td><td>Login en dashboard</td></tr><tr><td><code>#registrationsTab</code></td><td>Filters, correcties en registratie-overzicht</td></tr><tr><td><code>#employeesTab</code></td><td>Medewerkers toevoegen en verwijderen</td></tr><tr><td><code>#toast</code></td><td>Tijdelijke feedbackmeldingen</td></tr></table>
-<p><code>id</code>-waarden koppelen HTML aan JavaScript. Dynamische knoppen gebruiken <code>data-*</code>-attributen.</p>
+<h2>3. Technologiestack</h2>
+<ul><li>HTML5 voor de structuur.</li><li>CSS3 voor kleuren en layout.</li><li>JavaScript voor de werking.</li><li>OOP met classes.</li><li>localStorage als tijdelijke opslag.</li><li>SheetJS voor Excel.</li></ul>
+<p>Voor productie kunnen PHP, .NET of Node.js, een SQL-database en een interne server of Azure worden gebruikt. Dit moet met de IT-afdeling worden afgesproken.</p>
 
-<h2>4. CSS-ontwerp</h2>
-<p>De stylesheet is geordend van algemeen naar specifiek: variabelen en reset, basislayout, publieke componenten, admincomponenten, meldingen en responsive regels. De belangrijkste variabelen zijn <code>--green</code>, <code>--green-dark</code>, <code>--blue</code>, <code>--blue-soft</code>, <code>--mint</code>, <code>--line</code> en <code>--shadow</code>.</p>
+<h2>4. Databaseontwerp</h2>
+<h3>Tabel Medewerkers</h3>
+<table><tr><th>Veld</th><th>Type</th><th>Uitleg</th></tr><tr><td>MedewerkerID</td><td>Integer/UUID</td><td>Unieke sleutel</td></tr><tr><td>Voornaam</td><td>Tekst</td><td>Voornaam</td></tr><tr><td>Achternaam</td><td>Tekst</td><td>Achternaam</td></tr><tr><td>Actief</td><td>Boolean</td><td>Of de medewerker actief is</td></tr></table>
+<h3>Tabel Registraties</h3>
+<table><tr><th>Veld</th><th>Type</th><th>Uitleg</th></tr><tr><td>RegistratieID</td><td>Integer/UUID</td><td>Unieke sleutel</td></tr><tr><td>MedewerkerID</td><td>Integer/UUID</td><td>Koppeling met medewerker</td></tr><tr><td>DatumTijd</td><td>DateTime</td><td>Moment van registratie</td></tr><tr><td>Aantal</td><td>Integer</td><td>Standaard 1</td></tr></table>
+<h3>AdminLog</h3>
+<p>Voor een echte versie is een logtabel handig met bijvoorbeeld LogID, AdminID, Actie, MedewerkerID, DatumTijd en Details.</p>
+<p>Een medewerker kan beter op inactief worden gezet dan echt verwijderd. Zo blijven oude registraties gekoppeld.</p>
 
-<h2>5. Datamodel</h2>
-<pre>{
-  employees: [{ id: "unieke-id", name: "Voorbeeld Naam", color: "#d8f1e8" }],
-  registrations: [{ id: "unieke-id", employeeId: "id-van-medewerker", createdAt: "2026-09-04T08:00:00.000Z" }]
-}</pre>
-<p>Iedere registratie staat voor precies één blikje. Het aantal wordt daarom niet apart opgeslagen in de demo.</p>
-<h3>Voorgesteld databaseschema</h3>
-<pre>Medewerkers
-- MedewerkerID PRIMARY KEY
-- Voornaam
-- Achternaam
-- Actief
+<h2>5. Schermontwerpen</h2>
+<h3>Medewerkersscherm</h3><p>Toont naam, avatar, teller, zoekveld, plusknop en dag- en maandtotalen. Een gewone medewerker heeft geen minknop.</p>
+<h3>Admin-login</h3><p>Bevat e-mailadres, wachtwoord, login-knop, foutmelding en sluitknop. In de demo werkt ieder ingevuld wachtwoord.</p>
+<h3>Beheerscherm</h3><p>Bevat registraties, filters, correcties, Excel-export, medewerkersbeheer en uitloggen.</p>
+<h3>Mobiel</h3><p>Op een klein scherm komen de onderdelen onder elkaar te staan.</p>
 
-Registraties
-- RegistratieID PRIMARY KEY
-- MedewerkerID FOREIGN KEY
-- DatumTijd
-- Aantal DEFAULT 1
+<h2>6. Procesbeschrijvingen</h2>
+<h3>Blikje registreren</h3>
+<ol><li>Gebruiker zoekt een medewerker.</li><li>Gebruiker klikt op +.</li><li>Er wordt een registratie met aantal 1 gemaakt.</li><li>Datum en tijd worden toegevoegd.</li><li>De gegevens worden opgeslagen.</li><li>De teller en melding worden bijgewerkt.</li></ol>
+<h3>Registratie corrigeren</h3><p>De beheerder logt in, zoekt een medewerker en gebruikt + of −. Daarna wordt het overzicht vernieuwd.</p>
+<h3>Medewerker beheren</h3><p>De beheerder kan een medewerker toevoegen of verwijderen. Oude registraties blijven zichtbaar als Verwijderd.</p>
+<h3>Excel exporteren</h3><p>De filters worden toegepast en daarna worden een detailblad en een totaalblad gedownload.</p>
 
-AdminLog
-- LogID PRIMARY KEY
-- AdminID
-- Actie
-- MedewerkerID
-- RegistratieID
-- DatumTijd
-- Details</pre>
+<h2>7. Interfaces</h2>
+<p>Excel bevat medewerker, aantal, prijs, datum/tijd en totalen. Mogelijke API-routes zijn <code>GET /api/employees</code>, <code>POST /api/registrations</code>, <code>GET /api/registrations</code>, <code>POST /api/admin/login</code>, <code>POST /api/employees</code> en <code>GET /api/export</code>.</p>
 
-<h2>6. Toekomstige backendkoppeling</h2>
-<table><tr><th>Methode</th><th>Endpoint</th><th>Doel</th></tr><tr><td>GET</td><td>/api/employees</td><td>Actieve medewerkers ophalen</td></tr><tr><td>POST</td><td>/api/registrations</td><td>Eén blikje registreren</td></tr><tr><td>GET</td><td>/api/registrations</td><td>Registraties met filters ophalen</td></tr><tr><td>POST</td><td>/api/admin/login</td><td>Adminsessie starten</td></tr><tr><td>POST</td><td>/api/admin/corrections</td><td>Correctie vastleggen</td></tr><tr><td>POST</td><td>/api/employees</td><td>Medewerker toevoegen</td></tr><tr><td>PATCH</td><td>/api/employees/{id}</td><td>Medewerker inactief maken</td></tr><tr><td>GET</td><td>/api/export</td><td>Gefilterde export maken</td></tr></table>
-<p>Authenticatie, autorisatie, validatie, logging en transacties horen bij een echte backend op de server plaats te vinden.</p>
+<h2>8. Beveiliging</h2>
+<h3>Authenticatie</h3><p>De demo-login is niet veilig. Productie moet echte accounts, gehashte wachtwoorden en sessies gebruiken.</p>
+<h3>Autorisatie</h3><ul><li>Medewerker: registreren.</li><li>Admin: registreren, corrigeren, beheren en exporteren.</li><li>Systeembeheerder: rollen en instellingen beheren.</li></ul>
+<p>Verder zijn HTTPS, server-side controle, logging, rate limiting en back-ups nodig.</p>
 
-<h2>7. Foutafhandeling en gegevensbehoud</h2>
-<ul><li>Beschadigde JSON wordt niet gebruikt; de demo start met voorbeelddata.</li><li>Een opslagfout wordt gelogd en aan de gebruiker gemeld.</li><li>Mislukte wijzigingen worden via een snapshot teruggedraaid.</li><li>Historische registraties blijven bestaan en worden als <strong>Verwijderd</strong> weergegeven.</li><li>Een ontbrekende SheetJS-bibliotheek toont een foutmelding.</li></ul>
+<h2>9. Niet-functionele eisen</h2>
+<table><tr><th>Eis</th><th>Uitleg</th><th>Doel</th></tr><tr><td>Beschikbaarheid</td><td>Werken tijdens werktijd</td><td>99% productie</td></tr><tr><td>Gebruiksgemak</td><td>Registratie snel uitvoeren</td><td>Binnen 5 seconden</td></tr><tr><td>Performance</td><td>Pagina snel laden</td><td>Binnen 2 seconden</td></tr><tr><td>Responsive</td><td>Desktop en mobiel</td><td>Normale schermen</td></tr><tr><td>Gegevensbehoud</td><td>Historie bewaren</td><td>Ook na vertrek medewerker</td></tr><tr><td>Beveiliging</td><td>Alleen admins beheren</td><td>Servercontrole</td></tr></table>
 
-<h2>8. Export</h2>
-<p>De export maakt de werkbladen <strong>Registraties</strong> en <strong>Maandtotalen</strong> of <strong>Periode-totalen</strong>. De prijs is 69 cent per blikje en wordt afgerond op twee decimalen.</p>
+<h2>10. Exportontwerp</h2>
+<p>Het blad Registraties bevat naam, aantal, prijs en datum/tijd. Het blad Maandtotalen of Periode-totalen bevat totalen per medewerker en een totaal van alle medewerkers. Er kan worden gefilterd op medewerker en maand.</p>
 
-<h2>9. Beveiliging voor productie</h2>
-<p>De demo-login accepteert elk ingevuld wachtwoord. Voor productie zijn HTTPS, gehashte wachtwoorden, sessies, rollen, server-side validatie, auditlogging, rate limiting, back-ups, CSRF-bescherming en toegangscontrole voor exports nodig.</p>
+<h2>11. Foutafhandeling</h2>
+<table><tr><th>Situatie</th><th>Actie</th></tr><tr><td>Beschadigde JSON</td><td>Starten met voorbeelddata</td></tr><tr><td>Opslaan lukt niet</td><td>Wijziging terugdraaien en melding tonen</td></tr><tr><td>Ongeldige invoer</td><td>Gebruiker waarschuwen</td></tr><tr><td>Geen medewerker</td><td>Duidelijke melding tonen</td></tr><tr><td>Export mislukt</td><td>Fout melden en loggen</td></tr></table>
 
-<h2>10. Test- en acceptatieplan</h2>
-<table><tr><th>Test</th><th>Verwacht resultaat</th></tr><tr><td>Zoek medewerker</td><td>Alleen passende namen verschijnen</td></tr><tr><td>Klik op publieke +</td><td>Eén registratie wordt opgeslagen</td></tr><tr><td>Herlaad pagina</td><td>Registratie blijft aanwezig</td></tr><tr><td>Beschadigde JSON</td><td>Demo valt terug op voorbeelddata</td></tr><tr><td>Admin-correctie</td><td>Alleen gekozen medewerker wijzigt</td></tr><tr><td>Medewerker verwijderen</td><td>Medewerker verdwijnt, historie blijft</td></tr><tr><td>Excel-export</td><td>Geselecteerde data staat in Excel</td></tr><tr><td>Mobiel formaat</td><td>Onderdelen blijven bruikbaar</td></tr></table>
+<h2>12. Testscenario's</h2>
+<table><tr><th>Test</th><th>Verwacht resultaat</th></tr><tr><td>Medewerker zoeken</td><td>Passende namen verschijnen</td></tr><tr><td>Blikje toevoegen</td><td>Aantal stijgt met 1</td></tr><tr><td>Pagina herladen</td><td>Registratie blijft aanwezig</td></tr><tr><td>Admin inloggen</td><td>Dashboard verschijnt</td></tr><tr><td>Admin corrigeren</td><td>Alleen gekozen medewerker wijzigt</td></tr><tr><td>Medewerker verwijderen</td><td>Medewerker verdwijnt, historie blijft</td></tr><tr><td>Excel exporteren</td><td>XLSX wordt gedownload</td></tr><tr><td>Modal sluiten</td><td>Modal sluit zonder uitloggen</td></tr><tr><td>Mobiel bekijken</td><td>Layout blijft bruikbaar</td></tr></table>
 
-<h2>11. Onderhoud</h2>
-<p>Houd opslag in <code>DataStore</code>, bedrijfsregels in <code>RegistrationModel</code>, DOM in <code>RegistrationView</code>, workflows in <code>RegistrationApp</code>, vormgeving in <code>styles.css</code> en vaste structuur in <code>index.html</code>. Zo blijven verantwoordelijkheden gescheiden.</p>
+<h2>13. Onderhoud en toekomst</h2>
+<p>Houd opslag in DataStore, regels in RegistrationModel, scherm in RegistrationView, acties in RegistrationApp, styling in styles.css en structuur in index.html. De volgende stap is een gedeelde database met echte login, autorisatie, logging en back-ups.</p>
 </body>
 </html>
