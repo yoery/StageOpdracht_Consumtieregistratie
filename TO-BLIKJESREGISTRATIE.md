@@ -8,7 +8,7 @@
 
 ### Doel van het systeem
 
-Met dit systeem kunnen medewerkers eenvoudig registreren dat zij een blikje hebben gepakt. De beheerder kan de registraties bekijken, aanpassen en exporteren naar Excel.
+Met dit systeem kunnen medewerkers producten registreren, zoals blikjes en cateringproducten. De beheerder kan registraties, medewerkers en prijzen beheren en een vaste Excel-export maken.
 
 ### Scope van het project
 
@@ -19,7 +19,9 @@ In deze demo zitten de volgende onderdelen:
 - datum en tijd automatisch opslaan;
 - inloggen als beheerder;
 - registraties corrigeren;
-- medewerkers toevoegen en verwijderen;
+- medewerkers toevoegen, wijzigen en actief of inactief zetten;
+- producten en prijzen beheren;
+- wijzigingen bijhouden in een logboek;
 - registraties filteren;
 - gegevens exporteren naar Excel;
 - gegevens opslaan in de browser met `localStorage`.
@@ -115,6 +117,7 @@ De demo bewaart een JSON-object in `localStorage`:
     {
       id: "unieke-id",
       employeeId: "id-van-medewerker",
+      productId: "blikje",
       createdAt: "2026-09-07T08:00:00.000Z"
     }
   ]
@@ -131,6 +134,9 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `Voornaam` | Tekst | Voornaam van de medewerker |
 | `Achternaam` | Tekst | Achternaam van de medewerker |
 | `Actief` | Boolean | Geeft aan of de medewerker nog actief is |
+| `Looncode` | Tekst | Looncode voor de Excel-export |
+| `Personeelsnummer` | Tekst | Nummer van de medewerker |
+| `Werkgevernummer` | Tekst | Nummer van de werkgever |
 
 ### Tabel Registraties
 
@@ -140,6 +146,17 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `MedewerkerID` | Integer of UUID | Koppeling met de medewerker |
 | `DatumTijd` | DateTime | Datum en tijd van de registratie |
 | `Aantal` | Integer | Aantal blikjes, standaard `1` |
+| `ProductID` | Integer of UUID | Geregistreerd product |
+
+### Tabel Producten
+
+| Veld | Type | Uitleg |
+|---|---|---|
+| `ProductID` | Integer of UUID | Uniek nummer van het product |
+| `Naam` | Tekst | Bijvoorbeeld blikje, melk, beleg of brood |
+| `Prijs` | Decimal | Prijs per product |
+
+De standaardprijzen zijn: blikje €0,65, sneetje brood €0,10, boter €0,10, zoet beleg €0,20, glas melk €0,20, beleg €0,50, ei €0,50 en yoghurt €0,50.
 
 ### Extra tabel voor adminacties
 
@@ -305,23 +322,22 @@ Voor productie zijn ook HTTPS, gehashte wachtwoorden, sessies, server-side contr
 
 ## 10. Exportontwerp
 
+### Werkblad Periode-totalen
+
+Dit werkblad gebruikt altijd deze kolomvolgorde:
+
+1. Jaar
+2. Maand
+3. Looncode
+4. Personeelsnummer
+5. Werkgevernummer
+6. Naam
+7. Totaal
+8. Prijs
+
 ### Werkblad Registraties
 
-Dit werkblad bevat:
-
-- naam medewerker;
-- aantal blikjes;
-- prijs per blikje;
-- datum en tijd.
-
-### Werkblad Maandtotalen of Periode-totalen
-
-Dit werkblad bevat:
-
-- totaal per medewerker;
-- totaal aantal blikjes;
-- totale prijs per medewerker;
-- totaal van alle medewerkers.
+Dit werkblad bevat de losse productregistraties met medewerker, product, datum, aantal en prijs.
 
 ### Exportopties
 

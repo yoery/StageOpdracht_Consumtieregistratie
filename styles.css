@@ -498,6 +498,23 @@ footer {
   outline-color:var(--green);
   background:#fff
 }
+/* Productkeuze op het openbare registratiescherm. */
+.product-select {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:12px 0 18px;
+  color:var(--muted);
+  font-size:12px
+}
+.product-select select {
+  min-width:190px;
+  height:38px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 10px;
+  background:#fff
+}
 .primary-button,.secondary-button {
   border-radius:8px;
   padding:11px 15px;
@@ -602,6 +619,88 @@ footer {
   gap:10px;
   margin-bottom:20px
 }
+.employee-fields {
+  flex-wrap:wrap
+}
+.employee-fields input {
+  min-width:150px
+}
+.employee-form-modal {
+  max-width:650px
+}
+.employee-products-modal {
+  max-width:520px
+}
+.personal-product-list {
+  display:grid;
+  gap:8px;
+  margin-top:20px
+}
+.personal-product-item {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  width:100%;
+  padding:13px 15px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#fff;
+  color:var(--ink)
+}
+.personal-product-item span {
+  display:grid;
+  gap:3px;
+  flex:1
+}
+.personal-product-item small {
+  color:var(--muted)
+}
+.personal-product-plus {
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:50%;
+  background:var(--green);
+  color:#fff;
+  font-size:22px;
+  line-height:1;
+  cursor:pointer
+}
+.personal-product-plus:hover,
+.personal-product-plus:focus-visible {
+  border-color:var(--green);
+  background:var(--blue)
+}
+.personal-product-amount {
+  min-width:28px;
+  margin-left:10px;
+  text-align:center
+}
+.employee-products-actions {
+  display:flex;
+  justify-content:flex-end;
+  margin-top:20px
+}
+.employee-row-clickable {
+  cursor:pointer
+}
+.employee-row-clickable:hover {
+  border-color:var(--green)
+}
+.employee-form-modal .employee-fields {
+  display:grid;
+  grid-template-columns:1fr 1fr
+}
+.employee-form-modal .employee-fields input {
+  width:100%
+}
+.employee-form-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  grid-column:1 / -1;
+  margin-top:8px
+}
 .add-employee-form input {
   flex:1
 }
@@ -615,6 +714,38 @@ footer {
   padding:13px;
   border:1px solid var(--line);
   border-radius:8px
+}
+.admin-employee-item span {
+  display:grid;
+  gap:3px
+}
+.admin-employee-item small {
+  color:var(--muted);
+  font-size:11px
+}
+.admin-item-actions {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end
+}
+.admin-item-actions .table-action {
+  white-space:nowrap
+}
+.admin-employee-item .table-action {
+  margin-left:6px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:#fff;
+  color:var(--green-dark);
+  cursor:pointer
+}
+.admin-employee-item .danger-action {
+  color:#c44949
+}
+#loadMoreAuditButton {
+  margin-top:12px
 }
 /* Tijdelijke meldingen na acties. */
 .toast {
@@ -664,14 +795,20 @@ footer {
   margin-bottom:20px
 }
 .admin-correction-item {
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:0;
+  overflow:hidden
+}
+.admin-correction-item summary {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  border:1px solid var(--line);
-  border-radius:9px;
-  padding:10px 12px
+  padding:10px 12px;
+  cursor:pointer;
+  list-style-position:inside
 }
-.admin-correction-item strong {
+.admin-correction-item summary strong {
   font-size:13px
 }
 .correction-count {
@@ -683,6 +820,28 @@ footer {
 .correction-actions {
   display:flex;
   gap:6px
+}
+.correction-product-list {
+  display:grid;
+  gap:6px;
+  padding:0 12px 12px 32px
+}
+.correction-product-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 0;
+  border-top:1px solid var(--line)
+}
+.correction-product-row > span {
+  font-size:12px
+}
+.correction-product-row > span strong {
+  display:inline-block;
+  min-width:24px;
+  margin-left:8px;
+  text-align:center;
+  color:var(--green-dark)
 }
 .correction-button {
   width:30px;
@@ -737,6 +896,12 @@ footer {
   }
   .modal {
     padding:25px 18px
+  }
+  .employee-form-modal .employee-fields {
+    grid-template-columns:1fr
+  }
+  .employee-form-actions {
+    flex-direction:column
   }
   .filter-row {
     align-items:stretch;

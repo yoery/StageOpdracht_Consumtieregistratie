@@ -2,7 +2,7 @@
 
 ## 1. Doel van de applicatie
 
-Blikjesregistratie is een eenvoudige website waarmee medewerkers kunnen aangeven dat zij een blikje hebben gepakt. Iedere klik op de `+`-knop maakt één registratie aan. De applicatie toont de huidige aantallen en geeft een beheerder extra functies voor correcties, medewerkers en Excel-export. De Excel-export berekent ook de prijs: €0,69 per blikje.
+Blikjesregistratie is een eenvoudige website waarmee medewerkers producten kunnen registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Iedere klik op een product maakt één registratie aan. Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.
 
 Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localStorage` van de gebruikte browser. Daardoor zijn de gegevens op één computer/browser beschikbaar, maar nog niet gedeeld tussen alle gebruikers van een bedrijfsnetwerk.
 
@@ -34,15 +34,15 @@ Gebruik de zoekbalk boven de medewerkerlijst. Typ een voornaam, achternaam of ee
 
 Met `Ctrl + K` op Windows of `Cmd + K` op macOS krijgt de zoekbalk automatisch de focus.
 
-### 4.2 Een blikje registreren
+### 4.2 Een product registreren
 
-1. Zoek de juiste medewerker.
-2. Klik op de groene `+`-knop.
-3. De registratie wordt direct toegevoegd.
-4. Het aantal van de medewerker wordt bijgewerkt.
-5. De totalen van vandaag en deze maand worden bijgewerkt.
+1. Zoek je eigen naam.
+2. Klik op je medewerkerkaart.
+3. Klik bij ieder gewenst product op het plusje.
+4. Klik op `Registreren` om alle gekozen producten tegelijk op te slaan.
+5. Je ziet geen persoonlijk totaal of persoonlijke kosten.
 
-Iedere klik telt als één blikje. De datum en tijd worden automatisch toegevoegd.
+Iedere klik op een plusje telt als één product. De datum en tijd worden automatisch toegevoegd zodra je op `Registreren` klikt.
 
 ### 4.3 Admin-dashboard openen
 
@@ -70,17 +70,31 @@ De dropdowns boven de tabel filteren op medewerker of maand.
 
 Open het tabblad `Medewerkers`.
 
-- Vul een naam in en klik op `+ Toevoegen` om een medewerker toe te voegen.
-- Zoek een medewerker met het zoekveld `Medewerker verwijderen`.
-- Klik daarna op `×` om de gevonden medewerker uit de actieve lijst te verwijderen.
+- Vul voornaam, achternaam en eventueel looncode, personeelsnummer en werkgevernummer in.
+- Klik op `+ Toevoegen` om een medewerker toe te voegen.
+- Gebruik `Wijzigen` om medewerkergegevens aan te passen.
+- Gebruik `Deactiveren` of `Activeren` om de medewerkerstatus te wijzigen.
 
 In deze demo worden namen als één tekst opgeslagen. In een echte database kunnen `Voornaam`, `Achternaam` en `Actief` afzonderlijke velden zijn.
 
-### 4.6 Modal sluiten en uitloggen
+Een inactieve medewerker kan daarna definitief worden verwijderd. De registraties blijven wel bestaan, zodat de administratie de historie houdt.
+
+### 4.6 Producten beheren
+
+Open het tabblad `Producten` en klik op `+ Product toevoegen`. Het formulier heeft dezelfde opties als het medewerkersformulier:
+
+- `Opslaan`: opslaan en het formulier sluiten.
+- `Opslaan + opnieuw`: opslaan, de velden leegmaken en het formulier open laten.
+
+### 4.7 Logboek bekijken
+
+Het tabblad `Logboek` toont standaard maximaal 20 wijzigingen. Met `Meer laden` worden steeds 20 extra wijzigingen getoond.
+
+### 4.8 Modal sluiten en uitloggen
 
 Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft ingelogd zolang de pagina open is. Met de knop `Uitloggen` wordt de adminsessie beëindigd en verschijnt bij het volgende openen opnieuw het loginformulier.
 
-### 4.7 Excel exporteren
+### 4.9 Excel exporteren
 
 1. Open het admin-dashboard.
 2. Kies eventueel een medewerker en/of maand.
@@ -89,10 +103,10 @@ Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft in
 
 Het bestand bevat twee werkbladen:
 
-1. `Registraties`: medewerker, aantal blikjes en registratiedatum.
-2. `Maandtotalen` wanneer één maand is gekozen, of `Periode-totalen` wanneer alle maanden zijn gekozen. Dit bevat het totaal per medewerker en een totaalregel voor alle geselecteerde medewerkers.
+1. `Periode-totalen`: altijd de kolommen `Jaar`, `Maand`, `Looncode`, `Personeelsnummer`, `Werkgevernummer`, `Naam`, `Totaal` en `Prijs`, in die vaste volgorde.
+2. `Registraties`: de losse registraties met dezelfde personeelsgegevens en het geregistreerde product.
 
-De gekozen filters worden toegepast op de export.
+De gekozen filters worden toegepast op de export. Producten en prijzen worden uit de administratie gehaald.
 
 ## 5. Uitleg van `index.html`
 
@@ -375,7 +389,7 @@ Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. 
 
 Wanneer een medewerker wordt verwijderd, blijven bestaande registraties behouden voor de administratie. In het admin-overzicht wordt bij zulke historische regels `Verwijderd` getoond.
 
-Voor de Excel-export geldt een vaste prijs van €0,69 per blikje. Het werkblad `Registraties` bevat de prijs per blikje. Het werkblad `Maandtotalen` bevat per medewerker het maandtotaal en de totale prijs.
+Voor de Excel-export worden de prijzen uit het productbeheer gebruikt. Het werkblad `Registraties` bevat de losse productregistraties. Het werkblad met totalen bevat per medewerker het aantal en de totale prijs. Deze gegevens zijn alleen zichtbaar voor de beheerder.
 
 ## 9. Belangrijke demo-beperkingen
 

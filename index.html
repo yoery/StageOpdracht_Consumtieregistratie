@@ -54,7 +54,7 @@
           <div class="card-heading">
             <div>
               <p class="section-kicker">Medewerkers</p>
-              <h2>Registreer je blikje</h2>
+              <h2>Registreer je consumptie</h2>
             </div>
             <span class="count-badge" id="employeeCount"></span>
           </div>
@@ -81,7 +81,7 @@
             <div>
               <span>Vandaag gepakt</span>
               <strong id="todayTotal">0</strong>
-              <small>blikjes</small>
+              <small>producten</small>
             </div>
           </div>
           <!-- Statistiekkaart met het aantal registraties van deze maand. -->
@@ -90,7 +90,7 @@
             <div>
               <span>Deze maand</span>
               <strong id="monthTotal">0</strong>
-              <small>blikjes totaal</small>
+              <small>producten totaal</small>
             </div>
           </div>
           <!-- Korte informatieve boodschap voor gebruikers. -->
@@ -154,6 +154,8 @@
         <nav class="admin-tabs" aria-label="Beheerderssecties">
           <button class="tab active" data-tab="registrations">Registraties</button>
           <button class="tab" data-tab="employees">Medewerkers</button>
+          <button class="tab" data-tab="products">Producten</button>
+          <button class="tab" data-tab="audit">Logboek</button>
         </nav>
         <div id="registrationsTab">
           <!-- Filters bepalen welke registraties in de tabel en export verschijnen. -->
@@ -176,26 +178,90 @@
           <!-- Alleen-lezen tabel met de afzonderlijke registraties. -->
           <div class="admin-table-wrap">
             <table>
-              <thead><tr><th>Medewerker</th><th>Aantal</th><th>Datum & tijd</th></tr></thead>
+              <thead><tr><th>Medewerker</th><th>Product</th><th>Aantal</th><th>Datum & tijd</th></tr></thead>
               <tbody id="adminTableBody"></tbody>
             </table>
           </div>
         </div>
         <div id="employeesTab" class="hidden">
-          <!-- Formulier om een nieuwe medewerker aan de administratie toe te voegen. -->
-          <form class="add-employee-form" id="employeeForm">
-            <input id="newEmployeeName" placeholder="Naam nieuwe medewerker" required>
-            <button class="primary-button" type="submit">+ Toevoegen</button>
-          </form>
+          <button class="primary-button" id="addEmployeeButton" type="button">+ Medewerker toevoegen</button>
           <!-- Zoekveld om eerst de juiste medewerker te vinden voordat die wordt verwijderd. -->
           <label class="admin-search employee-management-search">
-            <span>Medewerker verwijderen</span>
+            <span>Medewerker zoeken, wijzigen of activeren</span>
             <input type="search" id="employeeManagementSearch" placeholder="Zoek een medewerker..." autocomplete="off">
           </label>
           <!-- JavaScript plaatst hier de gevonden medewerkers met verwijderknop. -->
           <div id="adminEmployeeList" class="admin-employee-list"></div>
         </div>
+        <div id="productsTab" class="hidden">
+          <button class="primary-button" id="addProductButton" type="button">+ Product toevoegen</button>
+          <div id="adminProductList" class="admin-employee-list"></div>
+        </div>
+        <div id="auditTab" class="hidden">
+          <div class="admin-table-wrap">
+            <table>
+              <thead><tr><th>Actie</th><th>Details</th><th>Datum & tijd</th></tr></thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+          </div>
+          <button class="secondary-button hidden" id="loadMoreAuditButton" type="button">Meer laden</button>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Apart formulier voor toevoegen en wijzigen van producten. -->
+  <div class="modal-backdrop hidden" id="productFormModal" role="dialog" aria-modal="true" aria-labelledby="productFormTitle">
+    <div class="modal employee-form-modal">
+      <button class="modal-close" data-close-product-modal aria-label="Sluiten">×</button>
+      <p class="section-kicker">Productbeheer</p>
+      <h2 id="productFormTitle">Product toevoegen</h2>
+      <p class="muted" id="productFormHelp">Vul de productnaam en prijs in.</p>
+      <form class="add-employee-form employee-fields" id="productForm">
+        <input id="productName" placeholder="Productnaam" required>
+        <input id="productPrice" type="number" min="0" step="0.01" placeholder="Prijs" required>
+        <div class="employee-form-actions">
+          <button class="secondary-button" type="button" data-close-product-modal>Annuleren</button>
+          <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
+          <button class="primary-button" type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Persoonlijk productvenster zonder persoonlijke totalen. -->
+  <div class="modal-backdrop hidden" id="employeeProductsModal" role="dialog" aria-modal="true" aria-labelledby="employeeProductsTitle">
+    <div class="modal employee-products-modal">
+      <button class="modal-close" data-close-employee-products aria-label="Sluiten">×</button>
+      <p class="section-kicker">Persoonlijke registratie</p>
+      <h2 id="employeeProductsTitle">Product kiezen</h2>
+      <p class="muted">Gebruik de plusknoppen om producten te kiezen. Klik daarna op registreren om alles tegelijk op te slaan.</p>
+      <div id="employeeProductList" class="personal-product-list"></div>
+      <div class="employee-products-actions">
+        <button class="primary-button" id="registerSelectedProductsButton" type="button">Registreren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apart formulier voor toevoegen en wijzigen van medewerkers. -->
+  <div class="modal-backdrop hidden" id="employeeFormModal" role="dialog" aria-modal="true" aria-labelledby="employeeFormTitle">
+    <div class="modal employee-form-modal">
+      <button class="modal-close" data-close-employee-modal aria-label="Sluiten">×</button>
+      <p class="section-kicker">Medewerkersbeheer</p>
+      <h2 id="employeeFormTitle">Medewerker toevoegen</h2>
+      <p class="muted" id="employeeFormHelp">Vul de gegevens in en kies daarna hoe je verder wilt gaan.</p>
+      <form class="add-employee-form employee-fields" id="employeeForm">
+        <input id="newEmployeeFirstName" placeholder="Voornaam" required>
+        <input id="newEmployeeLastName" placeholder="Achternaam" required>
+        <input id="newEmployeePayrollCode" placeholder="Looncode">
+        <input id="newEmployeePersonnelNumber" placeholder="Personeelsnummer">
+        <input id="newEmployeeEmployerNumber" placeholder="Werkgevernummer">
+        <div class="employee-form-actions">
+          <button class="secondary-button" type="button" data-close-employee-modal>Annuleren</button>
+          <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
+          <button class="primary-button" type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
+        </div>
+      </form>
     </div>
   </div>
 

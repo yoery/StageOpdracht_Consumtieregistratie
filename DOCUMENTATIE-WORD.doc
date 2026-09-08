@@ -20,7 +20,7 @@ th{background:#e8f5ee}
 <p><strong>Project:</strong> Blikjesregistratie TVB<br><strong>Versie:</strong> frontend-demo</p>
 
 <h2>1. Doel van de applicatie</h2>
-<p>Medewerkers kunnen aangeven dat zij een blikje hebben gepakt. Iedere klik op de <code>+</code>-knop maakt één registratie aan. De datum en tijd worden automatisch toegevoegd. Beheerders kunnen medewerkers en registraties beheren en gegevens naar Excel exporteren.</p>
+<p>Medewerkers kunnen producten registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.</p>
 <div class="note"><strong>Belangrijk:</strong> deze demo bewaart gegevens in <code>localStorage</code> van de gebruikte browser. De gegevens zijn daarom nog niet gedeeld tussen verschillende computers.</div>
 
 <h2>2. Bestanden</h2>
