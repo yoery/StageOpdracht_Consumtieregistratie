@@ -727,7 +727,11 @@ class RegistrationApp {
   }
 }
 
-// Dependency injection koppelt de opslag, het model, de view en de controller los van elkaar.
-const model = new RegistrationModel(new DataStore(STORAGE_KEY));
-const app = new RegistrationApp(model, new RegistrationView(model));
-app.initialize();
+// In de browser wordt de applicatie gestart; Node kan de klassen voor unit tests importeren.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { DataStore, RegistrationModel, DEFAULT_PRODUCTS };
+} else {
+  const model = new RegistrationModel(new DataStore(STORAGE_KEY));
+  const app = new RegistrationApp(model, new RegistrationView(model));
+  app.initialize();
+}

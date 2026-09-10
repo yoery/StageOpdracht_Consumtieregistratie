@@ -1,0 +1,12 @@
+{
+  "name": "stageopdracht-consumptieregistratie",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unit tests voor de TVB consumptieregistratie",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
