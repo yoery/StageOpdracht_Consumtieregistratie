@@ -11,11 +11,11 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | Bestand | Functie |
 |---|---|
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
-| `styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
-| `app.js` | De interactieve werking, berekeningen, opslag en Excel-export |
+| `assets/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
+| `assets/js/app.js` | De interactieve werking, berekeningen, opslag en Excel-export |
 | `README.md` | Korte startinformatie voor het project |
-| `DOCUMENTATIE.md` | Deze uitgebreide uitleg |
-| `DOCUMENTATIE-WORD.doc` | Word-compatibele versie van deze documentatie |
+| `docs/` | Functioneel ontwerp, technisch ontwerp en overige documentatie |
+| `tests/` | Unit tests voor de belangrijkste reken- en registratiefuncties |
 
 ## 3. De website starten
 
@@ -119,7 +119,7 @@ In de `<head>` staan:
 - `viewport`: maakt de pagina geschikt voor mobiel.
 - De titel en beschrijving voor browser en zoekmachines.
 - Google Fonts voor de gebruikte lettertypes.
-- `styles.css` voor de vormgeving.
+- `assets/styles.css` voor de vormgeving.
 - SheetJS voor Excel-export.
 
 ### Navigatiebalk
@@ -167,7 +167,7 @@ De `.modal-backdrop` is een dialoogvenster over de website heen. De modal bevat 
 
 De knop met `data-close-modal` sluit de modal. Deze knop is bewust gescheiden van `Uitloggen`. Een ingelogde beheerder kan de modal sluiten en later opnieuw openen zonder opnieuw in te loggen.
 
-## 6. Uitleg van `styles.css`
+## 6. Uitleg van `assets/styles.css`
 
 ### CSS-variabelen
 
@@ -217,7 +217,7 @@ De CSS bevat opmaak voor:
 - Toastmeldingen.
 - Mobiele schermen.
 
-## 7. Uitleg van `app.js`
+## 7. Uitleg van `assets/js/app.js`
 
 ### Opslag en voorbeelddata
 

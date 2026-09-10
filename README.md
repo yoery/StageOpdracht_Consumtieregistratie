@@ -1,10 +1,22 @@
-# StageOpdracht_blikjesregistratie
+# StageOpdracht_consumpieregistratie
 
 Een interactieve front-end voor het registreren van blikjes binnen de organisatie.
 
 ## Starten
 
 Open [index.html](./index.html) in een moderne browser. Er is geen buildstap nodig.
+
+## Mappenstructuur
+
+```text
+index.html              # Hoofdpagina van de website
+assets/
+  styles.css            # Vormgeving
+  js/app.js             # Applicatielogica
+docs/                   # FO, TO en overige documentatie
+tests/                  # Unit tests
+.github/workflows/      # GitHub Actions CI/CD
+```
 
 ## Inbegrepen
 
@@ -19,10 +31,10 @@ Open [index.html](./index.html) in een moderne browser. Er is geen buildstap nod
 - Producten toevoegen via een formulier met `Opslaan` en `Opslaan + opnieuw`.
 - Excel-export met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs.
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
-- Uitgebreide documentatie in `DOCUMENTATIE.md` en een Word-compatibele export in `DOCUMENTATIE-WORD.doc`.
-- Functioneel ontwerp met wireframes en Nielsen-heuristieken in `FO-BLIKJESREGISTRATIE.md`.
-- Word-compatibele versie van het functioneel ontwerp in `FO-BLIKJESREGISTRATIE.doc`.
-- Technisch ontwerp met OOP-architectuur en databasespecificatie in `TO-BLIKJESREGISTRATIE.md`.
-- Word-compatibele versie van het technisch ontwerp in `TO-BLIKJESREGISTRATIE.doc`.
+- Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en een Word-compatibele export in [`docs/DOCUMENTATIE-WORD.doc`](./docs/DOCUMENTATIE-WORD.doc).
+- Functioneel ontwerp met wireframes en Nielsen-heuristieken in [`docs/FO-BLIKJESREGISTRATIE.md`](./docs/FO-BLIKJESREGISTRATIE.md).
+- Word-compatibele versie van het functioneel ontwerp in [`docs/FO-BLIKJESREGISTRATIE.doc`](./docs/FO-BLIKJESREGISTRATIE.doc).
+- Technisch ontwerp met OOP-architectuur en databasespecificatie in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md).
+- Word-compatibele versie van het technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.doc`](./docs/TO-BLIKJESREGISTRATIE.doc).
 
 De Excel-export gebruikt SheetJS via CDN; daarvoor is een internetverbinding nodig wanneer de pagina voor het eerst wordt geopend.

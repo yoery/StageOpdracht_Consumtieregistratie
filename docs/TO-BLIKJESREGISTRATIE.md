@@ -392,7 +392,7 @@ Bij nieuwe code moet de verdeling hetzelfde blijven:
 - regels in `RegistrationModel`;
 - HTML-weergave in `RegistrationView`;
 - acties in `RegistrationApp`;
-- vormgeving in `styles.css`;
+- vormgeving in `assets/styles.css`;
 - vaste paginaopbouw in `index.html`.
 
 De belangrijkste volgende stap is een backend met een gedeelde database, echte login, autorisatie, auditlog en back-ups.
