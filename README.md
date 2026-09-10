@@ -36,6 +36,7 @@ tests/                  # Unit tests
 - Functioneel ontwerp met wireframes en Nielsen-heuristieken in [`docs/FO-BLIKJESREGISTRATIE.md`](./docs/FO-BLIKJESREGISTRATIE.md).
 - Word-compatibele versie van het functioneel ontwerp in [`docs/FO-BLIKJESREGISTRATIE.doc`](./docs/FO-BLIKJESREGISTRATIE.doc).
 - Technisch ontwerp met OOP-architectuur en databasespecificatie in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md).
+- Productiegericht PostgreSQL-schema in [`docs/DATABASE-SCHEMA.sql`](./docs/DATABASE-SCHEMA.sql).
 - Word-compatibele versie van het technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.doc`](./docs/TO-BLIKJESREGISTRATIE.doc).
 
 De Excel-export gebruikt SheetJS via CDN; daarvoor is een internetverbinding nodig wanneer de pagina voor het eerst wordt geopend.
