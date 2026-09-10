@@ -1,8 +1,8 @@
-# Documentatie Blikjesregistratie
+# Documentatie Consumptieregistratie
 
 ## 1. Doel van de applicatie
 
-Blikjesregistratie is een eenvoudige website waarmee medewerkers producten kunnen registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Iedere klik op een product maakt één registratie aan. Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.
+Consumptieregistratie is een eenvoudige website waarmee medewerkers eten en drinken kunnen registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Iedere klik op een product maakt één registratie aan. Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.
 
 Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localStorage` van de gebruikte browser. Daardoor zijn de gegevens op één computer/browser beschikbaar, maar nog niet gedeeld tussen alle gebruikers van een bedrijfsnetwerk.
 
@@ -13,6 +13,9 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
 | `assets/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
 | `assets/js/app.js` | De interactieve werking, berekeningen, opslag en Excel-export |
+| `employerName` | De bedrijfsnaam waarmee medewerkers in de openbare lijst worden gegroepeerd en gefilterd |
+
+Bij het toevoegen of wijzigen van een medewerker kan de beheerder een bedrijfsnaam typen of een bestaande bedrijfsnaam uit de compacte keuzelijst kiezen. De lijst filtert direct tijdens het typen. Nieuwe bedrijfsnamen mogen ook direct worden ingevoerd. Op de homepage werkt het bedrijfsfilter op dezelfde manier.
 | `README.md` | Korte startinformatie voor het project |
 | `docs/` | Functioneel ontwerp, technisch ontwerp en overige documentatie |
 | `tests/` | Unit tests voor de belangrijkste reken- en registratiefuncties |

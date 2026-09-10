@@ -244,6 +244,108 @@ main {
   color:#99a8aa;
   white-space:nowrap
 }
+.company-filter {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 15px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:600
+}
+.company-combobox {
+  position:relative;
+  display:flex;
+  flex:1;
+  min-height:38px;
+  background:#fff
+}
+.company-combobox input {
+  width:100%;
+  flex:1;
+  min-width:0;
+  min-height:38px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 48px 0 10px !important;
+  color:var(--ink);
+  background:#fff;
+  outline:none
+}
+.company-combobox:focus-within {
+  border-color:transparent
+}
+.company-combobox:focus-within input {
+  border-color:var(--green)
+}
+.company-combobox-toggle {
+  position:absolute;
+  right:4px;
+  top:4px;
+  width:30px;
+  height:10px;
+  margin:0;
+  border-radius:8px;
+  background:#fff !important;
+  color:var(--muted);
+  font-size:25px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  opacity:1;
+  z-index:2;
+  box-shadow:none
+}
+.company-combobox-toggle:hover,
+.company-combobox-toggle:focus-visible {
+  border-color:var(--green) !important;
+  background:#fff !important;
+  color:var(--green-dark)
+}
+.company-options {
+  position:absolute;
+  top:calc(100% - 1px);
+  left:0;
+  right:0;
+  z-index:10;
+  display:grid;
+  max-height:140px;
+  overflow:auto;
+  padding:7px 3px 3px;
+  border:1px solid;
+  border-radius:0px 0px 8px 8px;
+  background:#fff;
+  box-shadow:var(--shadow)
+}
+.company-options button {
+  min-height:30px;
+  padding:5px 8px;
+  border-radius:5px;
+  background:#fff;
+  color:var(--ink);
+  text-align:left;
+  font-size:12px
+}
+.company-options button:hover,
+.company-options button:focus-visible {
+  background:var(--mint)
+}
+.form-company-combobox {
+  min-width:0
+}
+.company-group {
+  margin-top:18px
+}
+.company-group:first-child {
+  margin-top:0
+}
+.company-group h3 {
+  margin:0 0 8px;
+  color:var(--green-dark);
+  font:600 15px "Space Grotesk"
+}
 /* Medewerkerregels, avatars en registratieknoppen. */
 .employee-list {
   display:grid;
@@ -836,13 +938,6 @@ footer {
 .correction-product-row > span {
   font-size:12px
 }
-.correction-product-row > span strong {
-  display:inline-block;
-  min-width:24px;
-  margin-left:8px;
-  text-align:center;
-  color:var(--green-dark)
-}
 .correction-button {
   width:30px;
   height:30px;
@@ -857,6 +952,43 @@ footer {
 .correction-minus {
   background:#fbeaea;
   color:#b54d4d
+}
+.correction-amount {
+  min-width:24px;
+  text-align:center;
+  transform:translateY(2px);
+  color:var(--green-dark)
+}
+#productsTab > .primary-button {
+  margin-bottom:14px
+}
+/* Tabletlayout: de koelkasttablet gebruikt grotere aanraakvlakken en één kolom. */
+@media (min-width:721px) and (max-width:900px) {
+  main {
+    padding:0 20px
+  }
+  .content-grid {
+    grid-template-columns:1fr
+  }
+  .summary-column {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+  }
+  .tip-card {
+    grid-column:auto
+  }
+  .employee-row {
+    min-height:58px;
+    padding:10px 14px
+  }
+  .company-filter select,
+  .search-box {
+    min-height:48px
+  }
+  .modal {
+    width:min(760px,calc(100vw - 32px));
+    max-height:calc(100vh - 32px)
+  }
 }
 /* Mobiele layout: onderdelen stapelen op smalle schermen. */
 @media(max-width:720px) {
@@ -896,6 +1028,9 @@ footer {
   }
   .modal {
     padding:25px 18px
+  }
+  .employee-row {
+    min-height:58px
   }
   .employee-form-modal .employee-fields {
     grid-template-columns:1fr

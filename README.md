@@ -1,6 +1,6 @@
-# StageOpdracht_consumpieregistratie
+# Consumptieregistratie TVB
 
-Een interactieve front-end voor het registreren van blikjes binnen de organisatie.
+Een interactieve front-end voor het registreren van eten en drinken binnen de organisatie.
 
 ## Starten
 
@@ -21,6 +21,7 @@ tests/                  # Unit tests
 ## Inbegrepen
 
 - Medewerkerlijst met zoeken en een persoonlijk productvenster waarin meerdere producten met plusknoppen kunnen worden gekozen en daarna tegelijk geregistreerd.
+- Medewerkers kunnen aan een bedrijfsnaam en werkgevernummer worden gekoppeld, per bedrijf worden gegroepeerd en gefilterd.
 - Automatische datum/tijd en lokale opslag via `localStorage`.
 - Admin-demo via de knop rechtsboven (elk ingevuld wachtwoord werkt).
 - Admin-overzicht met medewerker- en maandfilters.

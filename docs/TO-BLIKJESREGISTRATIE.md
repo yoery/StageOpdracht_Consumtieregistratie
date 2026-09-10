@@ -136,6 +136,7 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `Actief` | Boolean | Geeft aan of de medewerker nog actief is |
 | `Looncode` | Tekst | Looncode voor de Excel-export |
 | `Personeelsnummer` | Tekst | Nummer van de medewerker |
+| `Bedrijfsnaam` | Tekst | Naam van het bedrijf waar de medewerker werkt |
 | `Werkgevernummer` | Tekst | Nummer van de werkgever |
 
 ### Tabel Registraties
