@@ -84,7 +84,14 @@ class RegistrationModel {
   // Het model gebruikt de opslaglaag en start met opgeslagen of voorbeeldgegevens.
   constructor(store) {
     this.store = store;
-    this.state = store.load() || this.createSeedState();
+    const loadedState = store.load();
+    this.state = loadedState ? {
+      ...loadedState,
+      registrations: (loadedState.registrations || []).map((registration) => ({
+        ...registration,
+        productId: { melk: "glas-melk", brood: "sneetje-brood" }[registration.productId] || registration.productId
+      }))
+    } : this.createSeedState();
   }
 
   // Maakt de eerste demo-status met voorbeeldmedewerkers zonder registraties.
