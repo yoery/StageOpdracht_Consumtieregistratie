@@ -4,8 +4,8 @@
   <!-- Metadata bepaalt de taal, tekenset, schaal op mobiel en browserinformatie. -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Blikjesregistratie voor medewerkers en administratie.">
-  <title>Blikjesregistratie | TVB</title>
+  <meta name="description" content="Consumptieregistratie voor medewerkers en administratie.">
+  <title>Consumptieregistratie | TVB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -18,10 +18,10 @@
   <div class="app-shell">
     <!-- Header met merknaam, systeemstatus en toegang tot de beheeromgeving. -->
     <header class="topbar">
-      <a class="brand" href="#" aria-label="TVB blikjesregistratie home">
+      <a class="brand" href="#" aria-label="TVB consumptieregistratie home">
         <span class="brand-mark" aria-hidden="true">TVB</span>
         <span>
-          <strong>Blikjesregistratie</strong>
+          <strong>Consumptieregistratie</strong>
           <small>Technische Verenigde Bedrijven</small>
         </span>
       </a>
@@ -39,8 +39,8 @@
       <section class="hero">
         <div>
           <p class="eyebrow">Vandaag · <span id="todayLabel"></span></p>
-          <h1>Wie heeft er vandaag<br><em>een blikje gepakt?</em></h1>
-          <p class="hero-copy">Registreer je blikje snel. Zo houden we samen zicht op ons verbruik.</p>
+          <h1>Wat heb je vandaag<br><em>gegeten of gedronken?</em></h1>
+          <p class="hero-copy">Registreer je consumptie snel. Zo houden we samen zicht op eten en drinken binnen de organisatie.</p>
         </div>
         <div class="hero-shape" aria-hidden="true">
           <span>♻</span>
@@ -64,6 +64,14 @@
             <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
             <kbd>⌘ K</kbd>
           </label>
+          <label class="company-filter">
+            <span>Bedrijf</span>
+            <div class="company-combobox">
+              <input id="employeeCompanyFilter" placeholder="Alle bedrijven" autocomplete="off" aria-label="Filter medewerkers op bedrijf">
+              <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen">⌄</button>
+              <div class="company-options hidden" id="companyFilterOptions" role="listbox"></div>
+            </div>
+          </label>
           <!-- JavaScript plaatst hier de actuele medewerkers en plusknoppen. -->
           <div class="employee-list" id="employeeList" aria-live="polite"></div>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
@@ -79,7 +87,7 @@
           <div class="stat-card stat-green">
             <div class="stat-icon" aria-hidden="true">▣</div>
             <div>
-              <span>Vandaag gepakt</span>
+              <span>Vandaag geregistreerd</span>
               <strong id="todayTotal">0</strong>
               <small>producten</small>
             </div>
@@ -107,8 +115,8 @@
 
     <!-- Voettekst met de organisatie en een korte slogan. -->
     <footer>
-      <span>TVB · Blikjesregistratie</span>
-      <span>Bewust drinken, samen geregeld.</span>
+      <span>TVB · Consumptieregistratie</span>
+      <span>Bewust eten en drinken, samen geregeld.</span>
     </footer>
   </div>
 
@@ -255,6 +263,11 @@
         <input id="newEmployeeLastName" placeholder="Achternaam" required>
         <input id="newEmployeePayrollCode" placeholder="Looncode">
         <input id="newEmployeePersonnelNumber" placeholder="Personeelsnummer">
+        <div class="company-combobox form-company-combobox">
+          <input id="newEmployeeEmployerName" placeholder="Bedrijfsnaam" autocomplete="organization">
+          <button type="button" class="company-combobox-toggle" data-toggle-company-form aria-label="Bestaande bedrijven openen">⌄</button>
+          <div class="company-options hidden" id="companyFormOptions" role="listbox"></div>
+        </div>
         <input id="newEmployeeEmployerNumber" placeholder="Werkgevernummer">
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-employee-modal>Annuleren</button>

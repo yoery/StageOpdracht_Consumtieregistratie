@@ -1,6 +1,6 @@
-# StageOpdracht_consumpieregistratie
+# Consumptieregistratie TVB
 
-Een interactieve front-end voor het registreren van blikjes binnen de organisatie.
+Een interactieve front-end voor het registreren van eten en drinken binnen de organisatie.
 
 ## Starten
 
@@ -21,6 +21,7 @@ tests/                  # Unit tests
 ## Inbegrepen
 
 - Medewerkerlijst met zoeken en een persoonlijk productvenster waarin meerdere producten met plusknoppen kunnen worden gekozen en daarna tegelijk geregistreerd.
+- Medewerkers kunnen aan een bedrijfsnaam en werkgevernummer worden gekoppeld, per bedrijf worden gegroepeerd en gefilterd.
 - Automatische datum/tijd en lokale opslag via `localStorage`.
 - Admin-demo via de knop rechtsboven (elk ingevuld wachtwoord werkt).
 - Admin-overzicht met medewerker- en maandfilters.
@@ -35,6 +36,7 @@ tests/                  # Unit tests
 - Functioneel ontwerp met wireframes en Nielsen-heuristieken in [`docs/FO-BLIKJESREGISTRATIE.md`](./docs/FO-BLIKJESREGISTRATIE.md).
 - Word-compatibele versie van het functioneel ontwerp in [`docs/FO-BLIKJESREGISTRATIE.doc`](./docs/FO-BLIKJESREGISTRATIE.doc).
 - Technisch ontwerp met OOP-architectuur en databasespecificatie in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md).
+- Productiegericht PostgreSQL-schema in [`docs/DATABASE-SCHEMA.sql`](./docs/DATABASE-SCHEMA.sql).
 - Word-compatibele versie van het technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.doc`](./docs/TO-BLIKJESREGISTRATIE.doc).
 
 De Excel-export gebruikt SheetJS via CDN; daarvoor is een internetverbinding nodig wanneer de pagina voor het eerst wordt geopend.

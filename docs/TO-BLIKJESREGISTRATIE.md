@@ -2,7 +2,7 @@
 
 **Versie:** 2.0
 **Datum:** 7 september 2026
-**Status:** demo van de website
+**Status:** frontend-demo met productieschema voor PostgreSQL
 
 ## 1. Inleiding
 
@@ -26,7 +26,7 @@ In deze demo zitten de volgende onderdelen:
 - gegevens exporteren naar Excel;
 - gegevens opslaan in de browser met `localStorage`.
 
-De demo heeft nog geen echte database of echte beveiligde login. Dit kan later worden toegevoegd.
+De demo heeft nog geen echte database of echte beveiligde login. Het volledige referentieschema voor productie staat in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHEMA.sql). De backend/API moet de browseropslag vervangen en beheerders moeten met gehashte wachtwoorden worden opgeslagen.
 
 ### Verwijzing naar het functioneel ontwerp
 
@@ -136,6 +136,7 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `Actief` | Boolean | Geeft aan of de medewerker nog actief is |
 | `Looncode` | Tekst | Looncode voor de Excel-export |
 | `Personeelsnummer` | Tekst | Nummer van de medewerker |
+| `Bedrijfsnaam` | Tekst | Naam van het bedrijf waar de medewerker werkt |
 | `Werkgevernummer` | Tekst | Nummer van de werkgever |
 
 ### Tabel Registraties
@@ -147,6 +148,22 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `DatumTijd` | DateTime | Datum en tijd van de registratie |
 | `Aantal` | Integer | Aantal blikjes, standaard `1` |
 | `ProductID` | Integer of UUID | Geregistreerd product |
+
+### Productieschema
+
+Het volledige PostgreSQL-schema staat in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHEMA.sql). Het schema bevat:
+
+- `companies` voor bedrijven en werkgeversnummers;
+- `employees` voor actieve en inactieve medewerkers;
+- `products` voor producten en prijzen;
+- `admins` voor beheerders en rollen;
+- `registrations` voor iedere consumptieregistratie met datum, tijd en aantal;
+- `audit_log` voor administratieve wijzigingen;
+- `monthly_employee_consumption` als databaseview voor maandtotalen.
+
+Registraties worden niet fysiek verwijderd bij normale correcties. Een correctie verwijdert alleen de betreffende registratie via de backend en schrijft altijd een regel naar `audit_log`. Medewerkers, bedrijven en producten worden bij voorkeur gedeactiveerd in plaats van verwijderd, zodat historische gegevens behouden blijven.
+
+Gebruik voor `password_hash` een sterk wachtwoordalgoritme zoals Argon2id of bcrypt. Sla nooit een wachtwoord zelf op. Gebruik in de backend parameterized queries, transacties rond correcties en een databasegebruiker met alleen de benodigde rechten.
 
 ### Tabel Producten
 

@@ -55,6 +55,7 @@ class DataStore {
           lastName: employee.lastName || nameParts.slice(-1)[0] || "",
           payrollCode: employee.payrollCode || "",
           personnelNumber: employee.personnelNumber || "",
+          employerName: employee.employerName || "",
           employerNumber: employee.employerNumber || "",
           active: employee.active !== false,
           color: employee.color || COLORS[index % COLORS.length]
@@ -99,7 +100,7 @@ class RegistrationModel {
     return {
       employees: SEED_EMPLOYEES.map((name, index) => {
         const parts = name.split(" ");
-        return { id: crypto.randomUUID(), name, firstName: parts[0], lastName: parts.slice(1).join(" "), payrollCode: "", personnelNumber: "", employerNumber: "", active: true, color: COLORS[index % COLORS.length] };
+        return { id: crypto.randomUUID(), name, firstName: parts[0], lastName: parts.slice(1).join(" "), payrollCode: "", personnelNumber: "", employerName: "", employerNumber: "", active: true, color: COLORS[index % COLORS.length] };
       }),
       registrations: [],
       products: DEFAULT_PRODUCTS.map((product) => ({ ...product })),
@@ -251,10 +252,34 @@ class RegistrationView {
   // Rendert de publieke medewerkerlijst op basis van de zoekterm.
   renderEmployees() {
     const query = this.$("#employeeSearch").value.toLowerCase().trim();
-    const employees = this.model.employees.filter(({ name, active }) => active && name.toLowerCase().includes(query));
+    const companyFilter = this.$("#employeeCompanyFilter").dataset.value || "all";
+    const employees = this.model.employees.filter(({ name, active, employerName, employerNumber }) => {
+      const company = employerName || employerNumber || "unknown";
+      return active && name.toLowerCase().includes(query) && (companyFilter === "all" || company.toLowerCase().includes(companyFilter.toLowerCase()));
+    });
     this.$("#employeeCount").textContent = `${employees.length} totaal`;
     this.$("#emptyState").classList.toggle("hidden", employees.length > 0);
-    this.$("#employeeList").innerHTML = employees.map((employee) => `<div class="employee-row employee-row-clickable" data-open-employee="${employee.id}" tabindex="0" role="button" aria-label="Product kiezen voor ${this.escapeHtml(employee.name)}"><div class="employee-info"><span class="person-avatar" style="background:${employee.color}">${this.initials(employee.name)}</span><div><div class="employee-name">${this.escapeHtml(employee.name)}</div><div class="employee-total">Klik om een product te kiezen</div></div></div></div>`).join("");
+    const groups = employees.reduce((grouped, employee) => {
+      const company = employee.employerName || employee.employerNumber || "Onbekend bedrijf";
+      const key = employee.employerName || employee.employerNumber || "unknown";
+      grouped[key] = grouped[key] || { company, employees: [] };
+      grouped[key].employees.push(employee);
+      return grouped;
+    }, {});
+    this.$("#employeeList").innerHTML = Object.values(groups).map(({ company, employees: companyEmployees }) => `<section class="company-group"><h3>${this.escapeHtml(company)}</h3>${companyEmployees.map((employee) => `<div class="employee-row employee-row-clickable" data-open-employee="${employee.id}" tabindex="0" role="button" aria-label="Product kiezen voor ${this.escapeHtml(employee.name)}"><div class="employee-info"><span class="person-avatar" style="background:${employee.color}">${this.initials(employee.name)}</span><div><div class="employee-name">${this.escapeHtml(employee.name)}</div><div class="employee-total">Klik om een product te kiezen</div></div></div></div>`).join("")}</section>`).join("");
+  }
+
+  // Vult de bedrijfsfilter met de werkgevers die bij medewerkers zijn ingevuld.
+  populateCompanyFilter() {
+    const filter = this.$("#employeeCompanyFilter");
+    const selected = filter.dataset.value || "all";
+    const companies = [...new Set(this.model.employees.map(({ employerName, employerNumber }) => employerName || employerNumber).filter(Boolean))].sort((a, b) => a.localeCompare(b, "nl"));
+    const selectedValue = companies.includes(selected) || selected === "unknown" ? selected : "all";
+    filter.dataset.value = selectedValue;
+    filter.value = selectedValue === "all" ? "" : selectedValue === "unknown" ? "Onbekend bedrijf" : selectedValue;
+    const options = [`<button type="button" data-company-value="all">Alle bedrijven</button>`, ...companies.map((company) => `<button type="button" data-company-value="${this.escapeHtml(company)}">${this.escapeHtml(company)}</button>`), `<button type="button" data-company-value="unknown">Onbekend bedrijf</button>`].join("");
+    this.$("#companyFilterOptions").innerHTML = options;
+    this.$("#companyFormOptions").innerHTML = companies.map((company) => `<button type="button" data-company-form-value="${this.escapeHtml(company)}">${this.escapeHtml(company)}</button>`).join("");
   }
 
   // Werkt de kaarten met dag- en maandtotalen bij.
@@ -283,7 +308,7 @@ class RegistrationView {
     this.$("#adminCorrectionList").innerHTML = employees.map((employee) => {
       const products = this.model.products.map(({ id, name }) => {
         const count = this.model.registrations.filter((registration) => registration.employeeId === employee.id && registration.productId === id).length;
-        return `<div class="correction-product-row"><span>${this.escapeHtml(name)} <strong>${count}</strong></span><div class="correction-actions"><button class="correction-button correction-minus" data-correction-minus="${employee.id}" data-correction-product="${id}" title="${this.escapeHtml(name)} verminderen">−</button><button class="correction-button correction-plus" data-correction-plus="${employee.id}" data-correction-product="${id}" title="${this.escapeHtml(name)} toevoegen">+</button></div></div>`;
+        return `<div class="correction-product-row"><span>${this.escapeHtml(name)}</span><div class="correction-actions"><button class="correction-button correction-minus" data-correction-minus="${employee.id}" data-correction-product="${id}" title="${this.escapeHtml(name)} verminderen">−</button><strong class="correction-amount">${count}</strong><button class="correction-button correction-plus" data-correction-plus="${employee.id}" data-correction-product="${id}" title="${this.escapeHtml(name)} toevoegen">+</button></div></div>`;
       }).join("");
       return `<details class="admin-correction-item" data-correction-employee="${employee.id}"${employee.id === openEmployee ? " open" : ""}><summary><strong>${this.escapeHtml(employee.name)}</strong><span class="correction-count">${this.model.countForEmployee(employee.id)} producten · € ${this.model.totalCostForEmployee(employee.id).toFixed(2).replace(".", ",")}</span></summary><div class="correction-product-list">${products}</div></details>`;
     }).join("") || `<p class="muted">Geen medewerker gevonden.</p>`;
@@ -326,7 +351,7 @@ class RegistrationView {
 
   // Toont de producten die de beheerder kan onderhouden.
   renderAdminProducts() {
-    this.$("#adminProductList").innerHTML = this.model.products.map((product) => `<div class="admin-employee-item"><span><strong>${this.escapeHtml(product.name)}</strong><small>€ ${product.price.toFixed(2).replace(".", ",")}</small></span><button class="table-action" data-edit-product="${product.id}">Wijzigen</button><button class="table-action" data-remove-product="${product.id}">Verwijderen</button></div>`).join("");
+    this.$("#adminProductList").innerHTML = this.model.products.map((product) => `<div class="admin-employee-item"><span><strong>${this.escapeHtml(product.name)}</strong><small>€ ${product.price.toFixed(2).replace(".", ",")}</small></span><div class="admin-item-actions"><button class="table-action" data-edit-product="${product.id}">Wijzigen</button><button class="table-action danger-action" data-remove-product="${product.id}">Verwijderen</button></div></div>`).join("");
   }
 
   // Toont het logboek met wijzigingen van de beheerder.
@@ -340,6 +365,7 @@ class RegistrationView {
   // Ververst de vaste onderdelen van de publieke pagina tegelijk.
   renderAll() {
     this.renderProductSelect();
+    this.populateCompanyFilter();
     this.renderEmployees();
     this.renderStats();
   }
@@ -490,7 +516,6 @@ class RegistrationApp {
         return;
       }
       const productName = this.model.productName(productId);
-      if (!window.confirm(`Weet je zeker dat je één registratie van ${productName} wilt verwijderen?`)) return;
       if (this.persist(() => this.model.removeLastRegistration(employeeId, productId))) {
         this.model.logAdminAction("Registratie verwijderd", `${productName} van medewerker ${employeeId}`);
         this.model.save();
@@ -532,6 +557,7 @@ class RegistrationApp {
       this.view.$("#newEmployeeLastName").value = employee.lastName;
       this.view.$("#newEmployeePayrollCode").value = employee.payrollCode;
       this.view.$("#newEmployeePersonnelNumber").value = employee.personnelNumber;
+      this.view.$("#newEmployeeEmployerName").value = employee.employerName;
       this.view.$("#newEmployeeEmployerNumber").value = employee.employerNumber;
       this.view.$("#employeeFormModal").classList.remove("hidden");
       this.view.showToast("Gegevens geladen om te wijzigen");
@@ -578,6 +604,47 @@ class RegistrationApp {
     this.view.$("#filterMonth").addEventListener("change", () => this.view.renderAdmin());
     this.view.$("#exportButton").addEventListener("click", () => this.exportExcel());
     this.view.$("#employeeSearch").addEventListener("input", () => this.view.renderEmployees());
+    this.view.$("#employeeCompanyFilter").addEventListener("input", () => {
+      const input = this.view.$("#employeeCompanyFilter");
+      delete input.dataset.value;
+      this.filterCompanyOptions("#companyFilterOptions", input.value);
+      this.view.$("#companyFilterOptions").classList.remove("hidden");
+      this.view.renderEmployees();
+    });
+    this.view.$("#newEmployeeEmployerName").addEventListener("input", () => {
+      const input = this.view.$("#newEmployeeEmployerName");
+      this.filterCompanyOptions("#companyFormOptions", input.value);
+      this.view.$("#companyFormOptions").classList.remove("hidden");
+    });
+    document.addEventListener("click", (event) => {
+      const filterOption = event.target.closest("[data-company-value]");
+      if (filterOption) {
+        const filter = this.view.$("#employeeCompanyFilter");
+        filter.dataset.value = filterOption.dataset.companyValue;
+        filter.value = filterOption.textContent;
+        this.view.$("#companyFilterOptions").classList.add("hidden");
+        this.view.renderEmployees();
+        return;
+      }
+
+      const formOption = event.target.closest("[data-company-form-value]");
+      if (formOption) {
+        this.view.$("#newEmployeeEmployerName").value = formOption.dataset.companyFormValue;
+        this.view.$("#companyFormOptions").classList.add("hidden");
+        return;
+      }
+      if (!event.target.closest(".company-combobox")) document.querySelectorAll(".company-options").forEach((options) => options.classList.add("hidden"));
+    });
+    const toggleCompanyDropdown = (comboboxSelector, optionsSelector) => {
+      const combobox = document.querySelector(comboboxSelector);
+      const options = this.view.$(optionsSelector);
+      combobox.addEventListener("click", (event) => {
+        if (event.target.closest(".company-options")) return;
+        options.classList.toggle("hidden");
+      });
+    };
+    toggleCompanyDropdown(".company-filter .company-combobox", "#companyFilterOptions");
+    toggleCompanyDropdown(".form-company-combobox", "#companyFormOptions");
     this.view.$("#adminEmployeeSearch").addEventListener("input", () => this.view.renderCorrectionEmployees());
     this.view.$("#employeeManagementSearch").addEventListener("input", () => this.view.renderAdminEmployees());
     this.view.$("#addEmployeeButton").addEventListener("click", () => this.openEmployeeForm());
@@ -594,10 +661,19 @@ class RegistrationApp {
     document.addEventListener("keydown", (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); this.view.$("#employeeSearch").focus(); } });
   }
 
+  // Filtert de compacte bedrijfskeuzelijst terwijl de gebruiker typt.
+  filterCompanyOptions(selector, query) {
+    const normalizedQuery = query.toLowerCase().trim();
+    this.view.$(selector).querySelectorAll("button").forEach((option) => {
+      option.classList.toggle("hidden", Boolean(normalizedQuery) && !option.textContent.toLowerCase().includes(normalizedQuery));
+    });
+  }
+
   // Opent een leeg formulier voor het snel toevoegen van een medewerker.
   openEmployeeForm() {
     const form = this.view.$("#employeeForm");
     form.reset();
+    this.view.populateCompanyFilter();
     delete form.dataset.editingId;
     this.view.$("#employeeFormTitle").textContent = "Medewerker toevoegen";
     this.view.$("#employeeFormHelp").textContent = "Vul de gegevens in en kies daarna hoe je verder wilt gaan.";
@@ -641,6 +717,7 @@ class RegistrationApp {
       lastName: this.view.$("#newEmployeeLastName").value.trim(),
       payrollCode: this.view.$("#newEmployeePayrollCode").value.trim(),
       personnelNumber: this.view.$("#newEmployeePersonnelNumber").value.trim(),
+      employerName: this.view.$("#newEmployeeEmployerName").value.trim(),
       employerNumber: this.view.$("#newEmployeeEmployerNumber").value.trim()
     };
     if (!employeeData.firstName || !employeeData.lastName) return;

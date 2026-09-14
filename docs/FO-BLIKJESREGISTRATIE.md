@@ -111,6 +111,7 @@ Een beheerder kan:
 | FR-27 | Het systeem houdt een logboek bij van administratieve wijzigingen. |
 | FR-28 | De Excel-export gebruikt de kolomvolgorde Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. |
 | FR-29 | Medewerkers zien geen persoonlijk aantal of persoonlijk totaalbedrag. |
+| FR-30 | Het systeem groepeert medewerkers per bedrijf en biedt een filter om één bedrijf te bekijken. |
 | FR-30 | Een medewerker kan op de eigen medewerkerkaart klikken en een product kiezen. |
 
 ## 6. Niet-functionele eisen (NFR)
