@@ -551,6 +551,7 @@ class RegistrationApp {
     if (editButton) {
       const employee = this.model.findEmployee(editButton.dataset.editEmployee);
       this.view.$("#employeeForm").dataset.editingId = employee.id;
+      this.view.$("#employeeSaveContinueButton").classList.add("hidden");
       this.view.$("#employeeFormTitle").textContent = "Medewerker wijzigen";
       this.view.$("#employeeFormHelp").textContent = "Pas de gegevens aan en klik daarna op Opslaan.";
       this.view.$("#newEmployeeFirstName").value = employee.firstName;
@@ -588,6 +589,8 @@ class RegistrationApp {
       this.view.$("#productFormTitle").textContent = "Product wijzigen";
       this.view.$("#productFormHelp").textContent = "Pas de productnaam of prijs aan.";
       this.view.$("#productFormModal").classList.remove("hidden");
+      this.view.$("#consumptionSaveContinueButton").classList.add("hidden");
+
     }
   }
 
@@ -675,6 +678,7 @@ class RegistrationApp {
     form.reset();
     this.view.populateCompanyFilter();
     delete form.dataset.editingId;
+    this.view.$("#employeeSaveContinueButton").classList.remove("hidden");
     this.view.$("#employeeFormTitle").textContent = "Medewerker toevoegen";
     this.view.$("#employeeFormHelp").textContent = "Vul de gegevens in en kies daarna hoe je verder wilt gaan.";
     this.view.$("#employeeFormModal").classList.remove("hidden");
@@ -691,6 +695,7 @@ class RegistrationApp {
     const form = this.view.$("#productForm");
     form.reset();
     delete form.dataset.editingId;
+    this.view.$("#consumptionSaveContinueButton").classList.remove("hidden");
     this.view.$("#productFormTitle").textContent = "Product toevoegen";
     this.view.$("#productFormHelp").textContent = "Vul de productnaam en prijs in.";
     this.view.$("#productFormModal").classList.remove("hidden");
