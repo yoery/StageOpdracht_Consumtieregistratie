@@ -231,7 +231,7 @@
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-product-modal>Annuleren</button>
           <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
-          <button class="primary-button" type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
+          <button class="primary-button" id="consumptionSaveContinueButton"type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
         </div>
       </form>
     </div>
@@ -261,18 +261,18 @@
       <form class="add-employee-form employee-fields" id="employeeForm">
         <input id="newEmployeeFirstName" placeholder="Voornaam" required>
         <input id="newEmployeeLastName" placeholder="Achternaam" required>
-        <input id="newEmployeePayrollCode" placeholder="Looncode">
-        <input id="newEmployeePersonnelNumber" placeholder="Personeelsnummer">
+        <input id="newEmployeePayrollCode" type="number" placeholder="Looncode" required>
+        <input id="newEmployeePersonnelNumber" type="number" placeholder="Personeelsnummer" required>
         <div class="company-combobox form-company-combobox">
-          <input id="newEmployeeEmployerName" placeholder="Bedrijfsnaam" autocomplete="organization">
+          <input id="newEmployeeEmployerName" placeholder="Bedrijfsnaam" required autocomplete="organization">
           <button type="button" class="company-combobox-toggle" data-toggle-company-form aria-label="Bestaande bedrijven openen">⌄</button>
           <div class="company-options hidden" id="companyFormOptions" role="listbox"></div>
         </div>
-        <input id="newEmployeeEmployerNumber" placeholder="Werkgevernummer">
+        <input id="newEmployeeEmployerNumber" type="number" placeholder="Werkgevernummer" required>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-employee-modal>Annuleren</button>
           <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
-          <button class="primary-button" type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
+          <button class="primary-button" id="employeeSaveContinueButton" type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
         </div>
       </form>
     </div>
