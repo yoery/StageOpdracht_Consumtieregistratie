@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const {
   RegistrationModel,
   DEFAULT_PRODUCTS
-} = require("../assets/js/app.js");
+} = require("../assets/js/RegistrationModel.js");
 
 const createStore = (state = null) => ({
   load: () => state,
