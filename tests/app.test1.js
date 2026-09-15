@@ -1,10 +1,11 @@
-import { RegistrationModel }
-from "../assets/js/RegistrationModel.js";
-import { DEFAULT_PRODUCTS }
-from "../assets/js/config.js";
+import test from "node:test";
 
-const test = import("node:test");
-const assert = import("node:assert/strict");
+import assert from "node:assert/strict";
+
+
+import { RegistrationModel } from "../assets/js/RegistrationModel.js";
+
+import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 
 const createStore = (state = null) => ({
   load: () => state,
