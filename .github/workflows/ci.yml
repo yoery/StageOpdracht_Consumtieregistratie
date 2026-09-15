@@ -10,11 +10,19 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Node.js instellen
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Controleer Node versie
+        run: |
+          node -v
+          npm -v
+
       - name: Unit tests uitvoeren
         run: npm test
