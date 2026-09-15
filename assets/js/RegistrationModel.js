@@ -304,3 +304,7 @@ export class RegistrationModel {
     ).padStart(2, "0")}`;
   }
 }
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { RegistrationModel };
+}

@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Unit tests voor de TVB consumptieregistratie",
+  "type": "module",
   "scripts": {
-    "test": "node --test tests/app.test1.js"
-  },
+    "test": "node --test tests/app.test1.js"  },
   "engines": {
     "node": ">=20"
   }
