@@ -27,7 +27,7 @@ const createModel = () => {
     active: true,
     color: "#d8f1e8"
   }];
-
+ 
   model.state.registrations = [];
   model.state.products = DEFAULT_PRODUCTS.map(p => ({ ...p }));
   model.state.auditLog = [];
