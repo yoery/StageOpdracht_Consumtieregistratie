@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from "./config.js";
+import {STORAGE_KEY,DEFAULT_PRODUCTS} from "./config.js";
 import { DataStore } from "./DataStore.js";
 import { RegistrationModel } from "./RegistrationModel.js";
 import { RegistrationView } from "./RegistrationView.js";
