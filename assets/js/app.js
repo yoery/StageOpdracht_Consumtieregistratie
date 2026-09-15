@@ -1,4 +1,4 @@
-// De sleutel en vaste waarden staan centraal zodat ze later eenvoudig vervangen kunnen worden.
+/* // De sleutel en vaste waarden staan centraal zodat ze later eenvoudig vervangen kunnen worden.
 const STORAGE_KEY = "tvb-blikjesregistratie";
 const COLORS = ["#d8f1e8", "#e3eef6", "#f8e9d9", "#e9e0f4", "#e4f0d8"];
 const SEED_EMPLOYEES = ["Lotte van Dijk", "Mark Jansen", "Sophie de Boer", "Daan Smit", "Nora Visser", "Bram Bakker", "Eva Meijer", "Tom de Groot"];
@@ -823,4 +823,4 @@ if (typeof module !== "undefined" && module.exports) {
   const model = new RegistrationModel(new DataStore(STORAGE_KEY));
   const app = new RegistrationApp(model, new RegistrationView(model));
   app.initialize();
-}
+} */
