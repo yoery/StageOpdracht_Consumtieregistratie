@@ -3,11 +3,6 @@ from "../assets/js/RegistrationModel.js";
 import { DEFAULT_PRODUCTS }
 from "../assets/js/config.js";
 
-const {
-  RegistrationModel,
-  DEFAULT_PRODUCTS
-} = require("../assets/js/main.js");
-
 
 const createStore = (state = null) => ({
   load: () => state,
