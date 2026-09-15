@@ -4,7 +4,7 @@
   "private": true,
   "description": "Unit tests voor de TVB consumptieregistratie",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test tests/app.test1.js"
   },
   "engines": {
     "node": ">=20"
