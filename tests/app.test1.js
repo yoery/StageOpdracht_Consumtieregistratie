@@ -3,8 +3,8 @@ from "../assets/js/RegistrationModel.js";
 import { DEFAULT_PRODUCTS }
 from "../assets/js/config.js";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
+const test = import("node:test");
+const assert = import("node:assert/strict");
 
 const createStore = (state = null) => ({
   load: () => state,
