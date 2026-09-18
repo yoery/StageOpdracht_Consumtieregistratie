@@ -359,7 +359,7 @@ test("saveProduct voegt nieuw product toe", () => {
 
   assert.equal(
     model.products.length,
-    before
+    before + 1
   );
 
   assert.ok(
