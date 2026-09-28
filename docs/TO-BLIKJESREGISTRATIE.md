@@ -8,7 +8,7 @@
 
 ### Doel van het systeem
 
-Met dit systeem kunnen medewerkers producten registreren, zoals blikjes en cateringproducten. De beheerder kan registraties, medewerkers en prijzen beheren en een vaste Excel-export maken.
+Met dit systeem kunnen medewerkers producten registreren, zoals blikjes en cateringproducten. De beheerder kan registraties, medewerkers en prijzen beheren en een vaste CSV-export maken voor de loonadministratie.
 
 ### Scope van het project
 
@@ -23,7 +23,7 @@ In deze demo zitten de volgende onderdelen:
 - producten en prijzen beheren;
 - wijzigingen bijhouden in een logboek;
 - registraties filteren;
-- gegevens exporteren naar Excel;
+- gegevens exporteren naar CSV (te openen in Excel);
 - gegevens opslaan in de browser met `localStorage`.
 
 De demo heeft nog geen echte database of echte beveiligde login. Het volledige referentieschema voor productie staat in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHEMA.sql). De backend/API moet de browseropslag vervangen en beheerders moeten met gehashte wachtwoorden worden opgeslagen.
@@ -47,7 +47,7 @@ DataStore
     ↓
 localStorage
     ↓
-Excel-export met SheetJS
+CSV-export
 ```
 
 ### Mogelijke productieversie
@@ -63,7 +63,7 @@ Backend en API
     ↓
 Gedeelde SQL-database
     ↓
-Excel-export
+CSV-export
 ```
 
 ### Opbouw van de JavaScript
@@ -86,7 +86,7 @@ Door deze verdeling blijft de code overzichtelijk. Later kan bijvoorbeeld `local
 - **JavaScript:** voor de werking van de website.
 - **OOP:** de JavaScript is verdeeld in classes.
 - **localStorage:** tijdelijke opslag in de browser.
-- **SheetJS:** maakt de Excel-export.
+- **CSV-export:** gemaakt met eigen JavaScript, zonder externe bibliotheek.
 
 ### Mogelijke technieken voor productie
 
@@ -134,7 +134,7 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `Voornaam` | Tekst | Voornaam van de medewerker |
 | `Achternaam` | Tekst | Achternaam van de medewerker |
 | `Actief` | Boolean | Geeft aan of de medewerker nog actief is |
-| `Looncode` | Tekst | Looncode voor de Excel-export |
+| `Looncode` | Tekst | Looncode voor de CSV-export |
 | `Personeelsnummer` | Tekst | Nummer van de medewerker |
 | `Bedrijfsnaam` | Tekst | Naam van het bedrijf waar de medewerker werkt |
 | `Werkgevernummer` | Tekst | Nummer van de werkgever |
@@ -227,7 +227,7 @@ De beheerder kan hier:
 - filteren op medewerker en maand;
 - een medewerker zoeken voor een correctie;
 - een blikje toevoegen of verwijderen;
-- Excel exporteren;
+- CSV exporteren;
 - medewerkers toevoegen;
 - medewerkers zoeken en verwijderen;
 - uitloggen.
@@ -273,27 +273,26 @@ Als opslaan niet lukt, wordt de wijziging teruggedraaid en krijgt de gebruiker e
 4. Oude registraties blijven bewaard.
 5. In het overzicht staat bij deze oude registraties `Verwijderd`.
 
-### Excel exporteren
+### CSV exporteren
 
-1. De beheerder kiest eventueel een medewerker en maand.
+1. De beheerder kiest eventueel een medewerker en consumptiemaand.
 2. De applicatie verzamelt de juiste registraties.
-3. Er wordt een tabblad met registraties gemaakt.
-4. Er wordt een tabblad met totalen gemaakt.
-5. De prijs wordt berekend met €0,69 per blikje.
-6. Het Excelbestand wordt gedownload.
+3. Per registratie wordt de loonmaand bepaald: de maand na de consumptie (`payrollPeriod`).
+4. De registraties worden per medewerker per loonmaand opgeteld, met de prijzen uit het productbeheer.
+5. Het CSV-bestand wordt gedownload (zonder totaalregel).
 
 ## 7. Interfaces
 
-### Excel
+### CSV
 
-De applicatie gebruikt SheetJS om een Excelbestand te maken. Het bestand bevat:
+De applicatie maakt zelf een CSV-bestand (`assets/js/csvExport.js`), bedoeld voor de loonadministratie:
 
-- de medewerker;
-- het aantal blikjes;
-- de prijs per blikje;
-- de datum en tijd;
-- totalen per medewerker;
-- het totaalbedrag.
+- kolommen in vaste volgorde: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal, Prijs;
+- Jaar en Maand zijn de **loonmaand**: consumpties worden verwerkt in de daaropvolgende maand (september → oktober, december → januari van het volgende jaar);
+- één regel per medewerker per loonmaand, zonder totaalregel (de loonadministratie leest iedere regel in als medewerker);
+- puntkomma als scheidingsteken en komma als decimaalteken, zodat een Nederlandse Excel het bestand direct goed opent;
+- UTF-8 met BOM, zodat letters zoals `é` goed worden getoond;
+- waarden die met `=`, `+`, `-` of `@` beginnen krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert.
 
 ### Mogelijke API
 
@@ -376,7 +375,7 @@ Week- en jaarfilters kunnen later worden toegevoegd.
 | Ongeldige invoer | De gebruiker krijgt een melding |
 | Medewerker niet gevonden | De zoeklijst toont een melding |
 | Geen registratie om te verwijderen | De gebruiker krijgt een informatiemelding |
-| SheetJS ontbreekt | De export wordt niet gestart |
+| Geen registraties voor de filters | De export wordt niet gestart en de gebruiker krijgt een melding |
 | Export mislukt | De gebruiker krijgt een foutmelding |
 | Onbevoegde actie | De actie wordt geweigerd en gelogd |
 
@@ -396,7 +395,8 @@ Week- en jaarfilters kunnen later worden toegevoegd.
 | Filter gebruiken | Alleen de gekozen gegevens verschijnen |
 | Medewerker toevoegen | De nieuwe medewerker verschijnt |
 | Medewerker verwijderen | De medewerker verdwijnt, historie blijft |
-| Excel exporteren | Een `.xlsx`-bestand wordt gedownload |
+| CSV exporteren | Een `.csv`-bestand wordt gedownload |
+| Export van september | Jaar en Maand in de export zijn oktober |
 | Modal sluiten | De modal sluit zonder uit te loggen |
 | Uitloggen | Het loginvenster verschijnt opnieuw |
 | Mobiel bekijken | De layout blijft bruikbaar |

@@ -4,8 +4,27 @@ import assert from "node:assert/strict";
 
 
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
+import { DataStore } from "../assets/js/DataStore.js";
+import { payrollPeriod, buildPayrollRows, toCsv } from "../assets/js/csvExport.js";
 
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
+
+// Node heeft geen localStorage; deze nep-versie bewaart alles in een Map.
+const fakeLocalStorage = () => {
+  const items = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => (items.has(key) ? items.get(key) : null),
+    setItem: (key, value) => items.set(key, String(value)),
+    removeItem: (key) => items.delete(key)
+  };
+};
+
+// Maakt een echte DataStore met de opgegeven opgeslagen gegevens.
+const createDataStore = (storedData) => {
+  fakeLocalStorage();
+  if (storedData) localStorage.setItem("test", JSON.stringify(storedData));
+  return new DataStore("test");
+};
 
 const createStore = (state = null) => ({
   load: () => state,
@@ -202,7 +221,7 @@ test("registraties blijven in invoervolgorde bewaard", () => {
 });
 
 test("migreert oude product-id's naar de nieuwe productnamen", () => {
-  const model = new RegistrationModel(createStore({
+  const model = new RegistrationModel(createDataStore({
     employees: [{
       id: "employee-1",
       name: "Test Medewerker",
@@ -234,7 +253,7 @@ test("migreert oude product-id's naar de nieuwe productnamen", () => {
 });
 
 test("migratie laat nieuwe product-id's ongemoeid", () => {
-  const model = new RegistrationModel(createStore({
+  const model = new RegistrationModel(createDataStore({
     employees: [{
       id: "employee-1",
       name: "Test"
@@ -253,6 +272,52 @@ test("migratie laat nieuwe product-id's ongemoeid", () => {
     model.registrations[0].productId,
     "glas-melk"
   );
+});
+
+test("gewijzigde prijs van een standaardproduct blijft bewaard na herladen", () => {
+  const store = createDataStore();
+  const model = new RegistrationModel(store);
+
+  model.saveProduct({ id: "blikje", name: "Blikje", price: "0.70" });
+  assert.equal(model.save(), true);
+
+  const reloaded = new RegistrationModel(store);
+
+  assert.equal(
+    reloaded.products.find(p => p.id === "blikje").price,
+    0.70
+  );
+});
+
+test("verwijderd standaardproduct komt niet terug na herladen", () => {
+  const store = createDataStore();
+  const model = new RegistrationModel(store);
+
+  assert.equal(model.removeProduct("yoghurt"), true);
+  model.save();
+
+  const reloaded = new RegistrationModel(store);
+
+  assert.equal(
+    reloaded.products.some(p => p.id === "yoghurt"),
+    false
+  );
+});
+
+test("oude gegevens zonder productlijst krijgen de standaardproducten", () => {
+  const model = new RegistrationModel(createDataStore({
+    employees: [],
+    registrations: []
+  }));
+
+  assert.deepEqual(model.products, DEFAULT_PRODUCTS);
+});
+
+test("beschadigde opgeslagen gegevens starten de demo opnieuw", () => {
+  fakeLocalStorage();
+  localStorage.setItem("test", "{geen geldige json");
+
+  assert.equal(new DataStore("test").load(), null);
 });
 
 test("findEmployee retourneert juiste medewerker", () => {
@@ -535,4 +600,53 @@ test("save schrijft state naar de store", () => {
     savedState.registrations.length,
     1
   );
+});
+test("loonmaand is de maand na de consumptie", () => {
+  assert.deepEqual(
+    payrollPeriod(new Date(2026, 8, 15)),
+    { year: 2026, month: 10 }
+  );
+});
+
+test("consumpties uit december gaan naar januari van het volgende jaar", () => {
+  assert.deepEqual(
+    payrollPeriod(new Date(2026, 11, 31)),
+    { year: 2027, month: 1 }
+  );
+});
+
+test("export telt per medewerker per loonmaand met prijzen", () => {
+  const model = createModel();
+
+  model.state.registrations = [
+    { id: "1", employeeId: "employee-1", productId: "blikje", createdAt: "2026-09-10T12:00:00" },
+    { id: "2", employeeId: "employee-1", productId: "boter", createdAt: "2026-09-20T12:00:00" },
+    { id: "3", employeeId: "employee-1", productId: "blikje", createdAt: "2026-10-05T12:00:00" }
+  ];
+
+  const rows = buildPayrollRows(model, "all", "2026-09");
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].Jaar, 2026);
+  assert.equal(rows[0].Maand, 10);
+  assert.equal(rows[0].Totaal, 2);
+  assert.equal(rows[0].Prijs, 0.75);
+});
+
+test("csv gebruikt puntkomma's en maakt speciale tekens en formules veilig", () => {
+  const csv = toCsv([{
+    Jaar: 2026,
+    Maand: 10,
+    Looncode: "",
+    Personeelsnummer: "",
+    Werkgevernummer: "",
+    Naam: "=Jansen; \"Jan\"",
+    Totaal: 2,
+    Prijs: "0,75"
+  }]);
+
+  const [header, row] = csv.split("\r\n");
+
+  assert.equal(header, "Jaar;Maand;Looncode;Personeelsnummer;Werkgevernummer;Naam;Totaal;Prijs");
+  assert.equal(row, "2026;10;;;;\"'=Jansen; \"\"Jan\"\"\";2;0,75");
 });

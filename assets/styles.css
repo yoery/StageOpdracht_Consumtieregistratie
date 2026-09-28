@@ -849,6 +849,15 @@ footer {
 #loadMoreAuditButton {
   margin-top:12px
 }
+/* Waarschuwing wanneer index.html direct als bestand wordt geopend. */
+.file-warning {
+  background:#fdf1e7;
+  border-bottom:1px solid #f0cfb3;
+  color:var(--ink);
+  padding:12px 20px;
+  font-size:14px;
+  text-align:center
+}
 /* Tijdelijke meldingen na acties. */
 .toast {
   position:fixed;

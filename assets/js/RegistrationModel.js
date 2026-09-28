@@ -7,27 +7,10 @@ import {
 // Deze klasse bevat de data en alle regels voor medewerkers en registraties.
 export class RegistrationModel {
   // Het model gebruikt de opslaglaag en start met opgeslagen of voorbeeldgegevens.
+  // Oude gegevens worden al door DataStore.migrate omgezet.
   constructor(store) {
     this.store = store;
-
-    const loadedState = store.load();
-
-    this.state = loadedState
-      ? {
-          ...loadedState,
-          registrations: (loadedState.registrations || []).map(
-            (registration) => ({
-              ...registration,
-              productId:
-                {
-                  melk: "glas-melk",
-                  brood: "sneetje-brood"
-                }[registration.productId] ||
-                registration.productId
-            })
-          )
-        }
-      : this.createSeedState();
+    this.state = store.load() || this.createSeedState();
   }
 
   // Maakt de eerste demo-status met voorbeeldmedewerkers zonder registraties.
@@ -303,8 +286,4 @@ export class RegistrationModel {
       date.getMonth() + 1
     ).padStart(2, "0")}`;
   }
-}
-
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = { RegistrationModel };
 }

@@ -71,20 +71,15 @@ export class DataStore {
 
   // Zet oude demo-gegevens om naar de nieuwe medewerker-, product- en registratievelden.
   migrate(data) {
-    const storedProducts = Array.isArray(data.products)
-      ? data.products
-      : [];
-
-    const products = DEFAULT_PRODUCTS
-      .map((defaultProduct) => defaultProduct)
-      .concat(
-        storedProducts.filter(
-          ({ id }) =>
-            !DEFAULT_PRODUCTS.some(
-              (defaultProduct) => defaultProduct.id === id
-            )
-        )
-      );
+    // Opgeslagen producten gaan voor, zodat gewijzigde prijzen en verwijderde producten bewaard blijven.
+    // Alleen oude gegevens zonder productlijst krijgen de standaardproducten.
+    const products =
+      Array.isArray(data.products) && data.products.length
+        ? data.products.map((product) => ({
+            ...product,
+            price: Number(product.price)
+          }))
+        : DEFAULT_PRODUCTS.map((product) => ({ ...product }));
 
     const employees = (data.employees || []).map(
       (employee, index) => {

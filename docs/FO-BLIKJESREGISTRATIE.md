@@ -8,7 +8,7 @@
 
 ### Doel van het systeem
 
-Met deze website kunnen medewerkers aangeven wanneer zij een blikje pakken. De beheerder kan de registraties bekijken, aanpassen en naar Excel exporteren.
+Met deze website kunnen medewerkers aangeven wanneer zij een blikje pakken. De beheerder kan de registraties bekijken, aanpassen en naar een CSV-bestand exporteren (te openen in Excel).
 
 ### Aanleiding van het project
 
@@ -24,7 +24,7 @@ In deze demo kunnen gebruikers:
 - registraties beheren;
 - medewerkers beheren;
 - verschillende producten en prijzen beheren;
-- gegevens naar Excel exporteren.
+- gegevens naar CSV exporteren voor de loonadministratie.
 
 Een echte gedeelde database en echte login zijn nog niet onderdeel van deze demo.
 
@@ -46,7 +46,7 @@ Een echte gedeelde database en echte login zijn nog niet onderdeel van deze demo
 - De registratie wordt meteen opgeslagen.
 - Het totaal wordt direct aangepast.
 - Een beheerder kan fouten herstellen.
-- De gegevens kunnen naar Excel worden geëxporteerd.
+- De gegevens kunnen naar een CSV-bestand worden geëxporteerd.
 - Ook cateringproducten zoals melk, beleg en brood kunnen worden geregistreerd.
 
 ## 4. Gebruikersrollen
@@ -75,7 +75,7 @@ Een beheerder kan:
 - medewerkers wijzigen en actief of inactief zetten;
 - productsoorten en prijzen beheren;
 - een logboek van wijzigingen bekijken;
-- een Excelbestand maken;
+- een CSV-bestand maken;
 - uitloggen.
 
 ## 5. Functionele eisen (FR)
@@ -99,18 +99,19 @@ Een beheerder kan:
 | FR-15 | Een beheerder kan een medewerker toevoegen. |
 | FR-16 | Een beheerder kan een medewerker verwijderen. |
 | FR-17 | Oude registraties blijven bestaan na het verwijderen van een medewerker. |
-| FR-18 | Een beheerder kan een `.xlsx`-bestand exporteren. |
-| FR-19 | De export bevat de medewerker, het aantal, de prijs en de datum. |
+| FR-18 | Een beheerder kan een `.csv`-bestand exporteren dat in Excel kan worden geopend. |
+| FR-19 | De export bevat de medewerker, het aantal, de prijs en de loonmaand. |
 | FR-20 | De export bevat totalen per medewerker. |
-| FR-21 | De export bevat het totaal van de gekozen periode. |
+| FR-21 | De export bevat geen totaalregel, zodat iedere regel een medewerker is en de loonadministratie het bestand direct kan inlezen. |
 | FR-22 | De prijs per blikje is €0,65. |
 | FR-23 | De beheerder kan looncode, personeelsnummer en werkgevernummer beheren. |
 | FR-24 | De beheerder kan productsoorten en prijzen beheren. |
 | FR-25 | De standaardproducten zijn blikje, melk, beleg en brood. |
 | FR-26 | Sneetje brood en boter kosten €0,10, zoet beleg en glas melk kosten €0,20, beleg, ei en yoghurt kosten €0,50. |
 | FR-27 | Het systeem houdt een logboek bij van administratieve wijzigingen. |
-| FR-28 | De Excel-export gebruikt de kolomvolgorde Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. |
+| FR-28 | De CSV-export gebruikt de kolomvolgorde Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. |
 | FR-29 | Medewerkers zien geen persoonlijk aantal of persoonlijk totaalbedrag. |
+| FR-30 | Consumpties worden verwerkt in de loonadministratie van de daaropvolgende maand. Jaar en Maand in de export zijn daarom de loonmaand: consumpties uit september staan bij oktober, consumpties uit december bij januari van het volgende jaar. |
 | FR-30 | Het systeem groepeert medewerkers per bedrijf en biedt een filter om één bedrijf te bekijken. |
 | FR-30 | Een medewerker kan op de eigen medewerkerkaart klikken en een product kiezen. |
 
@@ -163,14 +164,14 @@ Een beheerder kan:
 4. De beheerder zet de medewerker actief of inactief.
 5. Oude registraties blijven voor de administratie bewaard.
 
-### Excel-export maken
+### CSV-export maken
 
 **Actor:** Beheerder
 
-1. De beheerder kiest eventueel een medewerker en maand.
-2. De beheerder klikt op `Excel exporteren`.
-3. De website maakt een overzicht met de vaste kolomvolgorde en totalen.
-4. Het Excelbestand wordt gedownload.
+1. De beheerder kiest eventueel een medewerker en consumptiemaand. Bij iedere maand staat de bijbehorende loonmaand.
+2. De beheerder klikt op `CSV exporteren`.
+3. De website maakt een overzicht per medewerker per loonmaand met de vaste kolomvolgorde.
+4. Het CSV-bestand wordt gedownload en kan in Excel worden geopend.
 
 ## 8. Procesbeschrijving
 
@@ -183,7 +184,7 @@ Webapplicatie
     ↓
 localStorage
     ↓
-Excel-export
+CSV-export
 ```
 
 ### Een blikje registreren
@@ -272,8 +273,9 @@ De high-fidelity versie is de uiteindelijke website. Deze heeft:
 | AC-08 | Filter gebruiken | Alleen de gekozen gegevens worden getoond. |
 | AC-09 | Medewerker toevoegen | De nieuwe medewerker verschijnt in de lijst. |
 | AC-10 | Medewerker verwijderen | De medewerker verdwijnt, maar de historie blijft. |
-| AC-11 | Excel-export maken | Er wordt een Excelbestand gedownload. |
-| AC-12 | Export openen | Medewerker, aantal, datum en prijs staan erin. |
+| AC-11 | CSV-export maken | Er wordt een CSV-bestand gedownload. |
+| AC-12 | Export openen in Excel | Medewerker, aantal, loonmaand en prijs staan in de juiste kolommen. |
+| AC-13 | Export van september | Jaar en Maand in de export zijn de loonmaand oktober. |
 | AC-13 | Opslagfout testen | De wijziging wordt teruggedraaid en er verschijnt een melding. |
 | AC-14 | Mobiel scherm testen | De website blijft goed bruikbaar. |
 | AC-15 | Cateringproduct registreren | Melk, beleg of brood wordt met de juiste prijs opgeslagen. |

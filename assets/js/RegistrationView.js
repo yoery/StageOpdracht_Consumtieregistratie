@@ -1,3 +1,5 @@
+import { payrollPeriod } from "./csvExport.js";
+
 export class RegistrationView {
   // De view ontvangt het model, maar verandert de data zelf niet.
   constructor(model) {
@@ -7,12 +9,12 @@ export class RegistrationView {
 
   // Escapet gebruikersnamen voordat ze in innerHTML worden geplaatst.
   escapeHtml(value) {
-    return value.replace(/[&<>"']/g, (char) => ({
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
       '"': "&quot;",
-      "'": "'"
+      "'": "&#039;"
     }[char]));
   }
 
@@ -245,16 +247,21 @@ export class RegistrationView {
       )
     ];
 
+    // Toont de consumptiemaand plus de loonmaand waarin die wordt verwerkt (een maand later).
+    const monthFormat = new Intl.DateTimeFormat("nl-NL", {
+      month: "long",
+      year: "numeric"
+    });
+
     this.$("#filterMonth").innerHTML =
       `<option value="all">Alle maanden</option>${
-        months.map((month) =>
-          `<option value="${month}">
-            ${new Intl.DateTimeFormat("nl-NL", {
-              month: "long",
-              year: "numeric"
-            }).format(new Date(`${month}-01`))}
-          </option>`
-        ).join("")
+        months.map((month) => {
+          const [year, monthNumber] = month.split("-").map(Number);
+          const consumptionDate = new Date(year, monthNumber - 1, 1);
+          const payroll = payrollPeriod(consumptionDate);
+
+          return `<option value="${month}">${monthFormat.format(consumptionDate)} (loonmaand ${monthFormat.format(new Date(payroll.year, payroll.month - 1, 1))})</option>`;
+        }).join("")
       }`;
 
     this.$("#filterEmployee").value =
@@ -308,10 +315,6 @@ export class RegistrationView {
           </div>
         </div>`
       ).join("") || `<p class="muted">Geen medewerker gevonden.</p>`;
-  }
-
-  renderProductSelect() {
-    return this.model.products;
   }
 
   renderEmployeeProducts(employeeId) {
@@ -399,7 +402,6 @@ export class RegistrationView {
   }
 
   renderAll() {
-    this.renderProductSelect();
     this.populateCompanyFilter();
     this.renderEmployees();
     this.renderStats();
@@ -412,6 +414,8 @@ export class RegistrationView {
     toast.classList.remove("hidden");
     toast.classList.add("show");
 
-    setTimeout(() => toast.classList.add("hidden"), 2500);
+    // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => toast.classList.add("hidden"), 2500);
   }
 }

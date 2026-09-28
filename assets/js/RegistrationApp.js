@@ -1,4 +1,4 @@
-import { exportExcel } from "./excelExport.js";
+import { exportCsv } from "./csvExport.js";
 
 // Deze klasse koppelt gebruikersacties aan het model en de view.
 export class RegistrationApp {
@@ -30,26 +30,27 @@ export class RegistrationApp {
     return false;
   }
 
-  // Registreert een blikje en ververst de juiste onderdelen van de interface.
-  addRegistration(employeeId, adminCorrection = false, productId = "blikje") {
+  // Geeft een leesbare naam voor het logboek, ook als de medewerker later wordt verwijderd.
+  employeeLabel(employeeId) {
+    return this.model.findEmployee(employeeId)?.name || `medewerker ${employeeId}`;
+  }
+
+  // Voegt als beheerder één product toe voor een medewerker (correctie met de +-knop).
+  addCorrection(employeeId, productId) {
     const saved = this.persist(() => this.model.addRegistration(employeeId, productId));
     if (!saved) return false;
-    if (adminCorrection) {
-      this.model.logAdminAction("Registratie toegevoegd", `Product ${this.model.productName(productId)} voor medewerker ${employeeId}`);
-      if (!this.model.save()) {
-        this.view.showToast("Registratie opgeslagen, maar het logboek kon niet worden bijgewerkt.");
-      }
-
+    const productName = this.model.productName(productId);
+    this.model.logAdminAction("Registratie toegevoegd", `${productName} voor ${this.employeeLabel(employeeId)}`);
+    if (!this.model.save()) {
+      this.view.showToast("Registratie opgeslagen, maar het logboek kon niet worden bijgewerkt.");
+    } else {
+      this.view.showToast(`${productName} toegevoegd voor medewerker`);
     }
     this.view.renderAll();
-    if (!adminCorrection) this.closeEmployeeProducts();
-    if (adminCorrection) {
-      this.view.renderCorrectionEmployees();
-      this.view.renderAdmin();
-      this.view.showToast("Blikje toegevoegd voor medewerker");
-    } else {
-      this.view.showToast("Blikje direct opgeslagen ✓");
-    }
+    this.view.populateFilters();
+    this.view.renderCorrectionEmployees();
+    this.view.renderAdmin();
+    this.view.renderAuditLog();
     return true;
   }
 
@@ -99,11 +100,6 @@ export class RegistrationApp {
 
   // Verwerkt dynamische knoppen uit de publieke en adminlijsten.
   handleClick(event) {
-    const personalAdd = event.target.closest("[data-personal-add]");
-    if (personalAdd) {
-      this.addRegistration(personalAdd.dataset.personalAdd, false, personalAdd.dataset.productId);
-      return;
-    }
     const productIncrement = event.target.closest("[data-product-increment]");
     if (productIncrement) {
       const productId = productIncrement.dataset.productIncrement;
@@ -117,14 +113,12 @@ export class RegistrationApp {
     }
     const employeeButton = event.target.closest("[data-open-employee]");
     if (employeeButton) {
-      this.selectedEmployeeId = employeeButton.dataset.openEmployee;
-      this.selectedProducts = {};
-      this.view.renderEmployeeProducts(employeeButton.dataset.openEmployee);
+      this.openEmployeeProducts(employeeButton.dataset.openEmployee);
       return;
     }
     const correctionPlus = event.target.closest("[data-correction-plus]");
     if (correctionPlus) {
-      this.addRegistration(correctionPlus.dataset.correctionPlus, true, correctionPlus.dataset.correctionProduct);
+      this.addCorrection(correctionPlus.dataset.correctionPlus, correctionPlus.dataset.correctionProduct);
       return;
     }
     const correctionMinus = event.target.closest("[data-correction-minus]");
@@ -137,7 +131,7 @@ export class RegistrationApp {
       }
       const productName = this.model.productName(productId);
       if (this.persist(() => this.model.removeLastRegistration(employeeId, productId))) {
-        this.model.logAdminAction("Registratie verwijderd", `${productName} van medewerker ${employeeId}`);
+        this.model.logAdminAction("Registratie verwijderd", `${productName} van ${this.employeeLabel(employeeId)}`);
         this.model.save();
         this.view.renderAuditLog();
         this.view.populateFilters();
@@ -146,26 +140,38 @@ export class RegistrationApp {
         this.view.renderAll();
         this.view.showToast(`${productName} registratie verwijderd`);
       }
+      return;
     }
     const toggleButton = event.target.closest("[data-toggle-employee]");
-    if (toggleButton && this.persist(() => this.model.setEmployeeActive(toggleButton.dataset.toggleEmployee, !this.model.findEmployee(toggleButton.dataset.toggleEmployee).active))) {
-      this.model.logAdminAction("Medewerkerstatus gewijzigd", `Medewerker ${toggleButton.dataset.toggleEmployee} is actief/inactief gezet`);
-      this.model.save();
-      this.view.renderAuditLog();
-      this.view.populateFilters();
-      this.view.renderAdminEmployees();
-      this.view.renderAll();
-      this.view.showToast("Medewerkerstatus gewijzigd");
+    if (toggleButton) {
+      const employeeId = toggleButton.dataset.toggleEmployee;
+      const active = !this.model.findEmployee(employeeId).active;
+      if (this.persist(() => this.model.setEmployeeActive(employeeId, active))) {
+        this.model.logAdminAction("Medewerkerstatus gewijzigd", `${this.employeeLabel(employeeId)} is ${active ? "actief" : "inactief"} gezet`);
+        this.model.save();
+        this.view.renderAuditLog();
+        this.view.populateFilters();
+        this.view.renderAdminEmployees();
+        this.view.renderAll();
+        this.view.showToast("Medewerkerstatus gewijzigd");
+      }
+      return;
     }
     const removeEmployeeButton = event.target.closest("[data-remove-employee]");
-    if (removeEmployeeButton && this.persist(() => this.model.removeEmployee(removeEmployeeButton.dataset.removeEmployee))) {
-      this.model.logAdminAction("Medewerker definitief verwijderd", `Medewerker ${removeEmployeeButton.dataset.removeEmployee}`);
-      this.model.save();
-      this.view.renderAuditLog();
-      this.view.populateFilters();
-      this.view.renderAdminEmployees();
-      this.view.renderAll();
-      this.view.showToast("Inactieve medewerker definitief verwijderd");
+    if (removeEmployeeButton) {
+      const employeeId = removeEmployeeButton.dataset.removeEmployee;
+      const name = this.employeeLabel(employeeId);
+      if (!window.confirm(`${name} definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
+      if (this.persist(() => this.model.removeEmployee(employeeId))) {
+        this.model.logAdminAction("Medewerker definitief verwijderd", name);
+        this.model.save();
+        this.view.renderAuditLog();
+        this.view.populateFilters();
+        this.view.renderAdminEmployees();
+        this.view.renderAll();
+        this.view.showToast("Inactieve medewerker definitief verwijderd");
+      }
+      return;
     }
     const editButton = event.target.closest("[data-edit-employee]");
     if (editButton) {
@@ -189,12 +195,13 @@ export class RegistrationApp {
         this.view.showToast("Dit product wordt al gebruikt en kan niet worden verwijderd");
         return;
       }
+      const productName = this.model.productName(removeProductButton.dataset.removeProduct);
       if (this.persist(() => this.model.removeProduct(removeProductButton.dataset.removeProduct))) {
-        this.model.logAdminAction("Product verwijderd", removeProductButton.dataset.removeProduct);
+        this.model.logAdminAction("Product verwijderd", productName);
         this.model.save();
         this.view.renderAuditLog();
         this.view.renderAdminProducts();
-        this.view.renderProductSelect();
+        this.view.renderCorrectionEmployees();
         this.view.showToast("Product verwijderd");
       } else {
         this.view.showToast("Dit product wordt al gebruikt en kan niet worden verwijderd");
@@ -225,10 +232,8 @@ export class RegistrationApp {
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => { document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active")); tab.classList.add("active"); ["registrations", "employees", "products", "audit"].forEach((name) => this.view.$(`#${name}Tab`).classList.toggle("hidden", tab.dataset.tab !== name)); }));
     this.view.$("#filterEmployee").addEventListener("change", () => this.view.renderAdmin());
     this.view.$("#filterMonth").addEventListener("change", () => this.view.renderAdmin());
-    this.view.$("#exportButton").addEventListener("click", () =>
-    exportExcel(this.model,this.view.$("#filterEmployee").value,this.view.$("#filterMonth").value,this.view)
-);    
-this.view.$("#employeeSearch").addEventListener("input", () => this.view.renderEmployees());
+    this.view.$("#exportButton").addEventListener("click", () => exportCsv(this.model, this.view.$("#filterEmployee").value, this.view.$("#filterMonth").value, this.view));
+    this.view.$("#employeeSearch").addEventListener("input", () => this.view.renderEmployees());
     this.view.$("#employeeCompanyFilter").addEventListener("input", () => {
       const input = this.view.$("#employeeCompanyFilter");
       delete input.dataset.value;
@@ -284,6 +289,13 @@ this.view.$("#employeeSearch").addEventListener("input", () => this.view.renderE
     this.view.$("#employeeProductsModal").addEventListener("click", (event) => { if (event.target === this.view.$("#employeeProductsModal")) this.closeEmployeeProducts(); });
     this.view.$("#loadMoreAuditButton").addEventListener("click", () => { this.auditLogLimit += 20; this.view.renderAuditLog(this.auditLogLimit); });
     document.addEventListener("keydown", (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); this.view.$("#employeeSearch").focus(); } });
+    // Medewerkerrijen hebben role="button" en moeten dus ook met Enter en spatie werken.
+    this.view.$("#employeeList").addEventListener("keydown", (event) => {
+      const employeeRow = event.target.closest("[data-open-employee]");
+      if (!employeeRow || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      this.openEmployeeProducts(employeeRow.dataset.openEmployee);
+    });
   }
 
   // Filtert de compacte bedrijfskeuzelijst terwijl de gebruiker typt.
@@ -327,6 +339,13 @@ this.view.$("#employeeSearch").addEventListener("input", () => this.view.renderE
   // Sluit het productformulier.
   closeProductForm() {
     this.view.$("#productFormModal").classList.add("hidden");
+  }
+
+  // Opent het persoonlijke productvenster met een lege keuze.
+  openEmployeeProducts(employeeId) {
+    this.selectedEmployeeId = employeeId;
+    this.selectedProducts = {};
+    this.view.renderEmployeeProducts(employeeId);
   }
 
   // Sluit het persoonlijke productvenster.
@@ -382,7 +401,6 @@ this.view.$("#employeeSearch").addEventListener("input", () => this.view.renderE
     form.reset();
     delete form.dataset.editingId;
     this.view.renderAdminProducts();
-    this.view.renderProductSelect();
     this.view.renderCorrectionEmployees();
     this.view.renderAuditLog();
     this.view.showToast(editingId ? "Product gewijzigd" : "Product toegevoegd");

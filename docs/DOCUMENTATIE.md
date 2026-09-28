@@ -12,22 +12,28 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 |---|---|
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
 | `assets/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
-| `assets/js/app.js` | De interactieve werking, berekeningen, opslag en Excel-export |
-| `employerName` | De bedrijfsnaam waarmee medewerkers in de openbare lijst worden gegroepeerd en gefilterd |
-
-Bij het toevoegen of wijzigen van een medewerker kan de beheerder een bedrijfsnaam typen of een bestaande bedrijfsnaam uit de compacte keuzelijst kiezen. De lijst filtert direct tijdens het typen. Nieuwe bedrijfsnamen mogen ook direct worden ingevoerd. Op de homepage werkt het bedrijfsfilter op dezelfde manier.
+| `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
+| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers en standaardproducten |
+| `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
+| `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
+| `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
+| `assets/js/RegistrationApp.js` | Controller: verwerkt klikken, formulieren en toetsenbordacties |
+| `assets/js/csvExport.js` | CSV-export voor de loonadministratie (maand + 1) |
+| `assets/js/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
 | `README.md` | Korte startinformatie voor het project |
 | `docs/` | Functioneel ontwerp, technisch ontwerp en overige documentatie |
 | `tests/` | Unit tests voor de belangrijkste reken- en registratiefuncties |
 
+Bij het toevoegen of wijzigen van een medewerker kan de beheerder een bedrijfsnaam (`employerName`) typen of een bestaande bedrijfsnaam uit de compacte keuzelijst kiezen. Met deze bedrijfsnaam worden medewerkers in de openbare lijst gegroepeerd en gefilterd. De lijst filtert direct tijdens het typen. Nieuwe bedrijfsnamen mogen ook direct worden ingevoerd. Op de homepage werkt het bedrijfsfilter op dezelfde manier.
+
 ## 3. De website starten
 
-1. Open de projectmap.
-2. Dubbelklik op `index.html`.
+1. Open de projectmap in VS Code.
+2. Klik met de rechtermuisknop op `index.html` en kies **Open with Live Server** (extensie "Live Server"). Een andere lokale webserver werkt ook.
 3. De website opent in een moderne browser.
 4. Er is geen installatie of buildproces nodig.
 
-De Excel-export gebruikt SheetJS via een CDN. Voor deze functie is daarom een internetverbinding nodig wanneer de bibliotheek nog niet in de browser geladen is.
+Dubbelklikken op `index.html` werkt niet: de JavaScript is opgedeeld in modules, en browsers blokkeren modules die via `file://` worden geopend. De pagina toont dan een waarschuwing.
 
 ## 4. Gebruikershandleiding
 
@@ -97,19 +103,18 @@ Het tabblad `Logboek` toont standaard maximaal 20 wijzigingen. Met `Meer laden` 
 
 Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft ingelogd zolang de pagina open is. Met de knop `Uitloggen` wordt de adminsessie beëindigd en verschijnt bij het volgende openen opnieuw het loginformulier.
 
-### 4.9 Excel exporteren
+### 4.9 CSV exporteren
 
 1. Open het admin-dashboard.
-2. Kies eventueel een medewerker en/of maand.
-3. Klik op `Excel exporteren`.
-4. De browser downloadt een `.xlsx`-bestand.
+2. Kies eventueel een medewerker en/of maand. Achter iedere maand staat de loonmaand waarin die wordt verwerkt, bijvoorbeeld `september 2026 (loonmaand oktober 2026)`.
+3. Klik op `CSV exporteren`.
+4. De browser downloadt een `.csv`-bestand, bijvoorbeeld `blikjesregistratie-loonmaand-2026-10.csv`.
 
-Het bestand bevat twee werkbladen:
+Het bestand heeft altijd de kolommen `Jaar`, `Maand`, `Looncode`, `Personeelsnummer`, `Werkgevernummer`, `Naam`, `Totaal` en `Prijs`, in die vaste volgorde. Iedere regel is één medewerker in één loonmaand. Er staat bewust geen totaalregel in, omdat de loonadministratie iedere regel als medewerker inleest.
 
-1. `Periode-totalen`: altijd de kolommen `Jaar`, `Maand`, `Looncode`, `Personeelsnummer`, `Werkgevernummer`, `Naam`, `Totaal` en `Prijs`, in die vaste volgorde.
-2. `Registraties`: de losse registraties met dezelfde personeelsgegevens en het geregistreerde product.
+**Loonmaand:** consumpties worden verwerkt in de loonadministratie van de maand erna. `Jaar` en `Maand` in de export zijn daarom de loonmaand: consumpties uit september 2026 staan als `2026` / `10` in het bestand, consumpties uit december 2026 als `2027` / `1`.
 
-De gekozen filters worden toegepast op de export. Producten en prijzen worden uit de administratie gehaald.
+Het bestand gebruikt puntkomma's als scheidingsteken en een komma als decimaalteken (`0,65`), zodat een Nederlandse Excel het direct goed opent. De gekozen filters worden toegepast op de export. Producten en prijzen worden uit de administratie gehaald. Losse registraties staan in de tabel in het admin-dashboard.
 
 ## 5. Uitleg van `index.html`
 
@@ -123,7 +128,7 @@ In de `<head>` staan:
 - De titel en beschrijving voor browser en zoekmachines.
 - Google Fonts voor de gebruikte lettertypes.
 - `assets/styles.css` voor de vormgeving.
-- SheetJS voor Excel-export.
+- `assets/js/main.js` als startpunt van de JavaScript.
 
 ### Navigatiebalk
 
@@ -220,12 +225,13 @@ De CSS bevat opmaak voor:
 - Toastmeldingen.
 - Mobiele schermen.
 
-## 7. Uitleg van `assets/js/app.js`
+## 7. Uitleg van de JavaScript (`assets/js/`)
 
 ### Opslag en voorbeelddata
 
 ```js
-const STORAGE_KEY = "tvb-blikjesregistratie";
+// config.js
+export const STORAGE_KEY = "tvb-blikjesregistratie";
 ```
 
 Dit is de naam waaronder de applicatie haar gegevens in `localStorage` bewaart.
@@ -259,7 +265,7 @@ De JavaScript-code is opgedeeld in vier classes. Iedere class heeft één duidel
 
 #### `DataStore`
 
-Verzorgt het lezen en opslaan van gegevens. JSON-validatie en fouten van `localStorage` worden hier afgehandeld. Als later een database wordt gebruikt, kan deze opslaglaag worden vervangen zonder de interface en bedrijfsregels opnieuw te schrijven.
+Verzorgt het lezen en opslaan van gegevens. JSON-validatie en fouten van `localStorage` worden hier afgehandeld. `migrate` zet oude gegevens om (bijvoorbeeld product-id `melk` naar `glas-melk`). Opgeslagen producten gaan altijd voor op de standaardproducten, zodat gewijzigde prijzen en verwijderde producten bewaard blijven. Als later een database wordt gebruikt, kan deze opslaglaag worden vervangen zonder de interface en bedrijfsregels opnieuw te schrijven.
 
 #### `RegistrationModel`
 
@@ -282,13 +288,12 @@ Vormt de controller van de applicatie. Deze class koppelt klik- en formulier-eve
 
 De methode `RegistrationView.renderEmployees`:
 
-1. Leest de zoekterm.
-2. Vergelijkt de zoekterm met alle namen.
-3. Toont alleen overeenkomende medewerkers.
-4. Berekent per medewerker het totale aantal registraties.
-5. Maakt voor iedere medewerker een HTML-rij met een `+`-knop.
+1. Leest de zoekterm en het gekozen bedrijf.
+2. Toont alleen actieve medewerkers die daarbij passen.
+3. Groepeert de medewerkers per bedrijf.
+4. Maakt voor iedere medewerker een klikbare rij (ook te bedienen met Enter of spatie).
 
-De `data-add`-waarde bevat de unieke medewerker-id. Daardoor weet de klikhandler voor welke medewerker een registratie moet worden gemaakt.
+De `data-open-employee`-waarde bevat de unieke medewerker-id. Daardoor weet de klikhandler voor welke medewerker het productvenster moet worden geopend.
 
 ### `renderStats`
 
@@ -299,17 +304,16 @@ De methode `RegistrationView.renderStats` vergelijkt de datum van iedere registr
 
 Daarna worden de twee totalen in de statistiekkaarten geplaatst.
 
-### `addRegistration`
+### `registerSelectedProducts`
 
-De methode `RegistrationApp.addRegistration` wordt uitgevoerd na een klik op `+`.
-
-Er wordt een object toegevoegd met:
+De methode `RegistrationApp.registerSelectedProducts` wordt uitgevoerd na een klik op `Registreren` in het productvenster. Voor ieder gekozen product maakt `RegistrationModel.addRegistration` een object aan met:
 
 - Een unieke registratie-id.
 - De medewerker-id.
+- De product-id.
 - De huidige datum en tijd in ISO-formaat.
 
-Daarna worden de gegevens via `persist` opgeslagen en alle zichtbare onderdelen opnieuw getekend.
+Daarna worden de gegevens via `persist` opgeslagen en alle zichtbare onderdelen opnieuw getekend. Correcties van de beheerder met de `+`-knop lopen via `RegistrationApp.addCorrection` en komen ook in het logboek.
 
 ### `renderAll`
 
@@ -317,7 +321,7 @@ De methode `RegistrationView.renderAll` voert `renderEmployees` en `renderStats`
 
 ### `showToast`
 
-De methode `RegistrationView.showToast` toont een korte melding zoals `Blikje direct opgeslagen`. Na 2,5 seconden verdwijnt deze melding automatisch.
+De methode `RegistrationView.showToast` toont een korte melding zoals `Producten direct opgeslagen ✓`. Na 2,5 seconden verdwijnt deze melding automatisch.
 
 ### Opslagfouten en terugdraaien
 
@@ -340,16 +344,15 @@ De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige p
 
 `renderAdminEmployees` toont alle medewerkers in het beheertabblad.
 
-### Excel-export
+### CSV-export (`csvExport.js`)
 
-`exportExcel` gebruikt de SheetJS-bibliotheek:
+`exportCsv` heeft geen externe bibliotheek nodig:
 
 1. De geselecteerde filters worden gelezen.
-2. De bijbehorende registraties worden verzameld.
-3. Een detailoverzicht wordt gemaakt.
-4. Maandtotalen worden berekend.
-5. Twee werkbladen worden toegevoegd aan een workbook.
-6. Het workbook wordt gedownload als `.xlsx`.
+2. `buildPayrollRows` verzamelt de bijbehorende registraties en telt ze per medewerker per loonmaand.
+3. `payrollPeriod` bepaalt de loonmaand: de maand na de consumptie (december gaat naar januari van het volgende jaar).
+4. `toCsv` zet de regels om naar CSV met puntkomma's. Velden met speciale tekens krijgen aanhalingstekens, en waarden die met `=`, `+`, `-` of `@` beginnen krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert.
+5. Het bestand wordt gedownload als `.csv` (UTF-8 met BOM, zodat Excel letters zoals `é` goed toont).
 
 ### Event listeners
 
@@ -362,7 +365,7 @@ De event listeners koppelen gebruikersacties aan functies:
 - Klik op sluitknop → modal sluiten.
 - Klik op tabblad → juiste admin-tab tonen.
 - Wijziging van filter → tabel opnieuw tekenen.
-- Klik op export → Excelbestand maken.
+- Klik op export → CSV-bestand maken.
 - Formulier voor medewerker toevoegen → nieuwe medewerker opslaan.
 - `Ctrl/Cmd + K` → zoekbalk focussen.
 
@@ -392,7 +395,7 @@ Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. 
 
 Wanneer een medewerker wordt verwijderd, blijven bestaande registraties behouden voor de administratie. In het admin-overzicht wordt bij zulke historische regels `Verwijderd` getoond.
 
-Voor de Excel-export worden de prijzen uit het productbeheer gebruikt. Het werkblad `Registraties` bevat de losse productregistraties. Het werkblad met totalen bevat per medewerker het aantal en de totale prijs. Deze gegevens zijn alleen zichtbaar voor de beheerder.
+Voor de CSV-export worden de prijzen uit het productbeheer gebruikt. Het bestand bevat per medewerker per loonmaand het aantal en de totale prijs. Deze gegevens zijn alleen zichtbaar voor de beheerder.
 
 ## 9. Belangrijke demo-beperkingen
 
@@ -404,7 +407,6 @@ Deze versie is bedoeld als prototype:
 - Er zijn geen gebruikersrollen of wachtwoordbeheer.
 - Verwijderde medewerkers krijgen geen herstelmogelijkheid.
 - Er is geen server-side auditlog.
-- Excel-export is afhankelijk van de externe SheetJS-CDN.
 - Het admin-login is een demo en heeft geen echte server-side beveiliging.
 
 Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig.
