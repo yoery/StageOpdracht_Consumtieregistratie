@@ -11,11 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <!-- Externe stylesheet met alle kleuren, layouts en componentstijlen. -->
   <link rel="stylesheet" href="assets/styles.css">
-
-  <!--   <script type="module" src="assets/js/app.js"></script  -->
+  <!-- Startpunt van de applicatie. Modules werken alleen via een webserver (bijv. Live Server), niet via file://. -->
   <script type="module" src="assets/js/main.js"></script>
-  <!-- SheetJS is de externe bibliotheek voor het maken van Excelbestanden. -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -177,7 +174,7 @@
             <label>Maand
               <select id="filterMonth"><option value="all">Alle maanden</option></select>
             </label>
-            <button class="secondary-button export-button" id="exportButton">⇩ Excel exporteren</button>
+            <button class="secondary-button export-button" id="exportButton">⇩ CSV exporteren</button>
           </div>
           <!-- Zoekveld voor gerichte correcties per medewerker. -->
           <label class="admin-search">
@@ -234,7 +231,7 @@
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-product-modal>Annuleren</button>
           <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
-          <button class="primary-button" id="consumptionSaveContinueButton"type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
+          <button class="primary-button" id="consumptionSaveContinueButton" type="submit" data-save-mode="continue">Opslaan + opnieuw</button>
         </div>
       </form>
     </div>
@@ -283,7 +280,15 @@
 
   <!-- Tijdelijke statusmelding na acties zoals opslaan of verwijderen. -->
   <div class="toast hidden" id="toast" role="status"></div>
-  <!-- Applicatielogica die model, view en gebruikersacties koppelt. -->
-  <script src="assets/js/app.js"></script>
+  <!-- Browsers blokkeren JavaScript-modules via file://; dan zou de pagina leeg blijven zonder uitleg. -->
+  <script>
+    if (location.protocol === "file:") {
+      const warning = document.createElement("div");
+      warning.className = "file-warning";
+      warning.setAttribute("role", "alert");
+      warning.textContent = "Deze pagina werkt niet als los bestand. Open de map in VS Code en start hem met Live Server (of een andere lokale webserver).";
+      document.body.prepend(warning);
+    }
+  </script>
 </body>
 </html>

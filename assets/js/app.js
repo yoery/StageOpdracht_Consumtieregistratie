@@ -1,3 +1,5 @@
+// BACK-UP: originele versie van de app (één bestand) van vóór het opsplitsen in modules.
+// Dit bestand wordt niet meer geladen; de werkende code staat in main.js en de losse class-bestanden.
 /* // De sleutel en vaste waarden staan centraal zodat ze later eenvoudig vervangen kunnen worden.
 const STORAGE_KEY = "tvb-blikjesregistratie";
 const COLORS = ["#d8f1e8", "#e3eef6", "#f8e9d9", "#e9e0f4", "#e4f0d8"];
