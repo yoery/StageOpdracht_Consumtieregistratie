@@ -656,7 +656,11 @@ footer {
   display:flex;
   gap:22px;
   border-bottom:1px solid var(--line);
-  margin-bottom:20px
+  margin-bottom:20px;
+  overflow-x:auto
+}
+.tab {
+  white-space:nowrap
 }
 .tab {
   padding:14px 2px;
@@ -848,6 +852,158 @@ footer {
 }
 #loadMoreAuditButton {
   margin-top:12px
+}
+/* Keuzelijsten bedrijf en consumptiepunt in de beheerformulieren. */
+.add-employee-form select {
+  height:43px;
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 12px;
+  outline-color:var(--green);
+  background:#fff
+}
+.field-hint {
+  align-self:center;
+  margin:0;
+  color:var(--muted);
+  font-size:12px
+}
+/* Bedrijven met daaronder hun consumptiepunten. */
+#companiesTab > .primary-button {
+  margin-bottom:14px
+}
+.admin-company-list {
+  display:grid;
+  gap:12px
+}
+.admin-company-item > .admin-employee-item {
+  background:#f8fbfa
+}
+.admin-point-list {
+  display:grid;
+  gap:6px;
+  margin:6px 0 0 22px
+}
+.admin-point-empty {
+  font-size:12px;
+  margin:4px 0
+}
+/* Aan/uit-lijst met producten in het consumptiepuntformulier. */
+.offer-list {
+  grid-column:1 / -1;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 14px 14px
+}
+.offer-list legend {
+  padding:0 6px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--ink)
+}
+#pointProductList {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:4px 14px
+}
+.modal .offer-item {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  font-weight:500;
+  font-size:13px;
+  cursor:pointer
+}
+/* Overschrijft de algemene formulierregels (flex:1, min-width, height) voor vinkjes. */
+.modal .offer-item input {
+  flex:none;
+  width:17px;
+  min-width:0;
+  height:17px;
+  padding:0;
+  accent-color:var(--green)
+}
+/* Voorraadoverzicht. */
+.stock-alerts {
+  margin-bottom:18px;
+  padding:14px 16px;
+  border:1px solid #f0cfb3;
+  border-radius:10px;
+  background:#fdf6ef;
+  font-size:13px
+}
+.stock-alerts h3 {
+  margin:0 0 8px;
+  font-size:14px
+}
+.stock-alerts ul {
+  display:grid;
+  gap:6px;
+  margin:0;
+  padding:0;
+  list-style:none
+}
+.stock-all-ok {
+  margin:0;
+  color:var(--green-dark)
+}
+.stock-alerts:has(.stock-all-ok) {
+  border-color:var(--line);
+  background:var(--mint)
+}
+.text-link {
+  background:none;
+  padding:0;
+  color:var(--blue);
+  font-weight:600;
+  text-decoration:underline;
+  cursor:pointer
+}
+.stock-badge {
+  display:inline-block;
+  min-width:86px;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  text-align:center
+}
+.stock-ok {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.stock-low {
+  background:#fdf1e7;
+  color:#a55a16
+}
+.stock-out {
+  background:#fbe7e7;
+  color:#b23b3b
+}
+.stock-input {
+  width:80px;
+  height:34px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:0 8px;
+  outline-color:var(--green);
+  background:#fff
+}
+.stock-delivery {
+  display:flex;
+  gap:6px;
+  align-items:center
+}
+.stock-table .table-action {
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:#fff;
+  color:var(--green-dark);
+  font-size:12px;
+  cursor:pointer
 }
 /* Waarschuwing wanneer index.html direct als bestand wordt geopend. */
 .file-warning {

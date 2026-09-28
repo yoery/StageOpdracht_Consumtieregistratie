@@ -74,6 +74,8 @@ Een beheerder kan:
 - medewerkers toevoegen en verwijderen;
 - medewerkers wijzigen en actief of inactief zetten;
 - productsoorten en prijzen beheren;
+- bedrijven en consumptiepunten beheren en per punt het aanbod instellen;
+- de voorraad per consumptiepunt bijhouden en zien wat bijbesteld moet worden;
 - een logboek van wijzigingen bekijken;
 - een CSV-bestand maken;
 - uitloggen.
@@ -104,7 +106,7 @@ Een beheerder kan:
 | FR-20 | De export bevat totalen per medewerker. |
 | FR-21 | De export bevat geen totaalregel, zodat iedere regel een medewerker is en de loonadministratie het bestand direct kan inlezen. |
 | FR-22 | De prijs per blikje is €0,65. |
-| FR-23 | De beheerder kan looncode, personeelsnummer en werkgevernummer beheren. |
+| FR-23 | De beheerder kan looncode, personeelsnummer en een eventueel afwijkend werkgevernummer per medewerker, en het standaard werkgevernummer per bedrijf beheren. |
 | FR-24 | De beheerder kan productsoorten en prijzen beheren. |
 | FR-25 | De standaardproducten zijn blikje, melk, beleg en brood. |
 | FR-26 | Sneetje brood en boter kosten €0,10, zoet beleg en glas melk kosten €0,20, beleg, ei en yoghurt kosten €0,50. |
@@ -112,8 +114,17 @@ Een beheerder kan:
 | FR-28 | De CSV-export gebruikt de kolomvolgorde Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. |
 | FR-29 | Medewerkers zien geen persoonlijk aantal of persoonlijk totaalbedrag. |
 | FR-30 | Consumpties worden verwerkt in de loonadministratie van de daaropvolgende maand. Jaar en Maand in de export zijn daarom de loonmaand: consumpties uit september staan bij oktober, consumpties uit december bij januari van het volgende jaar. |
-| FR-30 | Het systeem groepeert medewerkers per bedrijf en biedt een filter om één bedrijf te bekijken. |
-| FR-30 | Een medewerker kan op de eigen medewerkerkaart klikken en een product kiezen. |
+| FR-31 | Het systeem groepeert medewerkers per bedrijf en biedt een filter om één bedrijf te bekijken. |
+| FR-32 | Een medewerker kan op de eigen medewerkerkaart klikken en een product kiezen. |
+| FR-33 | De beheerder kan bedrijven toevoegen en de naam en het werkgevernummer wijzigen. Standaard zijn de 13 bedrijven van TVB aanwezig. |
+| FR-34 | Een bedrijf kan geen, één of meerdere consumptiepunten hebben. De beheerder kan consumptiepunten toevoegen, wijzigen en verwijderen. |
+| FR-35 | De beheerder stelt per consumptiepunt in welke producten worden aangeboden (aan/uit per product). |
+| FR-36 | Een nieuw product staat bij alle consumptiepunten uit, totdat de beheerder het aanzet. |
+| FR-37 | Iedere medewerker is gekoppeld aan een bedrijf en een vast consumptiepunt, en ziet alleen de producten die dat punt aanbiedt. |
+| FR-38 | Het systeem houdt per consumptiepunt de voorraad per product bij. Iedere registratie verlaagt de voorraad met 1; een correctie van de beheerder zet het product terug. |
+| FR-39 | De beheerder kan leveringen boeken, de getelde voorraad invullen en per product een minimum instellen. |
+| FR-40 | Het systeem toont een bijbestellijst met alle aangeboden producten die op zijn of op of onder het minimum zitten. |
+| FR-41 | Het werkgevernummer staat standaard bij het bedrijf. Bij een medewerker kan een afwijkend werkgevernummer worden ingevuld (bijvoorbeeld per teamleider); dat gaat in de CSV-export voor op het nummer van het bedrijf. |
 
 ## 6. Niet-functionele eisen (NFR)
 
@@ -159,10 +170,28 @@ Een beheerder kan:
 **Actor:** Beheerder
 
 1. De beheerder opent het tabblad `Medewerkers`.
-2. De beheerder vult de medewerkergegevens in of zoekt een bestaande medewerker.
+2. De beheerder vult de medewerkergegevens in, kiest bedrijf en consumptiepunt, of zoekt een bestaande medewerker.
 3. De beheerder voegt de medewerker toe of wijzigt de gegevens.
 4. De beheerder zet de medewerker actief of inactief.
 5. Oude registraties blijven voor de administratie bewaard.
+
+### Consumptiepunt en aanbod instellen
+
+**Actor:** Beheerder
+
+1. De beheerder opent het tabblad `Bedrijven`.
+2. De beheerder klikt bij een bedrijf op `+ Consumptiepunt` of bij een bestaand punt op `Aanbod wijzigen`.
+3. De beheerder vult de naam in en vinkt de producten aan die op dit punt worden aangeboden.
+4. Medewerkers die aan dit punt gekoppeld zijn, zien voortaan alleen deze producten.
+
+### Voorraad bijhouden
+
+**Actor:** Beheerder
+
+1. De beheerder opent het tabblad `Voorraad` en ziet bovenaan wat bijbesteld moet worden.
+2. Na een levering vult de beheerder het geleverde aantal in en klikt op `+ Toevoegen`.
+3. Na het tellen past de beheerder de voorraad direct aan.
+4. De beheerder stelt per product een minimum in; daaronder verschijnt het product in de bijbestellijst.
 
 ### CSV-export maken
 
@@ -276,8 +305,13 @@ De high-fidelity versie is de uiteindelijke website. Deze heeft:
 | AC-11 | CSV-export maken | Er wordt een CSV-bestand gedownload. |
 | AC-12 | Export openen in Excel | Medewerker, aantal, loonmaand en prijs staan in de juiste kolommen. |
 | AC-13 | Export van september | Jaar en Maand in de export zijn de loonmaand oktober. |
-| AC-13 | Opslagfout testen | De wijziging wordt teruggedraaid en er verschijnt een melding. |
-| AC-14 | Mobiel scherm testen | De website blijft goed bruikbaar. |
+| AC-14 | Opslagfout testen | De wijziging wordt teruggedraaid en er verschijnt een melding. |
+| AC-15 | Mobiel scherm testen | De website blijft goed bruikbaar. |
+| AC-16 | Product uitzetten bij een consumptiepunt | Medewerkers van dat punt zien het product niet meer. |
+| AC-17 | Nieuw product toevoegen | Het product staat bij alle consumptiepunten uit. |
+| AC-18 | Product registreren | De voorraad van het consumptiepunt van de medewerker wordt 1 lager. |
+| AC-19 | Voorraad op of onder het minimum | Het product verschijnt in de bijbestellijst. |
+| AC-20 | Levering boeken | De voorraad stijgt met het geleverde aantal en de actie staat in het logboek. |
 | AC-15 | Cateringproduct registreren | Melk, beleg of brood wordt met de juiste prijs opgeslagen. |
 | AC-16 | Medewerker wijzigen | De gewijzigde medewerkergegevens worden bewaard. |
 | AC-17 | Medewerker inactief maken | De medewerker verdwijnt uit de openbare lijst, maar historie blijft bestaan. |

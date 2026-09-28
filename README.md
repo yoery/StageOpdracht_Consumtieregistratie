@@ -42,6 +42,8 @@ tests/                      # Unit tests
 - Producten en prijzen beheren. Standaard zijn blikje €0,65, sneetje brood €0,10, boter €0,10, zoet beleg €0,20, glas melk €0,20, beleg €0,50, ei €0,50 en yoghurt €0,50.
 - Medewerkers zien geen persoonlijke aantallen of persoonlijke kosten; deze informatie is alleen beschikbaar voor de admin.
 - Producten toevoegen via een formulier met `Opslaan` en `Opslaan + opnieuw`.
+- Bedrijvenbeheer: de 13 bedrijven van TVB staan erin; bedrijven toevoegen, naam en standaard werkgevernummer wijzigen (per medewerker kan een afwijkend werkgevernummer worden ingevuld). Een bedrijf kan meerdere consumptiepunten hebben, en per consumptiepunt zet je aan welke producten er worden aangeboden. Medewerkers hebben een vast consumptiepunt en zien alleen de producten van dat punt. Een nieuw product staat overal uit tot de beheerder het aanzet.
+- Voorraadbeheer per consumptiepunt: iedere registratie haalt 1 van de voorraad af, leveringen en tellingen worden geboekt, en per product is er een minimum. Een bijbestellijst toont alles wat op is of bijbesteld moet worden.
 - CSV-export (te openen in Excel) met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. Jaar en Maand zijn de loonmaand: consumpties worden verwerkt in de maand erna (september → oktober, december → januari).
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en een Word-compatibele export in [`docs/DOCUMENTATIE-WORD.doc`](./docs/DOCUMENTATIE-WORD.doc).

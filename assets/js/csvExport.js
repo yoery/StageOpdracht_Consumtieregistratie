@@ -58,7 +58,7 @@ export function buildPayrollRows(model, selectedEmployee, selectedMonth) {
       Maand: month,
       Looncode: employee?.payrollCode || "",
       Personeelsnummer: employee?.personnelNumber || "",
-      Werkgevernummer: employee?.employerNumber || "",
+      Werkgevernummer: model.employerNumberFor(employee),
       Naam: employee?.name || "Verwijderd",
       Totaal: total,
       Prijs: Number(price.toFixed(2))

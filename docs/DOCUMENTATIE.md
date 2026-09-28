@@ -79,8 +79,10 @@ De dropdowns boven de tabel filteren op medewerker of maand.
 
 Open het tabblad `Medewerkers`.
 
-- Vul voornaam, achternaam en eventueel looncode, personeelsnummer en werkgevernummer in.
-- Klik op `+ Toevoegen` om een medewerker toe te voegen.
+- Vul voornaam, achternaam, looncode en personeelsnummer in.
+- Kies het bedrijf en daarna het vaste consumptiepunt van de medewerker. De keuzelijst toont alleen de punten van het gekozen bedrijf. De medewerker ziet bij het registreren alleen de producten van dat punt, en de voorraad van dat punt gaat omlaag.
+- Het werkgevernummer komt standaard van het bedrijf. Heeft een medewerker een ander werkgevernummer (bijvoorbeeld per teamleider), vul dan `Afwijkend werkgevernummer` in; dat nummer gaat dan voor in de CSV-export.
+- Klik op `Opslaan` om een medewerker toe te voegen. `Opslaan + opnieuw` houdt het bedrijf en consumptiepunt vast voor de volgende collega.
 - Gebruik `Wijzigen` om medewerkergegevens aan te passen.
 - Gebruik `Deactiveren` of `Activeren` om de medewerkerstatus te wijzigen.
 
@@ -95,15 +97,38 @@ Open het tabblad `Producten` en klik op `+ Product toevoegen`. Het formulier hee
 - `Opslaan`: opslaan en het formulier sluiten.
 - `Opslaan + opnieuw`: opslaan, de velden leegmaken en het formulier open laten.
 
-### 4.7 Logboek bekijken
+Een nieuw product staat bij alle consumptiepunten **uit**. Zet het daarna aan bij de punten die het aanbieden (zie 4.7).
+
+### 4.7 Bedrijven en consumptiepunten beheren
+
+Open het tabblad `Bedrijven`. Standaard staan de 13 bedrijven van TVB erin. Onder ieder bedrijf staan de consumptiepunten van dat bedrijf. Een bedrijf kan geen, één of meerdere consumptiepunten hebben.
+
+- `+ Bedrijf toevoegen` en `Wijzigen`: bedrijfsnaam en werkgevernummer invullen. Het werkgevernummer komt in de CSV-export bij de medewerkers van dat bedrijf, behalve bij medewerkers met een afwijkend werkgevernummer.
+- `+ Consumptiepunt`: een nieuw punt bij dat bedrijf toevoegen. Geef het een naam (bijv. `Kantine begane grond`) en vink aan welke producten er worden aangeboden.
+- `Aanbod wijzigen`: naam, bedrijf of aangeboden producten van een punt aanpassen. De voorraad blijft bewaard, ook als een product tijdelijk uit staat.
+- `Verwijderen`: kan alleen als er geen medewerkers meer aan het bedrijf of punt gekoppeld zijn. Een bedrijf kan ook pas worden verwijderd als het geen consumptiepunten meer heeft.
+
+### 4.8 Voorraad beheren
+
+Open het tabblad `Voorraad`.
+
+- Bovenaan staat de lijst **Bijbestellen** met alle aangeboden producten die `Op` zijn (voorraad 0 of minder) of op of onder het minimum zitten (`Bijbestellen`), over alle consumptiepunten. Klik op een punt om de voorraad daarvan te openen.
+- Kies een consumptiepunt om de voorraad per product te zien.
+- **Levering**: vul het geleverde aantal in en klik op `+ Toevoegen`. Het aantal komt bij de voorraad.
+- **Voorraad**: na het tellen kun je het getal direct aanpassen. Het wordt opgeslagen zodra je het veld verlaat.
+- **Minimum**: bij dit aantal of minder verschijnt het product in de bijbestellijst.
+
+Iedere registratie haalt automatisch 1 van de voorraad af bij het consumptiepunt van de medewerker. Een correctie met `−` in het admin-dashboard zet het product weer terug. Een negatieve voorraad betekent dat er meer is geregistreerd dan er volgens de telling was; tel dan opnieuw. Alle leveringen, tellingen en wijzigingen van het minimum komen in het logboek.
+
+### 4.9 Logboek bekijken
 
 Het tabblad `Logboek` toont standaard maximaal 20 wijzigingen. Met `Meer laden` worden steeds 20 extra wijzigingen getoond.
 
-### 4.8 Modal sluiten en uitloggen
+### 4.10 Modal sluiten en uitloggen
 
 Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft ingelogd zolang de pagina open is. Met de knop `Uitloggen` wordt de adminsessie beëindigd en verschijnt bij het volgende openen opnieuw het loginformulier.
 
-### 4.9 CSV exporteren
+### 4.11 CSV exporteren
 
 1. Open het admin-dashboard.
 2. Kies eventueel een medewerker en/of maand. Achter iedere maand staat de loonmaand waarin die wordt verwerkt, bijvoorbeeld `september 2026 (loonmaand oktober 2026)`.
@@ -375,12 +400,34 @@ Voor dynamisch aangemaakte knoppen gebruikt de app één algemene kliklistener o
 
 De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 
+### Bedrijven
+
+| Veld | Betekenis |
+|---|---|
+| `id` | Unieke identificatie |
+| `name` | Bedrijfsnaam |
+| `employerNumber` | Standaard werkgevernummer voor de CSV-export |
+
+### Consumptiepunten
+
+| Veld | Betekenis |
+|---|---|
+| `id` | Unieke identificatie |
+| `name` | Naam van het punt, bijv. `Kantine begane grond` |
+| `companyId` | Verwijzing naar het bedrijf |
+| `products` | Per product-id: `offered` (aangeboden ja/nee), `stock` (voorraad) en `minimum` |
+
 ### Medewerkers
 
 | Veld | Betekenis |
 |---|---|
 | `id` | Unieke identificatie |
-| `name` | Volledige naam |
+| `name`, `firstName`, `lastName` | Naam |
+| `payrollCode`, `personnelNumber` | Looncode en personeelsnummer |
+| `employerNumber` | Optioneel afwijkend werkgevernummer; leeg = dat van het bedrijf (`RegistrationModel.employerNumberFor`) |
+| `companyId` | Verwijzing naar het bedrijf |
+| `pointId` | Verwijzing naar het vaste consumptiepunt |
+| `active` | Actief of inactief |
 | `color` | Kleur van de avatar |
 
 ### Registraties
@@ -389,7 +436,11 @@ De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 |---|---|
 | `id` | Unieke identificatie |
 | `employeeId` | Verwijzing naar een medewerker |
+| `productId` | Verwijzing naar een product |
+| `pointId` | Consumptiepunt waar de voorraad van af ging; bij een correctie gaat het product hier weer naartoe terug |
 | `createdAt` | Datum en tijd van registratie |
+
+Oude gegevens uit een eerdere versie worden bij het laden automatisch omgezet (`DataStore.migrateCompanies`): de vrij ingevulde bedrijfsnaam wordt een bedrijf, het eerste werkgevernummer wordt de standaard van dat bedrijf (een afwijkend nummer blijft bij de medewerker staan) en ieder bedrijf met medewerkers krijgt één consumptiepunt met alle producten.
 
 Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. Dit sluit aan bij het voorgestelde datamodel waarin `Aantal` standaard 1 is.
 

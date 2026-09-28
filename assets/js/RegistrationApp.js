@@ -95,7 +95,24 @@ export class RegistrationApp {
     this.view.renderCorrectionEmployees();
     this.view.renderAdminEmployees();
     this.view.renderAdminProducts();
+    this.view.renderAdminCompanies();
+    this.view.renderStock();
     this.view.renderAuditLog();
+  }
+
+  // Slaat het logboek op en tekent alle admin- en publieke onderdelen opnieuw.
+  // Wordt gebruikt na wijzigingen aan bedrijven, consumptiepunten en voorraad.
+  finishAdminChange(message) {
+    this.model.save();
+    this.view.renderAll();
+    this.view.populateFilters();
+    this.view.renderAdminEmployees();
+    this.view.renderCorrectionEmployees();
+    this.view.renderAdminProducts();
+    this.view.renderAdminCompanies();
+    this.view.renderStock();
+    this.view.renderAuditLog();
+    this.view.showToast(message);
   }
 
   // Verwerkt dynamische knoppen uit de publieke en adminlijsten.
@@ -184,10 +201,11 @@ export class RegistrationApp {
       this.view.$("#newEmployeeLastName").value = employee.lastName;
       this.view.$("#newEmployeePayrollCode").value = employee.payrollCode;
       this.view.$("#newEmployeePersonnelNumber").value = employee.personnelNumber;
-      this.view.$("#newEmployeeEmployerName").value = employee.employerName;
-      this.view.$("#newEmployeeEmployerNumber").value = employee.employerNumber;
+      this.view.$("#newEmployeeEmployerNumber").value = employee.employerNumber || "";
+      this.view.populateEmployeeCompanySelects(employee.companyId, employee.pointId);
       this.view.$("#employeeFormModal").classList.remove("hidden");
       this.view.showToast("Gegevens geladen om te wijzigen");
+      return;
     }
     const removeProductButton = event.target.closest("[data-remove-product]");
     if (removeProductButton) {
@@ -198,14 +216,11 @@ export class RegistrationApp {
       const productName = this.model.productName(removeProductButton.dataset.removeProduct);
       if (this.persist(() => this.model.removeProduct(removeProductButton.dataset.removeProduct))) {
         this.model.logAdminAction("Product verwijderd", productName);
-        this.model.save();
-        this.view.renderAuditLog();
-        this.view.renderAdminProducts();
-        this.view.renderCorrectionEmployees();
-        this.view.showToast("Product verwijderd");
+        this.finishAdminChange("Product verwijderd");
       } else {
         this.view.showToast("Dit product wordt al gebruikt en kan niet worden verwijderd");
       }
+      return;
     }
     const editProductButton = event.target.closest("[data-edit-product]");
     if (editProductButton) {
@@ -217,8 +232,182 @@ export class RegistrationApp {
       this.view.$("#productFormHelp").textContent = "Pas de productnaam of prijs aan.";
       this.view.$("#productFormModal").classList.remove("hidden");
       this.view.$("#consumptionSaveContinueButton").classList.add("hidden");
-
+      return;
     }
+    this.handleCompanyClick(event);
+  }
+
+  // Verwerkt de knoppen van het bedrijven- en voorraadtabblad.
+  handleCompanyClick(event) {
+    const editCompanyButton = event.target.closest("[data-edit-company]");
+    if (editCompanyButton) {
+      this.openCompanyForm(this.model.findCompany(editCompanyButton.dataset.editCompany));
+      return;
+    }
+    const removeCompanyButton = event.target.closest("[data-remove-company]");
+    if (removeCompanyButton) {
+      const companyId = removeCompanyButton.dataset.removeCompany;
+      const name = this.model.companyName(companyId);
+      if (this.model.employees.some((employee) => employee.companyId === companyId) || this.model.pointsForCompany(companyId).length) {
+        this.view.showToast("Verwijder of verplaats eerst de medewerkers en consumptiepunten van dit bedrijf");
+        return;
+      }
+      if (!window.confirm(`${name} verwijderen?`)) return;
+      if (this.persist(() => this.model.removeCompany(companyId))) {
+        this.model.logAdminAction("Bedrijf verwijderd", name);
+        this.finishAdminChange("Bedrijf verwijderd");
+      }
+      return;
+    }
+    const addPointButton = event.target.closest("[data-add-point]");
+    if (addPointButton) {
+      this.openPointForm(null, addPointButton.dataset.addPoint);
+      return;
+    }
+    const editPointButton = event.target.closest("[data-edit-point]");
+    if (editPointButton) {
+      this.openPointForm(this.model.findPoint(editPointButton.dataset.editPoint));
+      return;
+    }
+    const removePointButton = event.target.closest("[data-remove-point]");
+    if (removePointButton) {
+      const point = this.model.findPoint(removePointButton.dataset.removePoint);
+      if (this.model.employees.some(({ pointId }) => pointId === point.id)) {
+        this.view.showToast("Koppel eerst de medewerkers van dit consumptiepunt aan een ander punt");
+        return;
+      }
+      if (!window.confirm(`Consumptiepunt ${point.name} verwijderen? De voorraad van dit punt verdwijnt.`)) return;
+      if (this.persist(() => this.model.removePoint(point.id))) {
+        this.model.logAdminAction("Consumptiepunt verwijderd", `${point.name} (${this.model.companyName(point.companyId)})`);
+        this.finishAdminChange("Consumptiepunt verwijderd");
+      }
+      return;
+    }
+    const showStockButton = event.target.closest("[data-show-stock-point]");
+    if (showStockButton) {
+      this.view.$("#stockPointSelect").value = showStockButton.dataset.showStockPoint;
+      this.view.renderStock();
+      return;
+    }
+    const deliveryButton = event.target.closest("[data-stock-delivery]");
+    if (deliveryButton) {
+      const productId = deliveryButton.dataset.stockDelivery;
+      const pointId = this.view.$("#stockPointSelect").value;
+      const amount = Number(this.view.$(`[data-delivery-amount="${productId}"]`).value);
+      if (!Number.isInteger(amount) || amount <= 0) {
+        this.view.showToast("Vul een geleverd aantal van minimaal 1 in");
+        return;
+      }
+      if (this.persist(() => this.model.changeStock(pointId, productId, amount))) {
+        this.model.logAdminAction("Levering geboekt", `${amount} × ${this.model.productName(productId)} op ${this.pointLabel(pointId)}`);
+        this.finishAdminChange("Levering toegevoegd aan de voorraad");
+      }
+    }
+  }
+
+  // Bedrijf en naam van een consumptiepunt, voor het logboek.
+  pointLabel(pointId) {
+    const point = this.model.findPoint(pointId);
+    return point ? `${this.model.companyName(point.companyId)} · ${point.name}` : "onbekend consumptiepunt";
+  }
+
+  // Slaat een gewijzigde voorraad (na tellen) of een gewijzigd minimum direct op.
+  saveStockField(input) {
+    const pointId = this.view.$("#stockPointSelect").value;
+    const productId = input.dataset.productId;
+    const value = Number(input.value);
+    const isStock = input.dataset.stockField === "stock";
+
+    if (input.value === "" || !Number.isInteger(value) || (!isStock && value < 0)) {
+      this.view.showToast(isStock ? "Vul een geheel aantal in" : "Het minimum moet 0 of hoger zijn");
+      this.view.renderStock();
+      return;
+    }
+    const saved = this.persist(() => isStock
+      ? this.model.setStock(pointId, productId, value)
+      : this.model.setMinimum(pointId, productId, value));
+    if (!saved) return;
+    this.model.logAdminAction(
+      isStock ? "Voorraad geteld" : "Minimum gewijzigd",
+      `${this.model.productName(productId)} op ${this.pointLabel(pointId)}: ${value}`
+    );
+    this.finishAdminChange(isStock ? "Voorraad bijgewerkt" : "Minimum bijgewerkt");
+  }
+
+  // Opent het bedrijfsformulier, leeg of gevuld om te wijzigen.
+  openCompanyForm(company = null) {
+    const form = this.view.$("#companyForm");
+    form.reset();
+    if (company) form.dataset.editingId = company.id;
+    else delete form.dataset.editingId;
+    this.view.$("#companyFormTitle").textContent = company ? "Bedrijf wijzigen" : "Bedrijf toevoegen";
+    this.view.$("#companyName").value = company?.name || "";
+    this.view.$("#companyEmployerNumber").value = company?.employerNumber || "";
+    this.view.$("#companyFormModal").classList.remove("hidden");
+    this.view.$("#companyName").focus();
+  }
+
+  saveCompany(event) {
+    event.preventDefault();
+    const form = this.view.$("#companyForm");
+    const editingId = form.dataset.editingId;
+    const name = this.view.$("#companyName").value.trim();
+    const employerNumber = this.view.$("#companyEmployerNumber").value.trim();
+    if (!name) return;
+    if (this.model.companies.some((company) => company.id !== editingId && company.name.toLowerCase() === name.toLowerCase())) {
+      this.view.showToast("Er bestaat al een bedrijf met deze naam");
+      return;
+    }
+    if (!this.persist(() => this.model.saveCompany({ id: editingId, name, employerNumber }))) return;
+    this.model.logAdminAction(editingId ? "Bedrijf gewijzigd" : "Bedrijf toegevoegd", name);
+    this.view.$("#companyFormModal").classList.add("hidden");
+    this.finishAdminChange(editingId ? "Bedrijf gewijzigd" : "Bedrijf toegevoegd");
+  }
+
+  // Opent het consumptiepuntformulier, leeg voor een bedrijf of gevuld om te wijzigen.
+  openPointForm(point = null, companyId = "") {
+    const form = this.view.$("#pointForm");
+    form.reset();
+    if (point) form.dataset.editingId = point.id;
+    else delete form.dataset.editingId;
+    this.view.$("#pointFormTitle").textContent = point ? "Consumptiepunt wijzigen" : "Consumptiepunt toevoegen";
+    this.view.renderPointForm(point, companyId);
+    this.view.$("#pointFormModal").classList.remove("hidden");
+    this.view.$("#pointName").focus();
+  }
+
+  savePoint(event) {
+    event.preventDefault();
+    const form = this.view.$("#pointForm");
+    const editingId = form.dataset.editingId;
+    const pointData = {
+      id: editingId,
+      name: this.view.$("#pointName").value.trim(),
+      companyId: this.view.$("#pointCompany").value,
+      offeredProductIds: [...form.querySelectorAll('input[name="offeredProduct"]:checked')].map(({ value }) => value)
+    };
+    if (!pointData.name || !pointData.companyId) return;
+    if (this.model.pointsForCompany(pointData.companyId).some((point) => point.id !== editingId && point.name.toLowerCase() === pointData.name.toLowerCase())) {
+      this.view.showToast("Dit bedrijf heeft al een consumptiepunt met deze naam");
+      return;
+    }
+
+    // Medewerkers blijven aan hun punt gekoppeld; verhuist het punt naar een ander bedrijf, dan verhuizen zij mee.
+    const saved = this.persist(() => {
+      this.model.savePoint(pointData);
+      if (editingId) {
+        this.model.employees
+          .filter(({ pointId }) => pointId === editingId)
+          .forEach((employee) => this.model.updateEmployee(employee.id, { ...employee, companyId: pointData.companyId }));
+      }
+    });
+    if (!saved) return;
+    this.model.logAdminAction(
+      editingId ? "Consumptiepunt gewijzigd" : "Consumptiepunt toegevoegd",
+      `${pointData.name} (${this.model.companyName(pointData.companyId)}), ${pointData.offeredProductIds.length} producten aangeboden`
+    );
+    this.view.$("#pointFormModal").classList.add("hidden");
+    this.finishAdminChange(editingId ? "Consumptiepunt gewijzigd" : "Consumptiepunt toegevoegd");
   }
 
   // Koppelt alle vaste formulieren, filters, tabs en toetsenbordacties.
@@ -229,7 +418,7 @@ export class RegistrationApp {
     this.view.$("#adminModal").addEventListener("click", (event) => { if (event.target === this.view.$("#adminModal")) this.view.$("#adminModal").classList.add("hidden"); });
     this.view.$("#loginForm").addEventListener("submit", (event) => { event.preventDefault(); if (this.view.$("#loginEmail").value && this.view.$("#loginPassword").value) { this.adminLoggedIn = true; this.showDashboard(); } else this.view.$("#loginError").classList.remove("hidden"); });
     this.view.$("#logoutButton").addEventListener("click", () => { this.adminLoggedIn = false; this.view.$("#adminView").classList.add("hidden"); this.view.$("#loginView").classList.remove("hidden"); this.view.$("#loginPassword").value = ""; this.view.$("#loginEmail").focus(); });
-    document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => { document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active")); tab.classList.add("active"); ["registrations", "employees", "products", "audit"].forEach((name) => this.view.$(`#${name}Tab`).classList.toggle("hidden", tab.dataset.tab !== name)); }));
+    document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => { document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active")); tab.classList.add("active"); ["registrations", "employees", "products", "companies", "stock", "audit"].forEach((name) => this.view.$(`#${name}Tab`).classList.toggle("hidden", tab.dataset.tab !== name)); }));
     this.view.$("#filterEmployee").addEventListener("change", () => this.view.renderAdmin());
     this.view.$("#filterMonth").addEventListener("change", () => this.view.renderAdmin());
     this.view.$("#exportButton").addEventListener("click", () => exportCsv(this.model, this.view.$("#filterEmployee").value, this.view.$("#filterMonth").value, this.view));
@@ -241,11 +430,7 @@ export class RegistrationApp {
       this.view.$("#companyFilterOptions").classList.remove("hidden");
       this.view.renderEmployees();
     });
-    this.view.$("#newEmployeeEmployerName").addEventListener("input", () => {
-      const input = this.view.$("#newEmployeeEmployerName");
-      this.filterCompanyOptions("#companyFormOptions", input.value);
-      this.view.$("#companyFormOptions").classList.remove("hidden");
-    });
+    this.view.$("#newEmployeeCompany").addEventListener("change", () => this.view.populateEmployeePointSelect());
     document.addEventListener("click", (event) => {
       const filterOption = event.target.closest("[data-company-value]");
       if (filterOption) {
@@ -254,13 +439,6 @@ export class RegistrationApp {
         filter.value = filterOption.textContent;
         this.view.$("#companyFilterOptions").classList.add("hidden");
         this.view.renderEmployees();
-        return;
-      }
-
-      const formOption = event.target.closest("[data-company-form-value]");
-      if (formOption) {
-        this.view.$("#newEmployeeEmployerName").value = formOption.dataset.companyFormValue;
-        this.view.$("#companyFormOptions").classList.add("hidden");
         return;
       }
       if (!event.target.closest(".company-combobox")) document.querySelectorAll(".company-options").forEach((options) => options.classList.add("hidden"));
@@ -274,7 +452,14 @@ export class RegistrationApp {
       });
     };
     toggleCompanyDropdown(".company-filter .company-combobox", "#companyFilterOptions");
-    toggleCompanyDropdown(".form-company-combobox", "#companyFormOptions");
+    this.view.$("#addCompanyButton").addEventListener("click", () => this.openCompanyForm());
+    this.view.$("#companyForm").addEventListener("submit", (event) => this.saveCompany(event));
+    this.view.$("#pointForm").addEventListener("submit", (event) => this.savePoint(event));
+    document.querySelectorAll("[data-close-company-modal]").forEach((button) => button.addEventListener("click", () => this.view.$("#companyFormModal").classList.add("hidden")));
+    document.querySelectorAll("[data-close-point-modal]").forEach((button) => button.addEventListener("click", () => this.view.$("#pointFormModal").classList.add("hidden")));
+    ["#companyFormModal", "#pointFormModal"].forEach((selector) => this.view.$(selector).addEventListener("click", (event) => { if (event.target === this.view.$(selector)) this.view.$(selector).classList.add("hidden"); }));
+    this.view.$("#stockPointSelect").addEventListener("change", () => this.view.renderStock());
+    this.view.$("#stockTableBody").addEventListener("change", (event) => { if (event.target.matches("[data-stock-field]")) this.saveStockField(event.target); });
     this.view.$("#adminEmployeeSearch").addEventListener("input", () => this.view.renderCorrectionEmployees());
     this.view.$("#employeeManagementSearch").addEventListener("input", () => this.view.renderAdminEmployees());
     this.view.$("#addEmployeeButton").addEventListener("click", () => this.openEmployeeForm());
@@ -310,7 +495,7 @@ export class RegistrationApp {
   openEmployeeForm() {
     const form = this.view.$("#employeeForm");
     form.reset();
-    this.view.populateCompanyFilter();
+    this.view.populateEmployeeCompanySelects();
     delete form.dataset.editingId;
     this.view.$("#employeeSaveContinueButton").classList.remove("hidden");
     this.view.$("#employeeFormTitle").textContent = "Medewerker toevoegen";
@@ -363,10 +548,11 @@ export class RegistrationApp {
       lastName: this.view.$("#newEmployeeLastName").value.trim(),
       payrollCode: this.view.$("#newEmployeePayrollCode").value.trim(),
       personnelNumber: this.view.$("#newEmployeePersonnelNumber").value.trim(),
-      employerName: this.view.$("#newEmployeeEmployerName").value.trim(),
-      employerNumber: this.view.$("#newEmployeeEmployerNumber").value.trim()
+      employerNumber: this.view.$("#newEmployeeEmployerNumber").value.trim(),
+      companyId: this.view.$("#newEmployeeCompany").value || null,
+      pointId: this.view.$("#newEmployeePoint").value || null
     };
-    if (!employeeData.firstName || !employeeData.lastName) return;
+    if (!employeeData.firstName || !employeeData.lastName || !employeeData.companyId) return;
     const editingId = this.view.$("#employeeForm").dataset.editingId;
     const saved = this.persist(() => editingId ? this.model.updateEmployee(editingId, employeeData) : this.model.addEmployee(employeeData));
     if (!saved) return;
@@ -376,10 +562,13 @@ export class RegistrationApp {
     delete this.view.$("#employeeForm").dataset.editingId;
     this.view.populateFilters();
     this.view.renderAdminEmployees();
+    this.view.renderAdminCompanies();
     this.view.renderAuditLog();
     this.view.renderAll();
     this.view.showToast(editingId ? "Medewerker gewijzigd" : "Medewerker toegevoegd");
     if (event.submitter?.dataset.saveMode === "continue" && !editingId) {
+      // Vaak worden meerdere collega's van hetzelfde punt achter elkaar ingevoerd.
+      this.view.populateEmployeeCompanySelects(employeeData.companyId, employeeData.pointId);
       this.view.$("#employeeFormTitle").textContent = "Medewerker toevoegen";
       this.view.$("#employeeFormHelp").textContent = "Vul de gegevens in voor de volgende medewerker.";
       this.view.$("#newEmployeeFirstName").focus();
@@ -395,15 +584,15 @@ export class RegistrationApp {
     const editingId = form.dataset.editingId;
     const productData = { id: editingId || crypto.randomUUID(), name: this.view.$("#productName").value.trim(), price: this.view.$("#productPrice").value };
     if (!productData.name || Number(productData.price) < 0) return;
+    if (this.model.products.some((product) => product.id !== editingId && product.name.toLowerCase() === productData.name.toLowerCase())) {
+      this.view.showToast("Er bestaat al een product met deze naam");
+      return;
+    }
     if (!this.persist(() => this.model.saveProduct(productData))) return;
     this.model.logAdminAction(editingId ? "Product gewijzigd" : "Product toegevoegd", productData.name);
-    this.model.save();
     form.reset();
     delete form.dataset.editingId;
-    this.view.renderAdminProducts();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAuditLog();
-    this.view.showToast(editingId ? "Product gewijzigd" : "Product toegevoegd");
+    this.finishAdminChange(editingId ? "Product gewijzigd" : "Product toegevoegd — zet het aan bij de consumptiepunten die het aanbieden");
     if (event.submitter?.dataset.saveMode === "continue" && !editingId) {
       this.view.$("#productFormTitle").textContent = "Product toevoegen";
       this.view.$("#productFormHelp").textContent = "Vul de gegevens in voor het volgende product.";

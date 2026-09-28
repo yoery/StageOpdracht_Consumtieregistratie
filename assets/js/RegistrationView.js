@@ -1,4 +1,5 @@
 import { payrollPeriod } from "./csvExport.js";
+import { STOCK_STATUS } from "./RegistrationModel.js";
 
 export class RegistrationView {
   // De view ontvangt het model, maar verandert de data zelf niet.
@@ -33,28 +34,25 @@ export class RegistrationView {
     }).format(new Date(value));
   }
 
-  // Rendert de publieke medewerkerlijst op basis van de zoekterm.
+  // Rendert de publieke medewerkerlijst op basis van de zoekterm en het gekozen bedrijf.
   renderEmployees() {
     const query = this.$("#employeeSearch").value.toLowerCase().trim();
     const companyFilter = this.$("#employeeCompanyFilter").dataset.value || "all";
 
-    const employees = this.model.employees.filter(({ name, active, employerName, employerNumber }) => {
-      const company = employerName || employerNumber || "unknown";
-      return active &&
-        name.toLowerCase().includes(query) &&
-        (companyFilter === "all" ||
-          company.toLowerCase().includes(companyFilter.toLowerCase()));
-    });
+    const employees = this.model.employees.filter(({ name, active, companyId }) =>
+      active &&
+      name.toLowerCase().includes(query) &&
+      (companyFilter === "all" || (companyId || "unknown") === companyFilter)
+    );
 
     this.$("#employeeCount").textContent = `${employees.length} totaal`;
     this.$("#emptyState").classList.toggle("hidden", employees.length > 0);
 
     const groups = employees.reduce((grouped, employee) => {
-      const company = employee.employerName || employee.employerNumber || "Onbekend bedrijf";
-      const key = employee.employerName || employee.employerNumber || "unknown";
+      const key = employee.companyId || "unknown";
 
       grouped[key] = grouped[key] || {
-        company,
+        company: this.model.companyName(employee.companyId),
         employees: []
       };
 
@@ -63,6 +61,7 @@ export class RegistrationView {
     }, {});
 
     this.$("#employeeList").innerHTML = Object.values(groups)
+      .sort((a, b) => a.company.localeCompare(b.company, "nl"))
       .map(({ company, employees: companyEmployees }) =>
         `<section class="company-group">
           <h3>${this.escapeHtml(company)}</h3>
@@ -88,50 +87,32 @@ export class RegistrationView {
       .join("");
   }
 
-  // Vult de bedrijfsfilter met de werkgevers die bij medewerkers zijn ingevuld.
+  // Vult de bedrijfsfilter met de bedrijven waar actieve medewerkers aan gekoppeld zijn.
   populateCompanyFilter() {
     const filter = this.$("#employeeCompanyFilter");
     const selected = filter.dataset.value || "all";
+    const activeEmployees = this.model.employees.filter(({ active }) => active);
 
-    const companies = [
-      ...new Set(
-        this.model.employees
-          .map(({ employerName, employerNumber }) =>
-            employerName || employerNumber
-          )
-          .filter(Boolean)
-      )
-    ].sort((a, b) => a.localeCompare(b, "nl"));
+    const companies = this.model.sortedCompanies().filter(({ id }) =>
+      activeEmployees.some(({ companyId }) => companyId === id)
+    );
+    const hasUnknown = activeEmployees.some(({ companyId }) => !this.model.findCompany(companyId));
 
     const selectedValue =
-      companies.includes(selected) || selected === "unknown"
+      companies.some(({ id }) => id === selected) || (selected === "unknown" && hasUnknown)
         ? selected
         : "all";
 
     filter.dataset.value = selectedValue;
+    filter.value = selectedValue === "all" ? "" : this.model.companyName(selectedValue === "unknown" ? null : selectedValue);
 
-    filter.value =
-      selectedValue === "all"
-        ? ""
-        : selectedValue === "unknown"
-          ? "Onbekend bedrijf"
-          : selectedValue;
-
-    const options = [
+    this.$("#companyFilterOptions").innerHTML = [
       `<button type="button" data-company-value="all">Alle bedrijven</button>`,
-      ...companies.map((company) =>
-        `<button type="button" data-company-value="${this.escapeHtml(company)}">${this.escapeHtml(company)}</button>`
+      ...companies.map(({ id, name }) =>
+        `<button type="button" data-company-value="${id}">${this.escapeHtml(name)}</button>`
       ),
-      `<button type="button" data-company-value="unknown">Onbekend bedrijf</button>`
+      hasUnknown ? `<button type="button" data-company-value="unknown">Onbekend bedrijf</button>` : ""
     ].join("");
-
-    this.$("#companyFilterOptions").innerHTML = options;
-
-    this.$("#companyFormOptions").innerHTML = companies
-      .map((company) =>
-        `<button type="button" data-company-form-value="${this.escapeHtml(company)}">${this.escapeHtml(company)}</button>`
-      )
-      .join("");
   }
 
   // Werkt de kaarten met dag- en maandtotalen bij.
@@ -289,7 +270,10 @@ export class RegistrationView {
             <strong>${this.escapeHtml(employee.name)}</strong>
             <small>
               ${employee.active ? "Actief" : "Inactief"} ·
+              ${this.escapeHtml(this.model.companyName(employee.companyId))} ·
+              ${this.escapeHtml(this.model.findPoint(employee.pointId)?.name || "Geen consumptiepunt")} ·
               ${this.escapeHtml(employee.personnelNumber || "Geen personeelsnummer")}
+              ${employee.employerNumber ? ` · werkgevernr. ${this.escapeHtml(employee.employerNumber)} (afwijkend)` : ""}
             </small>
           </span>
 
@@ -324,8 +308,13 @@ export class RegistrationView {
     this.$("#employeeProductsTitle").textContent =
       `Product kiezen voor ${employee.name}`;
 
-    this.$("#employeeProductList").innerHTML =
-      this.model.products.map(({ id, name, price }) => {
+    // Alleen de producten van het eigen consumptiepunt zijn te kiezen.
+    const products = this.model.productsForEmployee(employeeId);
+    this.$("#registerSelectedProductsButton").classList.toggle("hidden", products.length === 0);
+
+    this.$("#employeeProductList").innerHTML = products.length === 0
+      ? `<p class="muted">Er zijn geen producten beschikbaar op jouw consumptiepunt. Neem contact op met de beheerder als dit niet klopt.</p>`
+      : products.map(({ id, name, price }) => {
         const selectedAmount = this.app.selectedProducts[id] || 0;
 
         return `
@@ -348,6 +337,146 @@ export class RegistrationView {
       }).join("");
 
     this.$("#employeeProductsModal").classList.remove("hidden");
+  }
+
+  // Vult de keuzelijsten bedrijf en consumptiepunt in het medewerkersformulier.
+  populateEmployeeCompanySelects(companyId = "", pointId = "") {
+    this.$("#newEmployeeCompany").innerHTML =
+      `<option value="">Kies een bedrijf</option>${
+        this.model.sortedCompanies().map(({ id, name }) =>
+          `<option value="${id}">${this.escapeHtml(name)}</option>`
+        ).join("")
+      }`;
+    this.$("#newEmployeeCompany").value = this.model.findCompany(companyId) ? companyId : "";
+    this.populateEmployeePointSelect(pointId);
+  }
+
+  // Toont alleen de consumptiepunten van het gekozen bedrijf.
+  populateEmployeePointSelect(pointId = "") {
+    const points = this.model.pointsForCompany(this.$("#newEmployeeCompany").value);
+
+    this.$("#newEmployeePoint").innerHTML =
+      `<option value="">${points.length ? "Kies een consumptiepunt" : "Geen consumptiepunt bij dit bedrijf"}</option>${
+        points.map(({ id, name }) =>
+          `<option value="${id}">${this.escapeHtml(name)}</option>`
+        ).join("")
+      }`;
+    this.$("#newEmployeePoint").value = points.some(({ id }) => id === pointId) ? pointId : "";
+  }
+
+  // Rendert de bedrijven met hun consumptiepunten in het beheertabblad.
+  renderAdminCompanies() {
+    this.$("#adminCompanyList").innerHTML = this.model.sortedCompanies().map((company) => {
+      const employeeCount = this.model.employees.filter(({ companyId }) => companyId === company.id).length;
+      const points = this.model.pointsForCompany(company.id);
+
+      const pointRows = points.map((point) => {
+        const offered = this.model.offeredProducts(point.id).length;
+        const pointEmployees = this.model.employees.filter(({ pointId }) => pointId === point.id).length;
+
+        return `<div class="admin-employee-item admin-point-item">
+          <span>
+            <strong>${this.escapeHtml(point.name)}</strong>
+            <small>${offered} van ${this.model.products.length} producten · ${pointEmployees} medewerkers</small>
+          </span>
+          <div class="admin-item-actions">
+            <button class="table-action" data-edit-point="${point.id}">Aanbod wijzigen</button>
+            <button class="table-action danger-action" data-remove-point="${point.id}">Verwijderen</button>
+          </div>
+        </div>`;
+      }).join("") || `<p class="muted admin-point-empty">Nog geen consumptiepunt.</p>`;
+
+      return `<section class="admin-company-item">
+        <div class="admin-employee-item">
+          <span>
+            <strong>${this.escapeHtml(company.name)}</strong>
+            <small>Werkgevernummer ${this.escapeHtml(company.employerNumber || "onbekend")} · ${employeeCount} medewerkers</small>
+          </span>
+          <div class="admin-item-actions">
+            <button class="table-action" data-add-point="${company.id}">+ Consumptiepunt</button>
+            <button class="table-action" data-edit-company="${company.id}">Wijzigen</button>
+            <button class="table-action danger-action" data-remove-company="${company.id}">Verwijderen</button>
+          </div>
+        </div>
+        <div class="admin-point-list">${pointRows}</div>
+      </section>`;
+    }).join("");
+  }
+
+  // Vult het consumptiepuntformulier: bedrijfkeuze en een aan/uit-vinkje per product.
+  renderPointForm(point, companyId) {
+    this.$("#pointCompany").innerHTML = this.model.sortedCompanies().map(({ id, name }) =>
+      `<option value="${id}">${this.escapeHtml(name)}</option>`
+    ).join("");
+    this.$("#pointCompany").value = point?.companyId || companyId;
+    this.$("#pointName").value = point?.name || "";
+
+    this.$("#pointProductList").innerHTML = this.model.products.map(({ id, name }) =>
+      `<label class="offer-item">
+        <input type="checkbox" name="offeredProduct" value="${id}" ${point?.products[id]?.offered ? "checked" : ""}>
+        <span>${this.escapeHtml(name)}</span>
+      </label>`
+    ).join("");
+  }
+
+  // Rendert de voorraad: eerst alles wat op is of bijbesteld moet worden, dan de tabel van één punt.
+  renderStock() {
+    const alerts = this.model.stockAlerts();
+
+    this.$("#stockAlerts").innerHTML = alerts.length
+      ? `<h3>Bijbestellen (${alerts.length})</h3>
+        <ul>${alerts.map(({ point, product, entry, status }) =>
+          `<li>
+            <span class="stock-badge stock-${status}">${STOCK_STATUS[status]}</span>
+            <button type="button" class="text-link" data-show-stock-point="${point.id}">
+              ${this.escapeHtml(this.model.companyName(point.companyId))} · ${this.escapeHtml(point.name)}
+            </button>
+            — ${this.escapeHtml(product.name)}: ${entry.stock} (minimum ${entry.minimum})
+          </li>`
+        ).join("")}</ul>`
+      : `<p class="stock-all-ok">Alles is op voorraad.</p>`;
+
+    const select = this.$("#stockPointSelect");
+    const selected = select.value;
+
+    select.innerHTML = this.model.sortedCompanies()
+      .filter(({ id }) => this.model.pointsForCompany(id).length)
+      .map((company) =>
+        `<optgroup label="${this.escapeHtml(company.name)}">${
+          this.model.pointsForCompany(company.id).map(({ id, name }) =>
+            `<option value="${id}">${this.escapeHtml(name)}</option>`
+          ).join("")
+        }</optgroup>`
+      ).join("");
+
+    if (this.model.findPoint(selected)) select.value = selected;
+
+    const pointId = select.value;
+    const products = this.model.offeredProducts(pointId);
+    const point = this.model.findPoint(pointId);
+
+    this.$("#stockTableBody").innerHTML = !point
+      ? `<tr><td colspan="5" class="muted">Voeg eerst een consumptiepunt toe bij Bedrijven.</td></tr>`
+      : products.length === 0
+        ? `<tr><td colspan="5" class="muted">Dit consumptiepunt biedt nog geen producten aan.</td></tr>`
+        : products.map(({ id, name }) => {
+          const entry = point.products[id];
+          const status = this.model.stockStatus(entry);
+
+          return `<tr>
+            <td>${this.escapeHtml(name)}</td>
+            <td><input class="stock-input" type="number" step="1" value="${entry.stock}"
+                       data-stock-field="stock" data-product-id="${id}" aria-label="Voorraad ${this.escapeHtml(name)}"></td>
+            <td><input class="stock-input" type="number" min="0" step="1" value="${entry.minimum}"
+                       data-stock-field="minimum" data-product-id="${id}" aria-label="Minimum ${this.escapeHtml(name)}"></td>
+            <td><span class="stock-badge stock-${status}">${STOCK_STATUS[status]}</span></td>
+            <td class="stock-delivery">
+              <input class="stock-input" type="number" min="1" step="1" placeholder="Aantal"
+                     data-delivery-amount="${id}" aria-label="Geleverd aantal ${this.escapeHtml(name)}">
+              <button type="button" class="table-action" data-stock-delivery="${id}">+ Toevoegen</button>
+            </td>
+          </tr>`;
+        }).join("");
   }
 
   renderAdminProducts() {

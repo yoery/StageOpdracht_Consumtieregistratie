@@ -19,6 +19,23 @@ export const SEED_EMPLOYEES = [
   "Tom de Groot"
 ];
 
+// De bedrijven binnen TVB. De eerste (TVB) krijgt in de demo een voorbeeld-consumptiepunt.
+export const DEFAULT_COMPANIES = [
+  "TVB",
+  "E-Control",
+  "Home Service Nederland",
+  "IT Supervision",
+  "Klik",
+  "MVIE",
+  "STB",
+  "Technisch Beheer Nederland",
+  "Terberg Totaal Installaties",
+  "Titanium 24",
+  "Van den Broek Loodgietersbedrijf",
+  "VR Bedrijven",
+  "TVB Academy"
+];
+
 export const DEFAULT_PRODUCTS = [
   { id: "blikje", name: "Blikje", price: 0.65 },
   { id: "sneetje-brood", name: "Sneetje brood", price: 0.10 },

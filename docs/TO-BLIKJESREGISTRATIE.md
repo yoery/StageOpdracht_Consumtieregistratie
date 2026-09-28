@@ -106,10 +106,26 @@ De demo bewaart een JSON-object in `localStorage`:
 
 ```js
 {
+  companies: [
+    { id: "unieke-id", name: "IT Supervision", employerNumber: "1234" }
+  ],
+  points: [
+    {
+      id: "unieke-id",
+      name: "Kantine begane grond",
+      companyId: "id-van-bedrijf",
+      products: {
+        blikje: { offered: true, stock: 24, minimum: 6 },
+        ei: { offered: false, stock: 0, minimum: 0 }
+      }
+    }
+  ],
   employees: [
     {
       id: "unieke-id",
       name: "Voorbeeld Naam",
+      companyId: "id-van-bedrijf",
+      pointId: "id-van-consumptiepunt",
       color: "#d8f1e8"
     }
   ],
@@ -118,6 +134,7 @@ De demo bewaart een JSON-object in `localStorage`:
       id: "unieke-id",
       employeeId: "id-van-medewerker",
       productId: "blikje",
+      pointId: "id-van-consumptiepunt",
       createdAt: "2026-09-07T08:00:00.000Z"
     }
   ]
@@ -125,6 +142,15 @@ De demo bewaart een JSON-object in `localStorage`:
 ```
 
 Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd `1`.
+
+### Bedrijven, consumptiepunten en voorraad
+
+- Een **bedrijf** heeft een naam en een standaard werkgevernummer. Een medewerker kan een afwijkend werkgevernummer hebben (bijvoorbeeld per teamleider); `employerNumberFor` gebruikt dat nummer als het is ingevuld, en anders dat van het bedrijf.
+- Een bedrijf heeft geen, één of meerdere **consumptiepunten**. Per punt staat per product of het wordt aangeboden (`offered`), de voorraad (`stock`) en het minimum (`minimum`).
+- Een **medewerker** is gekoppeld aan een bedrijf en een vast consumptiepunt, en ziet alleen de producten die dat punt aanbiedt.
+- Een **registratie** onthoudt het consumptiepunt (`pointId`). De voorraad daar gaat 1 omlaag; bij een correctie gaat het product naar datzelfde punt terug, ook als de medewerker inmiddels bij een ander punt hoort.
+- Een nieuw product krijgt bij ieder punt `offered: false`. Een verwijderd product verdwijnt uit alle voorraadlijsten.
+- Status per product: `Op` bij voorraad 0 of lager, `Bijbestellen` bij voorraad op of onder het minimum, anders `Op voorraad`.
 
 ### Tabel Medewerkers
 
@@ -136,8 +162,9 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `Actief` | Boolean | Geeft aan of de medewerker nog actief is |
 | `Looncode` | Tekst | Looncode voor de CSV-export |
 | `Personeelsnummer` | Tekst | Nummer van de medewerker |
-| `Bedrijfsnaam` | Tekst | Naam van het bedrijf waar de medewerker werkt |
-| `Werkgevernummer` | Tekst | Nummer van de werkgever |
+| `BedrijfID` | Integer of UUID | Bedrijf waar de medewerker werkt (het standaard werkgevernummer staat bij het bedrijf) |
+| `Werkgevernummer` | Tekst | Optioneel afwijkend werkgevernummer; leeg = dat van het bedrijf |
+| `ConsumptiepuntID` | Integer of UUID | Vast consumptiepunt van de medewerker |
 
 ### Tabel Registraties
 
@@ -148,13 +175,17 @@ Elke klik op `+` maakt één registratie. Daarom is het aantal in de demo altijd
 | `DatumTijd` | DateTime | Datum en tijd van de registratie |
 | `Aantal` | Integer | Aantal blikjes, standaard `1` |
 | `ProductID` | Integer of UUID | Geregistreerd product |
+| `ConsumptiepuntID` | Integer of UUID | Punt waar de voorraad van af ging |
 
 ### Productieschema
 
 Het volledige PostgreSQL-schema staat in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHEMA.sql). Het schema bevat:
 
 - `companies` voor bedrijven en werkgeversnummers;
-- `employees` voor actieve en inactieve medewerkers;
+- `consumption_points` voor de consumptiepunten per bedrijf;
+- `point_products` voor aanbod, voorraad en minimum per consumptiepunt per product;
+- `stock_alerts` als databaseview voor alles wat bijbesteld moet worden;
+- `employees` voor actieve en inactieve medewerkers, met bedrijf en vast consumptiepunt;
 - `products` voor producten en prijzen;
 - `admins` voor beheerders en rollen;
 - `registrations` voor iedere consumptieregistratie met datum, tijd en aantal;
@@ -228,8 +259,10 @@ De beheerder kan hier:
 - een medewerker zoeken voor een correctie;
 - een blikje toevoegen of verwijderen;
 - CSV exporteren;
-- medewerkers toevoegen;
+- medewerkers toevoegen en aan een bedrijf en consumptiepunt koppelen;
 - medewerkers zoeken en verwijderen;
+- bedrijven en consumptiepunten beheren en per punt het aanbod aan- of uitzetten;
+- de voorraad per consumptiepunt bekijken, leveringen boeken en minimums instellen;
 - uitloggen.
 
 ### Mobiele weergave
@@ -272,6 +305,15 @@ Als opslaan niet lukt, wordt de wijziging teruggedraaid en krijgt de gebruiker e
 3. De medewerker verdwijnt uit de actieve lijst.
 4. Oude registraties blijven bewaard.
 5. In het overzicht staat bij deze oude registraties `Verwijderd`.
+
+### Voorraad bijhouden
+
+1. Bij iedere registratie verlaagt `RegistrationModel.addRegistration` de voorraad van het consumptiepunt van de medewerker met 1.
+2. Bij een correctie met `−` zet `removeLastRegistration` het product terug op het punt uit de registratie.
+3. Een levering telt het geleverde aantal op bij de voorraad (`changeStock`).
+4. Na tellen vervangt de beheerder de voorraad (`setStock`) of past het minimum aan (`setMinimum`).
+5. `stockAlerts` verzamelt alle aangeboden producten met status `Op` of `Bijbestellen` voor de bijbestellijst.
+6. Iedere levering, telling en minimumwijziging komt in het logboek.
 
 ### CSV exporteren
 
@@ -338,9 +380,9 @@ Voor productie zijn ook HTTPS, gehashte wachtwoorden, sessies, server-side contr
 
 ## 10. Exportontwerp
 
-### Werkblad Periode-totalen
+### CSV-bestand
 
-Dit werkblad gebruikt altijd deze kolomvolgorde:
+Het CSV-bestand gebruikt altijd deze kolomvolgorde:
 
 1. Jaar
 2. Maand
@@ -351,9 +393,7 @@ Dit werkblad gebruikt altijd deze kolomvolgorde:
 7. Totaal
 8. Prijs
 
-### Werkblad Registraties
-
-Dit werkblad bevat de losse productregistraties met medewerker, product, datum, aantal en prijs.
+Jaar en Maand zijn de loonmaand (consumptiemaand + 1). Het werkgevernummer is het afwijkende nummer van de medewerker, of anders dat van het bedrijf. De losse registraties staan in de tabel in het admin-dashboard.
 
 ### Exportopties
 
@@ -397,6 +437,12 @@ Week- en jaarfilters kunnen later worden toegevoegd.
 | Medewerker verwijderen | De medewerker verdwijnt, historie blijft |
 | CSV exporteren | Een `.csv`-bestand wordt gedownload |
 | Export van september | Jaar en Maand in de export zijn oktober |
+| Product uitzetten bij een consumptiepunt | Medewerkers van dat punt zien het product niet meer |
+| Nieuw product toevoegen | Het product staat bij alle consumptiepunten uit |
+| Product registreren | De voorraad van het punt van de medewerker daalt met 1 |
+| Registratie corrigeren met `−` | De voorraad stijgt weer met 1 |
+| Voorraad op of onder het minimum | Het product staat in de bijbestellijst |
+| Bedrijf met medewerkers verwijderen | Dit wordt geweigerd met een melding |
 | Modal sluiten | De modal sluit zonder uit te loggen |
 | Uitloggen | Het loginvenster verschijnt opnieuw |
 | Mobiel bekijken | De layout blijft bruikbaar |
