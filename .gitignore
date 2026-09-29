@@ -1,0 +1,12 @@
+# Afhankelijkheden en logbestanden van Node/npm
+node_modules/
+npm-debug.log*
+
+# Editor- en systeembestanden
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tijdelijke Word-bestanden (ontstaan als een .doc open staat)
+~$*

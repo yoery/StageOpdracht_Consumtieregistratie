@@ -26,7 +26,7 @@ th{background:#e8f5ee}
 <h2>2. Bestanden</h2>
 <table><tr><th>Bestand</th><th>Functie</th></tr>
 <tr><td>index.html</td><td>Structuur en zichtbare onderdelen van de website.</td></tr>
-<tr><td>assets/styles.css</td><td>Kleuren, layout, knoppen, kaarten, tabel en mobiele weergave.</td></tr>
+<tr><td>assets/css/styles.css</td><td>Kleuren, layout, knoppen, kaarten, tabel en mobiele weergave.</td></tr>
 <tr><td>assets/js/app.js</td><td>OOP-applicatielogica met opslag, model, view, events, berekeningen en Excel-export.</td></tr>
 <tr><td>README.md</td><td>Korte startinformatie.</td></tr>
 <tr><td>DOCUMENTATIE.md</td><td>Uitgebreide technische documentatie.</td></tr>
@@ -61,7 +61,7 @@ th{background:#e8f5ee}
 <h2>6. Technische werking</h2>
 <h3>index.html</h3>
 <p>HTML bevat semantische componenten: een header voor navigatie, main met hero en content-grid, aside voor statistieken, footer en een admin-modal. Binnen de modal staan afzonderlijke componenten voor login, tabs, filters, correcties en medewerkersbeheer. Elementen krijgen een <code>id</code> zodat JavaScript ze kan bijwerken.</p>
-<h3>assets/styles.css</h3>
+<h3>assets/css/styles.css</h3>
 <p>De stylesheet is geordend van algemeen naar specifiek: variabelen en reset, basislayout, publieke componenten, admincomponenten en responsive regels. De variabelen in <code>:root</code> bevatten het groene en blauwe TVB-kleurenpalet. Flexbox en CSS Grid zorgen voor de layout. De media query onder 720 pixels maakt de website geschikt voor telefoons.</p>
 <h3>assets/js/app.js</h3>
 <p>De JavaScript is objectgeoriënteerd opgesplitst in vier classes. <code>DataStore</code> leest en schrijft localStorage en valideert de gegevens. <code>RegistrationModel</code> beheert medewerkers, registraties en totalen. <code>RegistrationView</code> rendert de HTML en toont meldingen. <code>RegistrationApp</code> koppelt events aan model en view.</p>

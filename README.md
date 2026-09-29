@@ -15,25 +15,35 @@ Tests draaien (Node.js 20+): `npm test`
 ```text
 index.html                  # Hoofdpagina van de website
 assets/
-  styles.css                # Vormgeving
+  css/
+    styles.css              # Vormgeving
   js/
     main.js                 # Startpunt van de app
-    config.js               # Vaste waarden en standaardproducten
+    config.js               # Vaste waarden: standaardproducten en bedrijven
     DataStore.js            # Opslag in localStorage
     RegistrationModel.js    # Gegevens en regels
     RegistrationView.js     # Weergave (HTML)
     RegistrationApp.js      # Controller (klikken en formulieren)
-    csvExport.js            # CSV-export voor de loonadministratie
-    app.js                  # Back-up van de originele versie, wordt niet geladen
-docs/                       # FO, TO en overige documentatie
-tests/                      # Unit tests
-.github/workflows/          # GitHub Actions CI/CD
+    csvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
+    ThemeManager.js         # Class ThemeManager: licht/donker thema
+docs/
+  TO-BLIKJESREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
+  DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
+  DATABASE-SCHEMA.sql       # PostgreSQL-schema voor productie
+  *.doc                     # Word-versies (lopen achter op de .md-bestanden)
+tests/
+  helpers.js                # Gedeelde hulpfuncties voor de tests
+  *.test.js                 # Unit tests (basis, datastore, model, csv-export, view-app, theme)
+archief/
+  app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
+  app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
+.github/workflows/ci.yml    # GitHub Actions: draait npm test
 ```
 
 ## Inbegrepen
 
 - Medewerkerlijst met zoeken en een persoonlijk productvenster waarin meerdere producten met plusknoppen kunnen worden gekozen en daarna tegelijk geregistreerd.
-- Medewerkers kunnen aan een bedrijfsnaam en werkgevernummer worden gekoppeld, per bedrijf worden gegroepeerd en gefilterd.
+- Medewerkers zijn gekoppeld aan een bedrijf en een consumptiepunt, en worden per bedrijf gegroepeerd en gefilterd.
 - Automatische datum/tijd en lokale opslag via `localStorage`.
 - Admin-demo via de knop rechtsboven (elk ingevuld wachtwoord werkt).
 - Admin-overzicht met medewerker- en maandfilters.
@@ -46,9 +56,8 @@ tests/                      # Unit tests
 - Voorraadbeheer per consumptiepunt: iedere registratie haalt 1 van de voorraad af, leveringen en tellingen worden geboekt, en per product is er een minimum. Een bijbestellijst toont alles wat op is of bijbesteld moet worden.
 - CSV-export (te openen in Excel) met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. Jaar en Maand zijn de loonmaand: consumpties worden verwerkt in de maand erna (september → oktober, december → januari).
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
+- Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en een Word-compatibele export in [`docs/DOCUMENTATIE-WORD.doc`](./docs/DOCUMENTATIE-WORD.doc).
-- Functioneel ontwerp met wireframes en Nielsen-heuristieken in [`docs/FO-BLIKJESREGISTRATIE.md`](./docs/FO-BLIKJESREGISTRATIE.md).
-- Word-compatibele versie van het functioneel ontwerp in [`docs/FO-BLIKJESREGISTRATIE.doc`](./docs/FO-BLIKJESREGISTRATIE.doc).
-- Technisch ontwerp met OOP-architectuur en databasespecificatie in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md).
+- Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, wireframes met Nielsen-heuristieken, OOP-architectuur, databasespecificatie en acceptatiecriteria.
 - Productiegericht PostgreSQL-schema in [`docs/DATABASE-SCHEMA.sql`](./docs/DATABASE-SCHEMA.sql).
 - Word-compatibele versie van het technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.doc`](./docs/TO-BLIKJESREGISTRATIE.doc).

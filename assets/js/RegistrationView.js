@@ -1,8 +1,22 @@
-import { payrollPeriod } from "./csvExport.js";
 import { STOCK_STATUS } from "./RegistrationModel.js";
 
+/**
+ * RegistrationView — alles wat op het scherm komt (de "View" in MVC).
+ *
+ * Verantwoordelijkheid:
+ *   - zet de gegevens uit het model om naar HTML: de medewerkerlijst, het productvenster,
+ *     de tabellen en lijsten in het beheerscherm, de voorraad en meldingen (toasts);
+ *   - maakt tekst veilig voordat die in de pagina komt (escapeHtml).
+ *
+ * Verbonden met:
+ *   - RegistrationModel: de view leest daaruit, maar verandert zelf nooit gegevens.
+ *   - index.html: de view vult de elementen met een id, zoals #employeeList en #stockTableBody.
+ *   - RegistrationApp: bepaalt wanneer er opnieuw getekend moet worden en roept dan de
+ *     render-methodes aan. De view weet zelf niets van de controller.
+ */
 export class RegistrationView {
-  // De view ontvangt het model, maar verandert de data zelf niet.
+  // De view ontvangt het model om gegevens te kunnen tonen.
+  // `$` is een korte schrijfwijze om één element op de pagina te zoeken.
   constructor(model) {
     this.model = model;
     this.$ = (selector) => document.querySelector(selector);
@@ -209,6 +223,8 @@ export class RegistrationView {
       `<p class="muted">Geen medewerker gevonden.</p>`;
   }
 
+  // Vult de filters medewerker en maand boven de registratietabel.
+  // Een eerder gekozen waarde blijft geselecteerd als die nog bestaat.
   populateFilters() {
     const selectedEmployee = this.$("#filterEmployee").value;
     const selectedMonth = this.$("#filterMonth").value;
@@ -228,21 +244,11 @@ export class RegistrationView {
       )
     ];
 
-    // Toont de consumptiemaand plus de loonmaand waarin die wordt verwerkt (een maand later).
-    const monthFormat = new Intl.DateTimeFormat("nl-NL", {
-      month: "long",
-      year: "numeric"
-    });
-
     this.$("#filterMonth").innerHTML =
       `<option value="all">Alle maanden</option>${
-        months.map((month) => {
-          const [year, monthNumber] = month.split("-").map(Number);
-          const consumptionDate = new Date(year, monthNumber - 1, 1);
-          const payroll = payrollPeriod(consumptionDate);
-
-          return `<option value="${month}">${monthFormat.format(consumptionDate)} (loonmaand ${monthFormat.format(new Date(payroll.year, payroll.month - 1, 1))})</option>`;
-        }).join("")
+        months.map((month) =>
+          `<option value="${month}">${this.monthLabel(month)}</option>`
+        ).join("")
       }`;
 
     this.$("#filterEmployee").value =
@@ -256,6 +262,21 @@ export class RegistrationView {
         : "all";
   }
 
+  // Tekst voor een maand in het filter: de consumptiemaand plus de loonmaand waarin die
+  // wordt verwerkt, bijvoorbeeld "september 2026 (loonmaand oktober 2026)".
+  monthLabel(month) {
+    const monthFormat = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "numeric" });
+
+    const [year, monthNumber] = month.split("-").map(Number);
+    const consumptionDate = new Date(year, monthNumber - 1, 1);
+    const payroll = this.model.payrollPeriod(consumptionDate);
+    const payrollDate = new Date(payroll.year, payroll.month - 1, 1);
+
+    return `${monthFormat.format(consumptionDate)} (loonmaand ${monthFormat.format(payrollDate)})`;
+  }
+
+  // Rendert de medewerkerslijst in het beheertabblad, met knoppen om te wijzigen,
+  // (de)activeren en verwijderen. Verwijderen kan alleen bij inactieve medewerkers.
   renderAdminEmployees() {
     const query = this.$("#employeeManagementSearch").value.toLowerCase().trim();
 
@@ -301,7 +322,9 @@ export class RegistrationView {
       ).join("") || `<p class="muted">Geen medewerker gevonden.</p>`;
   }
 
-  renderEmployeeProducts(employeeId) {
+  // Opent het productvenster van een medewerker. `selectedProducts` komt van de controller
+  // en bevat per product-id hoe vaak het al is gekozen, bijvoorbeeld { blikje: 2 }.
+  renderEmployeeProducts(employeeId, selectedProducts = {}) {
     const employee = this.model.findEmployee(employeeId);
     if (!employee) return;
 
@@ -315,7 +338,7 @@ export class RegistrationView {
     this.$("#employeeProductList").innerHTML = products.length === 0
       ? `<p class="muted">Er zijn geen producten beschikbaar op jouw consumptiepunt. Neem contact op met de beheerder als dit niet klopt.</p>`
       : products.map(({ id, name, price }) => {
-        const selectedAmount = this.app.selectedProducts[id] || 0;
+        const selectedAmount = selectedProducts[id] || 0;
 
         return `
           <div class="personal-product-item">
@@ -479,6 +502,7 @@ export class RegistrationView {
         }).join("");
   }
 
+  // Rendert de productlijst in het beheertabblad, met knoppen om te wijzigen en te verwijderen.
   renderAdminProducts() {
     this.$("#adminProductList").innerHTML =
       this.model.products.map((product) =>
@@ -503,6 +527,8 @@ export class RegistrationView {
       ).join("");
   }
 
+  // Rendert het logboek, nieuwste wijziging bovenaan. `limit` bepaalt hoeveel regels
+  // zichtbaar zijn; de knop "Meer laden" verschijnt als er meer zijn.
   renderAuditLog(limit = 20) {
     const visibleEntries = [...this.model.auditLog]
       .reverse()
@@ -530,12 +556,14 @@ export class RegistrationView {
     );
   }
 
+  // Tekent de openbare pagina opnieuw: bedrijfsfilter, medewerkerlijst en totalen.
   renderAll() {
     this.populateCompanyFilter();
     this.renderEmployees();
     this.renderStats();
   }
 
+  // Toont een korte melding rechtsonder die na 2,5 seconde verdwijnt.
   showToast(message) {
     const toast = this.$("#toast");
 

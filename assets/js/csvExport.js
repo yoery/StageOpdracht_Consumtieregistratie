@@ -1,128 +1,160 @@
-// Vaste kolomvolgorde voor de loonadministratie.
-export const CSV_COLUMNS = [
-  "Jaar",
-  "Maand",
-  "Looncode",
-  "Personeelsnummer",
-  "Werkgevernummer",
-  "Naam",
-  "Totaal",
-  "Prijs"
-];
+/**
+ * CsvExport — maakt het CSV-bestand voor de loonadministratie.
+ *
+ * Verantwoordelijkheid:
+ *   - registraties per medewerker per loonmaand optellen;
+ *   - die regels omzetten naar CSV-tekst (puntkomma's, komma als decimaalteken);
+ *   - het bestand laten downloaden in de browser.
+ *
+ * Verbonden met:
+ *   - RegistrationModel: levert registraties, medewerkers, producten, het werkgevernummer
+ *     en de loonmaand (payrollPeriod).
+ *   - RegistrationApp: roept download() aan als de beheerder op "CSV exporteren" klikt,
+ *     en toont een melding als er niets te exporteren is.
+ *
+ * Deze class weet niets van de HTML-pagina; alleen download() gebruikt de browser om
+ * het bestand op te slaan.
+ */
+export class CsvExport {
+  // Vaste kolomvolgorde, afgesproken met de loonadministratie.
+  static COLUMNS = [
+    "Jaar",
+    "Maand",
+    "Looncode",
+    "Personeelsnummer",
+    "Werkgevernummer",
+    "Naam",
+    "Totaal",
+    "Prijs"
+  ];
 
-// Consumpties worden verwerkt in de loonadministratie van de maand erna:
-// september 2026 → oktober 2026, december 2026 → januari 2027.
-export function payrollPeriod(date) {
-  const period = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  constructor(model) {
+    this.model = model;
+  }
 
-  return {
-    year: period.getFullYear(),
-    month: period.getMonth() + 1
-  };
-}
+  // Telt de registraties per medewerker per loonmaand, met de filters uit het beheerscherm.
+  // selectedEmployee en selectedMonth zijn een id/maandcode of "all".
+  buildRows(selectedEmployee, selectedMonth) {
+    const grouped = new Map();
 
-// Telt de registraties per medewerker per loonmaand, met de filters uit het beheerscherm.
-export function buildPayrollRows(model, selectedEmployee, selectedMonth) {
-  const grouped = new Map();
+    for (const registration of this.model.registrations) {
+      if (!this.matchesFilters(registration, selectedEmployee, selectedMonth)) continue;
 
-  model.registrations
-    .filter(
-      (registration) =>
-        (selectedEmployee === "all" ||
-          registration.employeeId === selectedEmployee) &&
-        (selectedMonth === "all" ||
-          model.monthKey(new Date(registration.createdAt)) === selectedMonth)
-    )
-    .forEach((registration) => {
-      const { year, month } = payrollPeriod(new Date(registration.createdAt));
+      const { year, month } = this.model.payrollPeriod(new Date(registration.createdAt));
       const key = `${registration.employeeId}-${year}-${month}`;
 
-      const current = grouped.get(key) || {
-        employee: model.findEmployee(registration.employeeId),
-        year,
-        month,
-        total: 0,
-        price: 0
-      };
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          employee: this.model.findEmployee(registration.employeeId),
+          year,
+          month,
+          total: 0,
+          price: 0
+        });
+      }
 
-      current.total += 1;
-      current.price +=
-        model.products.find(({ id }) => id === registration.productId)?.price || 0;
+      const group = grouped.get(key);
+      group.total += 1;
+      group.price += this.model.productPrice(registration.productId);
+    }
 
-      grouped.set(key, current);
-    });
+    const rows = [...grouped.values()].map((group) => this.toRow(group));
+    return rows.sort((a, b) => this.compareRows(a, b));
+  }
 
-  return [...grouped.values()]
-    .map(({ employee, year, month, total, price }) => ({
+  // Controleert of een registratie binnen de gekozen medewerker en consumptiemaand valt.
+  matchesFilters(registration, selectedEmployee, selectedMonth) {
+    const employeeMatches = selectedEmployee === "all" || registration.employeeId === selectedEmployee;
+    const monthMatches =
+      selectedMonth === "all" ||
+      this.model.monthKey(new Date(registration.createdAt)) === selectedMonth;
+
+    return employeeMatches && monthMatches;
+  }
+
+  // Zet een opgetelde groep om naar één regel met de vaste kolomnamen.
+  toRow({ employee, year, month, total, price }) {
+    return {
       Jaar: year,
       Maand: month,
       Looncode: employee?.payrollCode || "",
       Personeelsnummer: employee?.personnelNumber || "",
-      Werkgevernummer: model.employerNumberFor(employee),
+      Werkgevernummer: this.model.employerNumberFor(employee),
       Naam: employee?.name || "Verwijderd",
       Totaal: total,
       Prijs: Number(price.toFixed(2))
-    }))
-    .sort(
-      (a, b) =>
-        a.Jaar - b.Jaar ||
-        a.Maand - b.Maand ||
-        a.Naam.localeCompare(b.Naam, "nl")
-    );
-}
-
-// Maakt één CSV-veld veilig: quotes rond speciale tekens en geen formules
-// (een naam die met = + - @ begint zou Excel anders als formule uitvoeren).
-function csvField(value) {
-  let text = String(value ?? "");
-
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  if (/[";\r\n]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
-
-  return text;
-}
-
-// Zet rijen om naar CSV met puntkomma's, zoals een Nederlandse Excel verwacht.
-export function toCsv(rows) {
-  return [CSV_COLUMNS, ...rows.map((row) => CSV_COLUMNS.map((column) => row[column]))]
-    .map((fields) => fields.map(csvField).join(";"))
-    .join("\r\n");
-}
-
-// Prijs met komma en twee decimalen, bijvoorbeeld 1,30.
-const formatPrice = (value) => value.toFixed(2).replace(".", ",");
-
-export function exportCsv(model, selectedEmployee, selectedMonth, view) {
-  const rows = buildPayrollRows(model, selectedEmployee, selectedMonth);
-
-  if (!rows.length) {
-    view.showToast("Geen registraties om te exporteren voor deze filters.");
-    return;
+    };
   }
 
-  // Geen totaalregel: de loonadministratie leest iedere regel in als medewerker.
-  const csvRows = rows.map((row) => ({ ...row, Prijs: formatPrice(row.Prijs) }));
+  // Sorteert op jaar, dan maand, dan naam.
+  compareRows(a, b) {
+    if (a.Jaar !== b.Jaar) return a.Jaar - b.Jaar;
+    if (a.Maand !== b.Maand) return a.Maand - b.Maand;
+    return a.Naam.localeCompare(b.Naam, "nl");
+  }
 
-  let fileName = "blikjesregistratie-alle-periodes.csv";
+  // Maakt één CSV-veld veilig: quotes rond speciale tekens en geen formules
+  // (een naam die met = + - @ begint zou Excel anders als formule uitvoeren).
+  escapeField(value) {
+    let text = String(value ?? "");
 
-  if (selectedMonth !== "all") {
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    if (/[";\r\n]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
+
+    return text;
+  }
+
+  // Zet rijen om naar CSV-tekst met puntkomma's, zoals een Nederlandse Excel verwacht.
+  toCsv(rows) {
+    const lines = [CsvExport.COLUMNS];
+
+    for (const row of rows) {
+      lines.push(CsvExport.COLUMNS.map((column) => row[column]));
+    }
+
+    return lines
+      .map((fields) => fields.map((field) => this.escapeField(field)).join(";"))
+      .join("\r\n");
+  }
+
+  // Prijs met komma en twee decimalen, bijvoorbeeld 1,30.
+  formatPrice(value) {
+    return value.toFixed(2).replace(".", ",");
+  }
+
+  // Bestandsnaam met de loonmaand, of "alle-periodes" als er geen maand is gekozen.
+  fileName(selectedMonth) {
+    if (selectedMonth === "all") return "blikjesregistratie-alle-periodes.csv";
+
     const [year, month] = selectedMonth.split("-").map(Number);
-    const period = payrollPeriod(new Date(year, month - 1, 1));
-    fileName = `blikjesregistratie-loonmaand-${period.year}-${String(period.month).padStart(2, "0")}.csv`;
+    const period = this.model.payrollPeriod(new Date(year, month - 1, 1));
+    const paddedMonth = String(period.month).padStart(2, "0");
+
+    return `blikjesregistratie-loonmaand-${period.year}-${paddedMonth}.csv`;
   }
 
-  // De BOM (byte order mark, U+FEFF) aan het begin zorgt dat Excel letters zoals é en ë goed toont.
-  const bom = String.fromCharCode(0xfeff);
-  const blob = new Blob([bom + toCsv(csvRows)], {
-    type: "text/csv;charset=utf-8"
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  // Maakt het CSV-bestand en laat de browser het downloaden.
+  // Geeft false terug als er voor deze filters niets te exporteren is.
+  download(selectedEmployee, selectedMonth) {
+    const rows = this.buildRows(selectedEmployee, selectedMonth);
+    if (rows.length === 0) return false;
 
-  link.href = url;
-  link.download = fileName;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+    // Geen totaalregel: de loonadministratie leest iedere regel in als medewerker.
+    const csvRows = rows.map((row) => ({ ...row, Prijs: this.formatPrice(row.Prijs) }));
+
+    // De BOM (byte order mark, U+FEFF) aan het begin zorgt dat Excel letters zoals é en ë goed toont.
+    const bom = String.fromCharCode(0xfeff);
+    const blob = new Blob([bom + this.toCsv(csvRows)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = this.fileName(selectedMonth);
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    return true;
+  }
 }

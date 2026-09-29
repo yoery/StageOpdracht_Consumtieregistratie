@@ -9,8 +9,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Zet het donkere thema al vóór het tekenen van de pagina, zodat die niet eerst licht oplicht.
+       Daarna neemt ThemeManager (assets/js/ThemeManager.js) het over, ook voor de stand "Auto". -->
+  <script>
+    try {
+      const themeMode = localStorage.getItem("tvb-theme") || "system";
+      const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (themeMode === "dark" || (themeMode === "system" && systemDark)) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    } catch (error) {
+      // Geen toegang tot de opslag: de pagina start licht en ThemeManager regelt de rest.
+    }
+  </script>
   <!-- Externe stylesheet met alle kleuren, layouts en componentstijlen. -->
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/css/styles.css">
   <!-- Startpunt van de applicatie. Modules werken alleen via een webserver (bijv. Live Server), niet via file://. -->
   <script type="module" src="assets/js/main.js"></script>
 </head>
@@ -26,6 +39,18 @@
         </span>
       </a>
       <div class="topbar-actions">
+        <!-- Thema: slider voor licht/donker, en de keuzes Systeem (standaard) en Auto (dag/nacht). -->
+        <div class="theme-control" role="group" aria-label="Weergave: licht of donker">
+          <button type="button" class="theme-switch" id="themeSwitch" role="switch" aria-checked="false" aria-label="Donkere modus">
+            <span class="theme-switch-icon" aria-hidden="true">☀</span>
+            <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-knob"></span></span>
+            <span class="theme-switch-icon" aria-hidden="true">☾</span>
+          </button>
+          <div class="theme-modes">
+            <button type="button" data-theme-mode="system" aria-pressed="true" title="Volgt de instelling van je apparaat">Systeem</button>
+            <button type="button" data-theme-mode="auto" aria-pressed="false" title="Overdag licht, na zonsondergang donker">Auto</button>
+          </div>
+        </div>
         <span class="status-pill"><i aria-hidden="true"></i> Systeem actief</span>
         <button class="avatar-button" id="adminOpenButton" title="Open admin login" aria-label="Admin login">
           <span class="avatar" aria-hidden="true">A</span>

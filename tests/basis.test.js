@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { DataStore } from "../assets/js/DataStore.js";
-import { payrollPeriod, buildPayrollRows, toCsv } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/csvExport.js";
 
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 
@@ -603,14 +603,14 @@ test("save schrijft state naar de store", () => {
 });
 test("loonmaand is de maand na de consumptie", () => {
   assert.deepEqual(
-    payrollPeriod(new Date(2026, 8, 15)),
+    createModel().payrollPeriod(new Date(2026, 8, 15)),
     { year: 2026, month: 10 }
   );
 });
 
 test("consumpties uit december gaan naar januari van het volgende jaar", () => {
   assert.deepEqual(
-    payrollPeriod(new Date(2026, 11, 31)),
+    createModel().payrollPeriod(new Date(2026, 11, 31)),
     { year: 2027, month: 1 }
   );
 });
@@ -624,7 +624,7 @@ test("export telt per medewerker per loonmaand met prijzen", () => {
     { id: "3", employeeId: "employee-1", productId: "blikje", createdAt: "2026-10-05T12:00:00" }
   ];
 
-  const rows = buildPayrollRows(model, "all", "2026-09");
+  const rows = new CsvExport(model).buildRows("all", "2026-09");
 
   assert.equal(rows.length, 1);
   assert.equal(rows[0].Jaar, 2026);
@@ -634,7 +634,7 @@ test("export telt per medewerker per loonmaand met prijzen", () => {
 });
 
 test("csv gebruikt puntkomma's en maakt speciale tekens en formules veilig", () => {
-  const csv = toCsv([{
+  const csv = new CsvExport(null).toCsv([{
     Jaar: 2026,
     Maand: 10,
     Looncode: "",
@@ -824,7 +824,7 @@ test("export haalt het werkgevernummer bij het bedrijf", () => {
   model.saveCompany({ id: point.companyId, name: "TVB", employerNumber: "1001" });
   model.addRegistration("employee-1", "blikje");
 
-  assert.equal(buildPayrollRows(model, "all", "all")[0].Werkgevernummer, "1001");
+  assert.equal(new CsvExport(model).buildRows("all", "all")[0].Werkgevernummer, "1001");
 });
 
 test("afwijkend werkgevernummer bij de medewerker gaat voor op dat van het bedrijf", () => {
@@ -834,7 +834,7 @@ test("afwijkend werkgevernummer bij de medewerker gaat voor op dat van het bedri
   model.updateEmployee("employee-1", { ...model.findEmployee("employee-1"), employerNumber: "2002" });
   model.addRegistration("employee-1", "blikje");
 
-  assert.equal(buildPayrollRows(model, "all", "all")[0].Werkgevernummer, "2002");
+  assert.equal(new CsvExport(model).buildRows("all", "all")[0].Werkgevernummer, "2002");
 });
 
 test("oude gegevens: afwijkend werkgevernummer blijft bij de medewerker staan", () => {
