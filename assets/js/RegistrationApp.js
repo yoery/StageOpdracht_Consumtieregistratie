@@ -114,6 +114,7 @@ export class RegistrationApp {
   handleClick(event) {
     const actions = [
       ["[data-product-increment]", (button) => this.incrementProduct(button.dataset.productIncrement)],
+      ["[data-product-decrement]", (button) => this.decrementProduct(button.dataset.productDecrement)],
       ["#registerSelectedProductsButton", () => this.registerSelectedProducts()],
       ["[data-open-employee]", (button) => this.openEmployeeProducts(button.dataset.openEmployee)],
       ["[data-correction-plus]", (button) => this.addCorrection(button.dataset.correctionPlus, button.dataset.correctionProduct)],
@@ -287,6 +288,27 @@ export class RegistrationApp {
     this.view.renderEmployeeProducts(this.selectedEmployeeId, this.selectedProducts);
   }
 
+  // Haalt één stuk af van een gekozen product (de "−"-knop), maar nooit onder 0.
+  // Zo kan een medewerker een vergissing herstellen zonder opnieuw te beginnen.
+  decrementProduct(productId) {
+    const current = this.selectedProducts[productId] || 0;
+    if (current === 0) return;
+
+    this.selectedProducts[productId] = current - 1;
+    this.view.renderEmployeeProducts(this.selectedEmployeeId, this.selectedProducts);
+  }
+
+  // Maakt een korte samenvatting van de keuze, bijvoorbeeld "2× Blikje, 1× Ei".
+  selectionSummary() {
+    const parts = [];
+
+    for (const [productId, amount] of Object.entries(this.selectedProducts)) {
+      if (amount > 0) parts.push(`${amount}× ${this.model.productName(productId)}`);
+    }
+
+    return parts.join(", ");
+  }
+
   // Sluit het persoonlijke productvenster en vergeet de keuze.
   closeEmployeeProducts() {
     this.hide("#employeeProductsModal");
@@ -304,6 +326,9 @@ export class RegistrationApp {
       return;
     }
 
+    // De samenvatting wordt vóór het opslaan gemaakt, omdat de keuze daarna wordt gewist.
+    const message = `${this.employeeLabel(this.selectedEmployeeId)}: ${this.selectionSummary()} geregistreerd ✓`;
+
     const saved = this.persist(() => {
       for (const [productId, amount] of Object.entries(this.selectedProducts)) {
         for (let count = 0; count < amount; count += 1) {
@@ -316,7 +341,10 @@ export class RegistrationApp {
     this.view.renderAll();
     this.selectedProducts = {};
     this.closeEmployeeProducts();
-    this.view.showToast("Producten direct opgeslagen ✓");
+
+    // Op een gedeelde tablet moet de medewerker kunnen lezen voor wie en wat er is opgeslagen,
+    // daarom blijft deze melding langer staan.
+    this.view.showToast(message, 4000);
   }
 
   // ------------------------------------------------------------------

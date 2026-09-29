@@ -141,6 +141,8 @@ In productie beheert een systeembeheerder de rollen en instellingen. Deze rol be
 | FR-44 | Met een slider in de bovenbalk kan de gebruiker zelf licht of donker kiezen. |
 | FR-45 | Met de keuze "Auto" is het thema overdag licht en na zonsondergang donker, volgens de tijden van zonsopkomst en zonsondergang in Nederland per maand. |
 | FR-46 | De gekozen thema-instelling wordt per browser onthouden. |
+| FR-47 | In het productvenster kan de gebruiker per product met `−` en `+` het aantal kiezen; `−` gaat niet onder 0. De knop `Registreren` toont het totaal aantal gekozen producten. |
+| FR-48 | Na het registreren toont het systeem een melding met de naam van de medewerker en de geregistreerde producten, bijvoorbeeld "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd ✓". |
 
 ## 5. Niet-functionele eisen (NFR)
 
@@ -372,7 +374,7 @@ Op dit scherm staan:
 - een zoekveld en een bedrijfsfilter;
 - de actieve medewerkers, gegroepeerd per bedrijf, met naam en avatar;
 - het totaal van vandaag en van deze maand (voor alle medewerkers samen);
-- na een klik op een medewerker: een productvenster met alleen de producten van het eigen consumptiepunt, een `+`-knop per product en een knop `Registreren`;
+- na een klik op een medewerker: een productvenster met alleen de producten van het eigen consumptiepunt, per product een `−`- en `+`-knop (44 × 44 pixels, geschikt voor een aanraakscherm) en een knop `Registreren (aantal)`;
 - een melding na het opslaan.
 
 Een medewerker ziet geen persoonlijke aantallen of kosten en krijgt geen `−`-knop. Alleen de beheerder kan een registratie verlagen.
@@ -415,6 +417,10 @@ Technisch: alle kleuren staan als CSS-variabelen in `:root` (licht) en `:root[da
 Op een klein scherm komen de onderdelen onder elkaar te staan. Hierdoor blijven de knoppen en teksten goed leesbaar op een telefoon. In de bovenbalk vervallen dan de statustekst, de icoontjes naast de slider en (op telefoons) de naam naast het logo, zodat de thema-knoppen en de admin-knop blijven passen.
 
 De pagina is altijd minstens schermhoog, met de footer onderaan. Staat er weinig op het scherm (bijvoorbeeld op een staande tablet bij het consumptiepunt, of na zoeken op één naam), dan rekt de medewerkerskaart mee tot boven de footer in plaats van dat er onder de footer een leeg vlak ontstaat. Staat er meer op dan past, dan scrollt de pagina zoals normaal.
+
+Bovenbalk, inhoud en footer gebruiken dezelfde paginabreedte en zijmarge (CSS-variabelen `--page-width` en `--gutter`), zodat de randen op ieder scherm gelijk lopen. Op tablets en telefoons (tot 1100 pixels breed) zijn de kleine teksten groter gemaakt, zodat ze op armlengte leesbaar zijn; op een groot scherm blijven de oorspronkelijke maten staan.
+
+Knoppen en medewerkerrijen reageren kort bij indrukken (ze worden heel even iets kleiner), vensters openen met een zachte fade en tabbladen faden in. Alle effecten duren hooguit een kwart seconde. Wie op het apparaat "minder beweging" heeft ingesteld, krijgt geen animaties.
 
 ### Low-fidelity wireframe
 
@@ -475,6 +481,10 @@ De high-fidelity versie is de uiteindelijke website. Deze heeft:
 - Een medewerker kan zelf niet verlagen en ziet alleen producten die op het eigen punt aanwezig zijn. Dit helpt om fouten te voorkomen en past bij **foutpreventie**.
 - De website werkt op verschillende schermen. Dit past bij **flexibiliteit en efficiënt gebruik**.
 - Oude registraties blijven zichtbaar als `Verwijderd`. Hierdoor kan de gebruiker beter zien wat er met oude gegevens is gebeurd.
+- Het productvenster heeft naast `+` ook een `−`-knop, zodat een verkeerde tik direct te herstellen is. Dit past bij **gebruikerscontrole en vrijheid**.
+- De melding na het registreren noemt de naam en de producten, staat onderaan in het midden en blijft 4 seconden staan. Dit past bij **zichtbaarheid van de systeemstatus**, belangrijk op een gedeelde tablet.
+- Formulieren hebben labels boven de velden in plaats van alleen voorbeeldtekst die verdwijnt tijdens het typen. Dit past bij **herkenning in plaats van onthouden** en **foutpreventie**.
+- Knoppen voor aanraakschermen zijn minstens 44 × 44 pixels, en op een staande tablet is de banner compacter zodat de medewerkerlijst hoger begint. Dit past bij **flexibiliteit en efficiënt gebruik**.
 
 ## 10. Use cases en procesbeschrijvingen
 
@@ -698,6 +708,8 @@ Voor productie zijn ook HTTPS, gehashte wachtwoorden, sessies, server-side contr
 | AC-33 | Slider aanklikken | Het thema wisselt tussen licht en donker; "Systeem" en "Auto" staan uit. Na herladen blijft de keuze bewaard. |
 | AC-34 | "Auto" kiezen | Overdag is het thema licht, na zonsondergang donker. |
 | AC-35 | Donker thema bekijken | Alle schermen (ook het beheerscherm en de meldingen) zijn donker en goed leesbaar; de tekst is groen. |
+| AC-36 | Productvenster: `+`, `+`, `−` op één product | Het aantal is 1 en de knop toont `Registreren (1)`; `−` bij 0 doet niets. |
+| AC-37 | Registreren op de tablet | De melding noemt de naam en de producten en is onderaan in het midden goed leesbaar. |
 
 Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `npm test` en via GitHub Actions:
 

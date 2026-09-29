@@ -273,8 +273,12 @@
       <h2 id="productFormTitle">Product toevoegen</h2>
       <p class="muted" id="productFormHelp">Vul de productnaam en prijs in.</p>
       <form class="add-employee-form employee-fields" id="productForm">
-        <input id="productName" placeholder="Productnaam" required>
-        <input id="productPrice" type="number" min="0" step="0.01" placeholder="Prijs" required>
+        <label>Productnaam
+          <input id="productName" placeholder="bijv. Soep" required>
+        </label>
+        <label>Prijs in euro
+          <input id="productPrice" type="number" min="0" step="0.01" placeholder="bijv. 0.65" required>
+        </label>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-product-modal>Annuleren</button>
           <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
@@ -306,13 +310,27 @@
       <h2 id="employeeFormTitle">Medewerker toevoegen</h2>
       <p class="muted" id="employeeFormHelp">Vul de gegevens in en kies daarna hoe je verder wilt gaan.</p>
       <form class="add-employee-form employee-fields" id="employeeForm">
-        <input id="newEmployeeFirstName" placeholder="Voornaam" required>
-        <input id="newEmployeeLastName" placeholder="Achternaam" required>
-        <input id="newEmployeePayrollCode" type="number" placeholder="Looncode" required>
-        <input id="newEmployeePersonnelNumber" type="number" placeholder="Personeelsnummer" required>
-        <select id="newEmployeeCompany" required aria-label="Bedrijf"></select>
-        <select id="newEmployeePoint" aria-label="Consumptiepunt"></select>
-        <input id="newEmployeeEmployerNumber" type="number" placeholder="Afwijkend werkgevernummer (optioneel)" aria-describedby="employerNumberHint">
+        <label>Voornaam
+          <input id="newEmployeeFirstName" required>
+        </label>
+        <label>Achternaam
+          <input id="newEmployeeLastName" required>
+        </label>
+        <label>Looncode
+          <input id="newEmployeePayrollCode" type="number" required>
+        </label>
+        <label>Personeelsnummer
+          <input id="newEmployeePersonnelNumber" type="number" required>
+        </label>
+        <label>Bedrijf
+          <select id="newEmployeeCompany" required></select>
+        </label>
+        <label>Consumptiepunt
+          <select id="newEmployeePoint"></select>
+        </label>
+        <label>Afwijkend werkgevernummer (optioneel)
+          <input id="newEmployeeEmployerNumber" type="number" aria-describedby="employerNumberHint">
+        </label>
         <p class="field-hint" id="employerNumberHint">Leeg laten = werkgevernummer van het bedrijf.</p>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-employee-modal>Annuleren</button>
@@ -331,8 +349,12 @@
       <h2 id="companyFormTitle">Bedrijf toevoegen</h2>
       <p class="muted">Het werkgevernummer komt in de CSV-export bij de medewerkers van dit bedrijf, behalve bij wie een afwijkend nummer heeft.</p>
       <form class="add-employee-form employee-fields" id="companyForm">
-        <input id="companyName" placeholder="Bedrijfsnaam" required>
-        <input id="companyEmployerNumber" type="number" placeholder="Werkgevernummer">
+        <label>Bedrijfsnaam
+          <input id="companyName" required>
+        </label>
+        <label>Werkgevernummer
+          <input id="companyEmployerNumber" type="number">
+        </label>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-company-modal>Annuleren</button>
           <button class="primary-button" type="submit">Opslaan</button>
@@ -349,8 +371,12 @@
       <h2 id="pointFormTitle">Consumptiepunt toevoegen</h2>
       <p class="muted">Zet aan welke producten hier worden aangeboden. Medewerkers van dit punt zien alleen deze producten.</p>
       <form class="add-employee-form employee-fields" id="pointForm">
-        <input id="pointName" placeholder="Naam, bijv. Kantine begane grond" required>
-        <select id="pointCompany" required aria-label="Bedrijf"></select>
+        <label>Naam
+          <input id="pointName" placeholder="bijv. Kantine begane grond" required>
+        </label>
+        <label>Bedrijf
+          <select id="pointCompany" required></select>
+        </label>
         <fieldset class="offer-list">
           <legend>Aanbod</legend>
           <div id="pointProductList"></div>

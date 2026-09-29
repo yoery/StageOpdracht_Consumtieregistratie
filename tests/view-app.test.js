@@ -79,7 +79,7 @@ test("gekozen producten worden in één keer als losse registraties opgeslagen",
   assert.equal(model.findPoint(point.id).products.blikje.stock, 22);
   assert.deepEqual(app.selectedProducts, {});
   assert.equal(app.selectedEmployeeId, null);
-  assert.deepEqual(view.toasts, ["Producten direct opgeslagen ✓"]);
+  assert.deepEqual(view.toasts, ["Test Medewerker: 2× Blikje, 1× Boter geregistreerd ✓"]);
 });
 
 test("registreren zonder gekozen product slaat niets op", () => {
@@ -131,6 +131,34 @@ test("+ in het productvenster telt het gekozen aantal op", () => {
   app.incrementProduct("blikje");
 
   assert.deepEqual(app.selectedProducts, { blikje: 2 });
+});
+
+test("− in het productvenster haalt er één af, maar niet onder 0", () => {
+  const { app } = createApp();
+  app.openEmployeeProducts("employee-1");
+
+  app.incrementProduct("blikje");
+  app.incrementProduct("blikje");
+  app.decrementProduct("blikje");
+  app.decrementProduct("ei");
+
+  assert.deepEqual(app.selectedProducts, { blikje: 1 });
+
+  app.decrementProduct("blikje");
+  app.decrementProduct("blikje");
+
+  assert.deepEqual(app.selectedProducts, { blikje: 0 });
+});
+
+test("producten die weer op 0 staan, worden niet geregistreerd en niet genoemd", () => {
+  const { app, model, view } = createApp();
+  app.selectedEmployeeId = "employee-1";
+  app.selectedProducts = { blikje: 1, ei: 0 };
+
+  app.registerSelectedProducts();
+
+  assert.deepEqual(model.registrations.map(({ productId }) => productId), ["blikje"]);
+  assert.deepEqual(view.toasts, ["Test Medewerker: 1× Blikje geregistreerd ✓"]);
 });
 
 test("employeeLabel valt terug op de id als de medewerker niet bestaat", () => {
