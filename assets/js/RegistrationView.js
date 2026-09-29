@@ -333,8 +333,14 @@ export class RegistrationView {
 
     // Alleen de producten van het eigen consumptiepunt zijn te kiezen.
     const products = this.model.productsForEmployee(employeeId);
-    this.$("#registerSelectedProductsButton").classList.toggle("hidden", products.length === 0);
+    const registerButton = this.$("#registerSelectedProductsButton");
+    registerButton.classList.toggle("hidden", products.length === 0);
 
+    // De knop laat zien hoeveel producten er worden geregistreerd, bijvoorbeeld "Registreren (3)".
+    const totalSelected = Object.values(selectedProducts).reduce((sum, amount) => sum + amount, 0);
+    registerButton.textContent = totalSelected > 0 ? `Registreren (${totalSelected})` : "Registreren";
+
+    // Per product: naam en prijs, en een teller met − en + (de − kan niet onder 0).
     this.$("#employeeProductList").innerHTML = products.length === 0
       ? `<p class="muted">Er zijn geen producten beschikbaar op jouw consumptiepunt. Neem contact op met de beheerder als dit niet klopt.</p>`
       : products.map(({ id, name, price }) => {
@@ -347,15 +353,24 @@ export class RegistrationView {
               <small>€ ${price.toFixed(2).replace(".", ",")}</small>
             </span>
 
-            <button class="personal-product-plus"
+            <button class="personal-product-step personal-product-minus"
                     type="button"
-                    data-product-increment="${id}">
-              +
+                    data-product-decrement="${id}"
+                    aria-label="Eén ${this.escapeHtml(name)} minder"
+                    ${selectedAmount === 0 ? "disabled" : ""}>
+              −
             </button>
 
-            <strong class="personal-product-amount">
+            <strong class="personal-product-amount" aria-live="polite">
               ${selectedAmount}
             </strong>
+
+            <button class="personal-product-step personal-product-plus"
+                    type="button"
+                    data-product-increment="${id}"
+                    aria-label="Eén ${this.escapeHtml(name)} meer">
+              +
+            </button>
           </div>`;
       }).join("");
 
@@ -563,8 +578,9 @@ export class RegistrationView {
     this.renderStats();
   }
 
-  // Toont een korte melding rechtsonder die na 2,5 seconde verdwijnt.
-  showToast(message) {
+  // Toont een korte melding onderaan het scherm. `duration` is hoe lang die zichtbaar blijft
+  // (in milliseconden); standaard 2,5 seconde.
+  showToast(message, duration = 2500) {
     const toast = this.$("#toast");
 
     toast.textContent = message;
@@ -573,6 +589,6 @@ export class RegistrationView {
 
     // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => toast.classList.add("hidden"), 2500);
+    this.toastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
   }
 }

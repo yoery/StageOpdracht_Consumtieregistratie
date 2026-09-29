@@ -387,7 +387,7 @@ De methode `RegistrationView.renderAll` voert `renderEmployees` en `renderStats`
 
 ### `showToast`
 
-De methode `RegistrationView.showToast` toont een korte melding zoals `Producten direct opgeslagen ✓`. Na 2,5 seconden verdwijnt deze melding automatisch.
+De methode `RegistrationView.showToast` toont een korte melding onderaan in het midden van het scherm, zoals `Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd ✓`. Standaard verdwijnt een melding na 2,5 seconde; de melding na het registreren blijft 4 seconden staan, zodat een medewerker aan een gedeelde tablet kan lezen voor wie en wat er is opgeslagen.
 
 ### Opslagfouten en terugdraaien
 

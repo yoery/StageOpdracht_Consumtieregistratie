@@ -2,6 +2,9 @@
 /* Licht thema (standaard). Alle kleuren van de website komen uit deze variabelen,
    zodat het donkere thema hieronder alleen de variabelen hoeft te vervangen. */
 :root {
+  /* Paginabreedte en zijmarge: gedeeld door bovenbalk, inhoud en footer, zodat alles gelijk uitlijnt. */
+  --page-width:1120px;
+  --gutter:28px;
   color-scheme:light;
   --ink:#163540;
   --muted:#71858a;
@@ -96,7 +99,7 @@ button {
 /* Navigatiebalk met merkidentiteit en admin-ingang. */
 .topbar {
   height:76px;
-  padding:0 max(5vw,28px);
+  padding:0 max(var(--gutter),calc((100% - var(--page-width)) / 2 + var(--gutter)));
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -143,7 +146,8 @@ button {
   display:flex;
   align-items:center;
   gap:6px;
-  padding:4px;
+  min-height:44px;
+  padding:0 6px;
   background:none;
   color:var(--muted);
   font-size:14px
@@ -185,7 +189,8 @@ button {
   overflow:hidden
 }
 .theme-modes button {
-  padding:5px 10px;
+  min-height:36px;
+  padding:0 12px;
   background:var(--paper);
   color:var(--muted);
   font-size:11px;
@@ -233,9 +238,9 @@ main {
   display:flex;
   flex-direction:column;
   width:100%;
-  max-width:1120px;
+  max-width:var(--page-width);
   margin:0 auto;
-  padding:0 28px 28px
+  padding:0 var(--gutter) var(--gutter)
 }
 .hero {
   min-height:255px;
@@ -657,7 +662,7 @@ footer {
   justify-content:space-between;
   color:var(--muted);
   font-size:11px;
-  padding:22px max(5vw,28px);
+  padding:22px max(var(--gutter),calc((100% - var(--page-width)) / 2 + var(--gutter)));
   border-top:1px solid var(--line)
 }
 /* Beheerder-modal met login en dashboard. */
@@ -681,14 +686,23 @@ footer {
   position:relative;
   box-shadow:var(--modal-shadow)
 }
+/* Sluitknop (×) met een aanraakvlak van 44 × 44 pixels. */
 .modal-close {
   position:absolute;
-  right:16px;
-  top:12px;
+  right:8px;
+  top:6px;
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
   background:none;
   font-size:26px;
   color:var(--muted);
   z-index:1
+}
+.modal-close:hover,.modal-close:focus-visible {
+  background:var(--paper-soft)
 }
 .modal-icon {
   width:42px;
@@ -878,6 +892,7 @@ footer {
   display:flex;
   justify-content:space-between;
   align-items:center;
+  gap:8px;
   width:100%;
   padding:13px 15px;
   border:1px solid var(--line);
@@ -893,26 +908,41 @@ footer {
 .personal-product-item small {
   color:var(--muted)
 }
-.personal-product-plus {
-  width:34px;
-  height:34px;
+/* − en + in het productvenster: 44 × 44 pixels, groot genoeg om met een vinger te raken. */
+.personal-product-step {
+  width:44px;
+  height:44px;
+  flex:none;
   border:0;
   border-radius:50%;
-  background:var(--green);
-  color:#fff;
-  font-size:22px;
+  font-size:24px;
   line-height:1;
   cursor:pointer
 }
+.personal-product-plus {
+  background:var(--green);
+  color:#fff
+}
 .personal-product-plus:hover,
 .personal-product-plus:focus-visible {
-  border-color:var(--green);
   background:var(--blue)
 }
+.personal-product-minus {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.personal-product-minus:hover,
+.personal-product-minus:focus-visible {
+  background:var(--mint-border)
+}
+.personal-product-minus:disabled {
+  opacity:.4;
+  cursor:default
+}
 .personal-product-amount {
-  min-width:28px;
-  margin-left:10px;
-  text-align:center
+  min-width:36px;
+  text-align:center;
+  font-size:17px
 }
 .employee-products-actions {
   display:flex;
@@ -995,9 +1025,14 @@ footer {
   outline-color:var(--green);
   background:var(--paper)
 }
+/* Labels boven de velden in de beheerformulieren; de ruimte komt van de grid-gap. */
+.employee-fields label {
+  margin:0
+}
 .field-hint {
-  align-self:center;
+  align-self:end;
   margin:0;
+  padding-bottom:12px;
   color:var(--muted);
   font-size:12px
 }
@@ -1147,10 +1182,14 @@ footer {
   text-align:center
 }
 /* Tijdelijke meldingen na acties. */
+/* Onderaan in het midden, zodat de melding op een tablet goed in beeld is. */
 .toast {
   position:fixed;
   bottom:25px;
-  right:25px;
+  left:50%;
+  transform:translateX(-50%);
+  max-width:calc(100vw - 32px);
+  text-align:center;
   background:var(--toast-bg);
   color:var(--toast-text);
   border-radius:8px;
@@ -1162,13 +1201,14 @@ footer {
 .toast.show {
   animation:pop .25s ease
 }
+/* De melding schuift iets omhoog in beeld; translateX(-50%) houdt hem in het midden. */
 @keyframes pop {
   from {
-    transform:translateY(10px);
+    transform:translate(-50%,10px);
     opacity:0
   }
   to {
-    transform:none;
+    transform:translate(-50%,0);
     opacity:1
   }
 }
@@ -1260,9 +1300,70 @@ footer {
   margin-bottom:14px
 }
 /* Tabletlayout: de koelkasttablet gebruikt grotere aanraakvlakken en één kolom. */
+/* Beweging en reactie: korte, subtiele effecten zodat de gebruiker ziet dat een tik of klik
+   is aangekomen. Alleen klikbare elementen reageren; alles duurt hooguit een kwart seconde. */
+.primary-button,.secondary-button,.correction-button,.personal-product-step,
+.admin-employee-item .table-action,.stock-table .table-action,.tab,.theme-modes button {
+  transition:background-color .15s,color .15s,border-color .15s,transform .1s
+}
+/* Indrukken: knoppen worden heel even iets kleiner. */
+.primary-button:active,.secondary-button:active,.correction-button:active,
+.personal-product-step:active:not(:disabled),
+.admin-employee-item .table-action:active,.stock-table .table-action:active {
+  transform:scale(.95)
+}
+/* Medewerkerrij: op een tablet (geen hover) is dit de reactie op een tik. */
+.employee-row-clickable:active {
+  transform:scale(.985);
+  background:var(--mint)
+}
+.admin-employee-item .table-action:hover,.stock-table .table-action:hover {
+  border-color:var(--hover-border);
+  background:var(--hover-bg)
+}
+.tab:hover {
+  color:var(--ink)
+}
+/* Vensters openen met een zachte fade en schuiven iets omhoog. */
+.modal-backdrop:not(.hidden) {
+  animation:backdrop-in .2s ease-out
+}
+.modal-backdrop:not(.hidden) > .modal {
+  animation:modal-in .22s ease-out
+}
+/* Wisselen van tabblad of van login naar dashboard: de nieuwe inhoud fadet in. */
+#loginView:not(.hidden),#adminView:not(.hidden),
+#registrationsTab:not(.hidden),#employeesTab:not(.hidden),#productsTab:not(.hidden),
+#companiesTab:not(.hidden),#stockTab:not(.hidden),#auditTab:not(.hidden) {
+  animation:fade-in .2s ease-out
+}
+@keyframes backdrop-in {
+  from {
+    opacity:0
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity:0;
+    transform:translateY(12px) scale(.98)
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity:0
+  }
+}
+/* Wie op het apparaat "minder beweging" heeft ingesteld, krijgt geen animaties. */
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important
+  }
+}
 @media (min-width:721px) and (max-width:900px) {
-  main {
-    padding:0 20px 20px
+  :root {
+    --gutter:20px
   }
   .content-grid {
     grid-template-columns:1fr;
@@ -1290,9 +1391,41 @@ footer {
   }
 }
 /* Mobiele layout: onderdelen stapelen op smalle schermen. */
+/* Staande tablet (bijv. bij een consumptiepunt): een compactere banner, zodat de
+   medewerkerlijst hoger op het scherm begint. Tekst, kleuren en afbeelding blijven hetzelfde. */
+@media (min-width:721px) and (max-width:1100px) and (orientation:portrait) {
+  .hero {
+    min-height:0;
+    padding:30px 40px
+  }
+  .hero h1 {
+    font-size:34px
+  }
+  .hero-copy {
+    margin-top:10px
+  }
+  .hero-shape {
+    top:50%;
+    width:150px;
+    height:150px;
+    margin-top:-75px
+  }
+  .hero-shape:before {
+    inset:16px
+  }
+  .hero-shape:after {
+    inset:32px
+  }
+  .hero-shape span {
+    font-size:52px
+  }
+  .content-grid {
+    margin-top:18px
+  }
+}
 @media(max-width:720px) {
-  .topbar {
-    padding:0 18px
+  :root {
+    --gutter:16px
   }
   .admin-label,.status-pill {
     display:none
@@ -1303,9 +1436,6 @@ footer {
   }
   .theme-switch-icon {
     display:none
-  }
-  main {
-    padding:0 14px 14px
   }
   .hero {
     padding:39px 26px;
@@ -1356,7 +1486,8 @@ footer {
     width:100%
   }
   footer {
-    padding:18px;
+    padding-top:18px;
+    padding-bottom:18px;
     gap:20px;
     flex-direction:column
   }
@@ -1365,5 +1496,51 @@ footer {
 @media(max-width:520px) {
   .brand > span:not(.brand-mark) {
     display:none
+  }
+}
+/* Tablets en telefoons: de kleine teksten worden groter, zodat ze op armlengte leesbaar zijn.
+   Op een groot scherm blijven de oorspronkelijke maten staan. */
+@media(max-width:1100px) {
+  .eyebrow,.section-kicker {
+    font-size:12px
+  }
+  .brand small,.search-box kbd {
+    font-size:12px
+  }
+  .theme-modes button {
+    font-size:13px
+  }
+  .status-pill,.count-badge {
+    font-size:13px
+  }
+  .company-filter,.company-options button {
+    font-size:14px
+  }
+  .employee-total,.stat-card span,.stat-card small,.tip-card p,footer {
+    font-size:13px
+  }
+  .empty-state p {
+    font-size:14px
+  }
+  .modal label,.filter-row label,.offer-list legend,.admin-search {
+    font-size:14px
+  }
+  .primary-button,.secondary-button,.stock-table .table-action {
+    font-size:14px
+  }
+  .form-error,.field-hint,.admin-point-empty {
+    font-size:14px
+  }
+  .admin-table-wrap table {
+    font-size:14px
+  }
+  .admin-table-wrap th,.stock-badge {
+    font-size:12px
+  }
+  .admin-employee-item small,.correction-count {
+    font-size:13px
+  }
+  .correction-product-row > span {
+    font-size:14px
   }
 }
