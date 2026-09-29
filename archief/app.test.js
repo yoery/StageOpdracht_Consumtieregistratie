@@ -1,6 +1,6 @@
 /* const test = require("node:test");
 const assert = require("node:assert/strict");
-const { RegistrationModel, DEFAULT_PRODUCTS } = require("../assets/js/app.js");
+const { RegistrationModel, DEFAULT_PRODUCTS } = require("./app.js");
 
 const createStore = (state = null) => ({
   load: () => state,

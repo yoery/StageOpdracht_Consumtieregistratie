@@ -21,13 +21,28 @@ CREATE UNIQUE INDEX companies_name_active_unique
     ON companies (lower(name))
     WHERE active = true;
 
+-- Een bedrijf kan geen, één of meerdere consumptiepunten hebben.
+CREATE TABLE consumption_points (
+    point_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL REFERENCES companies(company_id) ON DELETE RESTRICT,
+    name varchar(150) NOT NULL,
+    active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT consumption_points_name_not_blank CHECK (length(btrim(name)) > 0),
+    CONSTRAINT consumption_points_name_unique UNIQUE (company_id, name)
+);
+
 CREATE TABLE employees (
     employee_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id uuid REFERENCES companies(company_id) ON DELETE SET NULL,
+    point_id uuid REFERENCES consumption_points(point_id) ON DELETE SET NULL,
     first_name varchar(100) NOT NULL,
     last_name varchar(150) NOT NULL,
     payroll_code varchar(100),
     personnel_number varchar(100),
+    -- Optioneel afwijkend werkgevernummer; NULL = companies.employer_number.
+    employer_number varchar(100),
     active boolean NOT NULL DEFAULT true,
     color varchar(20),
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -55,6 +70,35 @@ CREATE TABLE products (
     CONSTRAINT products_name_unique UNIQUE (name)
 );
 
+-- Aanbod en voorraad per consumptiepunt per product.
+-- Een nieuw product krijgt bij ieder punt een regel met offered = false.
+CREATE TABLE point_products (
+    point_id uuid NOT NULL REFERENCES consumption_points(point_id) ON DELETE CASCADE,
+    product_id uuid NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
+    offered boolean NOT NULL DEFAULT false,
+    stock integer NOT NULL DEFAULT 0,
+    minimum integer NOT NULL DEFAULT 0,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (point_id, product_id),
+    CONSTRAINT point_products_minimum_non_negative CHECK (minimum >= 0)
+);
+
+-- Producten die bijbesteld moeten worden (op of onder het minimum).
+CREATE OR REPLACE VIEW stock_alerts AS
+SELECT
+    c.name AS company_name,
+    cp.name AS point_name,
+    p.name AS product_name,
+    pp.stock,
+    pp.minimum,
+    CASE WHEN pp.stock <= 0 THEN 'Op' ELSE 'Bijbestellen' END AS status
+FROM point_products pp
+JOIN consumption_points cp ON cp.point_id = pp.point_id
+JOIN companies c ON c.company_id = cp.company_id
+JOIN products p ON p.product_id = pp.product_id
+WHERE pp.offered = true
+  AND pp.stock <= pp.minimum;
+
 CREATE TABLE admins (
     admin_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email varchar(320) NOT NULL,
@@ -76,6 +120,8 @@ CREATE TABLE registrations (
     registration_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id uuid NOT NULL REFERENCES employees(employee_id) ON DELETE RESTRICT,
     product_id uuid NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
+    -- Consumptiepunt waar de voorraad van af ging.
+    point_id uuid REFERENCES consumption_points(point_id) ON DELETE SET NULL,
     registered_by_admin_id uuid REFERENCES admins(admin_id) ON DELETE SET NULL,
     registered_at timestamptz NOT NULL DEFAULT now(),
     amount integer NOT NULL DEFAULT 1,
@@ -128,6 +174,14 @@ CREATE TRIGGER employees_set_updated_at
     BEFORE UPDATE ON employees
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE TRIGGER consumption_points_set_updated_at
+    BEFORE UPDATE ON consumption_points
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER point_products_set_updated_at
+    BEFORE UPDATE ON point_products
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE TRIGGER products_set_updated_at
     BEFORE UPDATE ON products
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -135,6 +189,22 @@ CREATE TRIGGER products_set_updated_at
 CREATE TRIGGER admins_set_updated_at
     BEFORE UPDATE ON admins
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+INSERT INTO companies (name)
+VALUES
+    ('TVB'),
+    ('E-Control'),
+    ('Home Service Nederland'),
+    ('IT Supervision'),
+    ('Klik'),
+    ('MVIE'),
+    ('STB'),
+    ('Technisch Beheer Nederland'),
+    ('Terberg Totaal Installaties'),
+    ('Titanium 24'),
+    ('Van den Broek Loodgietersbedrijf'),
+    ('VR Bedrijven'),
+    ('TVB Academy');
 
 INSERT INTO products (name, price)
 VALUES

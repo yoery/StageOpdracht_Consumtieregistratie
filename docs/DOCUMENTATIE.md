@@ -11,17 +11,19 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | Bestand | Functie |
 |---|---|
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
-| `assets/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
+| `assets/css/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
 | `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
 | `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers en standaardproducten |
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
 | `assets/js/RegistrationApp.js` | Controller: verwerkt klikken, formulieren en toetsenbordacties |
-| `assets/js/csvExport.js` | CSV-export voor de loonadministratie (maand + 1) |
-| `assets/js/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
+| `assets/js/csvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
+| `assets/js/ThemeManager.js` | Class `ThemeManager`: licht en donker thema (Systeem, Auto of zelf kiezen met de slider) |
+| `archief/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
+| `archief/app.test.js` | Back-up van de oude tests bij die versie; wordt niet meer uitgevoerd |
 | `README.md` | Korte startinformatie voor het project |
-| `docs/` | Functioneel ontwerp, technisch ontwerp en overige documentatie |
+| `docs/` | Technisch ontwerp (met daarin ook de functionele eisen), databaseschema en overige documentatie |
 | `tests/` | Unit tests voor de belangrijkste reken- en registratiefuncties |
 
 Bij het toevoegen of wijzigen van een medewerker kan de beheerder een bedrijfsnaam (`employerName`) typen of een bestaande bedrijfsnaam uit de compacte keuzelijst kiezen. Met deze bedrijfsnaam worden medewerkers in de openbare lijst gegroepeerd en gefilterd. De lijst filtert direct tijdens het typen. Nieuwe bedrijfsnamen mogen ook direct worden ingevoerd. Op de homepage werkt het bedrijfsfilter op dezelfde manier.
@@ -79,8 +81,10 @@ De dropdowns boven de tabel filteren op medewerker of maand.
 
 Open het tabblad `Medewerkers`.
 
-- Vul voornaam, achternaam en eventueel looncode, personeelsnummer en werkgevernummer in.
-- Klik op `+ Toevoegen` om een medewerker toe te voegen.
+- Vul voornaam, achternaam, looncode en personeelsnummer in.
+- Kies het bedrijf en daarna het vaste consumptiepunt van de medewerker. De keuzelijst toont alleen de punten van het gekozen bedrijf. De medewerker ziet bij het registreren alleen de producten van dat punt, en de voorraad van dat punt gaat omlaag.
+- Het werkgevernummer komt standaard van het bedrijf. Heeft een medewerker een ander werkgevernummer (bijvoorbeeld per teamleider), vul dan `Afwijkend werkgevernummer` in; dat nummer gaat dan voor in de CSV-export.
+- Klik op `Opslaan` om een medewerker toe te voegen. `Opslaan + opnieuw` houdt het bedrijf en consumptiepunt vast voor de volgende collega.
 - Gebruik `Wijzigen` om medewerkergegevens aan te passen.
 - Gebruik `Deactiveren` of `Activeren` om de medewerkerstatus te wijzigen.
 
@@ -95,15 +99,38 @@ Open het tabblad `Producten` en klik op `+ Product toevoegen`. Het formulier hee
 - `Opslaan`: opslaan en het formulier sluiten.
 - `Opslaan + opnieuw`: opslaan, de velden leegmaken en het formulier open laten.
 
-### 4.7 Logboek bekijken
+Een nieuw product staat bij alle consumptiepunten **uit**. Zet het daarna aan bij de punten die het aanbieden (zie 4.7).
+
+### 4.7 Bedrijven en consumptiepunten beheren
+
+Open het tabblad `Bedrijven`. Standaard staan de 13 bedrijven van TVB erin. Onder ieder bedrijf staan de consumptiepunten van dat bedrijf. Een bedrijf kan geen, één of meerdere consumptiepunten hebben.
+
+- `+ Bedrijf toevoegen` en `Wijzigen`: bedrijfsnaam en werkgevernummer invullen. Het werkgevernummer komt in de CSV-export bij de medewerkers van dat bedrijf, behalve bij medewerkers met een afwijkend werkgevernummer.
+- `+ Consumptiepunt`: een nieuw punt bij dat bedrijf toevoegen. Geef het een naam (bijv. `Kantine begane grond`) en vink aan welke producten er worden aangeboden.
+- `Aanbod wijzigen`: naam, bedrijf of aangeboden producten van een punt aanpassen. De voorraad blijft bewaard, ook als een product tijdelijk uit staat.
+- `Verwijderen`: kan alleen als er geen medewerkers meer aan het bedrijf of punt gekoppeld zijn. Een bedrijf kan ook pas worden verwijderd als het geen consumptiepunten meer heeft.
+
+### 4.8 Voorraad beheren
+
+Open het tabblad `Voorraad`.
+
+- Bovenaan staat de lijst **Bijbestellen** met alle aangeboden producten die `Op` zijn (voorraad 0 of minder) of op of onder het minimum zitten (`Bijbestellen`), over alle consumptiepunten. Klik op een punt om de voorraad daarvan te openen.
+- Kies een consumptiepunt om de voorraad per product te zien.
+- **Levering**: vul het geleverde aantal in en klik op `+ Toevoegen`. Het aantal komt bij de voorraad.
+- **Voorraad**: na het tellen kun je het getal direct aanpassen. Het wordt opgeslagen zodra je het veld verlaat.
+- **Minimum**: bij dit aantal of minder verschijnt het product in de bijbestellijst.
+
+Iedere registratie haalt automatisch 1 van de voorraad af bij het consumptiepunt van de medewerker. Een correctie met `−` in het admin-dashboard zet het product weer terug. Een negatieve voorraad betekent dat er meer is geregistreerd dan er volgens de telling was; tel dan opnieuw. Alle leveringen, tellingen en wijzigingen van het minimum komen in het logboek.
+
+### 4.9 Logboek bekijken
 
 Het tabblad `Logboek` toont standaard maximaal 20 wijzigingen. Met `Meer laden` worden steeds 20 extra wijzigingen getoond.
 
-### 4.8 Modal sluiten en uitloggen
+### 4.10 Modal sluiten en uitloggen
 
 Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft ingelogd zolang de pagina open is. Met de knop `Uitloggen` wordt de adminsessie beëindigd en verschijnt bij het volgende openen opnieuw het loginformulier.
 
-### 4.9 CSV exporteren
+### 4.11 CSV exporteren
 
 1. Open het admin-dashboard.
 2. Kies eventueel een medewerker en/of maand. Achter iedere maand staat de loonmaand waarin die wordt verwerkt, bijvoorbeeld `september 2026 (loonmaand oktober 2026)`.
@@ -116,6 +143,16 @@ Het bestand heeft altijd de kolommen `Jaar`, `Maand`, `Looncode`, `Personeelsnum
 
 Het bestand gebruikt puntkomma's als scheidingsteken en een komma als decimaalteken (`0,65`), zodat een Nederlandse Excel het direct goed opent. De gekozen filters worden toegepast op de export. Producten en prijzen worden uit de administratie gehaald. Losse registraties staan in de tabel in het admin-dashboard.
 
+### 4.12 Licht of donker thema
+
+Rechtsboven in de bovenbalk staat de thema-schakelaar:
+
+- **Systeem** (standaard): de website volgt de instelling van je computer of telefoon. Staat Windows of je telefoon op donker, dan is de website ook donker.
+- **Slider (☀ / ☾)**: kies zelf licht of donker. Dit is een vaste keuze; "Systeem" en "Auto" staan daarna uit.
+- **Auto**: overdag licht en na zonsondergang donker. De tijden van zonsopkomst en zonsondergang zijn per maand ingesteld voor Nederland (`DAYLIGHT_HOURS` in `config.js`), bijvoorbeeld in december donker vanaf ongeveer 16:30 en in juni vanaf ongeveer 22:00. De website controleert iedere minuut of het tijd is om te wisselen.
+
+De keuze wordt per browser onthouden. In het donkere thema blijven de huiskleuren behouden: de achtergrond wordt donker en de tekst krijgt de groene huiskleur, iets lichter zodat hij goed leesbaar is.
+
 ## 5. Uitleg van `index.html`
 
 ### Metadata en externe bestanden
@@ -127,7 +164,7 @@ In de `<head>` staan:
 - `viewport`: maakt de pagina geschikt voor mobiel.
 - De titel en beschrijving voor browser en zoekmachines.
 - Google Fonts voor de gebruikte lettertypes.
-- `assets/styles.css` voor de vormgeving.
+- `assets/css/styles.css` voor de vormgeving.
 - `assets/js/main.js` als startpunt van de JavaScript.
 
 ### Navigatiebalk
@@ -175,7 +212,7 @@ De `.modal-backdrop` is een dialoogvenster over de website heen. De modal bevat 
 
 De knop met `data-close-modal` sluit de modal. Deze knop is bewust gescheiden van `Uitloggen`. Een ingelogde beheerder kan de modal sluiten en later opnieuw openen zonder opnieuw in te loggen.
 
-## 6. Uitleg van `assets/styles.css`
+## 6. Uitleg van `assets/css/styles.css`
 
 ### CSS-variabelen
 
@@ -189,9 +226,13 @@ In `:root` staan herbruikbare variabelen:
 - `--ink`: donkere tekstkleur.
 - `--muted`: grijze ondersteunende tekst.
 - `--line`: randkleur.
+- `--paper` en `--paper-soft`: achtergrond van kaarten, invoervelden en tabelkoppen.
+- `--danger`, `--error-*` en `--warning-*`: kleuren voor verwijderknoppen, foutmeldingen en de bijbestellijst.
 - `--shadow`: standaard schaduw.
 
 Als het organisatiepalet later verandert, kunnen de kleuren centraal worden aangepast.
+
+**Licht en donker thema:** alle kleuren in de stylesheet komen uit deze variabelen. `:root` bevat de lichte kleuren, `:root[data-theme="dark"]` dezelfde variabelen met donkere waarden. De class `ThemeManager` zet `data-theme="light"` of `data-theme="dark"` op het `<html>`-element, en de hele website verandert dan mee. Een klein script in de `<head>` van `index.html` zet het donkere thema al vóór het tekenen van de pagina, zodat de pagina niet eerst wit oplicht. Alleen de witte tekst op groene knoppen, de letters in de avatars en de kleuren van de banner zijn in beide thema's hetzelfde.
 
 De stylesheet is geordend van algemeen naar specifiek:
 
@@ -261,28 +302,53 @@ De status heeft deze structuur:
 
 ### Objectgeoriënteerde structuur
 
-De JavaScript-code is opgedeeld in vier classes. Iedere class heeft één duidelijke verantwoordelijkheid.
+De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in zes classes: vijf voor de applicatie zelf en `ThemeManager` voor het lichte en donkere thema. Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
+
+```text
+DataStore ──► RegistrationModel ──► RegistrationView
+                     │                     │
+                     ├──► CsvExport        │
+                     ▼                     ▼
+               RegistrationApp (controller, stuurt model, view en export aan)
+```
+
+`main.js` maakt alle objecten één keer aan en geeft ze aan elkaar door (compositie). `config.js` bevat alleen vaste waarden en is daarom geen class.
+
+Toegepaste OOP-principes:
+
+- **Encapsulatie:** iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (`model.employees`, `model.products`) en wijzigen ze alleen via methodes (`model.addRegistration`, `model.saveCompany`).
+- **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class.
+- **Compositie:** de controller krijgt het model, de view en de export mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven.
+- **Losse koppeling:** de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes `load()` en `save()`.
 
 #### `DataStore`
 
-Verzorgt het lezen en opslaan van gegevens. JSON-validatie en fouten van `localStorage` worden hier afgehandeld. `migrate` zet oude gegevens om (bijvoorbeeld product-id `melk` naar `glas-melk`). Opgeslagen producten gaan altijd voor op de standaardproducten, zodat gewijzigde prijzen en verwijderde producten bewaard blijven. Als later een database wordt gebruikt, kan deze opslaglaag worden vervangen zonder de interface en bedrijfsregels opnieuw te schrijven.
+Verzorgt het lezen en opslaan van gegevens in `localStorage`. `load` controleert met `isValid` of de gegevens compleet zijn. `migrate` zet oude gegevens om (bijvoorbeeld product-id `melk` naar `glas-melk`, of een vrij ingevulde bedrijfsnaam naar een echt bedrijf). Opgeslagen producten gaan altijd voor op de standaardproducten, zodat gewijzigde prijzen en verwijderde producten bewaard blijven. Als later een database wordt gebruikt, kan deze opslaglaag worden vervangen zonder de rest opnieuw te schrijven.
 
 #### `RegistrationModel`
 
-Beheert medewerkers en registraties. Deze class bevat de domeinregels, zoals:
+Bevat alle gegevens en regels. De methodes zijn gegroepeerd per onderwerp: registraties, medewerkers, producten, bedrijven, consumptiepunten, voorraad en logboek. Voorbeelden van regels:
 
-- Een registratie toevoegen of het laatst toegevoegde blikje verwijderen.
-- Medewerkers toevoegen en verwijderen.
-- Totalen per medewerker, dag en maand berekenen.
-- Een veilige snapshot maken en herstellen wanneer opslaan mislukt.
+- Een registratie verlaagt de voorraad van het consumptiepunt van de medewerker.
+- Een bedrijf of consumptiepunt met medewerkers kan niet worden verwijderd.
+- De loonmaand is de maand na de consumptie (`payrollPeriod`).
+- Met `snapshot` en `restore` kan een wijziging worden teruggedraaid als opslaan mislukt.
 
 #### `RegistrationView`
 
-Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerlijst, statistieken, admin-tabellen, filters en toastmeldingen. Ook worden namen veilig als HTML weergegeven.
+Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerlijst, het productvenster, statistieken, admin-tabellen, filters, voorraad en toastmeldingen. Ook worden namen veilig als HTML weergegeven. De view leest uit het model, maar verandert zelf niets.
 
 #### `RegistrationApp`
 
-Vormt de controller van de applicatie. Deze class koppelt klik- en formulier-events aan het model en laat daarna de view opnieuw renderen. De methode `persist` zorgt dat iedere wijziging wordt opgeslagen of automatisch wordt teruggedraaid bij een opslagfout.
+Vormt de controller van de applicatie. Deze class koppelt klik- en formulier-events aan het model en laat daarna de view opnieuw renderen. `handleClick` bevat een lijst van knoppen met de actie die erbij hoort; iedere actie is een eigen, korte methode. De methode `persist` zorgt dat iedere wijziging wordt opgeslagen of automatisch wordt teruggedraaid bij een opslagfout.
+
+#### `CsvExport`
+
+Maakt het CSV-bestand voor de loonadministratie (zie verderop).
+
+#### `ThemeManager`
+
+Regelt het lichte en donkere thema (zie 4.12). Onthoudt de instelling (`system`, `auto`, `light` of `dark`) in `localStorage`, bepaalt met `resolveTheme` welk thema daarbij hoort en zet dat met `apply` op de pagina. Deze class staat los van het model, de view en de controller, omdat het thema een weergave-instelling per browser is en geen gegeven van de registratie.
 
 ### `renderEmployees`
 
@@ -344,15 +410,17 @@ De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige p
 
 `renderAdminEmployees` toont alle medewerkers in het beheertabblad.
 
-### CSV-export (`csvExport.js`)
+### CSV-export (class `CsvExport` in `csvExport.js`)
 
-`exportCsv` heeft geen externe bibliotheek nodig:
+De export heeft geen externe bibliotheek nodig. Na een klik op `CSV exporteren` roept `RegistrationApp.exportCsv` de methode `CsvExport.download` aan:
 
-1. De geselecteerde filters worden gelezen.
-2. `buildPayrollRows` verzamelt de bijbehorende registraties en telt ze per medewerker per loonmaand.
-3. `payrollPeriod` bepaalt de loonmaand: de maand na de consumptie (december gaat naar januari van het volgende jaar).
-4. `toCsv` zet de regels om naar CSV met puntkomma's. Velden met speciale tekens krijgen aanhalingstekens, en waarden die met `=`, `+`, `-` of `@` beginnen krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert.
+1. `buildRows` verzamelt de registraties die bij de filters passen en telt ze per medewerker per loonmaand.
+2. `RegistrationModel.payrollPeriod` bepaalt de loonmaand: de maand na de consumptie (december gaat naar januari van het volgende jaar).
+3. `toCsv` zet de regels om naar CSV met puntkomma's. `escapeField` zet velden met speciale tekens tussen aanhalingstekens, en geeft waarden die met `=`, `+`, `-` of `@` beginnen een `'` ervoor, zodat Excel ze niet als formule uitvoert.
+4. `fileName` maakt de bestandsnaam met de loonmaand.
 5. Het bestand wordt gedownload als `.csv` (UTF-8 met BOM, zodat Excel letters zoals `é` goed toont).
+
+Zijn er geen registraties voor de filters, dan geeft `download` `false` terug en toont de controller een melding.
 
 ### Event listeners
 
@@ -375,12 +443,34 @@ Voor dynamisch aangemaakte knoppen gebruikt de app één algemene kliklistener o
 
 De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 
+### Bedrijven
+
+| Veld | Betekenis |
+|---|---|
+| `id` | Unieke identificatie |
+| `name` | Bedrijfsnaam |
+| `employerNumber` | Standaard werkgevernummer voor de CSV-export |
+
+### Consumptiepunten
+
+| Veld | Betekenis |
+|---|---|
+| `id` | Unieke identificatie |
+| `name` | Naam van het punt, bijv. `Kantine begane grond` |
+| `companyId` | Verwijzing naar het bedrijf |
+| `products` | Per product-id: `offered` (aangeboden ja/nee), `stock` (voorraad) en `minimum` |
+
 ### Medewerkers
 
 | Veld | Betekenis |
 |---|---|
 | `id` | Unieke identificatie |
-| `name` | Volledige naam |
+| `name`, `firstName`, `lastName` | Naam |
+| `payrollCode`, `personnelNumber` | Looncode en personeelsnummer |
+| `employerNumber` | Optioneel afwijkend werkgevernummer; leeg = dat van het bedrijf (`RegistrationModel.employerNumberFor`) |
+| `companyId` | Verwijzing naar het bedrijf |
+| `pointId` | Verwijzing naar het vaste consumptiepunt |
+| `active` | Actief of inactief |
 | `color` | Kleur van de avatar |
 
 ### Registraties
@@ -389,7 +479,11 @@ De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 |---|---|
 | `id` | Unieke identificatie |
 | `employeeId` | Verwijzing naar een medewerker |
+| `productId` | Verwijzing naar een product |
+| `pointId` | Consumptiepunt waar de voorraad van af ging; bij een correctie gaat het product hier weer naartoe terug |
 | `createdAt` | Datum en tijd van registratie |
+
+Oude gegevens uit een eerdere versie worden bij het laden automatisch omgezet (`DataStore.migrateCompanies`): de vrij ingevulde bedrijfsnaam wordt een bedrijf, het eerste werkgevernummer wordt de standaard van dat bedrijf (een afwijkend nummer blijft bij de medewerker staan) en ieder bedrijf met medewerkers krijgt één consumptiepunt met alle producten.
 
 Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. Dit sluit aan bij het voorgestelde datamodel waarin `Aantal` standaard 1 is.
 

@@ -1,16 +1,70 @@
 ﻿/* Centrale kleuren, letterstijlen en schaduwen die de rest van de website hergebruikt. */
+/* Licht thema (standaard). Alle kleuren van de website komen uit deze variabelen,
+   zodat het donkere thema hieronder alleen de variabelen hoeft te vervangen. */
 :root {
+  color-scheme:light;
   --ink:#163540;
   --muted:#71858a;
   --green:#159a72;
   --green-dark:#087252;
   --mint:#e8f5ee;
+  --mint-border:#d7ede1;
   --blue:#176b8b;
   --blue-soft:#e8f2f6;
   --line:#e2e9e8;
   --paper:#fff;
+  --paper-soft:#f8fbfa;
   --bg:#f7faf9;
-  --shadow:0 18px 45px rgba(29,68,67,.08)
+  --hover-bg:#fbfefc;
+  --hover-border:#cce8db;
+  --danger:#c44949;
+  --error-bg:#fbe7e7;
+  --error-text:#b23b3b;
+  --warning-bg:#fdf1e7;
+  --warning-soft:#fdf6ef;
+  --warning-border:#f0cfb3;
+  --warning-text:#a55a16;
+  --overlay:rgba(16,47,53,.48);
+  --toast-bg:#163540;
+  --toast-text:#fff;
+  --hero-start:#144d5b;
+  --hero-end:#176a80;
+  --shadow:0 18px 45px rgba(29,68,67,.08);
+  --modal-shadow:0 25px 70px rgba(0,0,0,.2)
+}
+/* Donker thema. Wordt gebruikt als <html data-theme="dark"> is gezet (door ThemeManager).
+   De achtergrond wordt donker en de tekst krijgt de groene huiskleur, iets lichter
+   gemaakt zodat hij goed leesbaar blijft op de donkere achtergrond. */
+:root[data-theme="dark"] {
+  color-scheme:dark;
+  --ink:#1fbf8c;
+  --muted:#8fb3a8;
+  --green:#159a72;
+  --green-dark:#2fd29b;
+  --mint:#173a30;
+  --mint-border:#22503f;
+  --blue:#6cc0de;
+  --blue-soft:#17343f;
+  --line:#24403f;
+  --paper:#142628;
+  --paper-soft:#1a3033;
+  --bg:#0d1a1c;
+  --hover-bg:#183231;
+  --hover-border:#2a5a4a;
+  --danger:#f08a8a;
+  --error-bg:#3d1f1f;
+  --error-text:#f29a9a;
+  --warning-bg:#3a2a17;
+  --warning-soft:#2c2116;
+  --warning-border:#6b4a24;
+  --warning-text:#f0b36b;
+  --overlay:rgba(0,0,0,.6);
+  --toast-bg:#d6f5e8;
+  --toast-text:#0d1a1c;
+  --hero-start:#0f3640;
+  --hero-end:#12505f;
+  --shadow:0 18px 45px rgba(0,0,0,.35);
+  --modal-shadow:0 25px 70px rgba(0,0,0,.55)
 }
 /* Algemene reset en basisopmaak voor tekst, knoppen en invoervelden. */
 * {
@@ -20,7 +74,8 @@ body {
   margin:0;
   background:var(--bg);
   color:var(--ink);
-  font:15px "DM Sans",sans-serif
+  font:15px "DM Sans",sans-serif;
+  transition:background-color .2s,color .2s
 }
 button,input,select {
   font:inherit
@@ -29,8 +84,14 @@ button {
   cursor:pointer;
   border:0
 }
+/* De pagina is altijd minstens schermhoog, met de footer onderaan. Staat er weinig op het
+   scherm (bijv. op een staande tablet), dan groeit de inhoud mee in plaats van dat er onder
+   de footer een leeg vlak ontstaat. 100dvh houdt rekening met de adresbalk op tablets. */
 .app-shell {
-  min-height:100vh
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column
 }
 /* Navigatiebalk met merkidentiteit en admin-ingang. */
 .topbar {
@@ -39,7 +100,7 @@ button {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  background:#fff;
+  background:var(--paper);
   border-bottom:1px solid var(--line)
 }
 .brand {
@@ -71,6 +132,68 @@ button {
   display:flex;
   align-items:center;
   gap:12px
+}
+/* Thema-schakelaar in de bovenbalk: slider licht/donker en de keuzes Systeem en Auto. */
+.theme-control {
+  display:flex;
+  align-items:center;
+  gap:8px
+}
+.theme-switch {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px;
+  background:none;
+  color:var(--muted);
+  font-size:14px
+}
+.theme-switch-track {
+  position:relative;
+  width:40px;
+  height:22px;
+  border-radius:999px;
+  background:var(--line);
+  transition:background .2s
+}
+.theme-switch-knob {
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transition:transform .2s
+}
+.theme-switch[aria-checked="true"] .theme-switch-track {
+  background:var(--green)
+}
+.theme-switch[aria-checked="true"] .theme-switch-knob {
+  transform:translateX(18px)
+}
+.theme-switch:focus-visible,.theme-modes button:focus-visible {
+  outline:2px solid var(--green);
+  outline-offset:2px;
+  border-radius:999px
+}
+.theme-modes {
+  display:flex;
+  border:1px solid var(--line);
+  border-radius:999px;
+  overflow:hidden
+}
+.theme-modes button {
+  padding:5px 10px;
+  background:var(--paper);
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600
+}
+.theme-modes button[aria-pressed="true"] {
+  background:var(--mint);
+  color:var(--green-dark)
 }
 .status-pill {
   color:var(--green-dark);
@@ -106,16 +229,20 @@ button {
 }
 /* Centrale inhoudsbreedte en introductiebanner. */
 main {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  width:100%;
   max-width:1120px;
   margin:0 auto;
-  padding:0 28px
+  padding:0 28px 28px
 }
 .hero {
   min-height:255px;
   padding:54px 54px;
   position:relative;
   overflow:hidden;
-  background:linear-gradient(120deg,#144d5b,#176a80);
+  background:linear-gradient(120deg,var(--hero-start),var(--hero-end));
   color:#fff
 }
 .hero:before {
@@ -178,7 +305,10 @@ main {
   transform:rotate(12deg)
 }
 /* Kaartlayout voor medewerkers en samenvattende statistieken. */
+/* flex:1 laat dit gedeelte de vrije hoogte opvullen; de medewerkerskaart rekt dan mee tot
+   vlak boven de footer. De kaarten rechts (summary-column) blijven hun eigen hoogte houden. */
 .content-grid {
+  flex:1;
   display:grid;
   grid-template-columns:minmax(0,1fr) 300px;
   gap:26px;
@@ -222,7 +352,7 @@ main {
   height:46px;
   margin:23px 0 15px;
   padding:0 13px;
-  color:#8aa0a2
+  color:var(--muted)
 }
 .search-box span {
   font-size:23px;
@@ -241,7 +371,7 @@ main {
   border:1px solid var(--line);
   border-radius:4px;
   padding:3px 6px;
-  color:#99a8aa;
+  color:var(--muted);
   white-space:nowrap
 }
 .company-filter {
@@ -258,7 +388,7 @@ main {
   display:flex;
   flex:1;
   min-height:38px;
-  background:#fff
+  background:var(--paper)
 }
 .company-combobox input {
   width:100%;
@@ -269,7 +399,7 @@ main {
   border-radius:8px;
   padding:0 48px 0 10px !important;
   color:var(--ink);
-  background:#fff;
+  background:var(--paper);
   outline:none
 }
 .company-combobox:focus-within {
@@ -286,7 +416,7 @@ main {
   height:10px;
   margin:0;
   border-radius:8px;
-  background:#fff !important;
+  background:var(--paper) !important;
   color:var(--muted);
   font-size:25px;
   line-height:1;
@@ -301,7 +431,7 @@ main {
 .company-combobox-toggle:hover,
 .company-combobox-toggle:focus-visible {
   border-color:var(--green) !important;
-  background:#fff !important;
+  background:var(--paper) !important;
   color:var(--green-dark)
 }
 .company-options {
@@ -316,14 +446,14 @@ main {
   padding:7px 3px 3px;
   border:1px solid;
   border-radius:0px 0px 8px 8px;
-  background:#fff;
+  background:var(--paper);
   box-shadow:var(--shadow)
 }
 .company-options button {
   min-height:30px;
   padding:5px 8px;
   border-radius:5px;
-  background:#fff;
+  background:var(--paper);
   color:var(--ink);
   text-align:left;
   font-size:12px
@@ -361,8 +491,8 @@ main {
   transition:.18s
 }
 .employee-row:hover {
-  border-color:#cce8db;
-  background:#fbfefc
+  border-color:var(--hover-border);
+  background:var(--hover-bg)
 }
 .employee-info {
   display:flex;
@@ -376,7 +506,9 @@ main {
   display:grid;
   place-items:center;
   font-weight:700;
-  font-size:12px
+  font-size:12px;
+  /* De avatarkleuren zijn altijd lichte pasteltinten, dus de letters blijven donker (ook in dark mode). */
+  color:#163540
 }
 .employee-name {
   font-weight:600;
@@ -447,8 +579,8 @@ main {
   display:flex;
   gap:11px;
   padding:17px;
-  background:#eff8f3;
-  border-color:#d7ede1
+  background:var(--mint);
+  border-color:var(--mint-border)
 }
 .tip-icon {
   color:var(--green);
@@ -523,7 +655,7 @@ main {
 footer {
   display:flex;
   justify-content:space-between;
-  color:#91a3a2;
+  color:var(--muted);
   font-size:11px;
   padding:22px max(5vw,28px);
   border-top:1px solid var(--line)
@@ -533,21 +665,21 @@ footer {
 .modal-backdrop {
   position:fixed;
   inset:0;
-  background:rgba(16,47,53,.48);
+  background:var(--overlay);
   display:grid;
   place-items:center;
   padding:20px;
   z-index:5
 }
 .modal {
-  background:#fff;
+  background:var(--paper);
   border-radius:16px;
   width:min(760px,100%);
   max-height:90vh;
   overflow:auto;
   padding:31px;
   position:relative;
-  box-shadow:0 25px 70px rgba(0,0,0,.2)
+  box-shadow:var(--modal-shadow)
 }
 .modal-close {
   position:absolute;
@@ -598,7 +730,7 @@ footer {
   border-radius:8px;
   padding:0 12px;
   outline-color:var(--green);
-  background:#fff
+  background:var(--paper)
 }
 /* Productkeuze op het openbare registratiescherm. */
 .product-select {
@@ -615,7 +747,7 @@ footer {
   border:1px solid var(--line);
   border-radius:8px;
   padding:0 10px;
-  background:#fff
+  background:var(--paper)
 }
 .primary-button,.secondary-button {
   border-radius:8px;
@@ -639,7 +771,7 @@ footer {
   margin-top:5px
 }
 .form-error {
-  color:#c44949;
+  color:var(--danger);
   font-size:12px
 }
 /* Dashboardkop, tabs en filterbediening. */
@@ -656,7 +788,11 @@ footer {
   display:flex;
   gap:22px;
   border-bottom:1px solid var(--line);
-  margin-bottom:20px
+  margin-bottom:20px;
+  overflow-x:auto
+}
+.tab {
+  white-space:nowrap
 }
 .tab {
   padding:14px 2px;
@@ -698,7 +834,7 @@ footer {
 .admin-table-wrap th {
   text-align:left;
   color:var(--muted);
-  background:#f8fbfa;
+  background:var(--paper-soft);
   font-size:10px;
   text-transform:uppercase;
   letter-spacing:.7px
@@ -713,7 +849,7 @@ footer {
 }
 .table-action {
   background:none;
-  color:#c44949;
+  color:var(--danger);
   font-size:17px
 }
 .add-employee-form {
@@ -746,7 +882,7 @@ footer {
   padding:13px 15px;
   border:1px solid var(--line);
   border-radius:9px;
-  background:#fff;
+  background:var(--paper);
   color:var(--ink)
 }
 .personal-product-item span {
@@ -839,20 +975,172 @@ footer {
   padding:7px 9px;
   border:1px solid var(--line);
   border-radius:7px;
-  background:#fff;
+  background:var(--paper);
   color:var(--green-dark);
   cursor:pointer
 }
 .admin-employee-item .danger-action {
-  color:#c44949
+  color:var(--danger)
 }
 #loadMoreAuditButton {
   margin-top:12px
 }
+/* Keuzelijsten bedrijf en consumptiepunt in de beheerformulieren. */
+.add-employee-form select {
+  height:43px;
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 12px;
+  outline-color:var(--green);
+  background:var(--paper)
+}
+.field-hint {
+  align-self:center;
+  margin:0;
+  color:var(--muted);
+  font-size:12px
+}
+/* Bedrijven met daaronder hun consumptiepunten. */
+#companiesTab > .primary-button {
+  margin-bottom:14px
+}
+.admin-company-list {
+  display:grid;
+  gap:12px
+}
+.admin-company-item > .admin-employee-item {
+  background:var(--paper-soft)
+}
+.admin-point-list {
+  display:grid;
+  gap:6px;
+  margin:6px 0 0 22px
+}
+.admin-point-empty {
+  font-size:12px;
+  margin:4px 0
+}
+/* Aan/uit-lijst met producten in het consumptiepuntformulier. */
+.offer-list {
+  grid-column:1 / -1;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 14px 14px
+}
+.offer-list legend {
+  padding:0 6px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--ink)
+}
+#pointProductList {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:4px 14px
+}
+.modal .offer-item {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  font-weight:500;
+  font-size:13px;
+  cursor:pointer
+}
+/* Overschrijft de algemene formulierregels (flex:1, min-width, height) voor vinkjes. */
+.modal .offer-item input {
+  flex:none;
+  width:17px;
+  min-width:0;
+  height:17px;
+  padding:0;
+  accent-color:var(--green)
+}
+/* Voorraadoverzicht. */
+.stock-alerts {
+  margin-bottom:18px;
+  padding:14px 16px;
+  border:1px solid var(--warning-border);
+  border-radius:10px;
+  background:var(--warning-soft);
+  font-size:13px
+}
+.stock-alerts h3 {
+  margin:0 0 8px;
+  font-size:14px
+}
+.stock-alerts ul {
+  display:grid;
+  gap:6px;
+  margin:0;
+  padding:0;
+  list-style:none
+}
+.stock-all-ok {
+  margin:0;
+  color:var(--green-dark)
+}
+.stock-alerts:has(.stock-all-ok) {
+  border-color:var(--line);
+  background:var(--mint)
+}
+.text-link {
+  background:none;
+  padding:0;
+  color:var(--blue);
+  font-weight:600;
+  text-decoration:underline;
+  cursor:pointer
+}
+.stock-badge {
+  display:inline-block;
+  min-width:86px;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  text-align:center
+}
+.stock-ok {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.stock-low {
+  background:var(--warning-bg);
+  color:var(--warning-text)
+}
+.stock-out {
+  background:var(--error-bg);
+  color:var(--error-text)
+}
+.stock-input {
+  width:80px;
+  height:34px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:0 8px;
+  outline-color:var(--green);
+  background:var(--paper)
+}
+.stock-delivery {
+  display:flex;
+  gap:6px;
+  align-items:center
+}
+.stock-table .table-action {
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--paper);
+  color:var(--green-dark);
+  font-size:12px;
+  cursor:pointer
+}
 /* Waarschuwing wanneer index.html direct als bestand wordt geopend. */
 .file-warning {
-  background:#fdf1e7;
-  border-bottom:1px solid #f0cfb3;
+  background:var(--warning-bg);
+  border-bottom:1px solid var(--warning-border);
   color:var(--ink);
   padding:12px 20px;
   font-size:14px;
@@ -863,8 +1151,8 @@ footer {
   position:fixed;
   bottom:25px;
   right:25px;
-  background:var(--ink);
-  color:#fff;
+  background:var(--toast-bg);
+  color:var(--toast-text);
   border-radius:8px;
   padding:13px 18px;
   font-size:13px;
@@ -959,8 +1247,8 @@ footer {
   color:var(--green-dark)
 }
 .correction-minus {
-  background:#fbeaea;
-  color:#b54d4d
+  background:var(--error-bg);
+  color:var(--error-text)
 }
 .correction-amount {
   min-width:24px;
@@ -974,10 +1262,12 @@ footer {
 /* Tabletlayout: de koelkasttablet gebruikt grotere aanraakvlakken en één kolom. */
 @media (min-width:721px) and (max-width:900px) {
   main {
-    padding:0 20px
+    padding:0 20px 20px
   }
   .content-grid {
-    grid-template-columns:1fr
+    grid-template-columns:1fr;
+    /* Eén kolom: de medewerkerskaart krijgt de vrije hoogte, de kaarten eronder niet. */
+    grid-template-rows:1fr auto
   }
   .summary-column {
     display:grid;
@@ -1007,8 +1297,15 @@ footer {
   .admin-label,.status-pill {
     display:none
   }
+  /* Minder ruimte in de bovenbalk: de zon- en maanicoontjes naast de slider vervallen. */
+  .topbar-actions {
+    gap:8px
+  }
+  .theme-switch-icon {
+    display:none
+  }
   main {
-    padding:0 14px
+    padding:0 14px 14px
   }
   .hero {
     padding:39px 26px;
@@ -1019,7 +1316,8 @@ footer {
     opacity:.7
   }
   .content-grid {
-    grid-template-columns:1fr
+    grid-template-columns:1fr;
+    grid-template-rows:1fr auto
   }
   .summary-column {
     display:grid;
@@ -1061,5 +1359,11 @@ footer {
     padding:18px;
     gap:20px;
     flex-direction:column
+  }
+}
+/* Telefoons: alleen het TVB-logo in de bovenbalk, zodat de thema-knoppen en de admin-knop passen. */
+@media(max-width:520px) {
+  .brand > span:not(.brand-mark) {
+    display:none
   }
 }

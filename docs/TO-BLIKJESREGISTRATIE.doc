@@ -21,8 +21,6 @@ th{background-color:#f5f5f5}
 <p>Met dit systeem kunnen medewerkers eenvoudig registreren dat zij een blikje hebben gepakt. De beheerder kan registraties bekijken, aanpassen en exporteren naar Excel.</p>
 <h3>Scope</h3>
 <p>De demo bevat zoeken, registreren, automatische datum en tijd, adminfuncties, correcties, medewerkersbeheer, filters, Excel-export en localStorage. Een echte database en veilige login kunnen later worden toegevoegd.</p>
-<h3>Verwijzing naar het functioneel ontwerp</h3>
-<p>De eisen, gebruikersflows, wireframes en ontwerpkeuzes staan in <code>FO-BLIKJESREGISTRATIE.md</code> en <code>FO-BLIKJESREGISTRATIE.doc</code>.</p>
 
 <h2>2. Systeemarchitectuur</h2>
 <pre>Gebruiker → Webbrowser → HTML, CSS en JavaScript → DataStore → localStorage → Excel</pre>
@@ -76,6 +74,6 @@ th{background-color:#f5f5f5}
 <table><tr><th>Test</th><th>Verwacht resultaat</th></tr><tr><td>Medewerker zoeken</td><td>Passende namen verschijnen</td></tr><tr><td>Blikje toevoegen</td><td>Aantal stijgt met 1</td></tr><tr><td>Pagina herladen</td><td>Registratie blijft aanwezig</td></tr><tr><td>Admin inloggen</td><td>Dashboard verschijnt</td></tr><tr><td>Admin corrigeren</td><td>Alleen gekozen medewerker wijzigt</td></tr><tr><td>Medewerker verwijderen</td><td>Medewerker verdwijnt, historie blijft</td></tr><tr><td>Excel exporteren</td><td>XLSX wordt gedownload</td></tr><tr><td>Modal sluiten</td><td>Modal sluit zonder uitloggen</td></tr><tr><td>Mobiel bekijken</td><td>Layout blijft bruikbaar</td></tr></table>
 
 <h2>13. Onderhoud en toekomst</h2>
-<p>Houd opslag in DataStore, regels in RegistrationModel, scherm in RegistrationView, acties in RegistrationApp, styling in assets/styles.css en structuur in index.html. De unit tests staan in tests/ en de CI-workflow staat in .github/workflows/ci.yml. De volgende stap is een gedeelde database met echte login, autorisatie, logging en back-ups.</p>
+<p>Houd opslag in DataStore, regels in RegistrationModel, scherm in RegistrationView, acties in RegistrationApp, styling in assets/css/styles.css en structuur in index.html. De unit tests staan in tests/ en de CI-workflow staat in .github/workflows/ci.yml. De volgende stap is een gedeelde database met echte login, autorisatie, logging en back-ups.</p>
 </body>
 </html>

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { DataStore } from "../assets/js/DataStore.js";
-import { payrollPeriod, buildPayrollRows, toCsv } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/csvExport.js";
 
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 
@@ -603,14 +603,14 @@ test("save schrijft state naar de store", () => {
 });
 test("loonmaand is de maand na de consumptie", () => {
   assert.deepEqual(
-    payrollPeriod(new Date(2026, 8, 15)),
+    createModel().payrollPeriod(new Date(2026, 8, 15)),
     { year: 2026, month: 10 }
   );
 });
 
 test("consumpties uit december gaan naar januari van het volgende jaar", () => {
   assert.deepEqual(
-    payrollPeriod(new Date(2026, 11, 31)),
+    createModel().payrollPeriod(new Date(2026, 11, 31)),
     { year: 2027, month: 1 }
   );
 });
@@ -624,7 +624,7 @@ test("export telt per medewerker per loonmaand met prijzen", () => {
     { id: "3", employeeId: "employee-1", productId: "blikje", createdAt: "2026-10-05T12:00:00" }
   ];
 
-  const rows = buildPayrollRows(model, "all", "2026-09");
+  const rows = new CsvExport(model).buildRows("all", "2026-09");
 
   assert.equal(rows.length, 1);
   assert.equal(rows[0].Jaar, 2026);
@@ -634,7 +634,7 @@ test("export telt per medewerker per loonmaand met prijzen", () => {
 });
 
 test("csv gebruikt puntkomma's en maakt speciale tekens en formules veilig", () => {
-  const csv = toCsv([{
+  const csv = new CsvExport(null).toCsv([{
     Jaar: 2026,
     Maand: 10,
     Looncode: "",
@@ -649,4 +649,211 @@ test("csv gebruikt puntkomma's en maakt speciale tekens en formules veilig", () 
 
   assert.equal(header, "Jaar;Maand;Looncode;Personeelsnummer;Werkgevernummer;Naam;Totaal;Prijs");
   assert.equal(row, "2026;10;;;;\"'=Jansen; \"\"Jan\"\"\";2;0,75");
+});
+
+// Model met één medewerker die gekoppeld is aan het demo-consumptiepunt (24 op voorraad, minimum 6).
+const createModelWithPoint = () => {
+  const model = createModel();
+  const point = model.points[0];
+
+  model.state.employees[0].companyId = point.companyId;
+  model.state.employees[0].pointId = point.id;
+
+  return { model, point };
+};
+
+test("start met alle 13 bedrijven en een demo-consumptiepunt", () => {
+  const model = createModel();
+
+  assert.equal(model.companies.length, 13);
+  assert.ok(model.companies.some(({ name }) => name === "IT Supervision"));
+  assert.equal(model.points.length, 1);
+});
+
+test("registratie haalt voorraad af bij het consumptiepunt van de medewerker", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.addRegistration("employee-1", "blikje");
+
+  assert.equal(model.findPoint(point.id).products.blikje.stock, 23);
+  assert.equal(model.registrations[0].pointId, point.id);
+});
+
+test("registratie verwijderen zet de voorraad terug", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.addRegistration("employee-1", "blikje");
+  model.removeLastRegistration("employee-1", "blikje");
+
+  assert.equal(model.findPoint(point.id).products.blikje.stock, 24);
+});
+
+test("medewerker ziet alleen producten van het eigen consumptiepunt", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.savePoint({
+    id: point.id,
+    name: point.name,
+    companyId: point.companyId,
+    offeredProductIds: ["blikje", "glas-melk"]
+  });
+
+  assert.deepEqual(
+    model.productsForEmployee("employee-1").map(({ id }) => id),
+    ["blikje", "glas-melk"]
+  );
+});
+
+test("medewerker zonder consumptiepunt ziet geen producten", () => {
+  const model = createModel();
+
+  assert.deepEqual(model.productsForEmployee("employee-1"), []);
+});
+
+test("aanbod wijzigen laat voorraad en minimum staan", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.savePoint({ id: point.id, name: "Kantine", companyId: point.companyId, offeredProductIds: [] });
+
+  const updated = model.findPoint(point.id);
+  assert.equal(updated.name, "Kantine");
+  assert.equal(updated.products.blikje.offered, false);
+  assert.equal(updated.products.blikje.stock, 24);
+  assert.equal(updated.products.blikje.minimum, 6);
+});
+
+test("nieuw product staat bij ieder consumptiepunt uit", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.saveProduct({ id: "tijdelijk", name: "Soep", price: "1.00" });
+
+  const soup = model.products.find(({ name }) => name === "Soep");
+  assert.deepEqual(model.findPoint(point.id).products[soup.id], { offered: false, stock: 0, minimum: 0 });
+  assert.equal(model.productsForEmployee("employee-1").some(({ id }) => id === soup.id), false);
+});
+
+test("verwijderd product verdwijnt ook uit de voorraad", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.removeProduct("yoghurt");
+
+  assert.equal("yoghurt" in model.findPoint(point.id).products, false);
+});
+
+test("voorraadstatus: op, bijbestellen en op voorraad", () => {
+  const model = createModel();
+
+  assert.equal(model.stockStatus({ stock: 0, minimum: 6 }), "out");
+  assert.equal(model.stockStatus({ stock: 6, minimum: 6 }), "low");
+  assert.equal(model.stockStatus({ stock: 7, minimum: 6 }), "ok");
+});
+
+test("bijbestellijst bevat alleen aangeboden producten onder het minimum", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.setStock(point.id, "blikje", 3);
+  model.setStock(point.id, "ei", 0);
+  model.savePoint({
+    id: point.id,
+    name: point.name,
+    companyId: point.companyId,
+    offeredProductIds: ["blikje", "boter"]
+  });
+
+  const alerts = model.stockAlerts();
+  assert.deepEqual(alerts.map(({ product, status }) => [product.id, status]), [["blikje", "low"]]);
+});
+
+test("levering verhoogt de voorraad", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.changeStock(point.id, "blikje", 12);
+
+  assert.equal(model.findPoint(point.id).products.blikje.stock, 36);
+});
+
+test("bedrijf en consumptiepunt met medewerkers kunnen niet worden verwijderd", () => {
+  const { model, point } = createModelWithPoint();
+
+  assert.equal(model.removePoint(point.id), false);
+  assert.equal(model.removeCompany(point.companyId), false);
+
+  const emptyCompany = model.companies.find(({ name }) => name === "Klik");
+  assert.equal(model.removeCompany(emptyCompany.id), true);
+});
+
+test("bedrijf wijzigen past naam en werkgevernummer aan", () => {
+  const model = createModel();
+  const company = model.companies.find(({ name }) => name === "MVIE");
+
+  model.saveCompany({ id: company.id, name: "MVIE B.V.", employerNumber: "42" });
+
+  assert.equal(model.findCompany(company.id).name, "MVIE B.V.");
+  assert.equal(model.findCompany(company.id).employerNumber, "42");
+});
+
+test("oude gegevens: bedrijfsnaam wordt een bedrijf met consumptiepunt", () => {
+  const model = new RegistrationModel(createDataStore({
+    employees: [{
+      id: "employee-1",
+      name: "Jan Jansen",
+      employerName: "it supervision",
+      employerNumber: "77",
+      color: "#fff",
+      active: true
+    }],
+    registrations: [],
+    products: DEFAULT_PRODUCTS,
+    auditLog: []
+  }));
+
+  const employee = model.findEmployee("employee-1");
+  const company = model.findCompany(employee.companyId);
+
+  assert.equal(model.companies.length, 13);
+  assert.equal(company.name, "IT Supervision");
+  assert.equal(company.employerNumber, "77");
+  assert.equal(model.findPoint(employee.pointId).companyId, company.id);
+  assert.equal(model.productsForEmployee("employee-1").length, DEFAULT_PRODUCTS.length);
+  assert.equal("employerName" in employee, false);
+});
+
+test("export haalt het werkgevernummer bij het bedrijf", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.saveCompany({ id: point.companyId, name: "TVB", employerNumber: "1001" });
+  model.addRegistration("employee-1", "blikje");
+
+  assert.equal(new CsvExport(model).buildRows("all", "all")[0].Werkgevernummer, "1001");
+});
+
+test("afwijkend werkgevernummer bij de medewerker gaat voor op dat van het bedrijf", () => {
+  const { model, point } = createModelWithPoint();
+
+  model.saveCompany({ id: point.companyId, name: "TVB", employerNumber: "1001" });
+  model.updateEmployee("employee-1", { ...model.findEmployee("employee-1"), employerNumber: "2002" });
+  model.addRegistration("employee-1", "blikje");
+
+  assert.equal(new CsvExport(model).buildRows("all", "all")[0].Werkgevernummer, "2002");
+});
+
+test("oude gegevens: afwijkend werkgevernummer blijft bij de medewerker staan", () => {
+  const model = new RegistrationModel(createDataStore({
+    employees: [
+      { id: "a", name: "Jan Jansen", employerName: "Klik", employerNumber: "10", color: "#fff", active: true },
+      { id: "b", name: "Piet Pieters", employerName: "Klik", employerNumber: "10", color: "#fff", active: true },
+      { id: "c", name: "Kees Klaassen", employerName: "Klik", employerNumber: "20", color: "#fff", active: true }
+    ],
+    registrations: [],
+    products: DEFAULT_PRODUCTS,
+    auditLog: []
+  }));
+
+  const klik = model.companies.find(({ name }) => name === "Klik");
+
+  assert.equal(klik.employerNumber, "10");
+  assert.equal(model.findEmployee("a").employerNumber, "");
+  assert.equal(model.findEmployee("c").employerNumber, "20");
+  assert.equal(model.employerNumberFor(model.findEmployee("b")), "10");
+  assert.equal(model.employerNumberFor(model.findEmployee("c")), "20");
 });

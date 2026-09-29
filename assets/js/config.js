@@ -1,5 +1,20 @@
+/**
+ * config.js — vaste waarden van de applicatie.
+ *
+ * Dit bestand bevat alleen gegevens en geen gedrag, daarom is het geen class.
+ * Door de waarden hier centraal te zetten, hoeven ze maar op één plek te worden aangepast.
+ *
+ * Gebruikt door:
+ *   - main.js: STORAGE_KEY (de naam van de opslag in de browser);
+ *   - DataStore: standaardproducten, bedrijven en kleuren bij het omzetten van oude gegevens;
+ *   - RegistrationModel: de producten, bedrijven, kleuren en voorbeeldmedewerkers;
+ *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto".
+ */
+
+// Naam waaronder alle gegevens in localStorage worden bewaard.
 export const STORAGE_KEY = "tvb-blikjesregistratie";
 
+// Achtergrondkleuren voor de avatars van medewerkers; ze worden om de beurt gebruikt.
 export const COLORS = [
   "#d8f1e8",
   "#e3eef6",
@@ -8,6 +23,7 @@ export const COLORS = [
   "#e4f0d8"
 ];
 
+// Voorbeeldmedewerkers voor de demo (alleen gebruikt als er nog niets is opgeslagen).
 export const SEED_EMPLOYEES = [
   "Lotte van Dijk",
   "Mark Jansen",
@@ -19,6 +35,42 @@ export const SEED_EMPLOYEES = [
   "Tom de Groot"
 ];
 
+// De bedrijven binnen TVB. De eerste (TVB) krijgt in de demo een voorbeeld-consumptiepunt.
+export const DEFAULT_COMPANIES = [
+  "TVB",
+  "E-Control",
+  "Home Service Nederland",
+  "IT Supervision",
+  "Klik",
+  "MVIE",
+  "STB",
+  "Technisch Beheer Nederland",
+  "Terberg Totaal Installaties",
+  "Titanium 24",
+  "Van den Broek Loodgietersbedrijf",
+  "VR Bedrijven",
+  "TVB Academy"
+];
+
+// Ongeveer het moment van zonsopkomst en zonsondergang in Nederland, halverwege iedere maand
+// (lokale tijd, inclusief zomertijd). De thema-instelling "Auto" is licht tussen zonsopkomst
+// en zonsondergang, en donker daarbuiten. Index 0 = januari, 11 = december.
+export const DAYLIGHT_HOURS = [
+  { sunrise: "08:45", sunset: "16:50" }, // januari
+  { sunrise: "08:05", sunset: "17:45" }, // februari
+  { sunrise: "07:05", sunset: "18:35" }, // maart
+  { sunrise: "06:55", sunset: "20:25" }, // april
+  { sunrise: "05:55", sunset: "21:15" }, // mei
+  { sunrise: "05:20", sunset: "21:55" }, // juni
+  { sunrise: "05:40", sunset: "21:50" }, // juli
+  { sunrise: "06:30", sunset: "21:00" }, // augustus
+  { sunrise: "07:20", sunset: "19:55" }, // september
+  { sunrise: "08:10", sunset: "18:45" }, // oktober
+  { sunrise: "07:55", sunset: "17:00" }, // november
+  { sunrise: "08:40", sunset: "16:30" } // december
+];
+
+// Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.
 export const DEFAULT_PRODUCTS = [
   { id: "blikje", name: "Blikje", price: 0.65 },
   { id: "sneetje-brood", name: "Sneetje brood", price: 0.10 },
