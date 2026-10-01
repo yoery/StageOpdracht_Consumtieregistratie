@@ -26,14 +26,17 @@ assets/
     RegistrationApp.js      # Controller (klikken en formulieren)
     csvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
     ThemeManager.js         # Class ThemeManager: licht/donker thema
+    icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
+    FaceRecognitionDemo.js  # Demo gezichtsherkenning (uit te zetten in config.js)
 docs/
   TO-BLIKJESREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
   DATABASE-SCHEMA.sql       # PostgreSQL-schema voor productie
-  *.doc                     # Word-versies (lopen achter op de .md-bestanden)
+  *.doc                     # Word-versies van het TO en de documentatie
+  wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  *.test.js                 # Unit tests (basis, datastore, model, csv-export, view-app, theme)
+  *.test.js                 # Unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face)
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
   app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
@@ -42,7 +45,7 @@ archief/
 
 ## Inbegrepen
 
-- Medewerkerlijst met zoeken en een persoonlijk productvenster waarin meerdere producten met plusknoppen kunnen worden gekozen en daarna tegelijk geregistreerd.
+- Medewerkerlijst met zoeken en een persoonlijk productvenster waarin meerdere producten met `+` en `−` kunnen worden gekozen en daarna tegelijk geregistreerd.
 - Medewerkers zijn gekoppeld aan een bedrijf en een consumptiepunt, en worden per bedrijf gegroepeerd en gefilterd.
 - Automatische datum/tijd en lokale opslag via `localStorage`.
 - Admin-demo via de knop rechtsboven (elk ingevuld wachtwoord werkt).
@@ -56,8 +59,10 @@ archief/
 - Voorraadbeheer per consumptiepunt: iedere registratie haalt 1 van de voorraad af, leveringen en tellingen worden geboekt, en per product is er een minimum. Een bijbestellijst toont alles wat op is of bijbesteld moet worden.
 - CSV-export (te openen in Excel) met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. Jaar en Maand zijn de loonmaand: consumpties worden verwerkt in de maand erna (september → oktober, december → januari).
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
+- Persoonlijk welkom in het productvenster en een knop "Zelfde als vorige keer" met de keuze van de vorige keer.
+- Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat, niets opgeslagen; uit te zetten in `config.js`. Zie het TO voor de privacy-afweging en toekomstige uitbreidingen (QR-pas, AFAS, barcode, spraak, slim slot).
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en een Word-compatibele export in [`docs/DOCUMENTATIE-WORD.doc`](./docs/DOCUMENTATIE-WORD.doc).
-- Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, wireframes met Nielsen-heuristieken, OOP-architectuur, databasespecificatie en acceptatiecriteria.
+- Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.
 - Productiegericht PostgreSQL-schema in [`docs/DATABASE-SCHEMA.sql`](./docs/DATABASE-SCHEMA.sql).
 - Word-compatibele versie van het technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.doc`](./docs/TO-BLIKJESREGISTRATIE.doc).

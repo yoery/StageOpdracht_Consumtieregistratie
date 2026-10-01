@@ -8,7 +8,8 @@
  *   - main.js: STORAGE_KEY (de naam van de opslag in de browser);
  *   - DataStore: standaardproducten, bedrijven en kleuren bij het omzetten van oude gegevens;
  *   - RegistrationModel: de producten, bedrijven, kleuren en voorbeeldmedewerkers;
- *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto".
+ *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto";
+ *   - FaceRecognitionDemo en RegistrationApp: FACE_DEMO, de instellingen van de demo.
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -69,6 +70,19 @@ export const DAYLIGHT_HOURS = [
   { sunrise: "07:55", sunset: "17:00" }, // november
   { sunrise: "08:40", sunset: "16:30" } // december
 ];
+
+// Demo gezichtsherkenning (zie FaceRecognitionDemo.js).
+// Zet enabled op false om de demo volledig uit te schakelen; de knoppen verdwijnen dan.
+// De bibliotheek en modellen worden pas geladen als iemand de demo gebruikt.
+export const FACE_DEMO = {
+  enabled: true,
+  libraryUrl: "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.esm.js",
+  modelUrl: "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/",
+  // Hoe sterk twee gezichten moeten lijken om als dezelfde persoon te tellen (lager = strenger).
+  matchThreshold: 0.5,
+  // Hoe lang er maximaal naar een bekend gezicht wordt gezocht, in milliseconden.
+  scanTimeoutMs: 20000
+};
 
 // Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.
 export const DEFAULT_PRODUCTS = [

@@ -42,9 +42,9 @@
         <!-- Thema: slider voor licht/donker, en de keuzes Systeem (standaard) en Auto (dag/nacht). -->
         <div class="theme-control" role="group" aria-label="Weergave: licht of donker">
           <button type="button" class="theme-switch" id="themeSwitch" role="switch" aria-checked="false" aria-label="Donkere modus">
-            <span class="theme-switch-icon" aria-hidden="true">☀</span>
+            <span class="theme-switch-icon" aria-hidden="true" data-icon="sun"></span>
             <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-knob"></span></span>
-            <span class="theme-switch-icon" aria-hidden="true">☾</span>
+            <span class="theme-switch-icon" aria-hidden="true" data-icon="moon"></span>
           </button>
           <div class="theme-modes">
             <button type="button" data-theme-mode="system" aria-pressed="true" title="Volgt de instelling van je apparaat">Systeem</button>
@@ -68,7 +68,7 @@
           <p class="hero-copy">Registreer je consumptie snel. Zo houden we samen zicht op eten en drinken binnen de organisatie.</p>
         </div>
         <div class="hero-shape" aria-hidden="true">
-          <span>♻</span>
+          <span data-icon="recycle"></span>
         </div>
       </section>
 
@@ -83,34 +83,39 @@
             </div>
             <span class="count-badge" id="employeeCount"></span>
           </div>
+          <!-- Demo gezichtsherkenning (FaceRecognitionDemo.js). Alleen zichtbaar als de demo aan staat. -->
+          <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
+            <span data-icon="faceScan"></span> Herken mij met de camera (demo)
+          </button>
           <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
           <label class="search-box">
-            <span aria-hidden="true">⌕</span>
+            <span aria-hidden="true" data-icon="search"></span>
             <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
-            <kbd>⌘ K</kbd>
+            <kbd>Ctrl K</kbd>
           </label>
           <label class="company-filter">
             <span>Bedrijf</span>
             <div class="company-combobox">
               <input id="employeeCompanyFilter" placeholder="Alle bedrijven" autocomplete="off" aria-label="Filter medewerkers op bedrijf">
-              <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen">⌄</button>
+              <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen" data-icon="chevron"></button>
               <div class="company-options hidden" id="companyFilterOptions" role="listbox"></div>
             </div>
           </label>
-          <!-- JavaScript plaatst hier de actuele medewerkers en plusknoppen. -->
+          <!-- JavaScript plaatst hier de actieve medewerkers, gegroepeerd per bedrijf. Een klik opent het productvenster. -->
           <div class="employee-list" id="employeeList" aria-live="polite"></div>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
           <div class="empty-state hidden" id="emptyState">
-            <span aria-hidden="true">◌</span>
+            <span aria-hidden="true" data-icon="userSearch"></span>
             <strong>Geen medewerker gevonden</strong>
-            <p>Probeer een andere zoekterm.</p>
+            <p>Probeer een andere zoekterm of kies een ander bedrijf.</p>
+            <button type="button" class="secondary-button" data-clear-search>Zoekopdracht wissen</button>
           </div>
         </div>
 
         <aside class="summary-column">
           <!-- Statistiekkaart met het aantal registraties van vandaag. -->
           <div class="stat-card stat-green">
-            <div class="stat-icon" aria-hidden="true">▣</div>
+            <div class="stat-icon" aria-hidden="true" data-icon="package"></div>
             <div>
               <span>Vandaag geregistreerd</span>
               <strong id="todayTotal">0</strong>
@@ -119,7 +124,7 @@
           </div>
           <!-- Statistiekkaart met het aantal registraties van deze maand. -->
           <div class="stat-card stat-blue">
-            <div class="stat-icon" aria-hidden="true">◷</div>
+            <div class="stat-icon" aria-hidden="true" data-icon="calendar"></div>
             <div>
               <span>Deze maand</span>
               <strong id="monthTotal">0</strong>
@@ -128,7 +133,7 @@
           </div>
           <!-- Korte informatieve boodschap voor gebruikers. -->
           <div class="tip-card">
-            <span class="tip-icon" aria-hidden="true">✦</span>
+            <span class="tip-icon" aria-hidden="true" data-icon="sparkle"></span>
             <div>
               <strong>Goed bezig!</strong>
               <p>Elke registratie helpt ons bewuster om te gaan met verbruik.</p>
@@ -149,7 +154,7 @@
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal">
       <!-- Sluit alleen de modal; de admin blijft ingelogd zolang de pagina open is. -->
-      <button class="modal-close" data-close-modal aria-label="Sluiten">×</button>
+      <button class="modal-close" data-close-modal aria-label="Sluiten" data-icon="close"></button>
 
       <!-- Loginweergave die zichtbaar is wanneer de admin nog niet is ingelogd. -->
       <div id="loginView">
@@ -161,7 +166,7 @@
         <p class="section-kicker">Beheerdersomgeving</p>
         <h2 id="adminTitle">Welkom terug</h2>
         <p class="muted">Log in om registraties en medewerkers te beheren.</p>
-        <form id="loginForm">
+        <form id="loginForm" novalidate>
           <label>E-mailadres
             <input type="email" id="loginEmail" value="admin@tvb.nl" required>
           </label>
@@ -169,7 +174,7 @@
             <input type="password" id="loginPassword" placeholder="••••••••" required>
           </label>
           <p class="login-hint">Demo: elk ingevuld wachtwoord werkt.</p>
-          <button class="primary-button full-width" type="submit">Inloggen <span>→</span></button>
+          <button class="primary-button full-width" type="submit">Inloggen <span data-icon="arrowRight"></span></button>
           <p class="form-error hidden" id="loginError">Vul een e-mailadres en wachtwoord in.</p>
         </form>
       </div>
@@ -201,7 +206,7 @@
             <label>Maand
               <select id="filterMonth"><option value="all">Alle maanden</option></select>
             </label>
-            <button class="secondary-button export-button" id="exportButton">⇩ CSV exporteren</button>
+            <button class="secondary-button export-button" id="exportButton"><span data-icon="download"></span> CSV exporteren</button>
           </div>
           <!-- Zoekveld voor gerichte correcties per medewerker. -->
           <label class="admin-search">
@@ -219,22 +224,22 @@
           </div>
         </div>
         <div id="employeesTab" class="hidden">
-          <button class="primary-button" id="addEmployeeButton" type="button">+ Medewerker toevoegen</button>
-          <!-- Zoekveld om eerst de juiste medewerker te vinden voordat die wordt verwijderd. -->
+          <button class="primary-button" id="addEmployeeButton" type="button"><span data-icon="plus"></span> Medewerker toevoegen</button>
+          <!-- Zoekveld om de juiste medewerker te vinden om te wijzigen, (de)activeren of verwijderen. -->
           <label class="admin-search employee-management-search">
             <span>Medewerker zoeken, wijzigen of activeren</span>
             <input type="search" id="employeeManagementSearch" placeholder="Zoek een medewerker..." autocomplete="off">
           </label>
-          <!-- JavaScript plaatst hier de gevonden medewerkers met verwijderknop. -->
+          <!-- JavaScript plaatst hier de gevonden medewerkers met de knoppen Deactiveren/Activeren, Wijzigen en (bij inactieve medewerkers) Verwijderen. -->
           <div id="adminEmployeeList" class="admin-employee-list"></div>
         </div>
         <div id="productsTab" class="hidden">
-          <button class="primary-button" id="addProductButton" type="button">+ Product toevoegen</button>
+          <button class="primary-button" id="addProductButton" type="button"><span data-icon="plus"></span> Product toevoegen</button>
           <div id="adminProductList" class="admin-employee-list"></div>
         </div>
         <!-- Bedrijven met hun consumptiepunten; per punt wordt het aanbod ingesteld. -->
         <div id="companiesTab" class="hidden">
-          <button class="primary-button" id="addCompanyButton" type="button">+ Bedrijf toevoegen</button>
+          <button class="primary-button" id="addCompanyButton" type="button"><span data-icon="plus"></span> Bedrijf toevoegen</button>
           <div id="adminCompanyList" class="admin-company-list"></div>
         </div>
         <!-- Voorraad per consumptiepunt, met bovenaan alles wat bijbesteld moet worden. -->
@@ -268,11 +273,11 @@
   <!-- Apart formulier voor toevoegen en wijzigen van producten. -->
   <div class="modal-backdrop hidden" id="productFormModal" role="dialog" aria-modal="true" aria-labelledby="productFormTitle">
     <div class="modal employee-form-modal">
-      <button class="modal-close" data-close-product-modal aria-label="Sluiten">×</button>
+      <button class="modal-close" data-close-product-modal aria-label="Sluiten" data-icon="close"></button>
       <p class="section-kicker">Productbeheer</p>
       <h2 id="productFormTitle">Product toevoegen</h2>
       <p class="muted" id="productFormHelp">Vul de productnaam en prijs in.</p>
-      <form class="add-employee-form employee-fields" id="productForm">
+      <form class="add-employee-form employee-fields" id="productForm" novalidate>
         <label>Productnaam
           <input id="productName" placeholder="bijv. Soep" required>
         </label>
@@ -291,12 +296,16 @@
   <!-- Persoonlijk productvenster zonder persoonlijke totalen. -->
   <div class="modal-backdrop hidden" id="employeeProductsModal" role="dialog" aria-modal="true" aria-labelledby="employeeProductsTitle">
     <div class="modal employee-products-modal">
-      <button class="modal-close" data-close-employee-products aria-label="Sluiten">×</button>
+      <button class="modal-close" data-close-employee-products aria-label="Sluiten" data-icon="close"></button>
       <p class="section-kicker">Persoonlijke registratie</p>
       <h2 id="employeeProductsTitle">Product kiezen</h2>
+      <!-- Persoonlijke begroeting en de keuze van de vorige keer. -->
+      <p class="welcome-line" id="employeeWelcome"></p>
+      <div class="suggestion hidden" id="employeeSuggestion"></div>
       <p class="muted">Gebruik de plusknoppen om producten te kiezen. Klik daarna op registreren om alles tegelijk op te slaan.</p>
       <div id="employeeProductList" class="personal-product-list"></div>
       <div class="employee-products-actions">
+        <div class="face-enroll hidden" id="faceEnrollArea"></div>
         <button class="primary-button" id="registerSelectedProductsButton" type="button">Registreren</button>
       </div>
     </div>
@@ -305,11 +314,11 @@
   <!-- Apart formulier voor toevoegen en wijzigen van medewerkers. -->
   <div class="modal-backdrop hidden" id="employeeFormModal" role="dialog" aria-modal="true" aria-labelledby="employeeFormTitle">
     <div class="modal employee-form-modal">
-      <button class="modal-close" data-close-employee-modal aria-label="Sluiten">×</button>
+      <button class="modal-close" data-close-employee-modal aria-label="Sluiten" data-icon="close"></button>
       <p class="section-kicker">Medewerkersbeheer</p>
       <h2 id="employeeFormTitle">Medewerker toevoegen</h2>
       <p class="muted" id="employeeFormHelp">Vul de gegevens in en kies daarna hoe je verder wilt gaan.</p>
-      <form class="add-employee-form employee-fields" id="employeeForm">
+      <form class="add-employee-form employee-fields" id="employeeForm" novalidate>
         <label>Voornaam
           <input id="newEmployeeFirstName" required>
         </label>
@@ -344,11 +353,11 @@
   <!-- Formulier voor toevoegen en wijzigen van een bedrijf. -->
   <div class="modal-backdrop hidden" id="companyFormModal" role="dialog" aria-modal="true" aria-labelledby="companyFormTitle">
     <div class="modal employee-form-modal">
-      <button class="modal-close" data-close-company-modal aria-label="Sluiten">×</button>
+      <button class="modal-close" data-close-company-modal aria-label="Sluiten" data-icon="close"></button>
       <p class="section-kicker">Bedrijvenbeheer</p>
       <h2 id="companyFormTitle">Bedrijf toevoegen</h2>
       <p class="muted">Het werkgevernummer komt in de CSV-export bij de medewerkers van dit bedrijf, behalve bij wie een afwijkend nummer heeft.</p>
-      <form class="add-employee-form employee-fields" id="companyForm">
+      <form class="add-employee-form employee-fields" id="companyForm" novalidate>
         <label>Bedrijfsnaam
           <input id="companyName" required>
         </label>
@@ -366,11 +375,11 @@
   <!-- Formulier voor toevoegen en wijzigen van een consumptiepunt en het aanbod daarvan. -->
   <div class="modal-backdrop hidden" id="pointFormModal" role="dialog" aria-modal="true" aria-labelledby="pointFormTitle">
     <div class="modal employee-form-modal">
-      <button class="modal-close" data-close-point-modal aria-label="Sluiten">×</button>
+      <button class="modal-close" data-close-point-modal aria-label="Sluiten" data-icon="close"></button>
       <p class="section-kicker">Consumptiepunt</p>
       <h2 id="pointFormTitle">Consumptiepunt toevoegen</h2>
       <p class="muted">Zet aan welke producten hier worden aangeboden. Medewerkers van dit punt zien alleen deze producten.</p>
-      <form class="add-employee-form employee-fields" id="pointForm">
+      <form class="add-employee-form employee-fields" id="pointForm" novalidate>
         <label>Naam
           <input id="pointName" placeholder="bijv. Kantine begane grond" required>
         </label>
@@ -386,6 +395,31 @@
           <button class="primary-button" type="submit">Opslaan</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Demo gezichtsherkenning: camerabeeld met een kader voor het gezicht.
+       Wordt gebruikt om een gezicht in te stellen (per medewerker) en om iemand te herkennen. -->
+  <div class="modal-backdrop hidden" id="faceModal" role="dialog" aria-modal="true" aria-labelledby="faceTitle">
+    <div class="modal face-modal">
+      <button class="modal-close" data-close-face-modal aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Demo gezichtsherkenning</p>
+      <h2 id="faceTitle">Herken mij</h2>
+      <p class="muted" id="faceHelp">Plaats je gezicht binnen het kader en kijk recht in de camera.</p>
+      <div class="face-frame">
+        <video id="faceVideo" autoplay muted playsinline></video>
+        <div class="face-guide" aria-hidden="true"></div>
+      </div>
+      <p class="face-status" id="faceStatus" role="status"></p>
+      <label class="face-consent hidden" id="faceConsentLabel">
+        <input type="checkbox" id="faceConsent">
+        <span>Ik doe vrijwillig mee aan deze demo. Mijn gezicht wordt alleen in deze browser verwerkt en niet opgeslagen of verstuurd. Na het herladen van de pagina is alles weg.</span>
+      </label>
+      <div class="employee-form-actions">
+        <button class="secondary-button" type="button" data-close-face-modal>Annuleren</button>
+        <button class="primary-button hidden" type="button" id="faceEnrollButton" disabled>Gezicht vastleggen</button>
+      </div>
+      <p class="face-privacy"><span data-icon="lock"></span> Er worden geen foto's gemaakt of bewaard. Alles gebeurt op dit apparaat.</p>
     </div>
   </div>
 

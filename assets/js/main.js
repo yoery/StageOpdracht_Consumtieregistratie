@@ -15,6 +15,7 @@
  * - CsvExport maakt het CSV-bestand voor de loonadministratie.
  * - RegistrationApp reageert op wat de gebruiker doet.
  * - ThemeManager regelt het lichte en donkere thema; die staat los van de rest.
+ * - FaceRecognitionDemo is de demo gezichtsherkenning (uit te zetten in config.js).
  */
 import { STORAGE_KEY } from "./config.js";
 import { DataStore } from "./DataStore.js";
@@ -23,6 +24,7 @@ import { RegistrationView } from "./RegistrationView.js";
 import { RegistrationApp } from "./RegistrationApp.js";
 import { CsvExport } from "./csvExport.js";
 import { ThemeManager } from "./ThemeManager.js";
+import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
 
 // Het thema eerst, zodat de kleuren kloppen voordat de rest wordt getekend.
 new ThemeManager().initialize();
@@ -30,6 +32,7 @@ new ThemeManager().initialize();
 const model = new RegistrationModel(new DataStore(STORAGE_KEY));
 const view = new RegistrationView(model);
 const csvExport = new CsvExport(model);
-const app = new RegistrationApp(model, view, csvExport);
+const faceDemo = new FaceRecognitionDemo();
+const app = new RegistrationApp(model, view, csvExport, faceDemo);
 
 app.initialize();
