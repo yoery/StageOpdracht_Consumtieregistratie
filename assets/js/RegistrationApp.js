@@ -1,4 +1,5 @@
 import { CsvExport } from "./csvExport.js";
+import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
@@ -16,6 +17,7 @@ import { CsvExport } from "./csvExport.js";
  *   - RegistrationModel: voert alle wijzigingen uit en bewaart de gegevens.
  *   - RegistrationView: tekent het scherm en toont meldingen.
  *   - CsvExport: maakt het CSV-bestand als de beheerder op "CSV exporteren" klikt.
+ *   - FaceRecognitionDemo: de demo gezichtsherkenning (camera, herkennen, instellen).
  *   - index.html: de knoppen en formulieren waar de event listeners op zitten.
  *
  * Opbouw van deze class:
@@ -26,20 +28,25 @@ import { CsvExport } from "./csvExport.js";
  *   5. formulieren: medewerker, product, bedrijf, consumptiepunt
  *   6. voorraad
  *   7. event listeners koppelen
+ *   8. demo gezichtsherkenning
  */
 export class RegistrationApp {
-  // De controller krijgt het model, de view en de export mee (compositie).
-  // Als er geen export wordt meegegeven, maakt de controller er zelf een.
-  constructor(model, view, csvExport = new CsvExport(model)) {
+  // De controller krijgt het model, de view, de export en de demo gezichtsherkenning mee
+  // (compositie). Wat niet wordt meegegeven, maakt de controller zelf.
+  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo()) {
     this.model = model;
     this.view = view;
     this.csvExport = csvExport;
+    this.faceDemo = faceDemo;
 
     // Tijdelijke status van het scherm; deze wordt niet opgeslagen.
     this.adminLoggedIn = false;
     this.auditLogLimit = 20;
     this.selectedEmployeeId = null;
     this.selectedProducts = {}; // per product-id het gekozen aantal, bijv. { blikje: 2 }
+    this.recognizedByFace = false; // is de medewerker in het productvenster herkend met de camera?
+    this.faceSession = 0;          // telt op bij ieder openen en sluiten van het cameravenster
+    this.faceMode = null;          // "recognize" (herkennen) of "enroll" (instellen)
   }
 
   // ------------------------------------------------------------------
@@ -53,6 +60,7 @@ export class RegistrationApp {
 
     this.view.renderIcons();
     this.registerEventListeners();
+    this.view.$("#faceRecognizeButton").classList.toggle("hidden", !this.faceDemo.isAvailable());
     this.view.renderAll();
   }
 
@@ -156,7 +164,10 @@ export class RegistrationApp {
       ["[data-show-stock-point]", (button) => this.showStockPoint(button.dataset.showStockPoint)],
       ["[data-stock-delivery]", (button) => this.bookDelivery(button.dataset.stockDelivery)],
       ["[data-clear-search]", () => this.clearSearch()],
-      ["[data-go-tab]", (button) => this.switchTab(document.querySelector(`.tab[data-tab="${button.dataset.goTab}"]`))]
+      ["[data-go-tab]", (button) => this.switchTab(document.querySelector(`.tab[data-tab="${button.dataset.goTab}"]`))],
+      ["[data-repeat-last]", () => this.repeatLastSelection()],
+      ["[data-face-enroll]", () => this.startFaceEnrollment()],
+      ["[data-face-forget]", () => this.forgetFace()]
     ];
 
     for (const [selector, action] of actions) {
@@ -302,16 +313,34 @@ export class RegistrationApp {
   // ------------------------------------------------------------------
 
   // Opent het persoonlijke productvenster met een lege keuze.
-  openEmployeeProducts(employeeId) {
+  // `recognized` is true als de medewerker net met de camera is herkend (demo).
+  openEmployeeProducts(employeeId, { recognized = false } = {}) {
     this.selectedEmployeeId = employeeId;
     this.selectedProducts = {};
-    this.view.renderEmployeeProducts(employeeId, this.selectedProducts);
+    this.recognizedByFace = recognized;
+    this.renderProductWindow();
+  }
+
+  // Tekent het productvenster opnieuw, met de status van de demo gezichtsherkenning.
+  renderProductWindow() {
+    this.view.renderEmployeeProducts(this.selectedEmployeeId, this.selectedProducts, {
+      available: this.faceDemo.isAvailable(),
+      enrolled: this.faceDemo.isEnrolled(this.selectedEmployeeId),
+      recognized: this.recognizedByFace
+    });
+  }
+
+  // "Zelfde als vorige keer": neemt de keuze van de vorige keer over. De medewerker
+  // ziet de aantallen en bevestigt zelf met Registreren.
+  repeatLastSelection() {
+    this.selectedProducts = { ...this.model.lastSelection(this.selectedEmployeeId) };
+    this.renderProductWindow();
   }
 
   // Telt één stuk op bij een gekozen product (de "+"-knop in het productvenster).
   incrementProduct(productId) {
     this.selectedProducts[productId] = (this.selectedProducts[productId] || 0) + 1;
-    this.view.renderEmployeeProducts(this.selectedEmployeeId, this.selectedProducts);
+    this.renderProductWindow();
   }
 
   // Haalt één stuk af van een gekozen product (de "−"-knop), maar nooit onder 0.
@@ -321,7 +350,7 @@ export class RegistrationApp {
     if (current === 0) return;
 
     this.selectedProducts[productId] = current - 1;
-    this.view.renderEmployeeProducts(this.selectedEmployeeId, this.selectedProducts);
+    this.renderProductWindow();
   }
 
   // Maakt een korte samenvatting van de keuze, bijvoorbeeld "2× Blikje, 1× Ei".
@@ -340,6 +369,7 @@ export class RegistrationApp {
     this.hide("#employeeProductsModal");
     this.selectedProducts = {};
     this.selectedEmployeeId = null;
+    this.recognizedByFace = false;
   }
 
   // Slaat alle gekozen producten in één keer op; ieder stuk wordt één registratie.
@@ -858,6 +888,14 @@ export class RegistrationApp {
   registerPageEvents() {
     document.addEventListener("click", (event) => this.handleClick(event));
     this.registerModalClose("#employeeProductsModal", "[data-close-employee-products]", () => this.closeEmployeeProducts());
+
+    // Demo gezichtsherkenning
+    this.onClick("#faceRecognizeButton", () => this.startFaceRecognition());
+    this.onClick("#faceEnrollButton", () => this.captureEnrollment());
+    this.registerModalClose("#faceModal", "[data-close-face-modal]", () => this.closeFaceModal());
+    this.view.$("#faceConsent").addEventListener("change", (event) => {
+      this.view.$("#faceEnrollButton").disabled = !event.target.checked;
+    });
   }
 
   // Inloggen, uitloggen, tabbladen, logboek en export in het dashboard.
@@ -956,5 +994,163 @@ export class RegistrationApp {
       event.preventDefault();
       this.openEmployeeProducts(employeeRow.dataset.openEmployee);
     });
+  }
+
+  // ------------------------------------------------------------------
+  // 8. Demo gezichtsherkenning
+  // ------------------------------------------------------------------
+
+  // Knop "Herken mij met de camera (demo)" op de beginpagina.
+  startFaceRecognition() {
+    if (!this.faceDemo.hasEnrolledFaces()) {
+      this.view.showToast(
+        "Er is nog niemand ingesteld voor gezichtsherkenning. Kies je naam en zet het aan in het productvenster.",
+        { tone: "error", duration: 5000 }
+      );
+      return;
+    }
+    this.openFaceModal("recognize");
+  }
+
+  // Link "Gezichtsherkenning instellen (demo)" in het productvenster van een medewerker.
+  startFaceEnrollment() {
+    this.openFaceModal("enroll", this.selectedEmployeeId);
+  }
+
+  // Link "Uitzetten": vergeet het gezicht van deze medewerker.
+  forgetFace() {
+    this.faceDemo.forget(this.selectedEmployeeId);
+    this.renderProductWindow();
+    this.view.showToast("Gezichtsherkenning staat uit voor deze medewerker.", { tone: "success" });
+  }
+
+  // Toont een statustekst in het cameravenster ("info" of "error").
+  setFaceStatus(message, tone = "info") {
+    const status = this.view.$("#faceStatus");
+    status.textContent = message;
+    status.dataset.tone = tone;
+  }
+
+  // Opent het cameravenster om te herkennen ("recognize") of om een gezicht in te stellen ("enroll").
+  // Iedere keer openen krijgt een nieuw sessienummer; sluit de gebruiker het venster terwijl er
+  // nog geladen wordt, dan ziet de code aan het nummer dat ze moet stoppen.
+  async openFaceModal(mode, employeeId = null) {
+    this.faceSession += 1;
+    const session = this.faceSession;
+    this.faceMode = mode;
+    this.faceEmployeeId = employeeId;
+
+    const enrolling = mode === "enroll";
+    const name = enrolling ? this.employeeLabel(employeeId) : "";
+    this.view.$("#faceTitle").textContent = enrolling ? `Gezichtsherkenning instellen voor ${name}` : "Herken mij";
+    this.view.$("#faceHelp").textContent = enrolling
+      ? "Plaats je gezicht binnen het kader. Zet het vinkje en klik op Gezicht vastleggen."
+      : "Plaats je gezicht binnen het kader en kijk recht in de camera.";
+    this.view.$("#faceConsent").checked = false;
+    this.view.$("#faceConsentLabel").classList.toggle("hidden", !enrolling);
+    this.view.$("#faceEnrollButton").classList.toggle("hidden", !enrolling);
+    this.view.$("#faceEnrollButton").disabled = true;
+    this.show("#faceModal");
+
+    const video = this.view.$("#faceVideo");
+    this.setFaceStatus("Herkenningsmodel laden. De eerste keer kan dit even duren.");
+
+    try {
+      await this.faceDemo.load();
+    } catch (error) {
+      if (session === this.faceSession) {
+        this.setFaceStatus("De demo kon niet worden geladen. Controleer de internetverbinding.", "error");
+      }
+      return;
+    }
+    if (session !== this.faceSession) return;
+
+    this.setFaceStatus("Camera starten…");
+    try {
+      await this.faceDemo.startCamera(video);
+    } catch (error) {
+      if (session === this.faceSession) {
+        this.setFaceStatus("Geen toegang tot de camera. Geef toestemming in de browser, of kies je naam in de lijst.", "error");
+      }
+      return;
+    }
+    // Is het venster intussen gesloten? Dan de camera meteen weer uitzetten.
+    if (session !== this.faceSession) {
+      this.faceDemo.stopCamera(video);
+      return;
+    }
+
+    if (enrolling) this.setFaceStatus("Camera staat aan.");
+    else this.scanForFace(session);
+  }
+
+  // Kijkt steeds opnieuw of er een bekend gezicht in beeld is, tot iemand is herkend,
+  // het venster wordt gesloten of de tijd (FACE_DEMO.scanTimeoutMs) om is.
+  async scanForFace(session) {
+    const video = this.view.$("#faceVideo");
+    const deadline = Date.now() + this.faceDemo.settings.scanTimeoutMs;
+    this.setFaceStatus("Zoeken naar een bekend gezicht…");
+    this.faceDemo.resetConfirmation();
+
+    while (session === this.faceSession && Date.now() < deadline) {
+      const descriptor = await this.faceDemo.readFace(video);
+      if (session !== this.faceSession) return;
+
+      // Pas als dezelfde actieve medewerker twee keer achter elkaar is gevonden, telt het.
+      const match = descriptor ? this.faceDemo.findMatch(descriptor) : null;
+      const candidate = match && this.model.findEmployee(match)?.active ? match : null;
+      const employeeId = this.faceDemo.confirm(candidate);
+      if (employeeId) {
+        this.closeFaceModal();
+        this.openEmployeeProducts(employeeId, { recognized: true });
+        return;
+      }
+
+      let status = "Geen gezicht in beeld. Plaats je gezicht binnen het kader.";
+      if (candidate) status = "Bijna herkend. Blijf even rustig in het kader kijken.";
+      else if (descriptor) status = "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken.";
+      this.setFaceStatus(status);
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+
+    if (session === this.faceSession) {
+      this.setFaceStatus("Niet herkend. Sluit dit venster en kies je naam in de lijst.", "error");
+    }
+  }
+
+  // Knop "Gezicht vastleggen": leest het gezicht (een paar pogingen) en onthoudt het voor deze medewerker.
+  async captureEnrollment() {
+    const session = this.faceSession;
+    const video = this.view.$("#faceVideo");
+    const button = this.view.$("#faceEnrollButton");
+    button.disabled = true;
+    this.setFaceStatus("Gezicht vastleggen…");
+
+    let descriptor = null;
+    for (let attempt = 0; attempt < 5 && !descriptor; attempt += 1) {
+      descriptor = await this.faceDemo.readFace(video);
+      if (session !== this.faceSession) return;
+      if (!descriptor) await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    if (!descriptor) {
+      this.setFaceStatus("Geen gezicht gevonden. Plaats je gezicht binnen het kader en probeer het opnieuw.", "error");
+      button.disabled = !this.view.$("#faceConsent").checked;
+      return;
+    }
+
+    this.faceDemo.enroll(this.faceEmployeeId, descriptor);
+    const name = this.employeeLabel(this.faceEmployeeId);
+    this.closeFaceModal();
+    this.renderProductWindow();
+    this.view.showToast(`Gezichtsherkenning staat aan voor ${name}, alleen tijdens deze sessie.`, { tone: "success", duration: 4000 });
+  }
+
+  // Sluit het cameravenster en zet de camera uit. Een lopende zoektocht stopt vanzelf,
+  // omdat het sessienummer verandert.
+  closeFaceModal() {
+    this.faceSession += 1;
+    this.faceDemo.stopCamera(this.view.$("#faceVideo"));
+    this.hide("#faceModal");
   }
 }

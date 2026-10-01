@@ -191,6 +191,29 @@ export class RegistrationModel {
     );
   }
 
+  // Wat koos deze medewerker de vorige keer? Neemt de laatste registratie en alles wat binnen
+  // een minuut daarvoor is geregistreerd (één keer "Registreren" kan meerdere producten bevatten).
+  // Alleen producten die het eigen consumptiepunt nu aanbiedt, tellen mee.
+  // Geeft per product-id het aantal terug, bijvoorbeeld { blikje: 2, ei: 1 }, of {} als er niets is.
+  lastSelection(employeeId) {
+    const own = this.registrations.filter((registration) => registration.employeeId === employeeId);
+    if (own.length === 0) return {};
+
+    const times = own.map((registration) => new Date(registration.createdAt).getTime());
+    const lastTime = Math.max(...times);
+    const offeredIds = this.productsForEmployee(employeeId).map((product) => product.id);
+    const selection = {};
+
+    own.forEach((registration, index) => {
+      const withinLastMinute = lastTime - times[index] <= 60 * 1000;
+      if (withinLastMinute && offeredIds.includes(registration.productId)) {
+        selection[registration.productId] = (selection[registration.productId] || 0) + 1;
+      }
+    });
+
+    return selection;
+  }
+
   // Telt alle registraties die aan één medewerker gekoppeld zijn.
   countForEmployee(employeeId) {
     return this.registrations.filter((registration) => registration.employeeId === employeeId).length;

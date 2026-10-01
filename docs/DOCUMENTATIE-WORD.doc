@@ -2,87 +2,332 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<title>Documentatie Blikjesregistratie</title>
+<title>Documentatie Consumptieregistratie</title>
 <style>
 body{font-family:Arial,sans-serif;color:#163540;line-height:1.45;margin:40px}
 h1{color:#087252;border-bottom:3px solid #159a72;padding-bottom:10px}
-h2{color:#176b8b;margin-top:28px}
-h3{color:#087252;margin-top:20px}
-code{background:#eef5f2;padding:2px 4px}
-table{border-collapse:collapse;width:100%;margin:12px 0}
-th,td{border:1px solid #cbdad7;padding:7px;text-align:left}
+h2{color:#176b8b;margin-top:28px} h3{color:#087252;margin-top:20px} h4{color:#176b8b;margin-top:18px}
+code{background:#eef5f2;padding:2px 4px} pre{background:#f3f7f6;padding:12px;white-space:pre-wrap;font-family:Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:12px 0} th,td{border:1px solid #cbdad7;padding:7px;text-align:left;vertical-align:top}
 th{background:#e8f5ee}
-.note{background:#e8f2f6;padding:12px;border-left:4px solid #176b8b}
 </style>
 </head>
 <body>
-<h1>Documentatie Blikjesregistratie</h1>
-<p><strong>Project:</strong> Blikjesregistratie TVB<br><strong>Versie:</strong> frontend-demo</p>
-
-<h2>1. Doel van de applicatie</h2>
-<p>Medewerkers kunnen producten registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.</p>
-<div class="note"><strong>Belangrijk:</strong> deze demo bewaart gegevens in <code>localStorage</code> van de gebruikte browser. De gegevens zijn daarom nog niet gedeeld tussen verschillende computers.</div>
-
-<h2>2. Bestanden</h2>
-<table><tr><th>Bestand</th><th>Functie</th></tr>
-<tr><td>index.html</td><td>Structuur en zichtbare onderdelen van de website.</td></tr>
-<tr><td>assets/css/styles.css</td><td>Kleuren, layout, knoppen, kaarten, tabel en mobiele weergave.</td></tr>
-<tr><td>assets/js/app.js</td><td>OOP-applicatielogica met opslag, model, view, events, berekeningen en Excel-export.</td></tr>
-<tr><td>README.md</td><td>Korte startinformatie.</td></tr>
-<tr><td>DOCUMENTATIE.md</td><td>Uitgebreide technische documentatie.</td></tr>
+<h1 id="documentatie-consumptieregistratie">Documentatie Consumptieregistratie</h1>
+<h2 id="1-doel-van-de-applicatie">1. Doel van de applicatie</h2>
+<p>Consumptieregistratie is een eenvoudige website waarmee medewerkers eten en drinken kunnen registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Een medewerker kiest de producten met <code>+</code> en <code>−</code> en slaat ze op met <code>Registreren</code>; ieder gekozen product wordt dan één registratie. Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.</p>
+<p>Deze versie is een <strong>frontend-demo</strong>. De gegevens worden opgeslagen in <code>localStorage</code> van de gebruikte browser. Daardoor zijn de gegevens op één computer/browser beschikbaar, maar nog niet gedeeld tussen alle gebruikers van een bedrijfsnetwerk.</p>
+<h2 id="2-bestanden">2. Bestanden</h2>
+<table>
+<tr><th>Bestand</th><th>Functie</th></tr>
+<tr><td><code>index.html</code></td><td>De HTML-structuur en alle zichtbare onderdelen van de website</td></tr>
+<tr><td><code>assets/css/styles.css</code></td><td>De volledige vormgeving, kleuren, layout en mobiele weergave</td></tr>
+<tr><td><code>assets/js/main.js</code></td><td>Startpunt: maakt opslag, model, view en controller aan en start de app</td></tr>
+<tr><td><code>assets/js/config.js</code></td><td>Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang en de instellingen van de demo gezichtsherkenning (<code>FACE_DEMO</code>)</td></tr>
+<tr><td><code>assets/js/DataStore.js</code></td><td>Opslag in <code>localStorage</code>, validatie en omzetting van oude gegevens</td></tr>
+<tr><td><code>assets/js/RegistrationModel.js</code></td><td>Gegevens en regels voor registraties, medewerkers, producten en logboek</td></tr>
+<tr><td><code>assets/js/RegistrationView.js</code></td><td>Weergave van alle onderdelen als HTML</td></tr>
+<tr><td><code>assets/js/RegistrationApp.js</code></td><td>Controller: verwerkt klikken, formulieren en toetsenbordacties</td></tr>
+<tr><td><code>assets/js/csvExport.js</code></td><td>Class <code>CsvExport</code>: CSV-export voor de loonadministratie (maand + 1)</td></tr>
+<tr><td><code>assets/js/ThemeManager.js</code></td><td>Class <code>ThemeManager</code>: licht en donker thema (Systeem, Auto of zelf kiezen met de slider)</td></tr>
+<tr><td><code>assets/js/icons.js</code></td><td>De SVG-iconen van de website, met de hulpfunctie <code>icon(naam)</code></td></tr>
+<tr><td><code>assets/js/FaceRecognitionDemo.js</code></td><td>Class <code>FaceRecognitionDemo</code>: de uitschakelbare demo gezichtsherkenning (zie 4.14)</td></tr>
+<tr><td><code>archief/app.js</code></td><td>Back-up van de originele versie in één bestand; wordt niet meer geladen</td></tr>
+<tr><td><code>archief/app.test.js</code></td><td>Back-up van de oude tests bij die versie; wordt niet meer uitgevoerd</td></tr>
+<tr><td><code>README.md</code></td><td>Korte startinformatie voor het project</td></tr>
+<tr><td><code>docs/</code></td><td>Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie</td></tr>
+<tr><td><code>docs/wireframes/</code></td><td>Low-fidelity (<code>lofi-…</code>), mid-fidelity (<code>midfi-…</code>) en high-fidelity (<code>w…</code>) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9)</td></tr>
+<tr><td><code>tests/</code></td><td>Unit tests voor de regels, de opslag, de export, het thema en de welkom- en gezichtsherkenningsfuncties</td></tr>
+<tr><td><code>.github/workflows/ci.yml</code></td><td>Voert de unit tests automatisch uit op GitHub</td></tr>
 </table>
+<p>Bij het toevoegen of wijzigen van een medewerker kiest de beheerder een bedrijf uit de keuzelijst en daarna een consumptiepunt van dat bedrijf. Met het bedrijf worden medewerkers op de beginpagina gegroepeerd en gefilterd. Het bedrijfsfilter op de beginpagina is een keuzelijst waarin je ook kunt typen; de lijst filtert direct tijdens het typen en toont alleen bedrijven met actieve medewerkers.</p>
+<h2 id="3-de-website-starten">3. De website starten</h2>
+<ol><li>Open de projectmap in VS Code.</li><li>Klik met de rechtermuisknop op <code>index.html</code> en kies <strong>Open with Live Server</strong> (extensie "Live Server"). Een andere lokale webserver werkt ook.</li><li>De website opent in een moderne browser.</li><li>Er is geen installatie of buildproces nodig.</li></ol>
+<p>Dubbelklikken op <code>index.html</code> werkt niet: de JavaScript is opgedeeld in modules, en browsers blokkeren modules die via <code>file://</code> worden geopend. De pagina toont dan een waarschuwing.</p>
+<h2 id="4-gebruikershandleiding">4. Gebruikershandleiding</h2>
+<h3 id="41-een-medewerker-zoeken">4.1 Een medewerker zoeken</h3>
+<p>Gebruik de zoekbalk boven de medewerkerlijst. Typ een voornaam, achternaam of een deel van een naam. De lijst wordt direct gefilterd.</p>
+<p>Met <code>Ctrl + K</code> op Windows of <code>Cmd + K</code> op macOS krijgt de zoekbalk automatisch de focus.</p>
+<h3 id="42-een-product-registreren">4.2 Een product registreren</h3>
+<ol><li>Zoek je eigen naam.</li><li>Klik op je naam. Het productvenster opent met alleen de producten van jouw consumptiepunt.</li><li>Klik bij ieder gewenst product op <code>+</code>. Met <code>−</code> haal je een verkeerde keuze weer weg (niet lager dan 0).</li><li>Klik op <code>Registreren (aantal)</code> om alle gekozen producten tegelijk op te slaan.</li><li>Onderaan verschijnt 4 seconden een melding met je naam en de producten, bijvoorbeeld <code>Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd</code>.</li></ol>
+<p>Iedere tik op <code>+</code> telt als één product. De datum en tijd worden automatisch toegevoegd zodra je op <code>Registreren</code> klikt. Je ziet geen persoonlijk totaal of persoonlijke kosten. Klik je op <code>Registreren</code> zonder iets te kiezen, dan verschijnt "Kies eerst minimaal één product". Biedt je consumptiepunt nog niets aan, dan staat er "Geen producten op jouw consumptiepunt."</p>
+<h3 id="43-admin-dashboard-openen">4.3 Admin-dashboard openen</h3>
+<ol><li>Klik rechtsboven op <code>Admin login</code>.</li><li>Vul een e-mailadres in.</li><li>Vul een wachtwoord in.</li><li>Klik op <code>Inloggen</code>.</li></ol>
+<p>In deze demo wordt niet gecontroleerd of het wachtwoord echt correct is. Elk ingevuld wachtwoord werkt. Dit is alleen geschikt voor demonstratie en niet voor productie.</p>
+<h3 id="44-registraties-beheren">4.4 Registraties beheren</h3>
+<p>In het tabblad <code>Registraties</code> ziet de beheerder:</p>
+<ul><li>De filters <code>Medewerker</code> en <code>Maand</code> en de knop <code>CSV exporteren</code></li><li>Onder <code>Medewerker corrigeren</code>: een zoekveld en per medewerker het aantal producten en het bedrag</li><li>Een tabel met medewerker, product, aantal en datum en tijd, nieuwste bovenaan</li></ul>
+<p>De beheerder zoekt onder <code>Medewerker corrigeren</code> eerst een medewerker op en klapt de rij open. Per product staan daar een rode <code>−</code>, het aantal en een groene <code>+</code>. Met <code>+</code> wordt één registratie van dat product toegevoegd, met <code>−</code> wordt de laatste registratie van dat product bij die medewerker verwijderd. Iedere correctie komt in het logboek. De losse registraties in de tabel zijn alleen ter inzage; correcties gebeuren dus altijd via <code>Medewerker corrigeren</code>.</p>
+<p>De keuzelijsten boven de tabel filteren op medewerker of maand. Zijn er voor de filters geen registraties, dan staat er "Geen registraties voor deze filters."</p>
+<h3 id="45-medewerkers-beheren">4.5 Medewerkers beheren</h3>
+<p>Open het tabblad <code>Medewerkers</code>.</p>
+<ul><li>Vul voornaam, achternaam, looncode en personeelsnummer in.</li><li>Kies het bedrijf en daarna het vaste consumptiepunt van de medewerker. De keuzelijst toont alleen de punten van het gekozen bedrijf. De medewerker ziet bij het registreren alleen de producten van dat punt, en de voorraad van dat punt gaat omlaag.</li><li>Het werkgevernummer komt standaard van het bedrijf. Heeft een medewerker een ander werkgevernummer (bijvoorbeeld per teamleider), vul dan <code>Afwijkend werkgevernummer</code> in; dat nummer gaat dan voor in de CSV-export.</li><li>Klik op <code>Opslaan</code> om een medewerker toe te voegen. <code>Opslaan + opnieuw</code> houdt het bedrijf en consumptiepunt vast voor de volgende collega.</li><li>Gebruik <code>Wijzigen</code> om medewerkergegevens aan te passen.</li><li>Gebruik <code>Deactiveren</code> of <code>Activeren</code> om de medewerkerstatus te wijzigen.</li></ul>
+<p>Voornaam, achternaam, looncode, personeelsnummer en bedrijf zijn verplicht. Ontbreekt er iets, dan krijgt het veld een rode rand met een melding eronder en krijgt het eerste foute veld de focus. De voornaam en achternaam worden apart opgeslagen (<code>firstName</code>, <code>lastName</code>); de volledige naam (<code>name</code>) wordt daaruit samengesteld.</p>
+<p>Een inactieve medewerker kan daarna met <code>Verwijderen</code> definitief worden verwijderd; de browser vraagt eerst om bevestiging. De registraties blijven wel bestaan, zodat de administratie de historie houdt.</p>
+<h3 id="46-producten-beheren">4.6 Producten beheren</h3>
+<p>Open het tabblad <code>Producten</code> en klik op <code>+ Product toevoegen</code>. Het formulier heeft dezelfde opties als het medewerkersformulier:</p>
+<ul><li><code>Opslaan</code>: opslaan en het formulier sluiten.</li><li><code>Opslaan + opnieuw</code>: opslaan, de velden leegmaken en het formulier open laten.</li></ul>
+<p>Een nieuw product staat bij alle consumptiepunten <strong>uit</strong>. Zet het daarna aan bij de punten die het aanbieden (zie 4.7).</p>
+<p>Twee producten met dezelfde naam kan niet: dan verschijnt "Er bestaat al een product met deze naam." Een product dat al eens is geregistreerd, kan niet worden verwijderd, zodat oude registraties en de export blijven kloppen.</p>
+<h3 id="47-bedrijven-en-consumptiepunten-beheren">4.7 Bedrijven en consumptiepunten beheren</h3>
+<p>Open het tabblad <code>Bedrijven</code>. Standaard staan de 13 bedrijven van TVB erin. Onder ieder bedrijf staan de consumptiepunten van dat bedrijf. Een bedrijf kan geen, één of meerdere consumptiepunten hebben.</p>
+<ul><li><code>+ Bedrijf toevoegen</code> en <code>Wijzigen</code>: bedrijfsnaam en werkgevernummer invullen. Het werkgevernummer komt in de CSV-export bij de medewerkers van dat bedrijf, behalve bij medewerkers met een afwijkend werkgevernummer.</li><li><code>+ Consumptiepunt</code>: een nieuw punt bij dat bedrijf toevoegen. Geef het een naam (bijv. <code>Kantine begane grond</code>) en vink aan welke producten er worden aangeboden.</li><li><code>Aanbod wijzigen</code>: naam, bedrijf of aangeboden producten van een punt aanpassen. De voorraad blijft bewaard, ook als een product tijdelijk uit staat.</li><li><code>Verwijderen</code>: kan alleen als er geen medewerkers meer aan het bedrijf of punt gekoppeld zijn. Een bedrijf kan ook pas worden verwijderd als het geen consumptiepunten meer heeft.</li></ul>
+<h3 id="48-voorraad-beheren">4.8 Voorraad beheren</h3>
+<p>Open het tabblad <code>Voorraad</code>.</p>
+<ul><li>Bovenaan staat de lijst <strong>Bijbestellen</strong> met alle aangeboden producten die <code>Op</code> zijn (voorraad 0 of minder) of op of onder het minimum zitten (<code>Bijbestellen</code>), over alle consumptiepunten. Klik op een punt om de voorraad daarvan te openen.</li><li>Kies een consumptiepunt om de voorraad per product te zien.</li><li><strong>Levering</strong>: vul het geleverde aantal in en klik op <code>+ Toevoegen</code>. Het aantal komt bij de voorraad.</li><li><strong>Voorraad</strong>: na het tellen kun je het getal direct aanpassen. Het wordt opgeslagen zodra je het veld verlaat.</li><li><strong>Minimum</strong>: bij dit aantal of minder verschijnt het product in de bijbestellijst.</li></ul>
+<p>Iedere registratie haalt automatisch 1 van de voorraad af bij het consumptiepunt van de medewerker. Een correctie met <code>−</code> in het admin-dashboard zet het product weer terug. Een negatieve voorraad betekent dat er meer is geregistreerd dan er volgens de telling was; tel dan opnieuw. Alle leveringen, tellingen en wijzigingen van het minimum komen in het logboek.</p>
+<h3 id="49-logboek-bekijken">4.9 Logboek bekijken</h3>
+<p>Het tabblad <code>Logboek</code> toont standaard maximaal 20 wijzigingen. Met <code>Meer laden</code> worden steeds 20 extra wijzigingen getoond.</p>
+<h3 id="410-modal-sluiten-en-uitloggen">4.10 Modal sluiten en uitloggen</h3>
+<p>Het kruisje rechtsboven sluit alleen het admin-overzicht. De beheerder blijft ingelogd zolang de pagina open is. Met de knop <code>Uitloggen</code> wordt de adminsessie beëindigd en verschijnt bij het volgende openen opnieuw het loginformulier.</p>
+<h3 id="411-csv-exporteren">4.11 CSV exporteren</h3>
+<ol><li>Open het admin-dashboard.</li><li>Kies eventueel een medewerker en/of maand. Achter iedere maand staat de loonmaand waarin die wordt verwerkt, bijvoorbeeld <code>september 2026 (loonmaand oktober 2026)</code>.</li><li>Klik op <code>CSV exporteren</code>.</li><li>De browser downloadt een <code>.csv</code>-bestand, bijvoorbeeld <code>blikjesregistratie-loonmaand-2026-10.csv</code>.</li></ol>
+<p>Het bestand heeft altijd de kolommen <code>Jaar</code>, <code>Maand</code>, <code>Looncode</code>, <code>Personeelsnummer</code>, <code>Werkgevernummer</code>, <code>Naam</code>, <code>Totaal</code> en <code>Prijs</code>, in die vaste volgorde. Iedere regel is één medewerker in één loonmaand. Er staat bewust geen totaalregel in, omdat de loonadministratie iedere regel als medewerker inleest.</p>
+<p><strong>Loonmaand:</strong> consumpties worden verwerkt in de loonadministratie van de maand erna. <code>Jaar</code> en <code>Maand</code> in de export zijn daarom de loonmaand: consumpties uit september 2026 staan als <code>2026</code> / <code>10</code> in het bestand, consumpties uit december 2026 als <code>2027</code> / <code>1</code>.</p>
+<p>Het bestand gebruikt puntkomma's als scheidingsteken en een komma als decimaalteken (<code>0,65</code>), zodat een Nederlandse Excel het direct goed opent. De gekozen filters worden toegepast op de export. Producten en prijzen worden uit de administratie gehaald. Losse registraties staan in de tabel in het admin-dashboard.</p>
+<h3 id="412-licht-of-donker-thema">4.12 Licht of donker thema</h3>
+<p>Rechtsboven in de bovenbalk staat de thema-schakelaar:</p>
+<ul><li><strong>Systeem</strong> (standaard): de website volgt de instelling van je computer of telefoon. Staat Windows of je telefoon op donker, dan is de website ook donker.</li><li><strong>Slider (met zon- en maanicoon)</strong>: kies zelf licht of donker. Dit is een vaste keuze; "Systeem" en "Auto" staan daarna uit.</li><li><strong>Auto</strong>: overdag licht en na zonsondergang donker. De tijden van zonsopkomst en zonsondergang zijn per maand ingesteld voor Nederland (<code>DAYLIGHT_HOURS</code> in <code>config.js</code>), bijvoorbeeld in december donker vanaf ongeveer 16:30 en in juni vanaf ongeveer 22:00. De website controleert iedere minuut of het tijd is om te wisselen.</li></ul>
+<p>De keuze wordt per browser onthouden. In het donkere thema blijven de huiskleuren behouden: de achtergrond wordt donker en de tekst krijgt de groene huiskleur, iets lichter zodat hij goed leesbaar is.</p>
+<h3 id="413-welkom-en-zelfde-als-vorige-keer">4.13 Welkom en "zelfde als vorige keer"</h3>
+<p>Als een medewerker het productvenster opent, verschijnt een persoonlijke begroeting die past bij het tijdstip, bijvoorbeeld "Goedemorgen Lotte, welkom terug." Heeft de medewerker eerder iets geregistreerd, dan staat erboven wat er de vorige keer is gekozen ("Vorige keer koos je 1× Blikje en 1× Ei."). Met de knop <code>Zelfde als vorige keer</code> staan die aantallen direct klaar; de medewerker kan ze nog aanpassen en bevestigt met <code>Registreren</code>.</p>
+<h3 id="414-demo-gezichtsherkenning">4.14 Demo gezichtsherkenning</h3>
+<p>Dit is een demo; zie het TO (hoofdstuk 13, Privacy) waarom gezichtsherkenning niet geschikt is voor de echte toepassing.</p>
+<ol><li>Kies je naam in de lijst. Onderaan het productvenster staat <code>Gezichtsherkenning instellen (demo)</code>.</li><li>De camera van de tablet of laptop gaat aan. Plaats je gezicht in het kader, zet het vinkje voor vrijwillige deelname en klik op <code>Gezicht vastleggen</code>.</li><li>Voortaan kun je op de beginpagina op <code>Herken mij met de camera (demo)</code> klikken. Word je herkend, dan opent je eigen productvenster.</li></ol>
+<p>Er worden geen foto's gemaakt of opgeslagen; de herkenning gebeurt op het apparaat zelf. Na het herladen van de pagina is niemand meer ingesteld. Met <code>Uitzetten</code> in het productvenster vergeet de demo je gezicht direct. Met <code>FACE_DEMO.enabled = false</code> in <code>config.js</code> staat de demo helemaal uit. De camera werkt alleen via <code>http://localhost</code> of <code>https://</code>.</p>
+<h2 id="5-uitleg-van-indexhtml">5. Uitleg van <code>index.html</code></h2>
+<h3 id="metadata-en-externe-bestanden">Metadata en externe bestanden</h3>
+<p>In de <code>&lt;head&gt;</code> staan:</p>
+<ul><li><code>lang="nl"</code>: de pagina is Nederlandstalig.</li><li><code>charset="utf-8"</code>: ondersteunt Nederlandse tekens.</li><li><code>viewport</code>: maakt de pagina geschikt voor mobiel.</li><li>De titel en beschrijving voor browser en zoekmachines.</li><li>Google Fonts voor de gebruikte lettertypes.</li><li><code>assets/css/styles.css</code> voor de vormgeving.</li><li><code>assets/js/main.js</code> als startpunt van de JavaScript.</li></ul>
+<h3 id="navigatiebalk">Navigatiebalk</h3>
+<p>De <code>.topbar</code> bevat:</p>
+<ul><li>Het TVB-logo.</li><li>De naam van de applicatie.</li><li>De themakeuze: een slider voor licht of donker en de knoppen <code>Systeem</code> en <code>Auto</code> (zie 4.12).</li><li>De status <code>Systeem actief</code>.</li><li>De knop <code>Admin login</code> waarmee het admin-dashboard wordt geopend.</li></ul>
+<p>De HTML is ingedeeld in herkenbare componentblokken: <code>header</code> voor navigatie, <code>main</code> voor de hoofdinhoud, <code>section</code> voor inhoudelijke onderdelen, <code>aside</code> voor samenvattingen en <code>footer</code> voor de afsluiting. De admin-modal bevat afzonderlijke componenten voor login, tabs, filters en beheeracties. JavaScript gebruikt de <code>id</code>-waarden als koppeling met deze componenten.</p>
+<h3 id="hero-gedeelte">Hero-gedeelte</h3>
+<p>De <code>.hero</code> toont de datum van vandaag, een introductietekst en een decoratief recycling-symbool.</p>
+<p>De datum wordt niet hardcoded ingevuld. JavaScript vult het element met id <code>todayLabel</code> automatisch.</p>
+<h3 id="medewerkerlijst">Medewerkerlijst</h3>
+<p>De <code>.directory-card</code> bevat:</p>
+<ul><li>De titel <code>Registreer je consumptie</code>.</li><li>De teller met het aantal medewerkers (id <code>employeeCount</code>).</li><li>De knop <code>Herken mij met de camera (demo)</code> (id <code>faceRecognizeButton</code>); alleen zichtbaar als de demo aan staat en de browser een camera kan gebruiken.</li><li>De zoekbalk met id <code>employeeSearch</code> en de sneltoets-hint <code>Ctrl K</code>.</li><li>Het bedrijfsfilter met id <code>employeeCompanyFilter</code> en de keuzelijst <code>companyFilterOptions</code>.</li><li>De lege status met id <code>emptyState</code>, met de knop <code>Zoekopdracht wissen</code>.</li><li>De dynamische lijst met id <code>employeeList</code>.</li></ul>
+<p>JavaScript vult <code>employeeList</code> op basis van de medewerkers in de applicatiestatus.</p>
+<h3 id="statistieken">Statistieken</h3>
+<p>De elementen <code>todayTotal</code> en <code>monthTotal</code> worden door JavaScript gevuld met:</p>
+<ul><li>Het aantal registraties van vandaag.</li><li>Het aantal registraties van de huidige maand.</li></ul>
+<p>Daaronder staat de tipkaart <code>Goed bezig!</code>.</p>
+<h3 id="vensters-modals">Vensters (modals)</h3>
+<p>Ieder venster is een <code>.modal-backdrop</code> over de website heen. Een venster sluit met het kruisje of met een klik naast het venster.</p>
+<table>
+<tr><th>Id</th><th>Venster</th></tr>
+<tr><td><code>adminModal</code></td><td>Loginformulier (<code>loginView</code>) en beheerdashboard (<code>adminView</code>) met zes tabbladen</td></tr>
+<tr><td><code>employeeProductsModal</code></td><td>Productvenster van een medewerker, met begroeting, voorstel <code>Zelfde als vorige keer</code> en de link voor de demo gezichtsherkenning</td></tr>
+<tr><td><code>employeeFormModal</code></td><td>Medewerker toevoegen of wijzigen</td></tr>
+<tr><td><code>productFormModal</code></td><td>Product toevoegen of wijzigen</td></tr>
+<tr><td><code>companyFormModal</code></td><td>Bedrijf toevoegen of wijzigen</td></tr>
+<tr><td><code>pointFormModal</code></td><td>Consumptiepunt toevoegen of het aanbod wijzigen</td></tr>
+<tr><td><code>faceModal</code></td><td>Camerabeeld van de demo gezichtsherkenning (instellen of herkennen)</td></tr>
+</table>
+<p>Het element <code>toast</code> toont de korte meldingen onderaan het scherm.</p>
+<p>De knop met <code>data-close-modal</code> sluit het admin-venster. Deze knop is bewust gescheiden van <code>Uitloggen</code>. Een ingelogde beheerder kan het venster sluiten en later opnieuw openen zonder opnieuw in te loggen.</p>
+<h3 id="waarschuwing-bij-openen-als-los-bestand">Waarschuwing bij openen als los bestand</h3>
+<p>Onderaan <code>index.html</code> staat een klein script dat controleert of de pagina via <code>file://</code> is geopend. Is dat zo, dan verschijnt bovenaan een balk met de uitleg dat de website via Live Server moet worden gestart (zie hoofdstuk 3).</p>
+<h2 id="6-uitleg-van-assetscssstylescss">6. Uitleg van <code>assets/css/styles.css</code></h2>
+<h3 id="css-variabelen">CSS-variabelen</h3>
+<p>In <code>:root</code> staan herbruikbare variabelen:</p>
+<ul><li><code>--green</code>: hoofdgroen van de organisatie.</li><li><code>--green-dark</code>: donkere groene tekst en hoverkleur.</li><li><code>--blue</code>: hoofdblauw.</li><li><code>--blue-soft</code>: lichte blauwe achtergrond.</li><li><code>--mint</code>: lichte groene achtergrond.</li><li><code>--ink</code>: donkere tekstkleur.</li><li><code>--muted</code>: grijze ondersteunende tekst.</li><li><code>--line</code>: randkleur.</li><li><code>--paper</code> en <code>--paper-soft</code>: achtergrond van kaarten, invoervelden en tabelkoppen.</li><li><code>--danger</code>, <code>--error-*</code> en <code>--warning-*</code>: kleuren voor verwijderknoppen, foutmeldingen en de bijbestellijst.</li><li><code>--shadow</code>: standaard schaduw.</li></ul>
+<p>Als het organisatiepalet later verandert, kunnen de kleuren centraal worden aangepast.</p>
+<p><strong>Licht en donker thema:</strong> alle kleuren in de stylesheet komen uit deze variabelen. <code>:root</code> bevat de lichte kleuren, <code>:root[data-theme="dark"]</code> dezelfde variabelen met donkere waarden. De class <code>ThemeManager</code> zet <code>data-theme="light"</code> of <code>data-theme="dark"</code> op het <code>&lt;html&gt;</code>-element, en de hele website verandert dan mee. Een klein script in de <code>&lt;head&gt;</code> van <code>index.html</code> zet het donkere thema al vóór het tekenen van de pagina, zodat de pagina niet eerst wit oplicht. Alleen de witte tekst op groene knoppen, de letters in de avatars en de kleuren van de banner zijn in beide thema's hetzelfde.</p>
+<p>De stylesheet is geordend van algemeen naar specifiek:</p>
+<ol><li>Globale variabelen en reset.</li><li>Basislayout en navigatie.</li><li>Hoofdcomponenten zoals hero, kaarten en medewerkerregels.</li><li>Admincomponenten, tabellen en meldingen.</li><li>Responsive regels voor kleinere schermen.</li></ol>
+<p>Herbruikbare stijlen staan gegroepeerd in componentselectors, bijvoorbeeld <code>.card</code>, <code>.primary-button</code>, <code>.stat-card</code> en <code>.admin-search</code>. Hierdoor blijft de styling centraal beheerd en hoeft dezelfde stijl niet op meerdere plekken te worden gekopieerd.</p>
+<h3 id="layout">Layout</h3>
+<p>De website gebruikt onder andere:</p>
+<ul><li>Flexbox voor navigatie en rijen.</li><li>CSS Grid voor de hoofdinhoud en statistieken.</li><li>De variabelen <code>--page-width</code> en <code>--gutter</code>, zodat bovenbalk, inhoud en footer dezelfde breedte en zijmarge hebben.</li><li>Een pagina die altijd minstens schermhoog is (<code>100dvh</code>), met de footer onderaan.</li></ul>
+<p>Media queries:</p>
+<table>
+<tr><th>Media query</th><th>Wat er verandert</th></tr>
+<tr><td><code>max-width: 1100px</code></td><td>Kleine teksten worden groter, zodat ze op een tablet of telefoon op armlengte leesbaar zijn</td></tr>
+<tr><td><code>min-width: 721px</code> en <code>max-width: 900px</code></td><td>Kleinere zijmarge; de totalen komen onder de medewerkerlijst</td></tr>
+<tr><td><code>min-width: 721px</code>, <code>max-width: 1100px</code> en staand</td><td>Compactere banner op een staande tablet, zodat de lijst hoger begint</td></tr>
+<tr><td><code>max-width: 720px</code></td><td>Telefoonindeling: alles onder elkaar, kleinere zijmarge, minder tekst in de bovenbalk</td></tr>
+<tr><td><code>max-width: 520px</code></td><td>De naam naast het logo vervalt</td></tr>
+<tr><td><code>hover: none</code></td><td>De hint <code>Ctrl K</code> verdwijnt op aanraakschermen zonder toetsenbord</td></tr>
+<tr><td><code>prefers-reduced-motion: reduce</code></td><td>Geen animaties voor wie "minder beweging" heeft ingesteld</td></tr>
+</table>
+<h3 id="componenten">Componenten</h3>
+<p>De CSS bevat opmaak voor:</p>
+<ul><li>De topbar, het logo en de themakeuze.</li><li>De hero-banner.</li><li>Kaarten, statistieken en de tipkaart.</li><li>Medewerkerregels, het zoekveld en het bedrijfsfilter.</li><li>Het productvenster met <code>−</code>- en <code>+</code>-knoppen, de begroeting en het voorstel <code>Zelfde als vorige keer</code>.</li><li>Het venster van de demo gezichtsherkenning met het ovale kader.</li><li>Admin-modal, tabbladen, tabellen, filters en de voorraadlabels.</li><li>Formulieren met foutmeldingen onder het veld.</li><li>Lege toestanden (icoon, titel, uitleg en eventueel een knop).</li><li>Toastmeldingen (succes met vinkje, fout met waarschuwingsteken).</li><li>De SVG-iconen.</li><li>Mobiele schermen en het donkere thema.</li></ul>
+<h2 id="7-uitleg-van-de-javascript-assetsjs">7. Uitleg van de JavaScript (<code>assets/js/</code>)</h2>
+<h3 id="opslag-en-voorbeelddata">Opslag en voorbeelddata</h3>
+<pre>// config.js
+export const STORAGE_KEY = "tvb-blikjesregistratie";</pre>
+<p>Dit is de naam waaronder de applicatie haar gegevens in <code>localStorage</code> bewaart.</p>
+<p>Bij de eerste start worden acht voorbeeldmedewerkers aangemaakt, met de standaardproducten, de 13 bedrijven en één consumptiepunt (Hoofdkantoor bij TVB). Daarna worden de gegevens uit <code>localStorage</code> gebruikt.</p>
+<p>De status heeft deze structuur (de velden staan uitgelegd in hoofdstuk 8):</p>
+<pre>{
+  employees: [
+    {
+      id: "unieke-id",
+      name: "Lotte van Dijk",
+      firstName: "Lotte",
+      lastName: "van Dijk",
+      payrollCode: "",
+      personnelNumber: "",
+      employerNumber: "",
+      companyId: "id-van-bedrijf",
+      pointId: "id-van-consumptiepunt",
+      active: true,
+      color: "#d8f1e8"
+    }
+  ],
+  registrations: [
+    {
+      id: "unieke-id",
+      employeeId: "id-van-medewerker",
+      productId: "blikje",
+      pointId: "id-van-consumptiepunt",
+      createdAt: "2026-10-01T10:05:00.000Z"
+    }
+  ],
+  products: [{ id: "blikje", name: "Blikje", price: 0.65 }],
+  companies: [{ id: "id-van-bedrijf", name: "TVB", employerNumber: "" }],
+  points: [
+    {
+      id: "id-van-consumptiepunt",
+      name: "Hoofdkantoor",
+      companyId: "id-van-bedrijf",
+      products: { blikje: { offered: true, stock: 24, minimum: 6 } }
+    }
+  ],
+  auditLog: [
+    { id: "unieke-id", action: "Product gewijzigd", details: "Blikje", createdAt: "2026-10-01T10:06:00.000Z" }
+  ]
+}</pre>
+<p>De ingestelde gezichten van de demo gezichtsherkenning staan <strong>niet</strong> in deze status en ook niet in <code>localStorage</code>; ze bestaan alleen in het geheugen van de pagina.</p>
+<h3 id="objectgeoriënteerde-structuur">Objectgeoriënteerde structuur</h3>
+<p>De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in zeven classes: vijf voor de applicatie zelf, <code>ThemeManager</code> voor het lichte en donkere thema en <code>FaceRecognitionDemo</code> voor de demo gezichtsherkenning. Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.</p>
+<pre>DataStore ──► RegistrationModel ──► RegistrationView
+                     │                     │
+                     ├──► CsvExport        │
+                     ▼                     ▼
+               RegistrationApp (controller, stuurt model, view, export en FaceRecognitionDemo aan)
 
-<h2>3. Website starten</h2>
-<ol><li>Open de projectmap.</li><li>Open <code>index.html</code> in een moderne browser.</li><li>Er is geen buildproces nodig.</li></ol>
-<p>De Excel-export gebruikt SheetJS via een CDN en heeft daarom internet nodig als de bibliotheek nog niet geladen is.</p>
-
-<h2>4. Gebruik voor medewerkers</h2>
-<h3>Medewerker zoeken</h3>
-<p>Gebruik de zoekbalk om op voornaam, achternaam of een deel van een naam te zoeken. De lijst wordt direct aangepast. Met <code>Ctrl + K</code> of <code>Cmd + K</code> krijgt de zoekbalk focus.</p>
-<h3>Blikje toevoegen</h3>
-<ol><li>Zoek de juiste medewerker.</li><li>Klik op de groene <code>+</code>.</li><li>Het aantal gepakte blikjes, het dagtotaal en het maandtotaal worden bijgewerkt.</li></ol>
-<p>Iedere klik telt als één blikje. De registratie wordt direct in de browser opgeslagen.</p>
-
-<h2>5. Gebruik voor beheerders</h2>
-<h3>Admin login</h3>
-<p>Klik rechtsboven op <strong>Admin login</strong>. Vul een e-mailadres en wachtwoord in. In deze demo werkt elk ingevuld wachtwoord.</p>
-<h3>Overzicht sluiten en uitloggen</h3>
-<p>Het kruisje sluit alleen het overzicht. De beheerder blijft tijdens de huidige pagina-sessie ingelogd. Met <strong>Uitloggen</strong> wordt de sessie beëindigd en verschijnt de volgende keer het loginformulier.</p>
-<h3>Medewerkergerichte correcties</h3>
-<p>In het tabblad <strong>Registraties</strong> zoekt de beheerder eerst een medewerker met <strong>Medewerker corrigeren</strong>. Daarna kan:</p>
-<ul><li><code>+</code>: één blikje toevoegen.</li><li><code>−</code>: het laatst toegevoegde blikje van deze medewerker verwijderen.</li></ul>
-<p>De tabel eronder is alleen ter inzage; losse registraties kunnen daar niet meer per ongeluk worden verwijderd.</p>
-<h3>Medewerkers beheren</h3>
-<p>In het tabblad <strong>Medewerkers</strong> kan een beheerder een medewerker toevoegen. Met het zoekveld <strong>Medewerker verwijderen</strong> wordt de lijst gefilterd. Klik daarna op <code>×</code> bij de juiste medewerker om deze te verwijderen.</p>
-<h3>Excel exporteren</h3>
-<p>Kies optioneel een medewerker en maand en klik op <strong>Excel exporteren</strong>. Het bestand bevat:</p>
-<ul><li><strong>Registraties:</strong> medewerker, aantal blikjes, prijs per blikje (€0,69) en registratiedatum.</li><li><strong>Maandtotalen:</strong> totaal aantal blikjes en totale prijs per medewerker, plus een totaalregel.</li></ul>
-
-<h2>6. Technische werking</h2>
-<h3>index.html</h3>
-<p>HTML bevat semantische componenten: een header voor navigatie, main met hero en content-grid, aside voor statistieken, footer en een admin-modal. Binnen de modal staan afzonderlijke componenten voor login, tabs, filters, correcties en medewerkersbeheer. Elementen krijgen een <code>id</code> zodat JavaScript ze kan bijwerken.</p>
-<h3>assets/css/styles.css</h3>
-<p>De stylesheet is geordend van algemeen naar specifiek: variabelen en reset, basislayout, publieke componenten, admincomponenten en responsive regels. De variabelen in <code>:root</code> bevatten het groene en blauwe TVB-kleurenpalet. Flexbox en CSS Grid zorgen voor de layout. De media query onder 720 pixels maakt de website geschikt voor telefoons.</p>
-<h3>assets/js/app.js</h3>
-<p>De JavaScript is objectgeoriënteerd opgesplitst in vier classes. <code>DataStore</code> leest en schrijft localStorage en valideert de gegevens. <code>RegistrationModel</code> beheert medewerkers, registraties en totalen. <code>RegistrationView</code> rendert de HTML en toont meldingen. <code>RegistrationApp</code> koppelt events aan model en view.</p>
-<p><code>RegistrationApp.persist()</code> maakt eerst een snapshot en draait een wijziging terug als opslaan mislukt. <code>RegistrationView.renderEmployees()</code> toont en filtert medewerkers. <code>RegistrationView.renderStats()</code> berekent dag- en maandtotalen. <code>RegistrationApp.addRegistration()</code> maakt per klik een registratie met unieke id en ISO-datum.</p>
-<p><code>RegistrationView.renderAdmin()</code> vult de administratietabel. <code>RegistrationView.renderCorrectionEmployees()</code> filtert medewerkers voor correcties. <code>RegistrationView.renderAdminEmployees()</code> filtert de verwijderlijst. <code>RegistrationApp.exportExcel()</code> maakt de twee Excel-werkbladen en berekent prijzen met <code>PRICE_PER_CAN = 0.69</code>.</p>
-
-<h2>7. OOP en verantwoordelijkheden</h2>
-<p>De code gebruikt separation of concerns. De opslag, bedrijfsregels, presentatie en gebruikersinteractie zijn van elkaar gescheiden. Hierdoor kan localStorage later worden vervangen door API- of database-opslag zonder alle classes aan te passen. De HTML levert componenten en id-ankers, de CSS levert de vormgeving en JavaScript levert het gedrag.</p>
-
-<h2>8. Datamodel</h2>
-<h3>Medewerkers</h3>
-<table><tr><th>Veld</th><th>Betekenis</th></tr><tr><td>id</td><td>Unieke medewerker-id.</td></tr><tr><td>name</td><td>Volledige naam in de demo.</td></tr><tr><td>color</td><td>Avatar-kleur.</td></tr></table>
-<h3>Registraties</h3>
-<table><tr><th>Veld</th><th>Betekenis</th></tr><tr><td>id</td><td>Unieke registratie-id.</td></tr><tr><td>employeeId</td><td>Koppeling met een medewerker.</td></tr><tr><td>createdAt</td><td>Datum en tijd van de klik.</td></tr></table>
-<p>Het aantal is altijd 1, omdat iedere klik één registratie maakt. De prijs is €0,69 per blikje. Wanneer een medewerker wordt verwijderd, blijven diens oude registraties bewaard voor de administratie en worden ze in het overzicht als <strong>Verwijderd</strong> weergegeven.</p>
-
-<h2>9. Demo-beperkingen</h2>
-<ul><li>localStorage is niet gedeeld tussen gebruikers.</li><li>De login is geen echte beveiliging.</li><li>Er is geen database, auditlog of server-back-up.</li><li>Excel-export is afhankelijk van de SheetJS-CDN.</li><li>Verwijderde medewerkers kunnen niet worden hersteld.</li></ul>
-<p>Voor productie is een backend nodig met gedeelde database, echte authenticatie, autorisatie, back-ups en logging.</p>
-
-<h2>10. Mogelijke vervolgstappen</h2>
-<ol><li>Backend en gedeelde database kiezen.</li><li>localStorage vervangen door API-aanroepen.</li><li>Admin-authenticatie en rollen toevoegen.</li><li>Auditlog, jaarfilters en periodefilters toevoegen.</li><li>Back-ups en testen met meerdere gebruikers instellen.</li></ol>
+ThemeManager (los: alleen het thema van de pagina)</pre>
+<p><code>main.js</code> maakt alle objecten één keer aan en geeft ze aan elkaar door (compositie). <code>config.js</code> en <code>icons.js</code> bevatten alleen vaste waarden en een hulpfunctie en zijn daarom geen class.</p>
+<p>Toegepaste OOP-principes:</p>
+<ul><li><strong>Encapsulatie:</strong> iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (<code>model.employees</code>, <code>model.products</code>) en wijzigen ze alleen via methodes (<code>model.addRegistration</code>, <code>model.saveCompany</code>).</li><li><strong>Eén verantwoordelijkheid per class:</strong> opslag, regels, weergave, besturing en export staan elk in een eigen class.</li><li><strong>Compositie:</strong> de controller krijgt het model, de view en de export mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven.</li><li><strong>Losse koppeling:</strong> de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes <code>load()</code> en <code>save()</code>.</li></ul>
+<h4 id="datastore"><code>DataStore</code></h4>
+<p>Verzorgt het lezen en opslaan van gegevens in <code>localStorage</code>. <code>load</code> controleert met <code>isValid</code> of de gegevens compleet zijn. <code>migrate</code> zet oude gegevens om (bijvoorbeeld product-id <code>melk</code> naar <code>glas-melk</code>, of een vrij ingevulde bedrijfsnaam naar een echt bedrijf). Opgeslagen producten gaan altijd voor op de standaardproducten, zodat gewijzigde prijzen en verwijderde producten bewaard blijven. Als later een database wordt gebruikt, kan deze opslaglaag worden vervangen zonder de rest opnieuw te schrijven.</p>
+<h4 id="registrationmodel"><code>RegistrationModel</code></h4>
+<p>Bevat alle gegevens en regels. De methodes zijn gegroepeerd per onderwerp: registraties, medewerkers, producten, bedrijven, consumptiepunten, voorraad en logboek. Voorbeelden van regels:</p>
+<ul><li>Een registratie verlaagt de voorraad van het consumptiepunt van de medewerker.</li><li>Een bedrijf of consumptiepunt met medewerkers kan niet worden verwijderd.</li><li>De loonmaand is de maand na de consumptie (<code>payrollPeriod</code>).</li><li>Met <code>snapshot</code> en <code>restore</code> kan een wijziging worden teruggedraaid als opslaan mislukt.</li></ul>
+<h4 id="registrationview"><code>RegistrationView</code></h4>
+<p>Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerlijst, het productvenster, statistieken, admin-tabellen, filters, voorraad en toastmeldingen. Ook worden namen veilig als HTML weergegeven. De view leest uit het model, maar verandert zelf niets.</p>
+<h4 id="registrationapp"><code>RegistrationApp</code></h4>
+<p>Vormt de controller van de applicatie. Deze class koppelt klik- en formulier-events aan het model en laat daarna de view opnieuw renderen. <code>handleClick</code> bevat een lijst van knoppen met de actie die erbij hoort; iedere actie is een eigen, korte methode. De methode <code>persist</code> zorgt dat iedere wijziging wordt opgeslagen of automatisch wordt teruggedraaid bij een opslagfout.</p>
+<h4 id="csvexport"><code>CsvExport</code></h4>
+<p>Maakt het CSV-bestand voor de loonadministratie (zie verderop).</p>
+<h4 id="thememanager"><code>ThemeManager</code></h4>
+<p>Regelt het lichte en donkere thema (zie 4.12). Onthoudt de instelling (<code>system</code>, <code>auto</code>, <code>light</code> of <code>dark</code>) in <code>localStorage</code>, bepaalt met <code>resolveTheme</code> welk thema daarbij hoort en zet dat met <code>apply</code> op de pagina. Deze class staat los van het model, de view en de controller, omdat het thema een weergave-instelling per browser is en geen gegeven van de registratie.</p>
+<h4 id="facerecognitiondemo"><code>FaceRecognitionDemo</code></h4>
+<p>De uitschakelbare demo gezichtsherkenning (zie 4.14). De class laadt de bibliotheek face-api pas als iemand de demo gebruikt (<code>load</code>), zet de camera aan en uit (<code>startCamera</code>, <code>stopCamera</code>) en leest het grootste gezicht in beeld (<code>readFace</code>, <code>largestFace</code>). Een gezicht wordt bewaard als een rij getallen (een descriptor), alleen in het geheugen (<code>enroll</code>, <code>forget</code>). <code>findMatch</code> zoekt het ingestelde gezicht met de kleinste afstand onder de drempel uit <code>FACE_DEMO.matchThreshold</code>, en <code>confirm</code> telt pas als dezelfde persoon twee keer achter elkaar is gevonden. De controller krijgt deze class mee in de constructor.</p>
+<h4 id="iconsjs"><code>icons.js</code></h4>
+<p>Bevat de SVG-iconen als lijntekeningen met dezelfde lijndikte. De functie <code>icon(naam)</code> geeft de HTML van één icoon; elementen met <code>data-icon="naam"</code> in <code>index.html</code> krijgen bij het starten hun icoon.</p>
+<h3 id="renderemployees"><code>renderEmployees</code></h3>
+<p>De methode <code>RegistrationView.renderEmployees</code>:</p>
+<ol><li>Leest de zoekterm en het gekozen bedrijf.</li><li>Toont alleen actieve medewerkers die daarbij passen.</li><li>Groepeert de medewerkers per bedrijf.</li><li>Maakt voor iedere medewerker een klikbare rij (ook te bedienen met Enter of spatie).</li></ol>
+<p>De <code>data-open-employee</code>-waarde bevat de unieke medewerker-id. Daardoor weet de klikhandler voor welke medewerker het productvenster moet worden geopend.</p>
+<h3 id="renderstats"><code>renderStats</code></h3>
+<p>De methode <code>RegistrationView.renderStats</code> vergelijkt de datum van iedere registratie met:</p>
+<ul><li>De datum van vandaag.</li><li>De sleutel van de huidige maand.</li></ul>
+<p>Daarna worden de twee totalen in de statistiekkaarten geplaatst.</p>
+<h3 id="registerselectedproducts"><code>registerSelectedProducts</code></h3>
+<p>De methode <code>RegistrationApp.registerSelectedProducts</code> wordt uitgevoerd na een klik op <code>Registreren</code> in het productvenster. Voor ieder gekozen product maakt <code>RegistrationModel.addRegistration</code> een object aan met:</p>
+<ul><li>Een unieke registratie-id.</li><li>De medewerker-id.</li><li>De product-id.</li><li>De huidige datum en tijd in ISO-formaat.</li></ul>
+<p>Daarna worden de gegevens via <code>persist</code> opgeslagen en alle zichtbare onderdelen opnieuw getekend. Correcties van de beheerder met de <code>+</code>-knop lopen via <code>RegistrationApp.addCorrection</code> en komen ook in het logboek.</p>
+<h3 id="renderall"><code>renderAll</code></h3>
+<p>De methode <code>RegistrationView.renderAll</code> voert <code>populateCompanyFilter</code>, <code>renderEmployees</code> en <code>renderStats</code> achter elkaar uit. Zo blijven het bedrijfsfilter, de medewerkerlijst en de totalen gelijktijdig actueel.</p>
+<h3 id="renderemployeeproducts"><code>renderEmployeeProducts</code></h3>
+<p>De methode <code>RegistrationView.renderEmployeeProducts</code> tekent het productvenster: de begroeting (<code>greeting</code> kiest Goedemorgen, Goedemiddag of Goedenavond), het voorstel <code>Zelfde als vorige keer</code> (uit <code>RegistrationModel.lastSelection</code>, beschreven met <code>describeSelection</code>), de producten van het consumptiepunt met <code>−</code>- en <code>+</code>-knoppen en onderaan de link of status van de demo gezichtsherkenning.</p>
+<h3 id="showtoast"><code>showToast</code></h3>
+<p>De methode <code>RegistrationView.showToast</code> toont een korte melding onderaan in het midden van het scherm, zoals <code>Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd</code> met een vinkje ervoor. Foutmeldingen krijgen een waarschuwingsteken. Standaard verdwijnt een melding na 2,5 seconde; de melding na het registreren blijft 4 seconden staan, zodat een medewerker aan een gedeelde tablet kan lezen voor wie en wat er is opgeslagen.</p>
+<h3 id="opslagfouten-en-terugdraaien">Opslagfouten en terugdraaien</h3>
+<p>Iedere wijziging loopt via <code>RegistrationApp.persist</code>. Eerst wordt een snapshot van de vorige status gemaakt. Daarna wordt de wijziging uitgevoerd en probeert <code>DataStore.save</code> de gegevens op te slaan. Als de browseropslag mislukt, wordt de vorige status teruggezet en krijgt de gebruiker een foutmelding. Zo lijkt een mislukte opslag niet toch succesvol.</p>
+<h3 id="adminfuncties">Adminfuncties</h3>
+<p><code>openAdmin</code> opent de modal. Als <code>adminLoggedIn</code> waar is, wordt het dashboard opnieuw getoond; anders verschijnt het loginformulier.</p>
+<p>De variabele <code>adminLoggedIn</code> houdt de adminstatus alleen bij zolang de huidige pagina open is.</p>
+<p><code>renderAdmin</code>:</p>
+<ul><li>Leest de gekozen medewerkerfilter.</li><li>Leest de gekozen maandfilter.</li><li>Filtert de registraties.</li><li>Toont de resultaten in de admin-tabel.</li></ul>
+<p><code>populateFilters</code> vult de dropdowns met de huidige medewerkers en maanden die in registraties voorkomen.</p>
+<p><code>renderAdminEmployees</code> toont alle medewerkers in het beheertabblad.</p>
+<h3 id="csv-export-class-csvexport-in-csvexportjs">CSV-export (class <code>CsvExport</code> in <code>csvExport.js</code>)</h3>
+<p>De export heeft geen externe bibliotheek nodig. Na een klik op <code>CSV exporteren</code> roept <code>RegistrationApp.exportCsv</code> de methode <code>CsvExport.download</code> aan:</p>
+<ol><li><code>buildRows</code> verzamelt de registraties die bij de filters passen en telt ze per medewerker per loonmaand.</li><li><code>RegistrationModel.payrollPeriod</code> bepaalt de loonmaand: de maand na de consumptie (december gaat naar januari van het volgende jaar).</li><li><code>toCsv</code> zet de regels om naar CSV met puntkomma's. <code>escapeField</code> zet velden met speciale tekens tussen aanhalingstekens, en geeft waarden die met <code>=</code>, <code>+</code>, <code>-</code> of <code>@</code> beginnen een <code>'</code> ervoor, zodat Excel ze niet als formule uitvoert.</li><li><code>fileName</code> maakt de bestandsnaam met de loonmaand.</li><li>Het bestand wordt gedownload als <code>.csv</code> (UTF-8 met BOM, zodat Excel letters zoals <code>é</code> goed toont).</li></ol>
+<p>Zijn er geen registraties voor de filters, dan geeft <code>download</code> <code>false</code> terug en toont de controller een melding.</p>
+<h3 id="event-listeners">Event listeners</h3>
+<p>De event listeners koppelen gebruikersacties aan functies:</p>
+<p>De listeners worden in <code>RegistrationApp</code> per onderwerp gekoppeld:</p>
+<table>
+<tr><th>Methode</th><th>Wat er wordt gekoppeld</th></tr>
+<tr><td><code>registerPageEvents</code></td><td>De algemene kliklistener (<code>handleClick</code>), het sluiten van het productvenster en het cameravenster, de knoppen <code>Herken mij met de camera (demo)</code> en <code>Gezicht vastleggen</code>, en het toestemmingsvinkje</td></tr>
+<tr><td><code>registerAdminEvents</code></td><td><code>Admin login</code>, het sluiten van het admin-venster, inloggen, uitloggen, de tabbladen, <code>Meer laden</code> en <code>CSV exporteren</code></td></tr>
+<tr><td><code>registerFilterEvents</code></td><td>De zoekbalk, het bedrijfsfilter, de filters <code>Medewerker</code> en <code>Maand</code> en de zoekvelden in het beheer</td></tr>
+<tr><td><code>registerFormEvents</code></td><td>Openen, opslaan en sluiten van de formulieren voor medewerker, product, bedrijf en consumptiepunt, en het weghalen van een foutmelding zodra een veld wordt aangepast</td></tr>
+<tr><td><code>registerStockEvents</code></td><td>De keuze van het consumptiepunt en het aanpassen van voorraad of minimum</td></tr>
+<tr><td><code>registerKeyboardEvents</code></td><td><code>Ctrl/Cmd + K</code> voor de zoekbalk, en Enter of spatie op een medewerkerrij</td></tr>
+</table>
+<p>Voor dynamisch aangemaakte knoppen gebruikt de app één algemene kliklistener op <code>document</code> (<code>handleClick</code>). Die bevat een lijst van <code>data-</code>-attributen met de actie die erbij hoort, bijvoorbeeld <code>data-open-employee</code>, <code>data-product-increment</code>, <code>data-repeat-last</code> en <code>data-face-enroll</code>. Daardoor blijven knoppen werken nadat een lijst opnieuw is opgebouwd.</p>
+<h2 id="8-datamodel-en-koppelingen">8. Datamodel en koppelingen</h2>
+<p>De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:</p>
+<h3 id="bedrijven">Bedrijven</h3>
+<table>
+<tr><th>Veld</th><th>Betekenis</th></tr>
+<tr><td><code>id</code></td><td>Unieke identificatie</td></tr>
+<tr><td><code>name</code></td><td>Bedrijfsnaam</td></tr>
+<tr><td><code>employerNumber</code></td><td>Standaard werkgevernummer voor de CSV-export</td></tr>
+</table>
+<h3 id="consumptiepunten">Consumptiepunten</h3>
+<table>
+<tr><th>Veld</th><th>Betekenis</th></tr>
+<tr><td><code>id</code></td><td>Unieke identificatie</td></tr>
+<tr><td><code>name</code></td><td>Naam van het punt, bijv. <code>Kantine begane grond</code></td></tr>
+<tr><td><code>companyId</code></td><td>Verwijzing naar het bedrijf</td></tr>
+<tr><td><code>products</code></td><td>Per product-id: <code>offered</code> (aangeboden ja/nee), <code>stock</code> (voorraad) en <code>minimum</code></td></tr>
+</table>
+<h3 id="medewerkers">Medewerkers</h3>
+<table>
+<tr><th>Veld</th><th>Betekenis</th></tr>
+<tr><td><code>id</code></td><td>Unieke identificatie</td></tr>
+<tr><td><code>name</code>, <code>firstName</code>, <code>lastName</code></td><td>Naam</td></tr>
+<tr><td><code>payrollCode</code>, <code>personnelNumber</code></td><td>Looncode en personeelsnummer</td></tr>
+<tr><td><code>employerNumber</code></td><td>Optioneel afwijkend werkgevernummer; leeg = dat van het bedrijf (<code>RegistrationModel.employerNumberFor</code>)</td></tr>
+<tr><td><code>companyId</code></td><td>Verwijzing naar het bedrijf</td></tr>
+<tr><td><code>pointId</code></td><td>Verwijzing naar het vaste consumptiepunt</td></tr>
+<tr><td><code>active</code></td><td>Actief of inactief</td></tr>
+<tr><td><code>color</code></td><td>Kleur van de avatar</td></tr>
+</table>
+<h3 id="registraties">Registraties</h3>
+<table>
+<tr><th>Veld</th><th>Betekenis</th></tr>
+<tr><td><code>id</code></td><td>Unieke identificatie</td></tr>
+<tr><td><code>employeeId</code></td><td>Verwijzing naar een medewerker</td></tr>
+<tr><td><code>productId</code></td><td>Verwijzing naar een product</td></tr>
+<tr><td><code>pointId</code></td><td>Consumptiepunt waar de voorraad van af ging; bij een correctie gaat het product hier weer naartoe terug</td></tr>
+<tr><td><code>createdAt</code></td><td>Datum en tijd van registratie</td></tr>
+</table>
+<p>Oude gegevens uit een eerdere versie worden bij het laden automatisch omgezet (<code>DataStore.migrateCompanies</code>): de vrij ingevulde bedrijfsnaam wordt een bedrijf, het eerste werkgevernummer wordt de standaard van dat bedrijf (een afwijkend nummer blijft bij de medewerker staan) en ieder bedrijf met medewerkers krijgt één consumptiepunt met alle producten.</p>
+<p>Het aantal is in de demo altijd <code>1</code>, omdat iedere klik één registratie maakt. Dit sluit aan bij het voorgestelde datamodel waarin <code>Aantal</code> standaard 1 is.</p>
+<p>Wanneer een medewerker wordt verwijderd, blijven bestaande registraties behouden voor de administratie. In het admin-overzicht wordt bij zulke historische regels <code>Verwijderd</code> getoond.</p>
+<p>Voor de CSV-export worden de prijzen uit het productbeheer gebruikt. Het bestand bevat per medewerker per loonmaand het aantal en de totale prijs. Deze gegevens zijn alleen zichtbaar voor de beheerder.</p>
+<h2 id="9-belangrijke-demo-beperkingen">9. Belangrijke demo-beperkingen</h2>
+<p>Deze versie is bedoeld als prototype:</p>
+<ul><li><code>localStorage</code> is niet gedeeld tussen gebruikers.</li><li>Er is geen echte database.</li><li>De login heeft geen echte beveiliging.</li><li>Er zijn geen gebruikersrollen of wachtwoordbeheer.</li><li>Verwijderde medewerkers krijgen geen herstelmogelijkheid.</li><li>Er is geen server-side auditlog; het logboek staat alleen in de browser.</li><li>Het admin-login is een demo en heeft geen echte server-side beveiliging.</li><li>De gezichtsherkenning is alleen een demo. Ingestelde gezichten zijn na het herladen van de pagina weg, en de bibliotheek en modellen worden van internet (jsDelivr) geladen. Zie het TO (hoofdstuk 13) voor de privacyregels.</li></ul>
+<p>Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig.</p>
+<h2 id="10-code-uitleggen-tijdens-een-presentatie">10. Code uitleggen tijdens een presentatie</h2>
+<p>De applicatie volgt het principe van separation of concerns:</p>
+<ol><li><code>DataStore</code> weet hoe gegevens worden opgeslagen.</li><li><code>RegistrationModel</code> weet welke gegevens en bedrijfsregels gelden.</li><li><code>RegistrationView</code> weet hoe gegevens in HTML worden getoond.</li><li><code>RegistrationApp</code> weet welke actie bij een klik of formulier hoort.</li><li><code>CsvExport</code> weet hoe het CSV-bestand voor de loonadministratie eruitziet.</li><li><code>ThemeManager</code> weet welk thema (licht of donker) actief moet zijn.</li><li><code>FaceRecognitionDemo</code> weet hoe de camera en de demo gezichtsherkenning werken.</li></ol>
+<p>De schermen zelf staan als screenshots in het TO, hoofdstuk 9, paragraaf Wireframes (<code>docs/wireframes/</code>). Die zijn handig om tijdens een presentatie te laten zien welke code bij welk scherm hoort.</p>
+<p>De HTML bevat de componenten en vaste ankerpunten met <code>id</code>-waarden. De CSS bepaalt uitsluitend de presentatie. JavaScript koppelt de componenten aan gedrag. Daardoor kan bijvoorbeeld de opslag worden vervangen door een database zonder de volledige gebruikersinterface opnieuw te bouwen.</p>
+<h2 id="11-mogelijke-vervolgstappen">11. Mogelijke vervolgstappen</h2>
+<ol><li>Kies een backend, bijvoorbeeld PHP, Node.js of een beheerde dienst.</li><li>Maak de tabellen uit <code>docs/DATABASE-SCHEMA.sql</code> aan (onder andere medewerkers, registraties, producten, bedrijven, consumptiepunten en het logboek).</li><li>Vervang <code>localStorage</code> door API-aanroepen; alleen <code>DataStore</code> hoeft daarvoor te veranderen.</li><li>Voeg echte admin-authenticatie toe.</li><li>Bewaar het logboek op de server in plaats van in de browser.</li><li>Voeg naast het maandfilter ook jaar- en periodefilters toe.</li><li>Voeg databaseback-ups en foutlogging toe.</li><li>Test met meerdere gebruikers tegelijk.</li></ol>
 </body>
 </html>

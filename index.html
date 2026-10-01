@@ -83,6 +83,10 @@
             </div>
             <span class="count-badge" id="employeeCount"></span>
           </div>
+          <!-- Demo gezichtsherkenning (FaceRecognitionDemo.js). Alleen zichtbaar als de demo aan staat. -->
+          <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
+            <span data-icon="faceScan"></span> Herken mij met de camera (demo)
+          </button>
           <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
           <label class="search-box">
             <span aria-hidden="true" data-icon="search"></span>
@@ -97,7 +101,7 @@
               <div class="company-options hidden" id="companyFilterOptions" role="listbox"></div>
             </div>
           </label>
-          <!-- JavaScript plaatst hier de actuele medewerkers en plusknoppen. -->
+          <!-- JavaScript plaatst hier de actieve medewerkers, gegroepeerd per bedrijf. Een klik opent het productvenster. -->
           <div class="employee-list" id="employeeList" aria-live="polite"></div>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
           <div class="empty-state hidden" id="emptyState">
@@ -221,12 +225,12 @@
         </div>
         <div id="employeesTab" class="hidden">
           <button class="primary-button" id="addEmployeeButton" type="button"><span data-icon="plus"></span> Medewerker toevoegen</button>
-          <!-- Zoekveld om eerst de juiste medewerker te vinden voordat die wordt verwijderd. -->
+          <!-- Zoekveld om de juiste medewerker te vinden om te wijzigen, (de)activeren of verwijderen. -->
           <label class="admin-search employee-management-search">
             <span>Medewerker zoeken, wijzigen of activeren</span>
             <input type="search" id="employeeManagementSearch" placeholder="Zoek een medewerker..." autocomplete="off">
           </label>
-          <!-- JavaScript plaatst hier de gevonden medewerkers met verwijderknop. -->
+          <!-- JavaScript plaatst hier de gevonden medewerkers met de knoppen Deactiveren/Activeren, Wijzigen en (bij inactieve medewerkers) Verwijderen. -->
           <div id="adminEmployeeList" class="admin-employee-list"></div>
         </div>
         <div id="productsTab" class="hidden">
@@ -295,9 +299,13 @@
       <button class="modal-close" data-close-employee-products aria-label="Sluiten" data-icon="close"></button>
       <p class="section-kicker">Persoonlijke registratie</p>
       <h2 id="employeeProductsTitle">Product kiezen</h2>
+      <!-- Persoonlijke begroeting en de keuze van de vorige keer. -->
+      <p class="welcome-line" id="employeeWelcome"></p>
+      <div class="suggestion hidden" id="employeeSuggestion"></div>
       <p class="muted">Gebruik de plusknoppen om producten te kiezen. Klik daarna op registreren om alles tegelijk op te slaan.</p>
       <div id="employeeProductList" class="personal-product-list"></div>
       <div class="employee-products-actions">
+        <div class="face-enroll hidden" id="faceEnrollArea"></div>
         <button class="primary-button" id="registerSelectedProductsButton" type="button">Registreren</button>
       </div>
     </div>
@@ -387,6 +395,31 @@
           <button class="primary-button" type="submit">Opslaan</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Demo gezichtsherkenning: camerabeeld met een kader voor het gezicht.
+       Wordt gebruikt om een gezicht in te stellen (per medewerker) en om iemand te herkennen. -->
+  <div class="modal-backdrop hidden" id="faceModal" role="dialog" aria-modal="true" aria-labelledby="faceTitle">
+    <div class="modal face-modal">
+      <button class="modal-close" data-close-face-modal aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Demo gezichtsherkenning</p>
+      <h2 id="faceTitle">Herken mij</h2>
+      <p class="muted" id="faceHelp">Plaats je gezicht binnen het kader en kijk recht in de camera.</p>
+      <div class="face-frame">
+        <video id="faceVideo" autoplay muted playsinline></video>
+        <div class="face-guide" aria-hidden="true"></div>
+      </div>
+      <p class="face-status" id="faceStatus" role="status"></p>
+      <label class="face-consent hidden" id="faceConsentLabel">
+        <input type="checkbox" id="faceConsent">
+        <span>Ik doe vrijwillig mee aan deze demo. Mijn gezicht wordt alleen in deze browser verwerkt en niet opgeslagen of verstuurd. Na het herladen van de pagina is alles weg.</span>
+      </label>
+      <div class="employee-form-actions">
+        <button class="secondary-button" type="button" data-close-face-modal>Annuleren</button>
+        <button class="primary-button hidden" type="button" id="faceEnrollButton" disabled>Gezicht vastleggen</button>
+      </div>
+      <p class="face-privacy"><span data-icon="lock"></span> Er worden geen foto's gemaakt of bewaard. Alles gebeurt op dit apparaat.</p>
     </div>
   </div>
 

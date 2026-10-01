@@ -392,14 +392,57 @@ export class RegistrationView {
       ).join("") || this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm, of voeg een medewerker toe." });
   }
 
+  // Begroeting die past bij het tijdstip: tot 12 uur "Goedemorgen", tot 18 uur "Goedemiddag".
+  greeting(date) {
+    const hour = date.getHours();
+    if (hour < 12) return "Goedemorgen";
+    if (hour < 18) return "Goedemiddag";
+    return "Goedenavond";
+  }
+
+  // Zet een keuze om naar tekst, bijvoorbeeld { blikje: 2, ei: 1 } wordt "2× Blikje en 1× Ei".
+  describeSelection(selection) {
+    const parts = Object.entries(selection).map(([productId, amount]) => `${amount}× ${this.model.productName(productId)}`);
+    if (parts.length <= 1) return parts.join("");
+    return `${parts.slice(0, -1).join(", ")} en ${parts.at(-1)}`;
+  }
+
   // Opent het productvenster van een medewerker. `selectedProducts` komt van de controller
   // en bevat per product-id hoe vaak het al is gekozen, bijvoorbeeld { blikje: 2 }.
-  renderEmployeeProducts(employeeId, selectedProducts = {}) {
+  // `face` beschrijft de demo gezichtsherkenning: { available, enrolled, recognized }.
+  renderEmployeeProducts(employeeId, selectedProducts = {}, face = {}) {
     const employee = this.model.findEmployee(employeeId);
     if (!employee) return;
 
     this.$("#employeeProductsTitle").textContent =
       `Product kiezen voor ${employee.name}`;
+
+    // Persoonlijke begroeting, bijvoorbeeld "Goedemiddag Lotte, welkom terug."
+    const lastSelection = this.model.lastSelection(employeeId);
+    const returning = this.model.countForEmployee(employeeId) > 0;
+    let welcome = `${this.greeting(new Date())} ${employee.firstName || employee.name}${returning ? ", welkom terug." : "."}`;
+    if (face.recognized) welcome += " Je bent herkend met de camera.";
+    this.$("#employeeWelcome").textContent = welcome;
+
+    // Aanbeveling op basis van de vorige keer, met één knop om dezelfde keuze te maken.
+    const suggestion = this.$("#employeeSuggestion");
+    const hasSuggestion = Object.keys(lastSelection).length > 0;
+    suggestion.classList.toggle("hidden", !hasSuggestion);
+    suggestion.innerHTML = hasSuggestion
+      ? `${icon("repeat")}
+        <span>Vorige keer koos je ${this.escapeHtml(this.describeSelection(lastSelection))}.</span>
+        <button type="button" class="secondary-button" data-repeat-last>Zelfde als vorige keer</button>`
+      : "";
+
+    // Demo gezichtsherkenning: instellen of uitzetten (alleen als de demo beschikbaar is).
+    const faceArea = this.$("#faceEnrollArea");
+    faceArea.classList.toggle("hidden", !face.available);
+    faceArea.innerHTML = !face.available
+      ? ""
+      : face.enrolled
+        ? `<span class="face-enrolled">${icon("check")} Gezichtsherkenning staat aan (demo)</span>
+           <button type="button" class="text-link" data-face-forget>Uitzetten</button>`
+        : `<button type="button" class="text-link" data-face-enroll>${icon("faceScan")} Gezichtsherkenning instellen (demo)</button>`;
 
     // Alleen de producten van het eigen consumptiepunt zijn te kiezen.
     const products = this.model.productsForEmployee(employeeId);
