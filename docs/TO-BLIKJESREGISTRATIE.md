@@ -142,7 +142,7 @@ In productie beheert een systeembeheerder de rollen en instellingen. Deze rol be
 | FR-45 | Met de keuze "Auto" is het thema overdag licht en na zonsondergang donker, volgens de tijden van zonsopkomst en zonsondergang in Nederland per maand. |
 | FR-46 | De gekozen thema-instelling wordt per browser onthouden. |
 | FR-47 | In het productvenster kan de gebruiker per product met `−` en `+` het aantal kiezen; `−` gaat niet onder 0. De knop `Registreren` toont het totaal aantal gekozen producten. |
-| FR-48 | Na het registreren toont het systeem een melding met de naam van de medewerker en de geregistreerde producten, bijvoorbeeld "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd ✓". |
+| FR-48 | Na het registreren toont het systeem een melding met de naam van de medewerker en de geregistreerde producten, bijvoorbeeld "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd", met een vinkje. |
 
 ## 5. Niet-functionele eisen (NFR)
 
@@ -485,6 +485,10 @@ De high-fidelity versie is de uiteindelijke website. Deze heeft:
 - De melding na het registreren noemt de naam en de producten, staat onderaan in het midden en blijft 4 seconden staan. Dit past bij **zichtbaarheid van de systeemstatus**, belangrijk op een gedeelde tablet.
 - Formulieren hebben labels boven de velden in plaats van alleen voorbeeldtekst die verdwijnt tijdens het typen. Dit past bij **herkenning in plaats van onthouden** en **foutpreventie**.
 - Knoppen voor aanraakschermen zijn minstens 44 × 44 pixels, en op een staande tablet is de banner compacter zodat de medewerkerlijst hoger begint. Dit past bij **flexibiliteit en efficiënt gebruik**.
+- Foutmeldingen in formulieren staan direct onder het veld (met een waarschuwingsteken), het eerste foute veld krijgt de focus en de melding verdwijnt zodra je het veld aanpast. Dit past bij **fouten herkennen en herstellen**.
+- Lege lijsten en tabellen tonen een icoon, een korte uitleg en waar nodig een knop, zoals "Zoekopdracht wissen" of "Naar Bedrijven". Dit past bij **hulp en documentatie** en **fouten herstellen**.
+- Meldingen tonen een vinkje bij succes en een waarschuwingsteken bij een fout, zodat het verschil direct zichtbaar is. Dit past bij **zichtbaarheid van de systeemstatus**.
+- Alle iconen zijn eenvoudige SVG-lijntekeningen met dezelfde lijndikte (`assets/js/icons.js`) in plaats van teksttekens, zodat ze op ieder apparaat hetzelfde en scherp zijn. Dit past bij **consistentie en standaarden**.
 
 ## 10. Use cases en procesbeschrijvingen
 
@@ -710,6 +714,9 @@ Voor productie zijn ook HTTPS, gehashte wachtwoorden, sessies, server-side contr
 | AC-35 | Donker thema bekijken | Alle schermen (ook het beheerscherm en de meldingen) zijn donker en goed leesbaar; de tekst is groen. |
 | AC-36 | Productvenster: `+`, `+`, `−` op één product | Het aantal is 1 en de knop toont `Registreren (1)`; `−` bij 0 doet niets. |
 | AC-37 | Registreren op de tablet | De melding noemt de naam en de producten en is onderaan in het midden goed leesbaar. |
+| AC-38 | Formulier leeg opslaan | Onder ieder leeg verplicht veld staat een foutmelding en het eerste veld krijgt de focus. |
+| AC-39 | Zoeken zonder resultaat, dan "Zoekopdracht wissen" | Alle medewerkers zijn weer zichtbaar. |
+| AC-40 | Voorraad van een punt zonder aanbod | Een lege toestand legt uit wat te doen, met een knop naar Bedrijven. |
 
 Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `npm test` en via GitHub Actions:
 

@@ -20,6 +20,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `assets/js/RegistrationApp.js` | Controller: verwerkt klikken, formulieren en toetsenbordacties |
 | `assets/js/csvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
 | `assets/js/ThemeManager.js` | Class `ThemeManager`: licht en donker thema (Systeem, Auto of zelf kiezen met de slider) |
+| `assets/js/icons.js` | De SVG-iconen van de website, met de hulpfunctie `icon(naam)` |
 | `archief/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
 | `archief/app.test.js` | Back-up van de oude tests bij die versie; wordt niet meer uitgevoerd |
 | `README.md` | Korte startinformatie voor het project |
@@ -387,7 +388,7 @@ De methode `RegistrationView.renderAll` voert `renderEmployees` en `renderStats`
 
 ### `showToast`
 
-De methode `RegistrationView.showToast` toont een korte melding onderaan in het midden van het scherm, zoals `Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd ✓`. Standaard verdwijnt een melding na 2,5 seconde; de melding na het registreren blijft 4 seconden staan, zodat een medewerker aan een gedeelde tablet kan lezen voor wie en wat er is opgeslagen.
+De methode `RegistrationView.showToast` toont een korte melding onderaan in het midden van het scherm, zoals `Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd` met een vinkje ervoor. Foutmeldingen krijgen een waarschuwingsteken. Standaard verdwijnt een melding na 2,5 seconde; de melding na het registreren blijft 4 seconden staan, zodat een medewerker aan een gedeelde tablet kan lezen voor wie en wat er is opgeslagen.
 
 ### Opslagfouten en terugdraaien
 

@@ -79,7 +79,7 @@ test("gekozen producten worden in één keer als losse registraties opgeslagen",
   assert.equal(model.findPoint(point.id).products.blikje.stock, 22);
   assert.deepEqual(app.selectedProducts, {});
   assert.equal(app.selectedEmployeeId, null);
-  assert.deepEqual(view.toasts, ["Test Medewerker: 2× Blikje, 1× Boter geregistreerd ✓"]);
+  assert.deepEqual(view.toasts, ["Test Medewerker: 2× Blikje, 1× Boter geregistreerd"]);
 });
 
 test("registreren zonder gekozen product slaat niets op", () => {
@@ -158,7 +158,7 @@ test("producten die weer op 0 staan, worden niet geregistreerd en niet genoemd",
   app.registerSelectedProducts();
 
   assert.deepEqual(model.registrations.map(({ productId }) => productId), ["blikje"]);
-  assert.deepEqual(view.toasts, ["Test Medewerker: 1× Blikje geregistreerd ✓"]);
+  assert.deepEqual(view.toasts, ["Test Medewerker: 1× Blikje geregistreerd"]);
 });
 
 test("employeeLabel valt terug op de id als de medewerker niet bestaat", () => {
@@ -173,4 +173,21 @@ test("pointLabel toont bedrijf en naam van het consumptiepunt", () => {
 
   assert.equal(app.pointLabel(point.id), "TVB · Hoofdkantoor");
   assert.equal(app.pointLabel("weg"), "onbekend consumptiepunt");
+});
+
+test("lege toestand toont kop, uitleg en knop, met veilige tekst", () => {
+  const view = new RegistrationView(null);
+
+  const html = view.emptyState({ title: "Geen <b>data</b>", text: "Voeg iets toe.", action: "<button>Actie</button>" });
+
+  assert.ok(html.includes("<svg"));
+  assert.ok(html.includes("Geen &lt;b&gt;data&lt;/b&gt;"));
+  assert.ok(html.includes("<p>Voeg iets toe.</p>"));
+  assert.ok(html.includes("<button>Actie</button>"));
+});
+
+test("lege toestand in een tabel beslaat alle kolommen", () => {
+  const view = new RegistrationView(null);
+
+  assert.ok(view.emptyTableRow(4, { title: "Leeg" }).startsWith('<tr><td colspan="4"'));
 });

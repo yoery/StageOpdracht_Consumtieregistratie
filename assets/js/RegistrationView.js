@@ -1,4 +1,5 @@
 import { STOCK_STATUS } from "./RegistrationModel.js";
+import { icon } from "./icons.js";
 
 /**
  * RegistrationView — alles wat op het scherm komt (de "View" in MVC).
@@ -31,6 +32,69 @@ export class RegistrationView {
       '"': "&quot;",
       "'": "&#039;"
     }[char]));
+  }
+
+  // Vult alle elementen met data-icon="naam" in de pagina met het bijbehorende SVG-icoon.
+  renderIcons(root = document) {
+    root.querySelectorAll("[data-icon]").forEach((element) => {
+      element.innerHTML = icon(element.dataset.icon);
+    });
+  }
+
+  // Maakt een lege toestand: een icoon, een korte kop, uitleg wat je kunt doen en
+  // eventueel een knop (HTML). Zo ziet iedere lege lijst er hetzelfde uit.
+  emptyState({ iconName = "inbox", title, text = "", action = "" }) {
+    return `<div class="empty-block">
+      ${icon(iconName)}
+      <strong>${this.escapeHtml(title)}</strong>
+      ${text ? `<p>${this.escapeHtml(text)}</p>` : ""}
+      ${action}
+    </div>`;
+  }
+
+  // Een lege toestand als tabelregel over de hele breedte van de tabel.
+  emptyTableRow(columns, options) {
+    return `<tr><td colspan="${columns}" class="empty-cell">${this.emptyState(options)}</td></tr>`;
+  }
+
+  // Knop in een lege toestand die naar een ander tabblad van het beheerscherm gaat.
+  goToTabButton(tabName, label) {
+    return `<button type="button" class="secondary-button" data-go-tab="${tabName}">${this.escapeHtml(label)}</button>`;
+  }
+
+  // Toont een foutmelding direct onder een formulierveld en markeert het veld als ongeldig.
+  showFieldError(field, message) {
+    const errorId = `${field.id}-error`;
+    let error = document.getElementById(errorId);
+
+    if (!error) {
+      error = document.createElement("p");
+      error.className = "field-error";
+      error.id = errorId;
+      // In het label zelf, zodat de indeling van het formulier (twee kolommen) niet verschuift.
+      const label = field.closest("label");
+      if (label) label.append(error);
+      else field.after(error);
+    }
+
+    error.innerHTML = `${icon("alert")}<span></span>`;
+    error.querySelector("span").textContent = message;
+    field.setAttribute("aria-invalid", "true");
+    field.setAttribute("aria-describedby", errorId);
+  }
+
+  // Haalt de foutmelding van één veld weg.
+  clearFieldError(field) {
+    document.getElementById(`${field.id}-error`)?.remove();
+    field.removeAttribute("aria-invalid");
+    if (field.getAttribute("aria-describedby") === `${field.id}-error`) {
+      field.removeAttribute("aria-describedby");
+    }
+  }
+
+  // Haalt alle foutmeldingen in een formulier weg.
+  clearFieldErrors(form) {
+    form.querySelectorAll("[aria-invalid='true']").forEach((field) => this.clearFieldError(field));
   }
 
   // Maakt maximaal twee initialen voor de avatar van een medewerker.
@@ -161,11 +225,15 @@ export class RegistrationView {
             <td>${this.formatDate(registration.createdAt)}</td>
           </tr>`;
       }).join("")
-      : `<tr>
-          <td colspan="4" class="muted">
-            Geen registraties voor deze filters.
-          </td>
-        </tr>`;
+      : this.model.registrations.length === 0
+        ? this.emptyTableRow(4, {
+          title: "Nog geen registraties.",
+          text: "Registraties verschijnen hier zodra medewerkers iets registreren."
+        })
+        : this.emptyTableRow(4, {
+          title: "Geen registraties voor deze filters.",
+          text: "Kies een andere medewerker of maand, of kies weer voor alle medewerkers en maanden."
+        });
   }
 
   // Rendert de medewerkers waarvoor de admin correcties kan uitvoeren.
@@ -194,14 +262,16 @@ export class RegistrationView {
                 <button class="correction-button correction-minus"
                         data-correction-minus="${employee.id}"
                         data-correction-product="${id}"
-                        title="${this.escapeHtml(name)} verminderen">−</button>
+                        title="${this.escapeHtml(name)} verminderen"
+                        aria-label="${this.escapeHtml(name)} verminderen">${icon("minus")}</button>
 
                 <strong class="correction-amount">${count}</strong>
 
                 <button class="correction-button correction-plus"
                         data-correction-plus="${employee.id}"
                         data-correction-product="${id}"
-                        title="${this.escapeHtml(name)} toevoegen">+</button>
+                        title="${this.escapeHtml(name)} toevoegen"
+                        aria-label="${this.escapeHtml(name)} toevoegen">${icon("plus")}</button>
               </div>
             </div>`;
         }).join("");
@@ -220,7 +290,7 @@ export class RegistrationView {
             <div class="correction-product-list">${products}</div>
           </details>`;
       }).join("") ||
-      `<p class="muted">Geen medewerker gevonden.</p>`;
+      this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm." });
   }
 
   // Vult de filters medewerker en maand boven de registratietabel.
@@ -319,7 +389,7 @@ export class RegistrationView {
             </button>
           </div>
         </div>`
-      ).join("") || `<p class="muted">Geen medewerker gevonden.</p>`;
+      ).join("") || this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm, of voeg een medewerker toe." });
   }
 
   // Opent het productvenster van een medewerker. `selectedProducts` komt van de controller
@@ -342,7 +412,7 @@ export class RegistrationView {
 
     // Per product: naam en prijs, en een teller met − en + (de − kan niet onder 0).
     this.$("#employeeProductList").innerHTML = products.length === 0
-      ? `<p class="muted">Er zijn geen producten beschikbaar op jouw consumptiepunt. Neem contact op met de beheerder als dit niet klopt.</p>`
+      ? this.emptyState({ iconName: "location", title: "Geen producten op jouw consumptiepunt.", text: "Neem contact op met de beheerder als dit niet klopt." })
       : products.map(({ id, name, price }) => {
         const selectedAmount = selectedProducts[id] || 0;
 
@@ -358,7 +428,7 @@ export class RegistrationView {
                     data-product-decrement="${id}"
                     aria-label="Eén ${this.escapeHtml(name)} minder"
                     ${selectedAmount === 0 ? "disabled" : ""}>
-              −
+              ${icon("minus")}
             </button>
 
             <strong class="personal-product-amount" aria-live="polite">
@@ -369,7 +439,7 @@ export class RegistrationView {
                     type="button"
                     data-product-increment="${id}"
                     aria-label="Eén ${this.escapeHtml(name)} meer">
-              +
+              ${icon("plus")}
             </button>
           </div>`;
       }).join("");
@@ -431,7 +501,7 @@ export class RegistrationView {
             <small>Werkgevernummer ${this.escapeHtml(company.employerNumber || "onbekend")} · ${employeeCount} medewerkers</small>
           </span>
           <div class="admin-item-actions">
-            <button class="table-action" data-add-point="${company.id}">+ Consumptiepunt</button>
+            <button class="table-action" data-add-point="${company.id}">${icon("plus")} Consumptiepunt</button>
             <button class="table-action" data-edit-company="${company.id}">Wijzigen</button>
             <button class="table-action danger-action" data-remove-company="${company.id}">Verwijderen</button>
           </div>
@@ -494,9 +564,9 @@ export class RegistrationView {
     const point = this.model.findPoint(pointId);
 
     this.$("#stockTableBody").innerHTML = !point
-      ? `<tr><td colspan="5" class="muted">Voeg eerst een consumptiepunt toe bij Bedrijven.</td></tr>`
+      ? this.emptyTableRow(5, { iconName: "location", title: "Nog geen consumptiepunt.", text: "Voeg eerst een consumptiepunt toe bij Bedrijven.", action: this.goToTabButton("companies", "Naar Bedrijven") })
       : products.length === 0
-        ? `<tr><td colspan="5" class="muted">Dit consumptiepunt biedt nog geen producten aan.</td></tr>`
+        ? this.emptyTableRow(5, { iconName: "package", title: "Dit consumptiepunt biedt nog geen producten aan.", text: "Zet producten aan via Bedrijven en dan Aanbod wijzigen.", action: this.goToTabButton("companies", "Naar Bedrijven") })
         : products.map(({ id, name }) => {
           const entry = point.products[id];
           const status = this.model.stockStatus(entry);
@@ -511,7 +581,7 @@ export class RegistrationView {
             <td class="stock-delivery">
               <input class="stock-input" type="number" min="1" step="1" placeholder="Aantal"
                      data-delivery-amount="${id}" aria-label="Geleverd aantal ${this.escapeHtml(name)}">
-              <button type="button" class="table-action" data-stock-delivery="${id}">+ Toevoegen</button>
+              <button type="button" class="table-action" data-stock-delivery="${id}">${icon("plus")} Toevoegen</button>
             </td>
           </tr>`;
         }).join("");
@@ -539,7 +609,8 @@ export class RegistrationView {
             </button>
           </div>
         </div>`
-      ).join("");
+      ).join("") ||
+      this.emptyState({ iconName: "package", title: "Nog geen producten.", text: "Voeg een product toe met de knop hierboven." });
   }
 
   // Rendert het logboek, nieuwste wijziging bovenaan. `limit` bepaalt hoeveel regels
@@ -559,11 +630,10 @@ export class RegistrationView {
 
     this.$("#auditTableBody").innerHTML =
       rows ||
-      `<tr>
-        <td colspan="3" class="muted">
-          Nog geen administratieve wijzigingen.
-        </td>
-      </tr>`;
+      this.emptyTableRow(3, {
+        title: "Nog geen administratieve wijzigingen.",
+        text: "Wijzigingen aan registraties, medewerkers, producten, bedrijven en voorraad komen hier te staan."
+      });
 
     this.$("#loadMoreAuditButton").classList.toggle(
       "hidden",
@@ -578,14 +648,20 @@ export class RegistrationView {
     this.renderStats();
   }
 
-  // Toont een korte melding onderaan het scherm. `duration` is hoe lang die zichtbaar blijft
-  // (in milliseconden); standaard 2,5 seconde.
-  showToast(message, duration = 2500) {
+  // Toont een korte melding onderaan het scherm.
+  //   tone: "success" (met vinkje), "error" (met waarschuwingsteken en rode rand) of "info";
+  //   duration: hoe lang de melding zichtbaar blijft, in milliseconden (standaard 2,5 seconde).
+  showToast(message, { tone = "info", duration = 2500 } = {}) {
     const toast = this.$("#toast");
+    const toneIcons = { success: "check", error: "alert" };
 
-    toast.textContent = message;
-    toast.classList.remove("hidden");
+    toast.innerHTML = `${toneIcons[tone] ? icon(toneIcons[tone]) : ""}<span></span>`;
+    toast.querySelector("span").textContent = message;
+    // Klassen opnieuw zetten; offsetWidth lezen zorgt dat de in-animatie opnieuw start.
+    toast.className = `toast toast-${tone}`;
+    void toast.offsetWidth;
     toast.classList.add("show");
+    toast.setAttribute("role", tone === "error" ? "alert" : "status");
 
     // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
     clearTimeout(this.toastTimer);

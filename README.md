@@ -26,6 +26,7 @@ assets/
     RegistrationApp.js      # Controller (klikken en formulieren)
     csvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
     ThemeManager.js         # Class ThemeManager: licht/donker thema
+    icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
 docs/
   TO-BLIKJESREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
