@@ -24,16 +24,21 @@ import { FACE_DEMO } from "./config.js";
  *   - index.html: het venster #faceModal met het videobeeld #faceVideo.
  */
 export class FaceRecognitionDemo {
-  constructor(settings = FACE_DEMO) {
+  // `mediaDevices` is de camera-functie van de browser. Die kan worden meegegeven, zodat de
+  // camera in de unit tests (zonder browser) kan worden nagebootst.
+  constructor(settings = FACE_DEMO, mediaDevices = globalThis.navigator?.mediaDevices) {
     this.settings = settings;
+    this.mediaDevices = mediaDevices;
     this.faceapi = null;          // de bibliotheek, na het laden
     this.stream = null;           // de camerastream, zolang de camera aan staat
     this.knownFaces = new Map();  // employeeId -> descriptor (alleen in het geheugen)
+    this.lastCandidate = null;    // voor confirm(): wie het laatst is gevonden
+    this.streak = 0;              // voor confirm(): hoe vaak achter elkaar
   }
 
   // Staat de demo aan en heeft deze browser een camera-functie?
   isAvailable() {
-    return Boolean(this.settings.enabled && globalThis.navigator?.mediaDevices?.getUserMedia);
+    return Boolean(this.settings.enabled && this.mediaDevices?.getUserMedia);
   }
 
   // ------------------------------------------------------------------
@@ -53,31 +58,57 @@ export class FaceRecognitionDemo {
   }
 
   // Start de camera aan de voorkant (de kant van het scherm) en toont het beeld in `video`.
-  async startCamera(video) {
-    this.stream = await navigator.mediaDevices.getUserMedia({
+  // Het aanzetten van de camera kan even duren (de browser vraagt om toestemming). `isCurrent`
+  // zegt of het venster nog steeds open is; is het intussen gesloten, dan wordt deze camera
+  // meteen weer uitgezet en geeft de methode false terug. Zo blijft er nooit een camera aan
+  // staan die niemand meer kan uitzetten.
+  async startCamera(video, isCurrent = () => true) {
+    const stream = await this.mediaDevices.getUserMedia({
       video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false
     });
-    video.srcObject = this.stream;
+
+    if (!isCurrent()) {
+      this.stopTracks(stream);
+      return false;
+    }
+
+    this.stopCamera(video); // een eventuele oudere camera eerst uitzetten
+    this.stream = stream;
+    video.srcObject = stream;
     await video.play();
+    return true;
   }
 
   // Zet de camera uit. Altijd aanroepen als het venster sluit.
   stopCamera(video) {
-    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stopTracks(this.stream);
     this.stream = null;
     if (video) video.srcObject = null;
+  }
+
+  // Zet alle sporen (beeld) van een camerastream uit.
+  stopTracks(stream) {
+    stream?.getTracks().forEach((track) => track.stop());
   }
 
   // Zoekt gezichten in het huidige camerabeeld en geeft de descriptor (128 getallen) terug van
   // het grootste gezicht: dat is de persoon die het dichtst bij de camera staat. Zo wordt niet
   // per ongeluk iemand op de achtergrond gekozen. Geeft null terug als er geen gezicht te zien is.
+  // Gaat er in de bibliotheek iets mis (bijvoorbeeld omdat het beeld net wegvalt), dan telt dat
+  // als "geen gezicht", zodat het zoeken gewoon doorgaat in plaats van vast te lopen.
   async readFace(video) {
-    const options = new this.faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 });
-    const results = await this.faceapi
-      .detectAllFaces(video, options)
-      .withFaceLandmarks(true)
-      .withFaceDescriptors();
+    let results;
+    try {
+      const options = new this.faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 });
+      results = await this.faceapi
+        .detectAllFaces(video, options)
+        .withFaceLandmarks(true)
+        .withFaceDescriptors();
+    } catch (error) {
+      console.warn("Gezicht lezen mislukt; er wordt opnieuw gezocht.", error);
+      return null;
+    }
 
     const closest = this.largestFace(results.map((result) => ({
       area: result.detection.box.width * result.detection.box.height,
@@ -116,6 +147,11 @@ export class FaceRecognitionDemo {
 
   hasEnrolledFaces() {
     return this.knownFaces.size > 0;
+  }
+
+  // De id's van alle medewerkers met een ingesteld gezicht.
+  enrolledIds() {
+    return [...this.knownFaces.keys()];
   }
 
   // Afstand tussen twee descriptors: hoe kleiner, hoe meer de gezichten op elkaar lijken.

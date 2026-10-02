@@ -33,32 +33,59 @@ test("geldige gegevens worden geladen", () => {
   assert.equal(data.companies[0].name, "TVB");
 });
 
-test("medewerker zonder naam maakt de gegevens ongeldig", () => {
+// Een beschadigde regel wordt overgeslagen; de rest van de gegevens blijft bewaard en er komt
+// een reservekopie van de oorspronkelijke gegevens onder "<sleutel>-backup".
+const loadWithDamage = (damage) => {
   const data = validData();
-  data.employees[0].name = "   ";
+  damage(data);
+  const store = createDataStore(data);
+  return { store, loaded: store.load(), original: JSON.stringify(data) };
+};
 
-  assert.equal(createDataStore(data).load(), null);
+test("medewerker zonder naam wordt overgeslagen, de rest blijft", () => {
+  const { store, loaded, original } = loadWithDamage((data) => {
+    data.employees[0].name = "   ";
+    data.employees.push({ id: "e2", name: "Piet Pieters", color: "#fff", active: true });
+  });
+
+  assert.deepEqual(loaded.employees.map(({ id }) => id), ["e2"]);
+  assert.equal(loaded.registrations.length, 1);
+  assert.equal(store.loadProblem, "skipped");
+  assert.equal(localStorage.getItem("test-backup"), original);
 });
 
-test("registratie met ongeldige datum maakt de gegevens ongeldig", () => {
-  const data = validData();
-  data.registrations[0].createdAt = "geen datum";
+test("registratie met ongeldige datum wordt overgeslagen, de andere registraties blijven", () => {
+  const { store, loaded } = loadWithDamage((data) => {
+    data.registrations.push({ id: "r2", employeeId: "e1", productId: "ei", createdAt: "geen datum" });
+  });
 
-  assert.equal(createDataStore(data).load(), null);
+  assert.deepEqual(loaded.registrations.map(({ id }) => id), ["r1"]);
+  assert.equal(store.loadProblem, "skipped");
 });
 
-test("product met ongeldige prijs maakt de gegevens ongeldig", () => {
-  const data = validData();
-  data.products = [{ id: "x", name: "Kapot", price: "abc" }];
+test("product met ongeldige prijs wordt overgeslagen", () => {
+  const { loaded } = loadWithDamage((data) => {
+    data.products = [{ id: "x", name: "Kapot", price: "abc" }, { id: "blikje", name: "Blikje", price: 0.65 }];
+  });
 
-  assert.equal(createDataStore(data).load(), null);
+  assert.deepEqual(loaded.products.map(({ id }) => id), ["blikje"]);
 });
 
-test("consumptiepunt zonder bedrijf maakt de gegevens ongeldig", () => {
-  const data = validData();
-  data.points = [{ id: "p1", name: "Kantine", products: {} }];
+test("consumptiepunt zonder bedrijf wordt overgeslagen", () => {
+  const { loaded } = loadWithDamage((data) => {
+    data.points = [{ id: "p1", name: "Kantine", products: {} }];
+  });
 
-  assert.equal(createDataStore(data).load(), null);
+  assert.deepEqual(loaded.points, []);
+});
+
+test("goede gegevens geven geen melding en geen reservekopie", () => {
+  const store = createDataStore(validData());
+
+  store.load();
+
+  assert.equal(store.loadProblem, null);
+  assert.equal(localStorage.getItem("test-backup"), null);
 });
 
 test("opgeslagen JSON die geen object is start de demo opnieuw", () => {
@@ -174,4 +201,27 @@ test("save geeft false terug als de browseropslag vol is", () => {
   const store = createDataStore(undefined, { failSet: true });
 
   assert.equal(store.save({ employees: [] }), false);
+});
+
+test("een logboek dat geen lijst is, wordt een lege lijst", () => {
+  const data = validData();
+  data.auditLog = "kapot";
+
+  assert.deepEqual(createDataStore(data).load().auditLog, []);
+});
+
+test("isValidAuditEntry vraagt een actie, details en een geldige datum", () => {
+  const store = new DataStore("test");
+
+  assert.equal(store.isValidAuditEntry({ action: "A", details: "B", createdAt: "2026-09-10T10:00:00.000Z" }), true);
+  assert.equal(store.isValidAuditEntry({ action: "A", details: "B", createdAt: "gisteren" }), false);
+  assert.equal(store.isValidAuditEntry({ action: "A", createdAt: "2026-09-10T10:00:00.000Z" }), false);
+  assert.equal(store.isValidAuditEntry(null), false);
+});
+
+test("voorraad zonder getal wordt 0 en 'aangeboden' moet echt true zijn", () => {
+  const data = validData();
+  data.points = [{ id: "p1", name: "Kantine", companyId: "c1", products: { blikje: { offered: "ja", stock: "veel", minimum: null } } }];
+
+  assert.deepEqual(createDataStore(data).load().points[0].products.blikje, { offered: false, stock: 0, minimum: 0 });
 });

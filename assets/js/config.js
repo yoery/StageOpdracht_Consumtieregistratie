@@ -74,10 +74,16 @@ export const DAYLIGHT_HOURS = [
 // Demo gezichtsherkenning (zie FaceRecognitionDemo.js).
 // Zet enabled op false om de demo volledig uit te schakelen; de knoppen verdwijnen dan.
 // De bibliotheek en modellen worden pas geladen als iemand de demo gebruikt.
+// Bibliotheek en modellen (@vladmandic/face-api 1.7.15, MIT-licentie) staan zelf in
+// assets/vendor/face-api/, zodat er tijdens gebruik geen code of gegevens van een externe server komen.
+// Alleen de modellen voor tiny_face_detector, face_landmark_68_tiny en face_recognition zijn meegenomen.
+// De paden worden met import.meta.url omgezet naar volledige adressen. Dat is nodig omdat
+// import() een pad relatief aan het modulebestand oplost, maar loadFromUri() relatief aan de pagina.
+// Een volledig adres werkt voor allebei, ongeacht in welke map de pagina staat.
 export const FACE_DEMO = {
   enabled: true,
-  libraryUrl: "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.esm.js",
-  modelUrl: "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/",
+  libraryUrl: new URL("../vendor/face-api/face-api.esm.js", import.meta.url).href,
+  modelUrl: new URL("../vendor/face-api/", import.meta.url).href,
   // Hoe sterk twee gezichten moeten lijken om als dezelfde persoon te tellen (lager = strenger).
   matchThreshold: 0.5,
   // Hoe lang er maximaal naar een bekend gezicht wordt gezocht, in milliseconden.

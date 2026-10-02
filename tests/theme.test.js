@@ -83,3 +83,44 @@ test("toMinutes zet een tijd om naar minuten na middernacht", () => {
   assert.equal(theme.toMinutes("00:00"), 0);
   assert.equal(theme.toMinutes("18:45"), 1125);
 });
+
+// Nep-pagina voor apply(): de slider, de knoppen Systeem en Auto en het <html>-element.
+const fakePage = (systemDark = false) => {
+  globalThis.window = { matchMedia: () => ({ matches: systemDark }) };
+  globalThis.document = { documentElement: { dataset: {} } };
+  const element = (mode) => ({ dataset: { themeMode: mode }, attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } });
+  const theme = new ThemeManager();
+  theme.switchButton = element();
+  theme.modeButtons = [element("system"), element("auto")];
+  return theme;
+};
+
+test("de slider kiest het tegenovergestelde van wat nu zichtbaar is", () => {
+  fakeLocalStorage();
+  const theme = fakePage(true); // apparaat staat op donker, instelling "system"
+
+  theme.toggle();
+
+  assert.equal(theme.mode, "light");
+  assert.equal(document.documentElement.dataset.theme, "light");
+  assert.equal(localStorage.getItem(ThemeManager.STORAGE_KEY), "light");
+});
+
+test("apply zet het thema op de pagina en werkt de slider en de knoppen bij", () => {
+  fakeLocalStorage();
+  const theme = fakePage(true); // apparaat staat op donker
+
+  theme.setMode("system");
+
+  assert.equal(document.documentElement.dataset.theme, "dark");
+  assert.equal(theme.switchButton.attributes["aria-checked"], "true");
+  assert.deepEqual(theme.modeButtons.map((button) => button.attributes["aria-pressed"]), ["true", "false"]);
+});
+
+test("auto: precies op het moment van zonsopkomst wordt het licht", () => {
+  const theme = new ThemeManager();
+
+  // In september is zonsopkomst volgens de tabel om 07:20.
+  assert.equal(theme.isDarkOutside(new Date(2026, 8, 15, 7, 19)), true);
+  assert.equal(theme.isDarkOutside(new Date(2026, 8, 15, 7, 20)), false);
+});

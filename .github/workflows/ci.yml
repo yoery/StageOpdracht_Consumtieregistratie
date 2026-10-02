@@ -2,20 +2,31 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "development"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "development"]
   workflow_dispatch:
+
+# Beveiliging: de workflow mag de code alleen lezen (geen schrijfrechten op de repository).
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      # De actions staan vast op een commit-SHA in plaats van op een tag (v4). Een tag kan later
+      # naar andere code wijzen; een SHA niet. Bij bijwerken: nieuwe SHA opzoeken en het
+      # versienummer in de opmerking erachter aanpassen.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Bewaar het GitHub-token niet in de map; de tests hebben het niet nodig.
+          persist-credentials: false
 
       - name: Node.js instellen
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 

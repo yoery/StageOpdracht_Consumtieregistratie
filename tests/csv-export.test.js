@@ -62,9 +62,11 @@ test("filter zonder passende registraties geeft een lege lijst", () => {
   assert.deepEqual(new CsvExport(createExportModel()).buildRows("all", "2020-01"), []);
 });
 
+// Een medewerker met registraties kan nu niet meer worden verwijderd. Oude gegevens kunnen zo'n
+// medewerker toch missen (verwijderd vóór die regel); daarom wordt dat hier nagebootst.
 test("verwijderde medewerker staat in de export als 'Verwijderd'", () => {
   const model = createExportModel();
-  model.removeEmployee("employee-2");
+  model.state.employees = model.employees.filter(({ id }) => id !== "employee-2");
 
   const row = new CsvExport(model).buildRows("all", "2026-09").find(({ Naam }) => Naam === "Verwijderd");
 
@@ -153,4 +155,19 @@ test("prijs in de CSV heeft een komma en twee decimalen", () => {
 
   assert.equal(exporter.formatPrice(1.3), "1,30");
   assert.equal(exporter.formatPrice(0), "0,00");
+});
+
+test("csv beschermt ook tegen een tab of regeleinde aan het begin van een veld", () => {
+  const csv = new CsvExport(createExportModel());
+
+  assert.equal(csv.escapeField("\tCode"), "'\tCode");
+  assert.equal(csv.escapeField("\rCode"), "\"'\rCode\"");
+  assert.equal(csv.escapeField("Jan; de Vries"), "\"Jan; de Vries\"");
+  assert.equal(csv.escapeField('Jan "JJ" Jansen'), '"Jan ""JJ"" Jansen"');
+});
+
+test("bestandsnaam voor december heeft de loonmaand januari van het volgende jaar", () => {
+  const csv = new CsvExport(createExportModel());
+
+  assert.equal(csv.fileName("2026-12"), "blikjesregistratie-loonmaand-2027-01.csv");
 });

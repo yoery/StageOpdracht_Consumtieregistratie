@@ -5,17 +5,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Consumptieregistratie voor medewerkers en administratie.">
+  <!-- Beveiliging: stuur bij links en verzoeken geen adres van deze pagina mee (referrer). -->
+  <meta name="referrer" content="no-referrer">
+  <!-- Content-Security-Policy: de browser laadt alleen bestanden van deze eigen server.
+       Alle code, lettertypes en modellen (ook face-api) staan in het project zelf.
+       De twee inline scripts (thema hieronder en de file://-melding onderaan) zijn toegestaan via
+       hun sha256-hash. Wijzig je zo'n script, dan moet de hash mee veranderen;
+       tests/beveiliging-config.test.js controleert dat.
+       Let op: frame-ancestors (en X-Frame-Options) werken niet via een meta-tag. Die moeten in
+       productie als HTTP-header door de webserver worden meegestuurd, tegen inbedden in een frame. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-zz/zEeC1kqeUOjPPtpqyLYsRIlP0p6bd5ahtKxMgTFI=' 'sha256-IYfz7ReFAXixhlxwr+3wpzbp4NwCPYY4sLnUgTOlfZw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Consumptieregistratie | TVB</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <!-- Zet het donkere thema al vóór het tekenen van de pagina, zodat die niet eerst licht oplicht.
-       Daarna neemt ThemeManager (assets/js/ThemeManager.js) het over, ook voor de stand "Auto". -->
+       Bij "Auto" wordt het thema van het vorige bezoek gebruikt (tvb-theme-last). Daarna neemt
+       ThemeManager (assets/js/ThemeManager.js) het over en past het thema zo nodig aan. -->
   <script>
     try {
       const themeMode = localStorage.getItem("tvb-theme") || "system";
       const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (themeMode === "dark" || (themeMode === "system" && systemDark)) {
+      const lastThemeDark = localStorage.getItem("tvb-theme-last") === "dark";
+      if (themeMode === "dark" || (themeMode === "system" && systemDark) || (themeMode === "auto" && lastThemeDark)) {
         document.documentElement.dataset.theme = "dark";
       }
     } catch (error) {
@@ -153,7 +162,7 @@
   <!-- Modal voor admin-login en het beheerdashboard. -->
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal">
-      <!-- Sluit alleen de modal; de admin blijft ingelogd zolang de pagina open is. -->
+      <!-- Sluit de modal en logt de admin uit (gedeelde tablet); bij opnieuw openen verschijnt het loginformulier. -->
       <button class="modal-close" data-close-modal aria-label="Sluiten" data-icon="close"></button>
 
       <!-- Loginweergave die zichtbaar is wanneer de admin nog niet is ingelogd. -->
@@ -184,7 +193,7 @@
         <div class="admin-header">
           <div>
             <p class="section-kicker">Beheer</p>
-            <h2>Overzicht</h2>
+            <h2 id="dashboardTitle">Overzicht</h2>
           </div>
           <button class="secondary-button" id="logoutButton">Uitloggen</button>
         </div>
@@ -212,6 +221,11 @@
           <label class="admin-search">
             <span>Medewerker corrigeren</span>
             <input type="search" id="adminEmployeeSearch" placeholder="Zoek een medewerker..." autocomplete="off">
+          </label>
+          <!-- Datum voor de correctie "+": standaard vandaag, of eerder voor een vergeten registratie. -->
+          <label class="admin-search correction-date">
+            <span>Datum bij toevoegen (+)</span>
+            <input type="date" id="correctionDate">
           </label>
           <!-- JavaScript plaatst hier de + en - correctieacties. -->
           <div id="adminCorrectionList" class="admin-correction-list"></div>
@@ -265,6 +279,8 @@
             </table>
           </div>
           <button class="secondary-button hidden" id="loadMoreAuditButton" type="button">Meer laden</button>
+          <p class="muted">Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug.</p>
+          <button class="secondary-button danger-action" id="wipeDataButton" type="button">Alle gegevens wissen</button>
         </div>
       </div>
     </div>
@@ -279,7 +295,7 @@
       <p class="muted" id="productFormHelp">Vul de productnaam en prijs in.</p>
       <form class="add-employee-form employee-fields" id="productForm" novalidate>
         <label>Productnaam
-          <input id="productName" placeholder="bijv. Soep" required>
+          <input id="productName" placeholder="bijv. Soep" maxlength="100" required>
         </label>
         <label>Prijs in euro
           <input id="productPrice" type="number" min="0" step="0.01" placeholder="bijv. 0.65" required>
@@ -320,10 +336,10 @@
       <p class="muted" id="employeeFormHelp">Vul de gegevens in en kies daarna hoe je verder wilt gaan.</p>
       <form class="add-employee-form employee-fields" id="employeeForm" novalidate>
         <label>Voornaam
-          <input id="newEmployeeFirstName" required>
+          <input id="newEmployeeFirstName" maxlength="100" required>
         </label>
         <label>Achternaam
-          <input id="newEmployeeLastName" required>
+          <input id="newEmployeeLastName" maxlength="100" required>
         </label>
         <label>Looncode
           <input id="newEmployeePayrollCode" type="number" required>
@@ -359,7 +375,7 @@
       <p class="muted">Het werkgevernummer komt in de CSV-export bij de medewerkers van dit bedrijf, behalve bij wie een afwijkend nummer heeft.</p>
       <form class="add-employee-form employee-fields" id="companyForm" novalidate>
         <label>Bedrijfsnaam
-          <input id="companyName" required>
+          <input id="companyName" maxlength="100" required>
         </label>
         <label>Werkgevernummer
           <input id="companyEmployerNumber" type="number">
@@ -381,7 +397,7 @@
       <p class="muted">Zet aan welke producten hier worden aangeboden. Medewerkers van dit punt zien alleen deze producten.</p>
       <form class="add-employee-form employee-fields" id="pointForm" novalidate>
         <label>Naam
-          <input id="pointName" placeholder="bijv. Kantine begane grond" required>
+          <input id="pointName" placeholder="bijv. Kantine begane grond" maxlength="100" required>
         </label>
         <label>Bedrijf
           <select id="pointCompany" required></select>

@@ -25,6 +25,9 @@ import { DAYLIGHT_HOURS } from "./config.js";
 export class ThemeManager {
   // Naam waaronder de instelling in localStorage staat (ook gebruikt door het script in index.html).
   static STORAGE_KEY = "tvb-theme";
+  // Het thema dat het laatst zichtbaar was ("light" of "dark"). Het script in de <head> van
+  // index.html gebruikt dit bij de stand "Auto", zodat de pagina niet eerst licht oplicht.
+  static LAST_THEME_KEY = "tvb-theme-last";
   static MODES = ["system", "auto", "light", "dark"];
 
   constructor() {
@@ -73,6 +76,15 @@ export class ThemeManager {
       localStorage.setItem(ThemeManager.STORAGE_KEY, this.mode);
     } catch (error) {
       // Niet erg: de keuze geldt dan alleen voor deze keer.
+    }
+  }
+
+  // Onthoudt welk thema zichtbaar is, voor het script in de <head> (zie LAST_THEME_KEY).
+  saveLastTheme(theme) {
+    try {
+      localStorage.setItem(ThemeManager.LAST_THEME_KEY, theme);
+    } catch (error) {
+      // Niet erg: bij "Auto" kan de pagina dan heel even licht zijn voordat dit script start.
     }
   }
 
@@ -133,6 +145,7 @@ export class ThemeManager {
   apply() {
     const isDark = this.currentTheme() === "dark";
     document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    this.saveLastTheme(isDark ? "dark" : "light");
 
     this.switchButton.setAttribute("aria-checked", String(isDark));
     this.switchButton.title = isDark ? "Donkere modus staat aan. Klik voor licht." : "Lichte modus staat aan. Klik voor donker.";

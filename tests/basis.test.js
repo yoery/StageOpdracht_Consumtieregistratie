@@ -514,7 +514,7 @@ test("monthKey maakt correcte maandcode", () => {
 
   assert.equal(
     model.monthKey(
-      new Date("2026-09-15")
+      new Date(2026, 8, 15)
     ),
     "2026-09"
   );
@@ -528,19 +528,19 @@ test("countForDate telt registraties van dezelfde dag", () => {
       id: "1",
       employeeId: "employee-1",
       productId: "blikje",
-      createdAt: "2026-09-15T10:00:00.000Z"
+      createdAt: new Date(2026, 8, 15, 10, 0).toISOString()
     },
     {
       id: "2",
       employeeId: "employee-1",
       productId: "blikje",
-      createdAt: "2026-09-15T11:00:00.000Z"
+      createdAt: new Date(2026, 8, 15, 11, 0).toISOString()
     }
   ];
 
   assert.equal(
     model.countForDate(
-      new Date("2026-09-15")
+      new Date(2026, 8, 15)
     ),
     2
   );
@@ -554,19 +554,19 @@ test("countForMonth telt registraties van dezelfde maand", () => {
       id: "1",
       employeeId: "employee-1",
       productId: "blikje",
-      createdAt: "2026-09-01T10:00:00.000Z"
+      createdAt: new Date(2026, 8, 1, 10, 0).toISOString()
     },
     {
       id: "2",
       employeeId: "employee-1",
       productId: "blikje",
-      createdAt: "2026-09-20T10:00:00.000Z"
+      createdAt: new Date(2026, 8, 20, 10, 0).toISOString()
     }
   ];
 
   assert.equal(
     model.countForMonth(
-      new Date("2026-09-15")
+      new Date(2026, 8, 15)
     ),
     2
   );

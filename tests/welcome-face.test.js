@@ -9,7 +9,7 @@ import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { createModel, registration } from "./helpers.js";
 
 // Nep-view die alles negeert (zie ook view-app.test.js).
-const createFakeView = () => new Proxy({ toasts: [], $: () => ({ classList: { add() {}, remove() {}, toggle() {} } }) }, {
+const createFakeView = () => new Proxy({ toasts: [], $: () => ({ classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, focus() {}, setAttribute() {} }) }, {
   get: (object, property) => (property in object ? object[property] : () => {})
 });
 
@@ -157,4 +157,50 @@ test("uitzetten vergeet het gezicht", () => {
 
   assert.equal(demo.isEnrolled("employee-1"), false);
   assert.equal(demo.findMatch(face(0.1)), null);
+});
+
+test("demo is beschikbaar als die aan staat en er een camera-functie is", () => {
+  const demo = new FaceRecognitionDemo({ enabled: true }, { getUserMedia: async () => ({}) });
+
+  assert.equal(demo.isAvailable(), true);
+});
+
+test("een afstand precies op de drempel telt niet als herkend, net eronder wel", () => {
+  const demo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5 }, null);
+  demo.enroll("employee-1", [0]);
+
+  assert.equal(demo.findMatch([0.5]), null);
+  assert.equal(demo.findMatch([0.49]), "employee-1");
+});
+
+test("camera uitzetten zonder camera geeft geen fout; met camera gaat alles uit", () => {
+  const demo = createDemo();
+  const video = { srcObject: "beeld" };
+  assert.doesNotThrow(() => demo.stopCamera(video));
+
+  const track = { stopped: false, stop() { track.stopped = true; } };
+  demo.stream = { getTracks: () => [track] };
+  demo.stopCamera(video);
+
+  assert.equal(track.stopped, true);
+  assert.equal(demo.stream, null);
+  assert.equal(video.srcObject, null);
+});
+
+test("confirm werkt ook zonder eerst resetConfirmation aan te roepen", () => {
+  const demo = createDemo();
+
+  assert.equal(demo.confirm("employee-1"), null);
+  assert.equal(demo.confirm("employee-1"), "employee-1");
+});
+
+test("gaat er bij het lezen van een gezicht iets mis, dan telt dat als geen gezicht", async () => {
+  const demo = createDemo();
+  console.warn = () => {};
+  demo.faceapi = {
+    TinyFaceDetectorOptions: class {},
+    detectAllFaces: () => { throw new Error("beeld weg"); }
+  };
+
+  assert.equal(await demo.readFace({}), null);
 });
