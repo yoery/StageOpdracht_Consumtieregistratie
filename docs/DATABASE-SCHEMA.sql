@@ -99,17 +99,31 @@ JOIN products p ON p.product_id = pp.product_id
 WHERE pp.offered = true
   AND pp.stock <= pp.minimum;
 
+-- Beheerders die mogen inloggen op het beheerscherm.
 CREATE TABLE admins (
     admin_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email varchar(320) NOT NULL,
+    -- Alleen de hash van het wachtwoord, nooit het wachtwoord zelf (geen platte tekst).
+    -- Gebruik Argon2id (of anders bcrypt) met een eigen, willekeurige salt per gebruiker.
+    -- De backend maakt en controleert de hash; de database ziet het wachtwoord nooit.
     password_hash text NOT NULL,
     display_name varchar(150) NOT NULL,
+    -- 'system_admin' = de systeembeheerder uit hoofdstuk 3 van het TO
+    -- (technisch beheer, gebruikersbeheer); 'admin' en 'manager' beheren de gegevens.
     role varchar(30) NOT NULL DEFAULT 'admin',
     active boolean NOT NULL DEFAULT true,
     last_login_at timestamptz,
+    -- Aantal mislukte inlogpogingen na elkaar; wordt 0 na een geslaagde login.
+    failed_login_count integer NOT NULL DEFAULT 0,
+    -- Na te veel mislukte pogingen is het account tot dit tijdstip geblokkeerd
+    -- (bescherming tegen het raden van wachtwoorden). NULL = niet geblokkeerd.
+    locked_until timestamptz,
+    -- Staat tweestapsverificatie (MFA) aan voor deze beheerder?
+    mfa_enabled boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT admins_role_valid CHECK (role IN ('admin', 'manager')),
+    CONSTRAINT admins_role_valid CHECK (role IN ('admin', 'manager', 'system_admin')),
+    CONSTRAINT admins_failed_login_count_non_negative CHECK (failed_login_count >= 0),
     CONSTRAINT admins_display_name_not_blank CHECK (length(btrim(display_name)) > 0)
 );
 
@@ -125,7 +139,14 @@ CREATE TABLE registrations (
     registered_by_admin_id uuid REFERENCES admins(admin_id) ON DELETE SET NULL,
     registered_at timestamptz NOT NULL DEFAULT now(),
     amount integer NOT NULL DEFAULT 1,
-    CONSTRAINT registrations_amount_positive CHECK (amount > 0)
+    -- Prijs op het moment van registreren (per stuk). Een latere prijswijziging van het
+    -- product verandert oude maanden in de loonexport dus niet.
+    price numeric(8, 2) NOT NULL,
+    -- Werkgevernummer op het moment van registreren, om dezelfde reden als de prijs:
+    -- een oude loonmaand in de export verandert niet als de medewerker van bedrijf wisselt.
+    employer_number varchar(100),
+    CONSTRAINT registrations_amount_positive CHECK (amount > 0),
+    CONSTRAINT registrations_price_non_negative CHECK (price >= 0)
 );
 
 CREATE INDEX registrations_employee_date_idx
@@ -219,6 +240,7 @@ VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Maandoverzicht voor het admin-dashboard.
+-- De kosten gebruiken de prijs die bij de registratie is bewaard (r.price), niet de huidige productprijs.
 CREATE OR REPLACE VIEW monthly_employee_consumption AS
 SELECT
     date_trunc('month', r.registered_at)::date AS month_start,
@@ -228,11 +250,10 @@ SELECT
     c.company_id,
     c.name AS company_name,
     SUM(r.amount)::integer AS total_amount,
-    SUM(r.amount * p.price)::numeric(12, 2) AS total_cost
+    SUM(r.amount * r.price)::numeric(12, 2) AS total_cost
 FROM registrations r
 JOIN employees e ON e.employee_id = r.employee_id
 LEFT JOIN companies c ON c.company_id = e.company_id
-JOIN products p ON p.product_id = r.product_id
 GROUP BY
     date_trunc('month', r.registered_at)::date,
     e.employee_id,
@@ -243,10 +264,48 @@ GROUP BY
 
 -- Voorbeeld: alle registraties binnen een periode.
 -- SELECT e.first_name, e.last_name, c.name AS company_name,
---        p.name AS product_name, r.amount, r.registered_at
+--        p.name AS product_name, r.amount, r.price, r.registered_at
 -- FROM registrations r
 -- JOIN employees e ON e.employee_id = r.employee_id
 -- LEFT JOIN companies c ON c.company_id = e.company_id
 -- JOIN products p ON p.product_id = r.product_id
 -- WHERE r.registered_at >= $1 AND r.registered_at < $2
 -- ORDER BY r.registered_at DESC;
+
+-- ------------------------------------------------------------------
+-- Beveiliging: rollen met zo weinig rechten als nodig (least privilege)
+-- ------------------------------------------------------------------
+-- Voorbeeld; pas namen en wachtwoorden aan per omgeving en zet wachtwoorden nooit in dit bestand.
+--
+-- De applicatie (backend/API) logt in met een eigen rol die geen tabellen mag aanmaken of
+-- verwijderen en geen eigenaar van de tabellen is.
+-- CREATE ROLE blikjes_app LOGIN PASSWORD '...';
+-- REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+-- GRANT USAGE ON SCHEMA public TO blikjes_app;
+-- GRANT SELECT, INSERT, UPDATE, DELETE
+--     ON companies, consumption_points, employees, products, point_products, registrations
+--     TO blikjes_app;
+-- GRANT SELECT, INSERT, UPDATE ON admins TO blikjes_app;
+-- GRANT SELECT ON stock_alerts, monthly_employee_consumption TO blikjes_app;
+--
+-- Het logboek is alleen-toevoegen (append-only): de applicatie mag regels lezen en
+-- toevoegen, maar niet wijzigen of verwijderen. Zo blijft het logboek controleerbaar.
+-- GRANT SELECT, INSERT ON audit_log TO blikjes_app;
+-- REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM blikjes_app;
+--
+-- Een aparte rol met alleen leesrechten, bijvoorbeeld voor rapportages.
+-- CREATE ROLE blikjes_rapportage LOGIN PASSWORD '...';
+-- GRANT USAGE ON SCHEMA public TO blikjes_rapportage;
+-- GRANT SELECT ON monthly_employee_consumption, stock_alerts TO blikjes_rapportage;
+--
+-- Bewaartermijn en anonimiseren (AVG):
+--   - Bewaar registraties niet langer dan nodig voor de loonadministratie
+--     (bijvoorbeeld de fiscale bewaarplicht van 7 jaar) en verwijder of anonimiseer ze daarna.
+--   - Gaat een medewerker uit dienst, anonimiseer dan na de bewaartermijn de persoonsgegevens
+--     (naam, looncode, personeelsnummer), zodat totalen bruikbaar blijven zonder persoon.
+--   - Voer dit periodiek uit met een geplande taak door de systeembeheerder.
+--
+-- Queries vanuit de applicatie:
+--   De applicatie gebruikt uitsluitend geparametriseerde queries (zoals $1 en $2 in het
+--   voorbeeld hierboven) en plakt nooit invoer van gebruikers in de SQL-tekst.
+--   Zo is SQL-injectie niet mogelijk.

@@ -1,7 +1,7 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
-**Versie:** 3.1
-**Datum:** 1 oktober 2026
+**Versie:** 3.3
+**Datum:** 2 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
 Dit document is het enige ontwerpdocument van het project. Het bevat zowel de functionele kant (aanleiding, gebruikersrollen, eisen, use cases, wireframes en acceptatiecriteria) als de technische uitwerking (architectuur, database, interfaces, beveiliging en tests). Het eerdere functioneel ontwerp is hierin opgenomen.
@@ -33,7 +33,8 @@ In deze demo zitten de volgende onderdelen:
 - wijzigingen bijhouden in een logboek;
 - registraties filteren;
 - gegevens exporteren naar CSV voor de loonadministratie;
-- gegevens opslaan in de browser met `localStorage`.
+- gegevens opslaan in de browser met `localStorage`;
+- alle gegevens op de tablet wissen (knop `Alle gegevens wissen` in het beheer).
 
 De demo heeft nog geen echte gedeelde database en geen echte beveiligde login. Het volledige referentieschema voor productie staat in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHEMA.sql). Een backend/API moet de browseropslag vervangen, en beheerders moeten met gehashte wachtwoorden worden opgeslagen.
 
@@ -82,16 +83,17 @@ Een beheerder kan:
 - inloggen en uitloggen;
 - alle registraties bekijken en filteren op medewerker en maand;
 - registraties corrigeren;
-- medewerkers toevoegen, wijzigen, actief of inactief zetten en verwijderen;
+- medewerkers toevoegen, wijzigen, actief of inactief zetten en (zonder registraties) verwijderen;
 - productsoorten en prijzen beheren;
 - bedrijven en consumptiepunten beheren en per punt het aanbod instellen;
 - de voorraad per consumptiepunt bijhouden en zien wat bijbesteld moet worden;
 - een logboek van wijzigingen bekijken;
-- een CSV-bestand maken.
+- een CSV-bestand maken;
+- alle gegevens op de tablet wissen en de demogegevens terugzetten.
 
 ### Systeembeheerder (productie)
 
-In productie beheert een systeembeheerder de rollen en instellingen. Deze rol bestaat nog niet in de demo.
+In productie beheert een systeembeheerder de rollen en instellingen. Deze rol bestaat nog niet in de demo. In het productieschema heet deze rol `system_admin`.
 
 ## 4. Functionele eisen (FR)
 
@@ -112,8 +114,8 @@ In productie beheert een systeembeheerder de rollen en instellingen. Deze rol be
 | FR-13 | Een beheerder kan een registratie toevoegen. |
 | FR-14 | Een beheerder kan de laatste registratie van een product verwijderen. |
 | FR-15 | Een beheerder kan een medewerker toevoegen. |
-| FR-16 | Een beheerder kan een medewerker verwijderen. |
-| FR-17 | Oude registraties blijven bestaan na het verwijderen van een medewerker. |
+| FR-16 | Een beheerder kan een inactieve medewerker zonder registraties definitief verwijderen. Heeft de medewerker registraties, dan wordt verwijderen geweigerd en is deactiveren voldoende. |
+| FR-17 | Registraties blijven altijd bestaan en houden de prijs van het moment van registreren, zodat een oude maand in de CSV-export niet verandert. |
 | FR-18 | Een beheerder kan een `.csv`-bestand exporteren dat in Excel kan worden geopend. |
 | FR-19 | De export bevat de medewerker, het aantal, de prijs en de loonmaand. |
 | FR-20 | De export bevat totalen per medewerker. |
@@ -134,8 +136,8 @@ In productie beheert een systeembeheerder de rollen en instellingen. Deze rol be
 | FR-35 | De beheerder stelt per consumptiepunt in welke producten worden aangeboden (aan/uit per product). |
 | FR-36 | Een nieuw product staat bij alle consumptiepunten uit, totdat de beheerder het aanzet. |
 | FR-37 | Iedere medewerker is gekoppeld aan een bedrijf en een vast consumptiepunt, en ziet alleen de producten die dat punt aanbiedt. |
-| FR-38 | Het systeem houdt per consumptiepunt de voorraad per product bij. Iedere registratie verlaagt de voorraad met 1; een correctie van de beheerder zet het product terug. |
-| FR-39 | De beheerder kan leveringen boeken, de getelde voorraad invullen en per product een minimum instellen. |
+| FR-38 | Het systeem houdt per consumptiepunt de voorraad per product bij. Iedere registratie verlaagt de voorraad met 1; een correctie van de beheerder zet het product terug, maar alleen als de registratie na de laatste telling van dat product is gemaakt. |
+| FR-39 | De beheerder kan leveringen boeken, de getelde voorraad invullen en per product een minimum instellen. Getelde voorraad en minimum zijn hele getallen van 0 tot en met 100.000; een levering is een heel getal van 1 tot en met 100.000. |
 | FR-40 | Het systeem toont een bijbestellijst met alle aangeboden producten die op zijn of op of onder het minimum zitten. |
 | FR-41 | Het werkgevernummer staat standaard bij het bedrijf. Bij een medewerker kan een afwijkend werkgevernummer worden ingevuld (bijvoorbeeld per teamleider); dat gaat in de CSV-export voor op het nummer van het bedrijf. |
 | FR-42 | De website heeft een licht en een donker thema. In het donkere thema blijven de huiskleuren behouden; de achtergrond wordt donker en de tekst krijgt de groene huiskleur. |
@@ -145,9 +147,14 @@ In productie beheert een systeembeheerder de rollen en instellingen. Deze rol be
 | FR-46 | De gekozen thema-instelling wordt per browser onthouden. |
 | FR-47 | In het productvenster kan de gebruiker per product met `−` en `+` het aantal kiezen; `−` gaat niet onder 0. De knop `Registreren` toont het totaal aantal gekozen producten. |
 | FR-48 | Na het registreren toont het systeem een melding met de naam van de medewerker en de geregistreerde producten, bijvoorbeeld "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd", met een vinkje. |
-| FR-49 | Het productvenster begroet de medewerker persoonlijk en passend bij het tijdstip, bijvoorbeeld "Goedemorgen Lotte, welkom terug." |
-| FR-50 | Het systeem toont wat de medewerker de vorige keer koos ("Vorige keer koos je 1× Blikje en 1× Ei.") en zet met één knop dezelfde keuze klaar. De medewerker bevestigt zelf met `Registreren`. Producten die het consumptiepunt niet meer aanbiedt, vallen weg. |
+| FR-49 | Het productvenster begroet de medewerker persoonlijk en passend bij het tijdstip, bijvoorbeeld "Goedemorgen Lotte, welkom terug." "Welkom terug" staat er alleen als de medewerker zelf al eens iets heeft geregistreerd; correcties van de beheerder tellen niet mee. |
+| FR-50 | Het systeem toont wat de medewerker de vorige keer koos ("Vorige keer koos je 1× Blikje en 1× Ei.") en zet met één knop dezelfde keuze klaar. De medewerker bevestigt zelf met `Registreren`. Producten die het consumptiepunt niet meer aanbiedt, vallen weg, en correcties van de beheerder tellen niet mee. |
 | FR-51 | Demo gezichtsherkenning (uit te schakelen): een medewerker kan vrijwillig zijn of haar gezicht instellen en daarna met de camera van de tablet of laptop worden herkend, waarna het eigen productvenster opent. Er wordt niets opgeslagen of verstuurd (zie 13, Privacy). |
+| FR-52 | De beheerder kan met de knop `Alle gegevens wissen` (tabblad Logboek) alle medewerkers, registraties, producten, voorraad, het logboek, de reservekopieën en de ingestelde gezichten op de tablet wissen. Het systeem vraagt twee keer om bevestiging, logt de beheerder daarna uit en zet de demogegevens terug. |
+| FR-53 | De datum bovenaan en de totalen van vandaag en deze maand worden na middernacht vanzelf bijgewerkt, ook als de pagina dag en nacht openstaat. |
+| FR-54 | Verwijdert de beheerder met `−` een registratie uit een andere maand dan de huidige, dan vraagt het systeem eerst om bevestiging, omdat die loonmaand mogelijk al is verwerkt. |
+| FR-55 | Iedere registratie bewaart het werkgevernummer van dat moment. Een oude loonmaand in de CSV-export verandert daardoor niet als de medewerker later naar een ander bedrijf gaat of het nummer van het bedrijf wijzigt. |
+| FR-56 | Bij een correctie met `+` kiest de beheerder de datum (standaard vandaag, niet later dan vandaag). Valt die datum in een eerdere maand, dan vraagt het systeem eerst om bevestiging, omdat die loonmaand mogelijk al is verwerkt. |
 
 ## 5. Niet-functionele eisen (NFR)
 
@@ -157,8 +164,9 @@ In productie beheert een systeembeheerder de rollen en instellingen. Deze rol be
 | Performance | De pagina moet snel laden | Binnen 2 seconden |
 | Browser | De website werkt in moderne browsers | Recente Edge, Chrome en Firefox |
 | Responsive | De website werkt op computer, tablet en telefoon | Alle normale schermen |
-| Toegankelijkheid | Knoppen hebben duidelijke namen en labels en werken met het toetsenbord | Alle knoppen |
+| Toegankelijkheid | Knoppen hebben duidelijke namen en labels en werken met het toetsenbord. Ieder veld heeft een zichtbare focus. Een venster zet bij openen de focus in het venster en heeft de naam van de zichtbare kop. Escape sluit het bovenste venster en Tab blijft binnen een open venster. Na het sluiten van een venster gaat de focus terug naar de knop of rij waarmee het werd geopend. | Alle knoppen, velden en vensters |
 | Foutmeldingen | Bij een opslagfout krijgt de gebruiker een duidelijke melding | Altijd |
+| Privacy | Er worden geen bestanden of gegevens van externe servers geladen; lettertypes en face-api staan in het project zelf. Persoonsgegevens op de tablet zijn volledig te wissen. | Geen verzoeken naar derden |
 | Gegevensbehoud | Oude registraties mogen niet verdwijnen | Ook na vertrek medewerker |
 | Beschikbaarheid | De website moet tijdens werktijd werken | 99% in productie |
 | Beveiliging | Alleen beheerders mogen beheren | Controle op de server |
@@ -211,9 +219,9 @@ De JavaScript is objectgeoriënteerd opgebouwd volgens het MVC-patroon, met vijf
 - `RegistrationApp` (controller) verwerkt klikken, formulieren en andere acties en stuurt het model, de view en de export aan.
 - `CsvExport` maakt de CSV-export voor de loonadministratie.
 
-Een zesde class, `ThemeManager`, regelt het lichte en donkere thema. Die staat los van de andere classes, omdat het thema een weergave-instelling per browser is en geen gegeven van de registratie. Een zevende class, `FaceRecognitionDemo`, is de uitschakelbare demo gezichtsherkenning; de controller krijgt die mee in de constructor. De bibliotheek face-api wordt alleen geladen als iemand de demo gebruikt.
+Een zesde class, `ThemeManager`, regelt het lichte en donkere thema. Die staat los van de andere classes, omdat het thema een weergave-instelling per browser is en geen gegeven van de registratie. Een zevende class, `FaceRecognitionDemo`, is de uitschakelbare demo gezichtsherkenning; de controller krijgt die mee in de constructor. De bibliotheek face-api wordt alleen geladen als iemand de demo gebruikt, en komt dan uit het project zelf (`assets/vendor/face-api/`).
 
-Daarnaast zijn er drie bestanden zonder class: `main.js` maakt de objecten aan en koppelt ze aan elkaar, `config.js` bevat vaste waarden zoals de standaardproducten, de bedrijven, de tijden van zonsopkomst en zonsondergang en de instellingen van de demo gezichtsherkenning (`FACE_DEMO`), en `icons.js` bevat de SVG-iconen.
+Daarnaast zijn er vier bestanden zonder class: `main.js` maakt de objecten aan en koppelt ze aan elkaar, `config.js` bevat vaste waarden zoals de standaardproducten, de bedrijven, de tijden van zonsopkomst en zonsondergang en de instellingen van de demo gezichtsherkenning (`FACE_DEMO`), `icons.js` bevat de SVG-iconen en `ids.js` bevat de functie `createId()` voor unieke id's.
 
 ```text
 DataStore ──► RegistrationModel ──► RegistrationView
@@ -237,7 +245,10 @@ Door deze verdeling blijft de code overzichtelijk. Later kan bijvoorbeeld `local
 - **OOP:** de JavaScript is verdeeld in classes.
 - **localStorage:** tijdelijke opslag in de browser.
 - **CSV-export:** gemaakt met eigen JavaScript, zonder externe bibliotheek.
-- **Node.js test runner:** voor de unit tests, automatisch uitgevoerd via GitHub Actions.
+- **Lettertypes DM Sans en Space Grotesk:** zelf gehost in `assets/fonts/` (woff2, SIL Open Font License 1.1, zie `assets/fonts/LICENSE.txt`). Er wordt niets van Google Fonts geladen.
+- **face-api (@vladmandic/face-api 1.7.15):** alleen voor de demo gezichtsherkenning. De bibliotheek en de drie modellen (gezicht vinden, gezichtspunten en herkenning) staan in `assets/vendor/face-api/` (MIT-licentie, samen ongeveer 8 MB, waarvan 6,4 MB het herkenningsmodel). Er wordt tijdens gebruik niets van een CDN geladen.
+- **Content-Security-Policy:** een `<meta>`-tag in `index.html` die de browser alleen bestanden van de eigen server laat laden (zie hoofdstuk 13).
+- **Node.js test runner:** voor de unit tests, automatisch uitgevoerd via GitHub Actions bij iedere push en pull request naar `main` en `development`. De workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het GitHub-token niet (`persist-credentials: false`) en gebruikt actions die vastgezet zijn op een commit-SHA.
 
 ### Mogelijke technieken voor productie
 
@@ -266,8 +277,8 @@ De demo bewaart een JSON-object in `localStorage`:
       name: "Kantine begane grond",
       companyId: "id-van-bedrijf",
       products: {
-        blikje: { offered: true, stock: 24, minimum: 6 },
-        ei: { offered: false, stock: 0, minimum: 0 }
+        blikje: { offered: true, stock: 24, minimum: 6, countedAt: "2026-10-01T07:30:00.000Z" }, // countedAt: tijdstip van de laatste telling
+        ei: { offered: false, stock: 0, minimum: 0 } // nog nooit geteld: geen countedAt
       }
     }
   ],
@@ -285,21 +296,36 @@ De demo bewaart een JSON-object in `localStorage`:
       id: "unieke-id",
       employeeId: "id-van-medewerker",
       productId: "blikje",
-      pointId: "id-van-consumptiepunt",
+      price: 0.65, // prijs op het moment van registreren
+      employerNumber: "4711", // werkgevernummer op het moment van registreren (alleen als dat bekend was)
+      pointId: "id-van-consumptiepunt", // null als er geen voorraad af ging
       createdAt: "2026-09-07T08:00:00.000Z"
+    },
+    {
+      id: "unieke-id",
+      employeeId: "id-van-medewerker",
+      productId: "ei",
+      price: 0.5,
+      pointId: null,
+      createdAt: "2026-09-07T09:00:00.000Z",
+      correction: true // alleen bij een correctie van de beheerder
     }
   ]
 }
 ```
 
-Elke gekozen eenheid wordt één registratie. Daarom is het aantal in de demo altijd `1`.
+Elke gekozen eenheid wordt één registratie. Daarom is het aantal in de demo altijd `1`. Iedere registratie bewaart de prijs van dat moment (`price`); oude registraties zonder prijs gebruiken de huidige prijs van het product. Op dezelfde manier bewaart iedere registratie het werkgevernummer van dat moment (`employerNumber`, zie `RegistrationModel.registrationEmployerNumber`). Was er toen nog geen nummer ingevuld, of is de registratie van vóór deze regel, dan gebruikt de export het huidige nummer. Id's worden gemaakt met `createId()` uit `assets/js/ids.js`, zodat dit ook werkt als de website via een netwerkadres (zonder https) wordt geopend.
+
+Bij het laden controleert `DataStore` iedere regel. Id's en verwijzingen naar id's moeten passen bij `^[A-Za-z0-9_-]{1,64}$` (letters, cijfers, `-` en `_`), prijzen moeten een getal van 0 tot en met 1000 zijn en een kleur moet de vorm `#rrggbb` hebben. Een regel met een ongeldige id, verwijzing of prijs wordt overgeslagen (met reservekopie en melding); een product zonder prijs (`null` of leeg) telt ook als ongeldig en wordt dus niet gratis. Een medewerker met een ongeldige kleur blijft bewaard en krijgt een standaardkleur. Oude product-id's (`melk`, `brood`) worden ook in de opgeslagen productlijst en in de voorraad van de punten omgezet naar de nieuwe id's.
 
 ### Bedrijven, consumptiepunten en voorraad
 
 - Een **bedrijf** heeft een naam en een standaard werkgevernummer. Een medewerker kan een afwijkend werkgevernummer hebben (bijvoorbeeld per teamleider); `employerNumberFor` gebruikt dat nummer als het is ingevuld, en anders dat van het bedrijf.
-- Een bedrijf heeft geen, één of meerdere **consumptiepunten**. Per punt staat per product of het wordt aangeboden (`offered`), de voorraad (`stock`) en het minimum (`minimum`).
+- Een bedrijf heeft geen, één of meerdere **consumptiepunten**. Per punt staat per product of het wordt aangeboden (`offered`), de voorraad (`stock`), het minimum (`minimum`) en, als de voorraad is geteld, het tijdstip van de laatste telling (`countedAt`).
 - Een **medewerker** is gekoppeld aan een bedrijf en een vast consumptiepunt, en ziet alleen de producten die dat punt aanbiedt.
-- Een **registratie** onthoudt het consumptiepunt (`pointId`). De voorraad daar gaat 1 omlaag; bij een correctie gaat het product naar datzelfde punt terug, ook als de medewerker inmiddels bij een ander punt hoort.
+- Een **registratie** onthoudt het consumptiepunt waar de voorraad van af ging (`pointId`). Alleen een product dat het punt van de medewerker aanbiedt, gaat van de voorraad af; anders is `pointId` leeg (`null`) en verandert er geen voorraad. Bij een correctie met `−` gaat het product naar datzelfde punt terug, ook als de medewerker inmiddels bij een ander punt hoort. Dat gebeurt alleen als de registratie na de laatste telling (`countedAt`) is gemaakt: is de voorraad daarna geteld, dan zat het product al niet meer in de getelde hoeveelheid en blijft de telling staan.
+- De getelde voorraad en het minimum zijn hele getallen van 0 tot en met 100.000. Door registraties kan de voorraad wel onder 0 komen (er is dan meer geregistreerd dan er volgens de telling was); dat is zo bedoeld. Een negatieve telling wordt geweigerd.
+- Een registratie die de beheerder met `+` toevoegt, krijgt `correction: true`. Zo'n correctie telt niet mee als "Vorige keer koos je …" in het productvenster, omdat de medewerker die keuze niet zelf heeft gemaakt.
 - Een nieuw product krijgt bij ieder punt `offered: false`. Een verwijderd product verdwijnt uit alle voorraadlijsten.
 - Status per product: `Op` bij voorraad 0 of lager, `Bijbestellen` bij voorraad op of onder het minimum, anders `Op voorraad`.
 
@@ -324,9 +350,12 @@ Elke gekozen eenheid wordt één registratie. Daarom is het aantal in de demo al
 | `RegistratieID` | Integer of UUID | Uniek nummer van de registratie |
 | `MedewerkerID` | Integer of UUID | Koppeling met de medewerker |
 | `DatumTijd` | DateTime | Datum en tijd van de registratie |
+| `Prijs` | Decimaal | Prijs op het moment van registreren; een latere prijswijziging verandert oude registraties niet |
+| `Werkgevernummer` | Tekst | Werkgevernummer op het moment van registreren; een latere wijziging verandert oude registraties niet |
 | `Aantal` | Integer | Aantal, standaard `1` |
 | `ProductID` | Integer of UUID | Geregistreerd product |
-| `ConsumptiepuntID` | Integer of UUID | Punt waar de voorraad van af ging |
+| `ConsumptiepuntID` | Integer of UUID | Punt waar de voorraad van af ging (leeg als er geen voorraad af ging) |
+| `Correctie` | Boolean | Door de beheerder toegevoegd; in het productieschema is dat `registered_by_admin_id` (ingevuld = correctie) |
 
 ### Tabel Producten
 
@@ -361,14 +390,21 @@ Het volledige PostgreSQL-schema staat in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHE
 - `stock_alerts` als databaseview voor alles wat bijbesteld moet worden;
 - `employees` voor actieve en inactieve medewerkers, met bedrijf en vast consumptiepunt;
 - `products` voor producten en prijzen;
-- `admins` voor beheerders en rollen;
+- `admins` voor beheerders en rollen (`admin`, `manager` en `system_admin`), met het aantal mislukte inlogpogingen (`failed_login_count`), een blokkade tot een tijdstip (`locked_until`) en of tweestapsverificatie aan staat (`mfa_enabled`);
 - `registrations` voor iedere consumptieregistratie met datum, tijd en aantal;
 - `audit_log` voor administratieve wijzigingen;
 - `monthly_employee_consumption` als databaseview voor maandtotalen.
 
 Registraties worden niet fysiek verwijderd bij normale correcties. Een correctie verwijdert alleen de betreffende registratie via de backend en schrijft altijd een regel naar `audit_log`. Medewerkers, bedrijven en producten worden bij voorkeur gedeactiveerd in plaats van verwijderd, zodat oude registraties aan de juiste medewerker gekoppeld blijven.
 
-Gebruik voor `password_hash` een sterk wachtwoordalgoritme zoals Argon2id of bcrypt. Sla nooit een wachtwoord zelf op. Gebruik in de backend parameterized queries, transacties rond correcties en een databasegebruiker met alleen de benodigde rechten.
+Gebruik voor `password_hash` een sterk wachtwoordalgoritme zoals Argon2id (of anders bcrypt), met een eigen salt per gebruiker. Sla nooit een wachtwoord zelf op. Gebruik in de backend parameterized queries, transacties rond correcties en een databasegebruiker met alleen de benodigde rechten.
+
+Onderaan het schema staan als voorbeeld (in commentaar):
+
+- **Rollen met zo weinig rechten als nodig:** de applicatie logt in met een eigen rol (`blikjes_app`) die geen tabellen mag aanmaken of verwijderen, en er is een aparte rol met alleen leesrechten voor rapportages.
+- **Logboek alleen-toevoegen:** de applicatie mag regels in `audit_log` lezen en toevoegen, maar niet wijzigen of verwijderen.
+- **Bewaartermijn en anonimiseren:** registraties niet langer bewaren dan nodig (bijvoorbeeld de fiscale bewaarplicht van 7 jaar) en daarna verwijderen of anonimiseren; bij uit dienst na de bewaartermijn naam, looncode en personeelsnummer anonimiseren.
+- **Queries:** alleen geparametriseerde queries, nooit invoer van gebruikers in de SQL-tekst.
 
 ## 9. Schermontwerpen en wireframes
 
@@ -395,18 +431,18 @@ Het loginvenster bevat:
 - een melding bij lege invoer;
 - een sluitknop.
 
-In de demo werkt ieder ingevuld wachtwoord. Dit is alleen voor demonstratie en is niet veilig voor productie.
+In de demo werkt ieder ingevuld wachtwoord. Dit is alleen voor demonstratie en is niet veilig voor productie. Wordt het beheervenster gesloten (kruisje, klik naast het venster of Escape), dan is de beheerder ook uitgelogd, zodat op een gedeelde tablet de volgende persoon niet zonder wachtwoord in het beheer komt.
 
 ### Beheerscherm
 
 Het beheerscherm heeft zes tabbladen:
 
 - **Registraties:** alle registraties bekijken, filteren op medewerker en maand, correcties met `+` en `−`, en CSV exporteren;
-- **Medewerkers:** medewerkers toevoegen, wijzigen, aan een bedrijf en consumptiepunt koppelen, activeren, deactiveren en verwijderen;
+- **Medewerkers:** medewerkers toevoegen, wijzigen, aan een bedrijf en consumptiepunt koppelen, activeren, deactiveren en (zonder registraties) verwijderen;
 - **Producten:** producten en prijzen beheren;
 - **Bedrijven:** bedrijven en consumptiepunten beheren en per punt het aanbod aan- of uitzetten;
 - **Voorraad:** de bijbestellijst, de voorraad per consumptiepunt, leveringen boeken en minimums instellen;
-- **Logboek:** alle administratieve wijzigingen.
+- **Logboek:** alle administratieve wijzigingen, en daaronder de knop `Alle gegevens wissen`.
 
 ### Licht en donker thema
 
@@ -416,7 +452,7 @@ Rechtsboven in de bovenbalk staat een slider (met een zon- en een maanicoon) met
 - de slider kiest vast licht of donker;
 - `Auto` is overdag licht en na zonsondergang donker.
 
-Technisch: alle kleuren staan als CSS-variabelen in `:root` (licht) en `:root[data-theme="dark"]` (donker). De class `ThemeManager` zet `data-theme` op het `<html>`-element en bewaart de keuze in `localStorage` onder `tvb-theme`. De tijden van zonsopkomst en zonsondergang staan per maand in `config.js` (`DAYLIGHT_HOURS`), een benadering voor Nederland; iedere minuut wordt gecontroleerd of het thema moet wisselen. Een klein script in de `<head>` zet het donkere thema al vóór het tekenen, zodat de pagina niet eerst wit oplicht. In het donkere thema blijven de huiskleuren behouden en krijgt de tekst een iets lichtere tint van het huisgroen (`#1fbf8c`), zodat hij goed leesbaar is.
+Technisch: alle kleuren staan als CSS-variabelen in `:root` (licht) en `:root[data-theme="dark"]` (donker). De class `ThemeManager` zet `data-theme` op het `<html>`-element en bewaart de keuze in `localStorage` onder `tvb-theme`. De tijden van zonsopkomst en zonsondergang staan per maand in `config.js` (`DAYLIGHT_HOURS`), een benadering voor Nederland; iedere minuut wordt gecontroleerd of het thema moet wisselen. Een klein script in de `<head>` zet het donkere thema al vóór het tekenen, zodat de pagina niet eerst wit oplicht. Bij `Auto` gebruikt dat script het thema van het vorige bezoek, dat `ThemeManager` bewaart onder `tvb-theme-last`; daarna past `ThemeManager` het thema zo nodig aan. In het donkere thema blijven de huiskleuren behouden en krijgt de tekst een iets lichtere tint van het huisgroen (`#1fbf8c`), zodat hij goed leesbaar is.
 
 ### Mobiele weergave
 
@@ -438,7 +474,7 @@ Een wireframe kan op drie niveaus worden uitgewerkt:
 | Mid-fidelity | De indeling met de echte teksten, labels en volgorde, in grijstinten en met één lettertype. Nog zonder huisstijl. | [Mid-fidelity wireframes](#mid-fidelity-wireframes) |
 | High-fidelity | Het eindontwerp met de kleuren, lettertypes, iconen en afbeeldingen van TVB. | [Wireframes](#wireframes) (de screenshots van de website) |
 
-**Hoe de low- en mid-fidelity wireframes zijn gemaakt.** Aan het begin van het project zijn de twee schetsen hieronder gemaakt ("Eerste schets" en "Eerste uitwerking"). De website is daarna flink veranderd, dus die schetsen laten niet meer zien hoe de website nu is. Daarom zijn de low- en mid-fidelity wireframes in dit hoofdstuk opnieuw gemaakt **vanuit de huidige website**, zodat ze precies overeenkomen met de echte schermen. Dat is gedaan op 1 oktober 2026 met Microsoft Edge zonder venster (headless), met dezelfde demogegevens als de high-fidelity screenshots (ingevoerd via de website zelf). Een klein script verandert alleen de weergave van de pagina; de indeling, de plaats en de grootte van alles blijven gelijk:
+**Hoe de low- en mid-fidelity wireframes zijn gemaakt.** Aan het begin van het project zijn de twee schetsen hieronder gemaakt ("Eerste schets" en "Eerste uitwerking"). De website is daarna flink veranderd, dus die schetsen laten niet meer zien hoe de website nu is. Daarom zijn de low- en mid-fidelity wireframes in dit hoofdstuk opnieuw gemaakt **vanuit de huidige website**, zodat ze precies overeenkomen met de echte schermen. Dat is gedaan op 1 oktober 2026 met Microsoft Edge zonder venster (headless), met dezelfde demogegevens als de high-fidelity screenshots (ingevoerd via de website zelf). Alleen L15 en M15 (Logboek) zijn op 2 oktober 2026 opnieuw gemaakt, op dezelfde manier, omdat onder het logboek de knop `Alle gegevens wissen` is bijgekomen. Een klein script verandert alleen de weergave van de pagina; de indeling, de plaats en de grootte van alles blijven gelijk:
 
 - **Low-fidelity:** alle kleuren en schaduwen zijn weg, ieder vlak, kaart, knop en invoerveld is een zwart kader op wit. Koppen, knoppen, tabbladen, labels van velden en kolomkoppen houden hun tekst; alle andere tekst is een grijze balk. Iconen zijn kleine grijze blokjes en afbeeldingen en het camerabeeld zijn een kader met een kruis.
 - **Mid-fidelity:** de pagina staat in grijstinten, alles gebruikt één lettertype (Arial), schaduwen en kleurverlopen zijn weg en de banner is een egaal grijs vlak. Alle echte teksten staan erin. Het camerabeeld is een grijs vlak met de tekst "Camerabeeld" en het ovale kader.
@@ -511,7 +547,7 @@ Een venster met een icoon, een kop, een korte uitleg, twee velden onder elkaar m
 
 ![L07 – Beheer: Registraties (low-fidelity)](wireframes/lofi-07-registraties.jpg)
 
-Het beheervenster met bovenaan de kop `Overzicht` en de knop `Uitloggen`, daaronder een rij met zes tabbladen. Op dit tabblad: twee keuzelijsten en een exportknop op één regel, een zoekveld, een lijst met per medewerker links een naam en rechts een totaal, en daaronder een tabel met vier kolommen. Uitgewerkt in [W18](#w18--beheer-registraties).
+Het beheervenster met bovenaan de kop `Overzicht` en de knop `Uitloggen`, daaronder een rij met zes tabbladen. Op dit tabblad: twee keuzelijsten en een exportknop op één regel, een zoekveld, een datumveld, een lijst met per medewerker links een naam en rechts een totaal, en daaronder een tabel met vier kolommen. Uitgewerkt in [W18](#w18--beheer-registraties).
 
 #### L08 – Beheer: Medewerkers
 
@@ -559,7 +595,7 @@ Bovenaan een blok `Bijbestellen (3)` met per regel een label, een link naar het 
 
 ![L15 – Beheer: Logboek (low-fidelity)](wireframes/lofi-15-logboek.jpg)
 
-Alleen een tabel met drie kolommen: actie, details en datum en tijd. Uitgewerkt in [W33](#w33--beheer-logboek).
+Een tabel met drie kolommen: actie, details en datum en tijd. Daaronder twee regels tekst (grijze balken) en één knop `Alle gegevens wissen`, los van de tabel. Uitgewerkt in [W33](#w33--beheer-logboek).
 
 ### Mid-fidelity wireframes
 
@@ -623,7 +659,7 @@ Het loginvenster met `Beheerdersomgeving`, `Welkom terug`, het ingevulde e-maila
 
 ![M07 – Beheer: Registraties (mid-fidelity)](wireframes/midfi-07-registraties.jpg)
 
-De tabbladen met het actieve tabblad onderstreept, de filters `Alle medewerkers` en `Alle maanden`, `CSV exporteren`, de totalen per medewerker (bijvoorbeeld "3 producten · € 1,80") en de tabel met de nieuwste registraties bovenaan. Deze wireframes zijn later op de dag gemaakt dan de high-fidelity screenshots, daarom staat er een andere tijd in de tabel.
+De tabbladen met het actieve tabblad onderstreept, de filters `Alle medewerkers` en `Alle maanden`, `CSV exporteren`, het zoekveld, het datumveld `Datum bij toevoegen (+)`, de totalen per medewerker (bijvoorbeeld "3 producten · € 1,80") en de tabel met de nieuwste registratie bovenaan.
 
 #### M08 – Beheer: Medewerkers
 
@@ -671,7 +707,7 @@ De bijbestellijst met de labels `Bijbestellen` en `Op` en de teksten (bijvoorbee
 
 ![M15 – Beheer: Logboek (mid-fidelity)](wireframes/midfi-15-logboek.jpg)
 
-Het logboek met de echte regels, zoals "Consumptiepunt toegevoegd" en "Voorraad geteld", met de details en de datum en tijd.
+Het logboek met de echte regels, zoals "Consumptiepunt toegevoegd" en "Voorraad geteld", met de details en de datum en tijd (hier "02 okt, 14:35"). Onder de tabel staat de uitleg "Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug." en de knop `Alle gegevens wissen`. Zonder kleur lijkt die knop op een gewone knop; in het eindontwerp is hij rood (zie W33).
 
 ### High-fidelity wireframe
 
@@ -693,7 +729,7 @@ Van ieder scherm van de high-fidelity versie staat een screenshot in de paragraa
 - De melding na het registreren laat zien wat er is gebeurd. Dit past bij **zichtbaarheid van de systeemstatus**.
 - De zoekbalk voorkomt dat de gebruiker alle namen moet onthouden. Dit past bij **herkenning in plaats van onthouden**.
 - De knoppen en kleuren zijn steeds hetzelfde. Dit past bij **consistentie en standaarden**.
-- De losse knoppen voor sluiten en uitloggen geven de gebruiker controle. Dit past bij **gebruikerscontrole en vrijheid**.
+- Het beheervenster heeft een sluitknop en een knop `Uitloggen`. Sluiten logt de beheerder ook uit, zodat op een gedeelde tablet niemand per ongeluk ingelogd blijft; met `Uitloggen` blijft het venster open met het loginformulier. Dit past bij **gebruikerscontrole en vrijheid** en **foutpreventie**.
 - Een medewerker kan zelf niet verlagen en ziet alleen producten die op het eigen punt aanwezig zijn. Dit helpt om fouten te voorkomen en past bij **foutpreventie**.
 - De website werkt op verschillende schermen. Dit past bij **flexibiliteit en efficiënt gebruik**.
 - Oude registraties blijven zichtbaar als `Verwijderd`. Hierdoor kan de gebruiker beter zien wat er met oude gegevens is gebeurd.
@@ -705,19 +741,22 @@ Van ieder scherm van de high-fidelity versie staat een screenshot in de paragraa
 - Lege lijsten en tabellen tonen een icoon, een korte uitleg en waar nodig een knop, zoals "Zoekopdracht wissen" of "Naar Bedrijven". Dit past bij **hulp en documentatie** en **fouten herstellen**.
 - Meldingen tonen een vinkje bij succes en een waarschuwingsteken bij een fout, zodat het verschil direct zichtbaar is. Dit past bij **zichtbaarheid van de systeemstatus**.
 - Alle iconen zijn eenvoudige SVG-lijntekeningen met dezelfde lijndikte (`assets/js/icons.js`) in plaats van teksttekens, zodat ze op ieder apparaat hetzelfde en scherp zijn. Dit past bij **consistentie en standaarden**.
+- Ieder venster sluit ook met de Escape-toets, en met Tab blijft de focus binnen het open venster in plaats van te verdwijnen naar de pagina erachter. Ctrl K werkt alleen als er geen venster open is. Bij het openen van een venster staat de focus meteen in het venster (in het productvenster op de eerste `+`-knop), en na een druk op `+` of `−` houdt dezelfde knop de focus, zodat je met het toetsenbord meerdere keren kunt drukken. Dit past bij **gebruikerscontrole en vrijheid** en **flexibiliteit en efficiënt gebruik**.
+- Na het sluiten van een venster (kruisje, achtergrond, Escape of na opslaan) gaat de focus terug naar de knop of medewerkerrij waarmee het werd geopend. Wie met het toetsenbord of een schermlezer werkt, hoeft dan niet opnieuw te zoeken waar hij was. Dit past bij **gebruikerscontrole en vrijheid** en bij toegankelijkheid.
+- Acties die niet terug te draaien zijn of die een verwerkte loonmaand kunnen raken, vragen eerst om bevestiging: `Alle gegevens wissen` twee keer, en een correctie met `−` op een registratie uit een andere maand één keer ("Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?"). Dit past bij **foutpreventie**.
 
 ### Wireframes
 
 Deze paragraaf laat ieder scherm van de website zien zoals het nu werkt. Per scherm staan een naam, een omschrijving, de UI-principes die erin zitten en de heuristieken van Nielsen die erin terugkomen.
 
-**Hoe de screenshots zijn gemaakt.** Alle afbeeldingen staan in de map `docs/wireframes/` en zijn screenshots van de echte website, gemaakt met Microsoft Edge zonder venster (headless) op 1 oktober 2026 rond 12:00 uur. Er is niets in getekend of nagemaakt. De demogegevens zijn via de website zelf ingevoerd: Lotte van Dijk registreerde 2× Blikje en 1× Ei, Sophie de Boer 1× Yoghurt en 1× Glas melk, en Daan Smit 2× Sneetje brood en 1× Beleg. Daarna zijn in het beheer het consumptiepunt Kantine IT (IT Supervision, alleen Blikje en Glas melk) en Kantine Klik (Klik, geen producten) aangemaakt, is Tom de Groot naar Kantine IT en Eva Meijer naar Kantine Klik verplaatst en is de voorraad Blikje op Hoofdkantoor op 4 gezet. Daarom staan in de eerste screenshots alle medewerkers nog onder TVB en in de latere ook onder IT Supervision en Klik.
+**Hoe de screenshots zijn gemaakt.** Alle afbeeldingen staan in de map `docs/wireframes/` en zijn screenshots van de echte website, gemaakt met Microsoft Edge zonder venster (headless) op 1 oktober 2026 rond 12:00 uur. Alleen W33 (Logboek) is op 2 oktober 2026 opnieuw gemaakt, op dezelfde manier en met dezelfde stappen, omdat onder het logboek de knop `Alle gegevens wissen` is bijgekomen. Daarom staat in W33 een andere datum en tijd. Er is niets in getekend of nagemaakt. De demogegevens zijn via de website zelf ingevoerd: Lotte van Dijk registreerde 2× Blikje en 1× Ei, Sophie de Boer 1× Yoghurt en 1× Glas melk, en Daan Smit 2× Sneetje brood en 1× Beleg. Daarna zijn in het beheer het consumptiepunt Kantine IT (IT Supervision, alleen Blikje en Glas melk) en Kantine Klik (Klik, geen producten) aangemaakt, is Tom de Groot naar Kantine IT en Eva Meijer naar Kantine Klik verplaatst en is de voorraad Blikje op Hoofdkantoor op 4 gezet. Daarom staan in de eerste screenshots alle medewerkers nog onder TVB en in de latere ook onder IT Supervision en Klik.
 
 Een paar dingen om te weten:
 
 - **Camera.** Bij de schermen van de gezichtsherkenning (W12 en W13) gebruikt de browser zijn eigen testbeeld als camera (een groen vlak met een draaiende cirkel en een teller). Er staan dus geen echte gezichten in dit document. Het beeld is gespiegeld, net als bij een echte camera aan de voorkant.
 - **W13.** Het venster `Herken mij` opent alleen als er minstens één gezicht is ingesteld. Met het testbeeld kan geen gezicht worden vastgelegd. Alleen voor deze screenshot is daarom nagebootst dat er iemand is ingesteld; het venster zelf is ongewijzigd.
 - **W14.** Hier is echt herkend: als camerabeeld is een voorbeeldfoto gebruikt. De screenshot is gemaakt nadat het cameravenster vanzelf was gesloten, dus de foto staat er niet op.
-- **Bevestigingsvragen.** Bij het verwijderen van een medewerker, bedrijf of consumptiepunt vraagt de browser om bevestiging met een eigen venster (`window.confirm`). Dat venster hoort bij de browser en niet bij de website en staat daarom niet tussen de screenshots.
+- **Bevestigingsvragen.** Bij het verwijderen van een medewerker, bedrijf of consumptiepunt, bij een correctie met `−` op een registratie uit een andere maand en bij `Alle gegevens wissen` vraagt de browser om bevestiging met een eigen venster (`window.confirm`). Dat venster hoort bij de browser en niet bij de website en staat daarom niet tussen de screenshots.
 - **Schermformaten.** De medewerkerskant is vastgelegd op een staande tablet (810 × 1080 pixels), omdat de website op een tablet bij het consumptiepunt wordt gebruikt. Het beheer is vastgelegd op een laptopscherm (1280 × 900). W02 en W03 tonen de beginpagina op een groot scherm (1440 × 900) en een telefoon (390 × 844).
 
 #### Gebruikte UI-principes
@@ -897,7 +936,7 @@ Een paar dingen om te weten:
 
 ![W07 – Productvenster, eerste keer](wireframes/w07-productvenster-eerste-keer.jpg)
 
-**Omschrijving.** Na een klik op Lotte van Dijk opent het productvenster. Bovenaan staan `Persoonlijke registratie`, `Product kiezen voor Lotte van Dijk` en een begroeting die bij het tijdstip past ("Goedemiddag Lotte."). Daaronder staat een korte uitleg en de lijst met producten van haar consumptiepunt, met de prijs. Per product is er een `−`-knop, het aantal en een `+`-knop. Omdat er nog niets is gekozen, staan alle aantallen op 0 en zijn de `−`-knoppen uitgeschakeld. Onderaan staan de link `Gezichtsherkenning instellen (demo)` en de knop `Registreren`. Het venster sluit met het kruisje of door naast het venster te klikken.
+**Omschrijving.** Na een klik op Lotte van Dijk opent het productvenster. Bovenaan staan `Persoonlijke registratie`, `Product kiezen voor Lotte van Dijk` en een begroeting die bij het tijdstip past ("Goedemiddag Lotte."). Daaronder staat een korte uitleg en de lijst met producten van haar consumptiepunt, met de prijs. Per product is er een `−`-knop, het aantal en een `+`-knop. Omdat er nog niets is gekozen, staan alle aantallen op 0 en zijn de `−`-knoppen uitgeschakeld. Onderaan staan de link `Gezichtsherkenning instellen (demo)` en de knop `Registreren`. Het venster sluit met het kruisje, met een klik naast het venster of met de Escape-toets.
 
 **UI-principes:**
 - *Affordance:* de groene `+`-knoppen zijn opvallend; de uitgeschakelde `−`-knoppen zijn vaag.
@@ -946,7 +985,7 @@ Een paar dingen om te weten:
 
 ![W10 – Productvenster met "Zelfde als vorige keer"](wireframes/w10-productvenster-vorige-keer.jpg)
 
-**Omschrijving.** Lotte opent het productvenster opnieuw. De begroeting is nu "Goedemiddag Lotte, welkom terug." Daaronder staat een groen vak met een icoon: "Vorige keer koos je 2× Blikje en 1× Ei." met de knop `Zelfde als vorige keer`. Die knop vult de aantallen in; opslaan gebeurt pas met `Registreren`. Het voorstel bestaat uit de laatste registratie en alles wat binnen 60 seconden daarvoor is geregistreerd, en bevat alleen producten die het punt nu aanbiedt.
+**Omschrijving.** Lotte opent het productvenster opnieuw. De begroeting is nu "Goedemiddag Lotte, welkom terug." Daaronder staat een groen vak met een icoon: "Vorige keer koos je 2× Blikje en 1× Ei." met de knop `Zelfde als vorige keer`. Die knop vult de aantallen in; opslaan gebeurt pas met `Registreren`. Het voorstel bestaat uit de laatste registratie en alles wat binnen 60 seconden daarvoor is geregistreerd, en bevat alleen producten die het punt nu aanbiedt. Correcties van de beheerder tellen niet mee.
 
 **UI-principes:**
 - *Visuele hiërarchie:* het voorstel staat boven de productlijst en valt op door de lichtgroene achtergrond.
@@ -1053,7 +1092,7 @@ Een paar dingen om te weten:
 **Nielsen-heuristieken:**
 - *H4:* een standaard loginformulier met de gebruikelijke velden en volgorde.
 - *H10:* de hint legt uit hoe inloggen in de demo werkt.
-- *H3:* het kruisje of een klik naast het venster sluit het zonder in te loggen.
+- *H3:* het kruisje, een klik naast het venster of de Escape-toets sluit het zonder in te loggen.
 
 #### W17 – Inloggen met een foutmelding
 
@@ -1073,7 +1112,7 @@ Een paar dingen om te weten:
 
 ![W18 – Beheer: Registraties](wireframes/w18-registraties.jpg)
 
-**Omschrijving.** Na inloggen opent het beheer (`Beheer` / `Overzicht`) met de knop `Uitloggen` en zes tabbladen: Registraties, Medewerkers, Producten, Bedrijven, Voorraad en Logboek. Het actieve tabblad is groen en onderstreept. Op `Registraties` staan de filters `Medewerker` en `Maand` en de knop `CSV exporteren`. Onder `Medewerker corrigeren` staan een zoekveld en per medewerker het aantal producten en het bedrag (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80). Daaronder staat de tabel met Medewerker, Product, Aantal en Datum & tijd, met de nieuwste registratie bovenaan.
+**Omschrijving.** Na inloggen opent het beheer (`Beheer` / `Overzicht`) met de knop `Uitloggen` en zes tabbladen: Registraties, Medewerkers, Producten, Bedrijven, Voorraad en Logboek. Het actieve tabblad is groen en onderstreept. Op `Registraties` staan de filters `Medewerker` en `Maand` en de knop `CSV exporteren`. Onder `Medewerker corrigeren` staan een zoekveld, het datumveld `Datum bij toevoegen (+)` (standaard vandaag: 02-10-2026) en per medewerker het aantal producten en het bedrag (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80). Daaronder staat de tabel met Medewerker, Product, Aantal en Datum & tijd, met de nieuwste registratie bovenaan (in de screenshot staan alleen de kolomkoppen net boven de rand).
 
 **UI-principes:**
 - *Groeperen:* filters en export staan samen boven de lijst; correcties en de tabel zijn aparte blokken.
@@ -1086,12 +1125,13 @@ Een paar dingen om te weten:
 - *H4:* tabbladen en tabellen werken zoals de gebruiker gewend is.
 - *H6:* medewerkers en maanden worden uit een lijst gekozen.
 - *H7:* filteren en zoeken maken een lange lijst snel kleiner; de export gebruikt dezelfde filters.
+- *H5:* het datumveld staat al op vandaag en accepteert geen datum na vandaag.
 
 #### W19 – Beheer: registratie corrigeren
 
 ![W19 – Beheer: registratie corrigeren](wireframes/w19-registraties-correctie.jpg)
 
-**Omschrijving.** De rij van Lotte van Dijk is opengeklapt. Per product staan een rode `−`-knop, het aantal (Blikje 2, Ei 1, de rest 0) en een groene `+`-knop. `−` verwijdert de laatste registratie van dat product, `+` voegt er één toe. Iedere correctie geeft een melding en komt in het logboek.
+**Omschrijving.** De rij van Lotte van Dijk is opengeklapt. Per product staan een rode `−`-knop, het aantal (Blikje 2, Ei 1, de rest 0) en een groene `+`-knop. `−` verwijdert de laatste registratie van dat product, `+` voegt er één toe op de datum uit `Datum bij toevoegen (+)`. Valt die datum in een eerdere maand, dan vraagt de browser eerst "Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Is bij `−` de laatste registratie uit een andere maand dan de huidige, dan vraagt de browser eerst "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (met de naam van de maand). Iedere correctie geeft een melding en komt in het logboek; de correctie en de logboekregel worden in één keer opgeslagen.
 
 **UI-principes:**
 - *Progressieve onthulling:* de producten van een medewerker zijn pas zichtbaar na openklappen.
@@ -1101,13 +1141,14 @@ Een paar dingen om te weten:
 **Nielsen-heuristieken:**
 - *H3:* een verkeerde registratie is door de beheerder terug te draaien.
 - *H1:* het aantal per product is direct zichtbaar en verandert na iedere klik.
+- *H5:* een correctie in een oude maand vraagt eerst om bevestiging, omdat die loonmaand al verwerkt kan zijn.
 - *H9:* fouten van medewerkers zijn hier te herstellen.
 
 #### W20 – Beheer: filter zonder registraties
 
 ![W20 – Beheer: filter zonder registraties](wireframes/w20-registraties-geen-resultaat.jpg)
 
-**Omschrijving.** Bij het filter `Mark Jansen` zijn er geen registraties. In de tabel staat een lege toestand met een icoon en "Geen registraties voor deze filters.", gevolgd door de uitleg "Kies een andere medewerker of maand, of kies weer voor alle medewerkers en maanden." (in de screenshot net onder de rand). Met dit filter geeft `CSV exporteren` de melding "Geen registraties om te exporteren voor deze filters."
+**Omschrijving.** Bij het filter `Mark Jansen` zijn er geen registraties. In de tabel staat een lege toestand met een icoon en "Geen registraties voor deze filters.", gevolgd door de uitleg "Kies een andere medewerker of maand, of kies weer voor alle medewerkers en maanden." Voor deze screenshot is het venster naar beneden gescrold, zodat de lege toestand helemaal zichtbaar is. Met dit filter geeft `CSV exporteren` de melding "Geen registraties om te exporteren voor deze filters."
 
 **UI-principes:**
 - *Feedback:* een lege tabel krijgt een uitleg in plaats van alleen kolomkoppen.
@@ -1122,7 +1163,7 @@ Een paar dingen om te weten:
 
 ![W21 – Beheer: Medewerkers](wireframes/w21-medewerkers.jpg)
 
-**Omschrijving.** Het tabblad `Medewerkers` met de knop `Medewerker toevoegen`, een zoekveld ("Medewerker zoeken, wijzigen of activeren") en de lijst. Per medewerker staan de naam en een regel met status, bedrijf, consumptiepunt en personeelsnummer (bijvoorbeeld "Actief · TVB · Hoofdkantoor · Geen personeelsnummer"), met de knoppen `Deactiveren` en `Wijzigen`. De knop `Verwijderen` verschijnt alleen bij een inactieve medewerker en vraagt dan eerst om bevestiging.
+**Omschrijving.** Het tabblad `Medewerkers` met de knop `Medewerker toevoegen`, een zoekveld ("Medewerker zoeken, wijzigen of activeren") en de lijst. Per medewerker staan de naam en een regel met status, bedrijf, consumptiepunt en personeelsnummer (bijvoorbeeld "Actief · TVB · Hoofdkantoor · Geen personeelsnummer"), met de knoppen `Deactiveren` en `Wijzigen`. De knop `Verwijderen` verschijnt alleen bij een inactieve medewerker zonder registraties en vraagt dan eerst om bevestiging.
 
 **UI-principes:**
 - *Groeperen:* alle gegevens van één medewerker staan in één rij, de acties rechts.
@@ -1131,7 +1172,7 @@ Een paar dingen om te weten:
 
 **Nielsen-heuristieken:**
 - *H1:* de status (`Actief`) staat bij iedere medewerker.
-- *H5:* een actieve medewerker kan niet direct worden verwijderd; eerst deactiveren, dan verwijderen met bevestiging.
+- *H5:* een actieve medewerker kan niet direct worden verwijderd; eerst deactiveren, dan verwijderen met bevestiging. Een medewerker met registraties kan helemaal niet worden verwijderd, zodat de CSV-export altijd een naam en looncode heeft.
 - *H3:* deactiveren is met `Activeren` terug te draaien.
 
 #### W22 – Medewerker toevoegen
@@ -1147,7 +1188,7 @@ Een paar dingen om te weten:
 - *Visuele hiërarchie:* `Opslaan + opnieuw` is de groene hoofdknop.
 
 **Nielsen-heuristieken:**
-- *H5:* bedrijf en consumptiepunt worden gekozen uit een lijst, dus een tikfout is niet mogelijk en een punt van een ander bedrijf kan niet.
+- *H5:* bedrijf en consumptiepunt worden gekozen uit een lijst, dus een tikfout is niet mogelijk en een punt van een ander bedrijf kan niet. Looncode, personeelsnummer en werkgevernummer mogen alleen cijfers bevatten; anders verschijnt "Gebruik alleen cijfers." bij het veld. Een personeelsnummer dat een andere medewerker al heeft, wordt geweigerd ("Er is al een medewerker met dit personeelsnummer.").
 - *H7:* met `Opslaan + opnieuw` voegt de beheerder snel meerdere medewerkers achter elkaar toe.
 - *H10:* de hint bij het werkgevernummer legt uit wat leeg laten betekent.
 - *H3:* `Annuleren` en het kruisje sluiten het formulier zonder op te slaan.
@@ -1156,7 +1197,7 @@ Een paar dingen om te weten:
 
 ![W23 – Medewerker toevoegen met foutmeldingen](wireframes/w23-medewerker-foutmeldingen.jpg)
 
-**Omschrijving.** Het formulier is leeg opgeslagen. De verplichte velden hebben een rode rand en eronder staat met een waarschuwingsteken "Vul dit veld in." of, bij Bedrijf, "Maak een keuze." Het eerste foute veld krijgt de focus. Zodra de gebruiker een veld aanpast, verdwijnt de melding bij dat veld. Het optionele veld en Consumptiepunt krijgen geen melding.
+**Omschrijving.** Het formulier is leeg opgeslagen. De verplichte velden hebben een rode rand en eronder staat met een waarschuwingsteken "Vul dit veld in." of, bij Bedrijf, "Maak een keuze." Het eerste foute veld krijgt de focus. Zodra de gebruiker een veld aanpast, verdwijnt de melding bij dat veld. Het optionele veld en Consumptiepunt krijgen geen melding: er is nog geen bedrijf gekozen. Consumptiepunt wordt pas verplicht als het gekozen bedrijf consumptiepunten heeft; dan staat er "Maak een keuze." als het leeg is.
 
 **UI-principes:**
 - *Feedback:* iedere fout staat direct onder het veld waar hij bij hoort.
@@ -1213,6 +1254,7 @@ Een paar dingen om te weten:
 - *H2:* "Prijs in euro" zegt in welke eenheid de prijs moet.
 - *H10:* de voorbeelden in de velden laten zien wat er verwacht wordt.
 - *H7:* `Opslaan + opnieuw` voor meerdere producten achter elkaar.
+- *H5:* een prijs onder 0 of met meer dan twee decimalen wordt geweigerd met de melding "Vul een prijs van 0 of hoger in, met hooguit twee decimalen."
 
 #### W27 – Product met een bestaande naam
 
@@ -1278,7 +1320,7 @@ Een paar dingen om te weten:
 
 ![W31 – Beheer: Voorraad](wireframes/w31-voorraad.jpg)
 
-**Omschrijving.** Het tabblad `Voorraad`. Bovenaan staat een oranje blok `Bijbestellen (3)` met alle aangeboden producten die op zijn of bijna op zijn, over alle punten: een oranje label `Bijbestellen` bij "TVB · Hoofdkantoor — Blikje: 4 (minimum 6)" en twee rode labels `Op` bij Kantine IT (nieuw punt, nog voorraad 0). De naam van het punt is een link die de voorraad van dat punt opent. Daaronder kiest de beheerder een consumptiepunt (de lijst is per bedrijf gegroepeerd) en ziet een tabel met Product, Voorraad, Minimum, Status en Levering. Voorraad en minimum zijn direct aan te passen; bij Levering vult de beheerder een aantal in en klikt op `Toevoegen`. De status is `Op` bij 0, `Bijbestellen` bij een voorraad op of onder het minimum en anders `Op voorraad`.
+**Omschrijving.** Het tabblad `Voorraad`. Bovenaan staat een oranje blok `Bijbestellen (3)` met alle aangeboden producten die op zijn of bijna op zijn, over alle punten: een oranje label `Bijbestellen` bij "TVB · Hoofdkantoor — Blikje: 4 (minimum 6)" en twee rode labels `Op` bij Kantine IT (nieuw punt, nog voorraad 0). De naam van het punt is een link die de voorraad van dat punt opent. Daaronder kiest de beheerder een consumptiepunt (de lijst is per bedrijf gegroepeerd) en ziet een tabel met Product, Voorraad, Minimum, Status en Levering. Voorraad en minimum zijn direct aan te passen (een heel getal van 0 tot en met 100.000); bij Levering vult de beheerder een aantal in (1 tot en met 100.000) en klikt op `Toevoegen`. Een tweede tik op dezelfde knop `Toevoegen` binnen 800 milliseconden na een geboekte levering wordt genegeerd, zodat een dubbele tik op de tablet geen onterechte foutmelding geeft. De status is `Op` bij 0, `Bijbestellen` bij een voorraad op of onder het minimum en anders `Op voorraad`.
 
 **UI-principes:**
 - *Visuele hiërarchie:* wat aandacht nodig heeft, staat bovenaan in een opvallend blok.
@@ -1312,16 +1354,21 @@ Een paar dingen om te weten:
 
 ![W33 – Beheer: Logboek](wireframes/w33-logboek.jpg)
 
-**Omschrijving.** Het tabblad `Logboek` met een tabel van Actie, Details en Datum & tijd, nieuwste bovenaan. Hier staan de acties die in de beheer-screenshots zijn gedaan, zoals "Consumptiepunt toegevoegd — Kantine IT (IT Supervision), 2 producten aangeboden", "Medewerker gewijzigd — Tom de Groot" en "Voorraad geteld — Blikje op TVB · Hoofdkantoor: 4". Het logboek toont 20 regels per keer; als er meer zijn, verschijnt `Meer laden`. Het logboek bevat de wijzigingen van de beheerder; de registraties die medewerkers zelf doen, staan op het tabblad Registraties.
+**Omschrijving.** Het tabblad `Logboek` met een tabel van Actie, Details en Datum & tijd, nieuwste bovenaan. Hier staan de vijf acties die in de beheer-screenshots zijn gedaan: "Voorraad geteld — Blikje op TVB · Hoofdkantoor: 4", "Medewerker gewijzigd" voor Eva Meijer en Tom de Groot, en "Consumptiepunt toegevoegd" voor Kantine Klik (Klik, 0 producten aangeboden) en Kantine IT (IT Supervision, 2 producten aangeboden), allemaal op "02 okt, 14:35". Het logboek toont 20 regels per keer; als er meer zijn, verschijnt `Meer laden`. Het logboek bevat de wijzigingen van de beheerder; de registraties die medewerkers zelf doen, staan op het tabblad Registraties.
+
+Onder de tabel staat in grijze tekst "Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug." met daaronder de knop `Alle gegevens wissen`: rode tekst op een lichtrode achtergrond, dezelfde stijl als de andere verwijderknoppen. Na een klik vraagt de browser twee keer om bevestiging ("Alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet wissen?" en "Weet je het zeker? Dit kan niet ongedaan worden gemaakt."). Na twee keer OK worden alle gegevens, beide reservekopieën en de ingestelde gezichten van de demo gewist, wordt de beheerder uitgelogd (het beheervenster sluit) en staan de demogegevens er weer. De melding is dan "Alle gegevens zijn gewist. De demogegevens staan er weer." Bij `Annuleren` op een van de twee vragen verandert er niets. De knop is bedoeld voor het recht op vergetelheid uit de AVG, bijvoorbeeld als de tablet ergens anders wordt gebruikt.
 
 **UI-principes:**
 - *Uitlijning:* vaste kolommen met datum en tijd rechts.
-- *Witruimte en eenvoud:* één tabel, zonder extra knoppen.
+- *Witruimte en eenvoud:* één tabel met daaronder één knop; de knop staat los van de tabel, zodat hij niet als onderdeel van het logboek wordt gezien.
+- *Kleur met betekenis:* de wisknop is rood, net als de andere knoppen die iets verwijderen.
 - *Progressieve onthulling:* eerst de 20 nieuwste regels, de rest met `Meer laden`.
 
 **Nielsen-heuristieken:**
 - *H1:* de beheerder kan terugzien wat er is gewijzigd en wanneer.
 - *H2:* de acties staan in gewone zinnen met namen in plaats van codes.
+- *H3:* wie per ongeluk op `Alle gegevens wissen` klikt, kan bij beide vragen nog annuleren.
+- *H5:* wissen kan niet ongedaan worden gemaakt, daarom zijn er twee bevestigingen en zegt de tekst boven de knop precies wat er wordt gewist.
 - *H9:* bij een vergissing is te zien wat er is gebeurd, zodat het kan worden hersteld.
 
 #### W34 – Foutmelding bij een levering
@@ -1336,7 +1383,7 @@ Een paar dingen om te weten:
 - *Consistentie:* de melding staat op dezelfde plek als alle andere meldingen.
 
 **Nielsen-heuristieken:**
-- *H5:* een lege of negatieve levering wordt niet geboekt.
+- *H5:* een lege of negatieve levering, of een levering van meer dan 100.000, wordt niet geboekt.
 - *H9:* de melding zegt wat er moet gebeuren.
 - *H1:* de gebruiker ziet waarom de voorraad niet is veranderd.
 
@@ -1370,9 +1417,11 @@ Iedere use case beschrijft eerst wat de gebruiker doet en daarna wat het systeem
 
 **Verwerking:**
 
-1. Met `+` wordt een registratie toegevoegd en gaat de voorraad van het consumptiepunt van de medewerker 1 omlaag.
-2. Met `−` verwijdert `removeLastRegistration` de laatste registratie van dat product en zet het product terug op het punt uit de registratie.
-3. De correctie komt in het logboek en het overzicht wordt vernieuwd.
+1. Met `+` leest `readCorrectionDate` eerst de datum uit het veld `Datum bij toevoegen (+)` (standaard vandaag; een datum in de toekomst wordt geweigerd). Valt die datum in een eerdere maand, dan vraagt `confirmOldMonthAddition` om bevestiging; bij `Annuleren` stopt de correctie. Daarna wordt een registratie op die datum toegevoegd (een eerdere dag krijgt 12:00 uur) en gaat de voorraad van het consumptiepunt van de medewerker 1 omlaag, behalve als de datum vóór de laatste telling ligt.
+2. Met `−` zoekt `lastRegistration` eerst de registratie die verwijderd gaat worden. Is die uit een andere maand dan de huidige, dan vraagt `confirmOldMonthRemoval` om bevestiging; bij `Annuleren` stopt de correctie.
+3. `removeLastRegistration` verwijdert de laatste registratie van dat product en zet het product terug op het punt uit de registratie, maar alleen als de registratie na de laatste telling (`countedAt`) is gemaakt.
+4. `persist(wijziging, logboekregel)` voert de correctie uit, voegt de logboekregel toe en slaat beide in één keer op. Lukt opslaan niet, dan worden de correctie en de logboekregel samen teruggedraaid.
+5. Het overzicht en de voorraad worden vernieuwd.
 
 ### Medewerker beheren
 
@@ -1380,7 +1429,7 @@ Iedere use case beschrijft eerst wat de gebruiker doet en daarna wat het systeem
 
 1. De beheerder opent het tabblad `Medewerkers`.
 2. De beheerder vult de gegevens in en kiest bedrijf en consumptiepunt, of zoekt een bestaande medewerker om te wijzigen.
-3. De beheerder zet een medewerker actief of inactief. Een inactieve medewerker kan definitief worden verwijderd, na bevestiging.
+3. De beheerder zet een medewerker actief of inactief. Een inactieve medewerker zonder registraties kan definitief worden verwijderd, na bevestiging.
 
 **Verwerking:**
 
@@ -1401,7 +1450,8 @@ Iedere use case beschrijft eerst wat de gebruiker doet en daarna wat het systeem
 
 1. `savePoint` slaat naam, bedrijf en aanbod op. Voorraad en minimum van bestaande producten blijven behouden.
 2. Medewerkers van dit punt zien voortaan alleen de aangevinkte producten.
-3. Een bedrijf of punt met gekoppelde medewerkers kan niet worden verwijderd.
+3. Wordt het punt bij een ander bedrijf ondergebracht, dan verhuizen de medewerkers van het punt mee (`moveEmployeesOfPoint`). Alleen hun bedrijf verandert; hun naam en andere gegevens blijven precies zoals ze waren.
+4. Een bedrijf of punt met gekoppelde medewerkers kan niet worden verwijderd.
 
 ### Voorraad bijhouden
 
@@ -1414,10 +1464,24 @@ Iedere use case beschrijft eerst wat de gebruiker doet en daarna wat het systeem
 
 **Verwerking:**
 
-1. Een levering telt het geleverde aantal op bij de voorraad (`changeStock`).
-2. Na tellen vervangt `setStock` de voorraad; `setMinimum` past het minimum aan.
+1. Een levering (een heel getal van 1 tot en met 100.000) telt het geleverde aantal op bij de voorraad (`changeStock`).
+2. Na tellen vervangt `setStock` de voorraad en bewaart het tijdstip van de telling (`countedAt`); `setMinimum` past het minimum aan. Beide moeten een heel getal van 0 tot en met 100.000 zijn; anders volgt een melding en springt het veld terug naar de opgeslagen waarde.
 3. `stockAlerts` verzamelt alle aangeboden producten met status `Op` of `Bijbestellen` voor de bijbestellijst.
-4. Iedere levering, telling en minimumwijziging komt in het logboek.
+4. Iedere levering, telling en minimumwijziging komt in het logboek, in dezelfde opslag als de wijziging zelf.
+
+### Alle gegevens wissen
+
+**Actor:** Beheerder
+
+1. De beheerder opent het tabblad `Logboek` en klikt op `Alle gegevens wissen`.
+2. De beheerder bevestigt twee keer.
+
+**Verwerking:**
+
+1. `RegistrationApp.wipeAllData` vraagt twee keer om bevestiging (`window.confirm`). Bij `Annuleren` gebeurt er niets.
+2. `RegistrationModel.wipeAll` laat `DataStore.clearAll` de gegevens en alle reservekopieën uit `localStorage` wissen en start opnieuw met de demogegevens. Die worden direct opgeslagen, zodat andere open tabbladen ze ook inladen.
+3. De ingestelde gezichten van de demo worden vergeten.
+4. De beheerder wordt uitgelogd, het beheervenster sluit en alles wordt opnieuw getekend.
 
 ### CSV-export maken
 
@@ -1430,7 +1494,7 @@ Iedere use case beschrijft eerst wat de gebruiker doet en daarna wat het systeem
 
 1. De applicatie verzamelt de registraties die bij de filters passen.
 2. Per registratie wordt de loonmaand bepaald: de maand na de consumptie (`RegistrationModel.payrollPeriod`).
-3. De registraties worden per medewerker per loonmaand opgeteld, met de prijzen uit het productbeheer.
+3. De registraties worden per medewerker per loonmaand opgeteld, met de prijs die bij iedere registratie is bewaard (oude registraties zonder prijs: de huidige prijs uit het productbeheer).
 4. Het CSV-bestand wordt gedownload, zonder totaalregel.
 
 ## 11. Interfaces
@@ -1444,7 +1508,7 @@ De class `CsvExport` (`assets/js/csvExport.js`) maakt zelf een CSV-bestand, bedo
 - één regel per medewerker per loonmaand, zonder totaalregel (de loonadministratie leest iedere regel in als medewerker);
 - puntkomma als scheidingsteken en komma als decimaalteken, zodat een Nederlandse Excel het bestand direct goed opent;
 - UTF-8 met BOM, zodat letters zoals `é` goed worden getoond;
-- waarden die met `=`, `+`, `-` of `@` beginnen krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert.
+- waarden die met `=`, `+`, `-` of `@` beginnen, ook als daar eerst spaties, tabs of enters voor staan, krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert. Ook een waarde die met een tab of enter begint, krijgt een `'`. Let op: daardoor verandert ook een gewone waarde die met `-` begint (bijvoorbeeld een naam als "-Jan") in het bestand; in de normale export komt dat zelden voor, omdat looncodes en nummers in het formulier alleen uit cijfers mogen bestaan en bedragen nooit negatief zijn.
 
 ### Mogelijke API
 
@@ -1482,7 +1546,7 @@ Het CSV-bestand gebruikt altijd deze kolomvolgorde:
 7. Totaal
 8. Prijs
 
-Jaar en Maand zijn de loonmaand (consumptiemaand + 1). Het werkgevernummer is het afwijkende nummer van de medewerker, of anders dat van het bedrijf. De losse registraties staan in de tabel in het admin-dashboard.
+Jaar en Maand zijn de loonmaand (consumptiemaand + 1). Het werkgevernummer is het nummer dat bij de registraties is bewaard: het afwijkende nummer van de medewerker, of anders dat van het bedrijf, op het moment van registreren. Is het nummer van een medewerker binnen één maand veranderd, dan staan er voor die maand twee regels, één per werkgevernummer. De losse registraties staan in de tabel in het admin-dashboard.
 
 ### Exportopties
 
@@ -1497,15 +1561,57 @@ Week- en jaarfilters kunnen later worden toegevoegd.
 
 ## 13. Beveiliging
 
+Dit hoofdstuk beschrijft eerlijk hoe het nu zit. De demo draait helemaal in de browser, zonder server. Een aantal dingen is in de demo al goed beveiligd, maar een echte beveiliging van gegevens en beheer kan pas met een backend. Daarom staat hieronder eerst wat al beveiligd is, daarna welke risico's er in de demo overblijven, en tot slot wat er vóór productie moet gebeuren.
+
 ### Authenticatie
 
-De login in de demo is niet echt beveiligd. Elk ingevuld wachtwoord wordt geaccepteerd. In productie moet een echte login met veilige wachtwoorden worden gebruikt.
+De login in de demo is niet echt beveiligd. Elk ingevuld wachtwoord wordt geaccepteerd. Of de beheerder is ingelogd, staat alleen in het geheugen van de pagina (`adminLoggedIn`); na herladen is de beheerder uitgelogd. Sluiten van het beheervenster (kruisje, klik naast het venster of Escape) logt de beheerder ook uit. In productie moet een echte login met veilige wachtwoorden worden gebruikt.
 
 ### Autorisatie
 
-De rechten per rol staan in hoofdstuk 3. In productie moet de server deze rechten controleren; controle in de browser alleen is niet genoeg.
+De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in de browser. In productie moet de server deze rechten controleren; controle in de browser alleen is niet genoeg.
 
-Voor productie zijn ook HTTPS, gehashte wachtwoorden, sessies, server-side controle, logging en back-ups nodig.
+### Wat in de demo al is beveiligd
+
+| Maatregel | Wat het doet | Waar |
+|---|---|---|
+| HTML escapen | Alle tekst én alle waarden in HTML-attributen (zoals id's in `data-…`, `value="…"` en klassen) worden veilig gemaakt voordat ze in de pagina komen. Een naam of id met `"` of `<` kan zo geen eigen HTML of script op de pagina zetten. | `RegistrationView.escapeHtml` |
+| Veilige selectors | Waarden uit id's die in een CSS-selector worden gebruikt (bijvoorbeeld om een statuslabel of knop terug te vinden), worden eerst veilig gemaakt met `CSS.escape`. | `cssAttributeValue` in `RegistrationView.js` |
+| Controle bij het laden | Id's en verwijzingen moeten passen bij `^[A-Za-z0-9_-]{1,64}$`, de namen `__proto__`, `constructor` en `prototype` zijn als id niet toegestaan, prijzen moeten tussen 0 en 1000 liggen, kleuren hebben de vorm `#rrggbb` en teksten hebben een maximale lengte (namen 200 tekens, de volledige naam van een medewerker 401, codes 64 en logboekteksten 500). Ongeldige regels worden overgeslagen, met een reservekopie en een melding; een ongeldige kleur wordt vervangen door een standaardkleur. Zo kunnen aangepaste gegevens in `localStorage` niet via een id of kleur in de pagina terechtkomen. | `DataStore.isSafeId`, `isSafeColor`, `isValidPrice`, `isText` |
+| Content-Security-Policy | Een `<meta>`-tag laat de browser alleen bestanden van de eigen server laden (`default-src 'self'`). Scripts mogen alleen uit eigen bestanden komen, plus de twee kleine inline scripts in `index.html`, die via hun sha256-hash zijn toegestaan. `style-src` staat ook `'unsafe-inline'` toe, omdat de pagina `style`-attributen gebruikt (bijvoorbeeld de kleur van een avatar). Verder: `object-src 'none'`, `base-uri 'none'` en `form-action 'self'`. Een test controleert dat de hashes kloppen. | `index.html`, `tests/beveiliging-config.test.js` |
+| Geen referrer | `<meta name="referrer" content="no-referrer">`: de browser stuurt bij links en verzoeken het adres van de pagina niet mee. | `index.html` |
+| Geen externe bronnen | De lettertypes (DM Sans en Space Grotesk) staan in `assets/fonts/`, en face-api met de drie modellen staat in `assets/vendor/face-api/`. Er gaan dus geen verzoeken (en geen IP-adressen van medewerkers) naar Google of een CDN. | `assets/fonts/`, `assets/vendor/face-api/`, `config.js` |
+| Controle van face-api | In `assets/vendor/face-api/README.md` staan de versie (1.7.15), de bron en een SHA-256-controlegetal van ieder bestand. Een test rekent de controlegetallen opnieuw uit, zodat een veranderd bestand opvalt. `.gitattributes` zorgt dat Git deze bestanden en de lettertypes niet aanpast (geen omzetting van regeleinden). | `assets/vendor/face-api/README.md`, `.gitattributes`, `tests/beveiliging-config.test.js` |
+| Invoer begrensd | De naamvelden in de formulieren (product, voornaam, achternaam, bedrijf en consumptiepunt) accepteren hooguit 100 tekens (`maxlength`). Een prijs moet tussen 0 en 1000 euro liggen; anders verschijnt een foutmelding bij het veld. | `index.html`, `RegistrationApp.isValidPrice` |
+| Beheeracties alleen na inloggen | `exportCsv` en `wipeAllData` doen niets als er geen beheerder is ingelogd, ook als de methode op een andere manier wordt aangeroepen. | `RegistrationApp.exportCsv`, `RegistrationApp.wipeAllData` |
+| CSV-formules | Velden die (eventueel na spaties, tabs of enters) met `=`, `+`, `-` of `@` beginnen, krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert (zie hoofdstuk 11). | `CsvExport.escapeField` |
+| Alle gegevens wissen | De beheerder kan alle gegevens, de reservekopieën en de ingestelde gezichten op de tablet wissen, na twee bevestigingen (recht op vergetelheid, AVG). | `RegistrationApp.wipeAllData`, `DataStore.clearAll` |
+| Uitloggen bij sluiten | Sluiten van het beheervenster logt de beheerder uit, zodat de volgende persoon op een gedeelde tablet niet zonder wachtwoord in het beheer komt. | `RegistrationApp.closeAdmin` |
+| Gezichtsdata alleen in het geheugen | Een gezicht wordt alleen vastgelegd na een vinkje voor toestemming, en alleen als rij van 128 getallen in het geheugen bewaard; niet in `localStorage` en niet op een server. | `FaceRecognitionDemo` |
+| Veilige CI | De GitHub Actions-workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het token niet (`persist-credentials: false`) en gebruikt actions die op een commit-SHA zijn vastgezet in plaats van op een tag. | `.github/workflows/ci.yml` |
+
+### Risico's die in de demo blijven
+
+| Risico | Uitleg |
+|---|---|
+| Demo-login | Ieder ingevuld wachtwoord werkt. Iedereen die de tablet heeft, kan in het beheer. |
+| Gegevens leesbaar en aan te passen | Alle gegevens (namen, looncodes, personeelsnummers en wat iemand heeft geregistreerd) staan als gewone tekst in `localStorage` van de tablet. Iedereen met toegang tot het apparaat en de ontwikkelaarstools van de browser kan ze lezen en wijzigen. De controle bij het laden voorkomt dat dit de pagina kapotmaakt of code laat uitvoeren, maar niet dat iemand bijvoorbeeld aantallen of prijzen verandert. |
+| Code via de console | Met de ontwikkelaarstools kan iemand de code van de pagina zelf uitvoeren of aanpassen, en zo ook zonder login beheeracties doen. Controle in de browser is daarom nooit een echte beveiliging. |
+| Geen echte herkenning van een levend gezicht | De demo gezichtsherkenning heeft geen controle of er een echt, levend gezicht voor de camera staat (geen liveness-check). Een foto kan dus mogelijk werken. Hoe vaak de demo de verkeerde persoon herkent, is niet gemeten. |
+| CSP-melding `wasm-eval` | Bij het laden van de demo gezichtsherkenning toont de console één CSP-melding over `wasm-eval`. Die komt doordat de bibliotheek (TensorFlow.js in face-api) test of WebAssembly werkt. De melding is onschadelijk; de demo werkt gewoon. De CSP is hiervoor bewust niet versoepeld. |
+| Inbedden in een frame (clickjacking) | Tegen het inbedden van de pagina in een frame van een andere website helpen alleen `frame-ancestors` of `X-Frame-Options`. Die werken niet via een `<meta>`-tag en moeten als HTTP-header door de webserver worden meegestuurd. Met Live Server is dat niet geregeld. |
+
+### Verplicht vóór productie
+
+| Onderwerp | Wat moet er gebeuren |
+|---|---|
+| Inloggen | Authenticatie en autorisatie op de server. Wachtwoorden alleen als hash met Argon2id (of bcrypt) met een eigen salt. Beperk het aantal inlogpogingen (rate limiting) en blokkeer een account tijdelijk na te veel mislukte pogingen (`failed_login_count`, `locked_until`). Tweestapsverificatie (MFA) voor beheerders (`mfa_enabled`). |
+| Verbinding en headers | Alleen HTTPS, met HSTS. De webserver stuurt beveiligingsheaders mee: de Content-Security-Policy met `frame-ancestors 'none'` (of `X-Frame-Options: DENY`), en een `Permissions-Policy` die de camera alleen voor de eigen website toestaat. |
+| Logboek | Een auditlog op de server waarin staat welke beheerder wat heeft gedaan en wanneer. |
+| Database | Databaserollen met zo weinig rechten als nodig, een logboek waarin de applicatie alleen mag toevoegen (append-only) en uitsluitend geparametriseerde queries. Voorbeelden staan in [`DATABASE-SCHEMA.sql`](./DATABASE-SCHEMA.sql). |
+| AVG | Een verwerkingsregister en een DPIA (gegevensbeschermingseffectbeoordeling), een vastgestelde bewaartermijn met verwijderen of anonimiseren daarna, en een werkwijze voor het recht op inzage en het recht op verwijdering. Personeelsnummers en looncodes versleuteld opslaan. |
+| Back-ups | Back-ups van de database, met een geteste manier om ze terug te zetten. |
+| CI en afhankelijkheden | De actions vastgezet op een commit-SHA houden en Dependabot (of een vergelijkbare dienst) aanzetten, zodat updates van actions en bibliotheken zichtbaar worden. |
 
 ### Privacy en de demo gezichtsherkenning
 
@@ -1515,9 +1621,10 @@ Om het idee te kunnen laten zien, is het gebouwd als demo (`assets/js/FaceRecogn
 
 - **Uit te schakelen:** met `FACE_DEMO.enabled = false` in `config.js` verdwijnen alle knoppen.
 - **Vrijwillig en per medewerker:** een medewerker zet het zelf aan in het eigen productvenster en moet een vinkje zetten voor vrijwillige deelname.
-- **Alles op het apparaat:** de herkenning draait in de browser (bibliotheek face-api). Er gaan geen beelden naar een server.
+- **Alles op het apparaat:** de herkenning draait in de browser (bibliotheek face-api). De bibliotheek en de modellen staan in het project zelf (`assets/vendor/face-api/`), dus ook bij het laden gaat er geen verzoek naar een andere server. Er gaan geen beelden naar een server.
 - **Niets bewaard:** er worden geen foto's gemaakt. Van een gezicht wordt alleen een reeks van 128 getallen onthouden, en alleen in het geheugen. Na herladen of sluiten van de pagina is alles weg; uitzetten kan ook direct.
-- **Camera alleen als het venster open is:** sluiten zet de camera meteen uit.
+- **Camera alleen als het venster open is:** sluiten zet de camera meteen uit. Lukt het starten van het camerabeeld niet nadat de camera al aan stond, dan wordt de camera ook uitgezet. Wordt de medewerker van een open productvenster in een ander tabblad verwijderd of gedeactiveerd, dan sluiten het productvenster en het cameravenster erboven.
+- **Wissen:** `Alle gegevens wissen` vergeet ook alle ingestelde gezichten.
 - **Extra zekerheid tegen vergissingen:** het grootste gezicht in beeld telt (de persoon voor de camera), en iemand geldt pas als herkend na twee keer achter elkaar dezelfde uitkomst.
 
 Voordat de demo bij TVB met echte medewerkers wordt gebruikt, moet dit worden besproken met de begeleider en de privacyfunctionaris. Voor de echte toepassing is een QR-code of medewerkerspas het advies (zie hoofdstuk 16).
@@ -1526,11 +1633,30 @@ Voordat de demo bij TVB met echte medewerkers wordt gebruikt, moet dit worden be
 
 | Situatie | Wat doet het systeem? |
 |---|---|
-| Beschadigde JSON | De demo start opnieuw met voorbeelddata |
-| Opslaan lukt niet | De wijziging wordt teruggedraaid en de gebruiker krijgt een melding |
-| Ongeldige invoer | De gebruiker krijgt een melding |
+| Onleesbare opgeslagen gegevens | De oorspronkelijke gegevens worden bewaard als reservekopie, de demo start met voorbeelddata en de gebruiker krijgt een melding |
+| Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum, een id met verboden tekens of een prijs buiten 0 tot en met 1000) | Alleen die regels worden overgeslagen; de rest blijft. Er komt een reservekopie en de gebruiker krijgt een melding. Een medewerker met een ongeldige kleur blijft bewaard en krijgt een standaardkleur |
+| Reservekopieën | Er zijn hooguit twee reservekopieën: `tvb-blikjesregistratie-backup` (de eerste, wordt nooit overschreven) en `tvb-blikjesregistratie-backup-laatste` (de nieuwste, wordt steeds vervangen). Zo loopt de opslag niet vol |
+| De website staat in twee tabbladen open | Slaat het ene tabblad iets op, dan laadt het andere tabblad de nieuwe gegevens in (`storage`-event), zodat het geen oude gegevens terugschrijft. Een open wijzigformulier van iets dat in het andere tabblad is verwijderd, sluit met een melding. Is de medewerker van een open productvenster verwijderd of gedeactiveerd, dan sluiten het productvenster en het cameravenster met een melding. Typt de beheerder op dat moment in de voorraadtabel, dan blijft die tabel staan, zodat het half ingetypte getal niet verdwijnt. Is een record in het andere tabblad gewijzigd terwijl het formulier ervan open staat, dan sluit het formulier ook met een melding, zodat de oude waarden de nieuwe niet overschrijven. Zijn de nieuwe gegevens onleesbaar, dan krijgt de gebruiker een waarschuwing |
+| Alle gegevens zijn in een ander tabblad gewist | Dit tabblad wist ook alles, sluit open vensters en formulieren, logt de beheerder uit en toont "De gegevens zijn in een ander venster gewist." Dit gebeurt niet als de opslag alleen niet te lezen was (bijvoorbeeld geblokkeerd door de browser); dan blijft alles staan |
+| Opslag niet beschikbaar | Kan de browser `localStorage` niet lezen, dan start de demo met voorbeelddata en krijgt de gebruiker een melding |
+| Wijziging blijkt niet meer mogelijk (de gegevens zijn intussen veranderd) | Er wordt niets opgeslagen en ook geen logboekregel gemaakt; de gebruiker krijgt de melding "Er is niets gewijzigd: de gegevens zijn intussen veranderd." |
+| Knop of formulier van iets dat intussen niet meer bestaat | Er wordt niets opgeslagen of opnieuw aangemaakt; de gebruiker krijgt de melding "… bestaat niet meer; er is niets opgeslagen." |
+| Opslaan lukt niet | De wijziging én de bijbehorende logboekregel worden samen teruggedraaid en de gebruiker krijgt een melding |
+| Ongeldige invoer | De gebruiker krijgt een melding bij het veld; bijvoorbeeld een consumptiepunt is verplicht als het gekozen bedrijf punten heeft, en een personeelsnummer mag maar één keer voorkomen |
+| Prijs hoger dan 1000 euro | Er verschijnt een foutmelding bij het veld ("Vul een prijs van 0 tot en met 1000 euro in, met hooguit twee decimalen.") en er wordt niets opgeslagen |
+| Medewerker of consumptiepunt met een bedrijf of punt dat niet (meer) bestaat of niet bij elkaar hoort | Er wordt niets opgeslagen en de gebruiker krijgt een melding |
+| Ongeldige voorraad, minimum of levering | Voorraad en minimum moeten een heel getal van 0 tot en met 100.000 zijn, een levering van 1 tot en met 100.000. Anders volgt een foutmelding en springt het veld terug naar de opgeslagen waarde |
+| Dubbele tik op `Toevoegen` bij een levering | Een tweede tik binnen 800 milliseconden wordt genegeerd |
+| Correctie `−` op een registratie uit een andere maand | Eerst een bevestigingsvraag met de naam van de maand; bij `Annuleren` verandert er niets |
+| Correctie `+` met een datum in een eerdere maand | Eerst een bevestigingsvraag met de naam van de maand; bij `Annuleren` verandert er niets |
+| Correctie `+` met een datum in de toekomst, een niet-bestaande datum of van vóór 2000 | Foutmelding bij het datumveld ("Kies een geldige datum, niet later dan vandaag."), de focus gaat naar het veld en er wordt niets opgeslagen |
+| Medewerker met registraties verwijderen | Dit wordt geweigerd met een melding; deactiveren is voldoende |
+| Correctie voor een medewerker die intussen is verwijderd | Er wordt niets opgeslagen en de beheerder krijgt een melding |
+| Website geopend via een netwerkadres (zonder https) | De website werkt; alleen de demo gezichtsherkenning is dan niet beschikbaar, omdat de camera https of localhost vraagt |
+| Camera start niet goed (bijvoorbeeld het beeld kan niet worden afgespeeld) | De camera wordt uitgezet en het cameravenster toont een foutmelding |
+| Pagina staat na middernacht nog open | Een timer kijkt iedere minuut of het een nieuwe dag is (`refreshIfNewDay`); dan worden de datum en de totalen van vandaag en deze maand opnieuw getekend |
 | Medewerker niet gevonden | De zoeklijst toont een melding |
-| Geen registratie om te verwijderen | De gebruiker krijgt een informatiemelding |
+| Geen registratie om te verwijderen | De gebruiker krijgt een foutmelding ("Dit product heeft geen registratie voor deze medewerker") |
 | Geen producten op het consumptiepunt | Het productvenster toont een melding in plaats van producten |
 | Bedrijf of punt met medewerkers verwijderen | Dit wordt geweigerd met een melding |
 | Dubbele naam voor product of consumptiepunt | Dit wordt geweigerd met een melding |
@@ -1547,7 +1673,7 @@ Voordat de demo bij TVB met echte medewerkers wordt gebruikt, moet dit worden be
 | AC-03 | Product registreren | De registratie wordt opgeslagen en er verschijnt een bevestiging. |
 | AC-04 | Pagina opnieuw laden | De registratie bestaat nog. |
 | AC-05 | Datum en tijd controleren | Datum en tijd zijn opgeslagen. |
-| AC-06 | Medewerker bekijken | Een medewerker ziet geen `−`-knop en geen persoonlijke aantallen. |
+| AC-06 | Medewerker bekijken | Een medewerker ziet geen persoonlijke aantallen en kan geen opgeslagen registratie verwijderen; de `−`-knop in het productvenster verlaagt alleen de keuze die nog niet is opgeslagen. |
 | AC-07 | Cateringproduct registreren | Melk, beleg of brood wordt met de juiste prijs opgeslagen. |
 | AC-08 | Beschadigde opslag openen | De demo start opnieuw met voorbeelddata. |
 | AC-09 | Opslagfout testen | De wijziging wordt teruggedraaid en er verschijnt een melding. |
@@ -1558,7 +1684,7 @@ Voordat de demo bij TVB met echte medewerkers wordt gebruikt, moet dit worden be
 | AC-14 | Medewerker toevoegen | De nieuwe medewerker verschijnt in de lijst. |
 | AC-15 | Medewerker wijzigen | De gewijzigde medewerkergegevens worden bewaard. |
 | AC-16 | Medewerker inactief maken | De medewerker verdwijnt uit de openbare lijst, maar de historie blijft bestaan. |
-| AC-17 | Medewerker verwijderen | De medewerker verdwijnt, maar de historie blijft. |
+| AC-17 | Medewerker verwijderen | Een inactieve medewerker zonder registraties verdwijnt na bevestiging. Bij een medewerker met registraties wordt verwijderen geweigerd met een melding. |
 | AC-18 | CSV-export maken | Er wordt een CSV-bestand gedownload. |
 | AC-19 | Export openen in Excel | Medewerker, aantal, loonmaand en prijs staan in de juiste kolommen. |
 | AC-20 | Exportkolommen controleren | De acht afgesproken kolommen staan in de juiste volgorde. |
@@ -1566,12 +1692,12 @@ Voordat de demo bij TVB met echte medewerkers wordt gebruikt, moet dit worden be
 | AC-22 | Product uitzetten bij een consumptiepunt | Medewerkers van dat punt zien het product niet meer. |
 | AC-23 | Nieuw product toevoegen | Het product staat bij alle consumptiepunten uit. |
 | AC-24 | Product registreren bij een consumptiepunt | De voorraad van het punt van de medewerker wordt 1 lager. |
-| AC-25 | Registratie corrigeren met `−` | De voorraad stijgt weer met 1. |
+| AC-25 | Registratie corrigeren met `−` | De voorraad stijgt weer met 1, tenzij de voorraad van dat product na de registratie is geteld; dan blijft de telling staan. |
 | AC-26 | Voorraad op of onder het minimum | Het product verschijnt in de bijbestellijst. |
 | AC-27 | Levering boeken | De voorraad stijgt met het geleverde aantal en de actie staat in het logboek. |
 | AC-28 | Bedrijf met medewerkers verwijderen | Dit wordt geweigerd met een melding. |
-| AC-29 | Modal sluiten | De modal sluit zonder uit te loggen. |
-| AC-30 | Uitloggen | Het loginvenster verschijnt opnieuw. |
+| AC-29 | Beheervenster sluiten (kruisje, klik naast het venster of Escape) | Het venster sluit en de beheerder is uitgelogd: bij het opnieuw openen verschijnt het loginformulier. |
+| AC-30 | Uitloggen met de knop `Uitloggen` | Het loginformulier verschijnt direct in hetzelfde venster. |
 | AC-31 | Mobiel scherm testen | De website blijft goed bruikbaar. |
 | AC-32 | Apparaat op donker, instelling "Systeem" | De website opent direct in het donkere thema, zonder eerst wit op te lichten. |
 | AC-33 | Slider aanklikken | Het thema wisselt tussen licht en donker; "Systeem" en "Auto" staan uit. Na herladen blijft de keuze bewaard. |
@@ -1582,10 +1708,19 @@ Voordat de demo bij TVB met echte medewerkers wordt gebruikt, moet dit worden be
 | AC-38 | Formulier leeg opslaan | Onder ieder leeg verplicht veld staat een foutmelding en het eerste veld krijgt de focus. |
 | AC-39 | Zoeken zonder resultaat, dan "Zoekopdracht wissen" | Alle medewerkers zijn weer zichtbaar. |
 | AC-40 | Voorraad van een punt zonder aanbod | Een lege toestand legt uit wat te doen, met een knop naar Bedrijven. |
-| AC-41 | Productvenster openen na een eerdere registratie | De medewerker wordt begroet ("Goedemorgen Lotte, welkom terug.") en ziet de keuze van de vorige keer. |
+| AC-41 | Productvenster openen na een eerdere eigen registratie | De medewerker wordt begroet ("Goedemorgen Lotte, welkom terug.") en ziet de keuze van de vorige keer. Na alleen een correctie van de beheerder staat er geen "welkom terug". |
 | AC-42 | "Zelfde als vorige keer" | De aantallen van de vorige keer staan klaar; er is nog niets geregistreerd tot `Registreren`. |
 | AC-43 | Demo: gezicht instellen | Zonder vinkje kan het gezicht niet worden vastgelegd; na vastleggen staat "Gezichtsherkenning staat aan (demo)" en is de camera uit. |
 | AC-44 | Demo: herkend worden | Na "Herken mij" opent het productvenster van de juiste medewerker met "Je bent herkend met de camera." Na herladen is niemand meer ingesteld. |
+| AC-45 | `Alle gegevens wissen`, twee keer OK | Alle gegevens en reservekopieën zijn gewist, de beheerder is uitgelogd en de demogegevens staan er weer. Bij `Annuleren` op een van de twee vragen verandert er niets. |
+| AC-46 | Correctie `−` op een registratie uit een vorige maand | Eerst verschijnt "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?"; alleen na OK wordt de registratie verwijderd. In de huidige maand komt er geen vraag. |
+| AC-47 | Pagina na middernacht nog open | Binnen een minuut tonen de datum en de tegels "Vandaag" en "Deze maand" de nieuwe dag. |
+| AC-48 | Voorraad tellen met een negatief aantal of meer dan 100.000 | Er verschijnt een foutmelding en het veld springt terug naar de opgeslagen waarde. 0 en 100.000 zijn toegestaan. |
+| AC-49 | Venster sluiten | De focus staat weer op de knop of medewerkerrij waarmee het venster werd geopend. |
+| AC-50 | Pagina laden met de ontwikkelaarstools open (tabblad Netwerk) | Alle bestanden komen van de eigen server; er zijn geen verzoeken naar Google Fonts of een CDN. |
+| AC-51 | Werkgevernummer van een bedrijf wijzigen na registraties, daarna de oude maand exporteren | De export toont voor die maand nog het oude werkgevernummer. |
+| AC-52 | Correctie `+` met als datum 14 september (vandaag is in oktober) | Eerst verschijnt "Deze registratie komt in september 2026. Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Na OK staat de registratie op 14 september om 12:00 en in het logboek "… op 14 september 2026"; bij `Annuleren` verandert er niets. |
+| AC-53 | Correctie `+` met een datum in de toekomst | Er verschijnt een foutmelding bij het datumveld en er wordt niets opgeslagen. |
 
 Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `npm test` en via GitHub Actions:
 
@@ -1597,9 +1732,18 @@ Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `np
 | `tests/csv-export.test.js` | CSV-export: loonmaand, filters, sortering, afronding en veilige CSV-velden |
 | `tests/view-app.test.js` | HTML-escaping, opslaan en terugdraaien, registreren van gekozen producten en logboekteksten |
 | `tests/theme.test.js` | Thema: welke instelling bij welk thema hoort, dag en nacht bij "Auto", onthouden van de keuze |
-| `tests/welcome-face.test.js` | Welkom en "Zelfde als vorige keer" (welke keuze, alleen aangeboden producten, nog niet registreren), begroeting per tijdstip en de demo gezichtsherkenning (afstand tussen gezichten, herkennen, grootste gezicht, twee keer bevestigen, uitzetten) |
+| `tests/welcome-face.test.js` | Welkom en "Zelfde als vorige keer" (welke keuze, alleen aangeboden producten, nog niet registreren), begroeting per tijdstip en de demo gezichtsherkenning (afstand tussen gezichten, herkennen, grootste gezicht, twee keer bevestigen, uitzetten, camera uitzetten) |
+| `tests/controller.test.js` | De controller: formulieren (producten, bedrijven, consumptiepunten, medewerkers) met hun foutmeldingen, verwijderen, correcties, leveringen en voorraad tellen, inloggen en uitloggen, het logboek, de toetsen Escape, Tab en Ctrl K, en de demo gezichtsherkenning |
+| `tests/regressie.test.js` | Regressietests: voor iedere opgeloste bug uit de eerste drie codecontroles een test die faalt als de bug terugkomt |
+| `tests/controle4-model.test.js` | Regressietests van de vierde codecontrole voor model, opslag en export: id's zonder https, prijs per registratie, lege productlijst, beschadigde bedrijvenlijst, verwijderen van medewerkers met registraties |
+| `tests/controle4-ui.test.js` | Regressietests van de vierde codecontrole voor controller en view: bijwerken van lijsten en voorraad, bedrijfsfilter, sluiten via de achtergrond, focus in de correctielijst, toestemming bij de camera, uitloggen bij sluiten, dubbel personeelsnummer |
+| `tests/opslag-model-export.test.js` | Opslag, model en export: hooguit twee reservekopieën, wissen van gegevens en reservekopieën (`clearAll`, `wipeAll`), strengere controle bij het laden (veilige id's en verwijzingen, kleuren, prijzen van 0 tot en met 1000, product zonder prijs, verboden id's zoals `__proto__`, te lange teksten), `maxlength` op de naamvelden, opslag die niet te lezen is, omzetten van oude product-id's, de voorraadtelling met `countedAt`, `lastRegistration`, `moveEmployeesOfPoint` en CSV-velden met spaties of enters vóór een formule |
+| `tests/controller-robuustheid.test.js` | Robuustheid van controller en view: bijwerken na middernacht, bevestiging bij een correctie in een oude maand, wijziging en logboekregel in één keer opslaan, grenzen bij voorraad en levering, dubbele tik op `Toevoegen`, verouderde formulieren en knoppen na een wijziging in een ander tabblad, de camera bij een fout, focus terug na sluiten, het filter "Onbekend bedrijf", veilige HTML en selectors, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
+| `tests/beveiliging-config.test.js` | Beveiliging van de configuratie: geen externe bronnen in `index.html`, `config.js` en `styles.css`, geen referrer, een kloppende Content-Security-Policy met de juiste script-hashes, lokale lettertypes en face-api, een CI-workflow met alleen leesrechten en de SHA-256-controlegetallen van face-api |
+| `tests/werkgever-en-correctiedatum.test.js` | Het werkgevernummer per registratie (bewaren, oude maand houdt het oude nummer, twee exportregels bij een ander nummer in één maand, oude registraties, controle bij het laden) en de datum bij een correctie `+` (vandaag, eerdere dag, vorige maand met bevestiging, Annuleren, ongeldige datums, voorraad bij een datum vóór de telling, het datumveld na inloggen en na middernacht) |
+| `tests/gegevens-en-tabbladen.test.js` | Bewaren van gegevens en samenwerken met andere tabbladen: de prijsgrens van 1000 euro, voorraad van een verdwenen consumptiepunt, de focus na `Registreren`, "niets gewijzigd" bij opslaan, verouderde keuzes en formulieren na een wijziging in een ander tabblad, en een opslag die in een ander tabblad is gewist. Gebruikt de strenge nep-view, zodat een verkeerde selector opvalt |
 
-`tests/helpers.js` bevat de gedeelde hulpfuncties, zoals nep-opslag en een testmodel.
+`tests/helpers.js` bevat de gedeelde hulpfuncties, zoals nep-opslag, een testmodel, een nep-view met nep-elementen en een strenge nep-view (`createStrictView`) die `null` teruggeeft voor onbekende selectors, zodat ook de controller zonder browser te testen is. In totaal zijn er 435 tests.
 
 ## 16. Onderhoud en toekomst
 
@@ -1612,7 +1756,10 @@ Bij nieuwe code moet de verdeling hetzelfde blijven:
 - export in `CsvExport` (`csvExport.js`);
 - vaste waarden in `config.js`;
 - vormgeving in `assets/css/styles.css`;
-- vaste paginaopbouw in `index.html`.
+- vaste paginaopbouw in `index.html`;
+- lettertypes in `assets/fonts/` en bibliotheken van anderen in `assets/vendor/`, nooit via een externe server.
+
+Wie een inline script in `index.html` wijzigt, moet ook de sha256-hash in de Content-Security-Policy aanpassen; `tests/beveiliging-config.test.js` faalt anders.
 
 De belangrijkste volgende stap is een backend met een gedeelde database, echte login, autorisatie, auditlog en back-ups.
 

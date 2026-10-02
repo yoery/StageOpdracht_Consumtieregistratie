@@ -133,14 +133,17 @@ test("updateEmployee van een onbekende medewerker verandert niets", () => {
   assert.equal(JSON.stringify(model.employees), before);
 });
 
-test("verwijderde medewerker laat zijn registraties staan", () => {
+test("medewerker met registraties kan niet definitief worden verwijderd; zonder registraties wel", () => {
   const { model } = createModel();
   model.addRegistration("employee-1", "blikje");
+  addEmployee(model);
 
-  model.removeEmployee("employee-1");
-
+  assert.equal(model.removeEmployee("employee-1"), false);
+  assert.ok(model.findEmployee("employee-1"));
   assert.equal(model.registrations.length, 1);
-  assert.equal(model.findEmployee("employee-1"), undefined);
+
+  assert.equal(model.removeEmployee("employee-2"), true);
+  assert.equal(model.findEmployee("employee-2"), undefined);
 });
 
 test("employerNumberFor geeft een lege tekst zonder bedrijf en zonder eigen nummer", () => {
@@ -268,7 +271,10 @@ test("setStock en setMinimum passen alleen het gekozen product aan", () => {
   model.setMinimum(point.id, "blikje", 10);
 
   const products = model.findPoint(point.id).products;
-  assert.deepEqual(products.blikje, { offered: true, stock: 5, minimum: 10 });
+  // Na tellen wordt ook het moment van tellen onthouden (countedAt).
+  const { countedAt, ...blikje } = products.blikje;
+  assert.deepEqual(blikje, { offered: true, stock: 5, minimum: 10 });
+  assert.ok(!Number.isNaN(Date.parse(countedAt)));
   assert.deepEqual(products.boter, { offered: true, stock: 24, minimum: 6 });
 });
 
@@ -319,4 +325,64 @@ test("bijbestellijst is leeg als alles boven het minimum zit", () => {
   const { model } = createModel();
 
   assert.deepEqual(model.stockAlerts(), []);
+});
+
+// Extra randgevallen
+
+test("hasRegistration zegt of een medewerker een product ooit heeft geregistreerd", () => {
+  const { model } = createModel();
+  model.addRegistration("employee-1", "blikje");
+
+  assert.equal(model.hasRegistration("employee-1", "blikje"), true);
+  assert.equal(model.hasRegistration("employee-1", "ei"), false);
+  assert.equal(model.hasRegistration("employee-2", "blikje"), false);
+});
+
+test("findProduct vindt een product op id, en geeft undefined voor een onbekend id", () => {
+  const { model } = createModel();
+
+  assert.equal(model.findProduct("ei").name, "Ei");
+  assert.equal(model.findProduct("bestaat-niet"), undefined);
+});
+
+test("voorraadstatus precies op het minimum is 'bijbestellen', één erboven is 'op voorraad'", () => {
+  const { model } = createModel();
+
+  assert.equal(model.stockStatus({ stock: 6, minimum: 6 }), "low");
+  assert.equal(model.stockStatus({ stock: 7, minimum: 6 }), "ok");
+  assert.equal(model.stockStatus({ stock: -2, minimum: 0 }), "out");
+});
+
+test("vorige keer: precies 60 seconden ervoor telt nog mee, 61 seconden niet", () => {
+  const { model } = createModel();
+  model.state.registrations = [
+    registration("1", "employee-1", "ei", "2026-09-02T11:58:59"),
+    registration("2", "employee-1", "boter", "2026-09-02T11:59:00"),
+    registration("3", "employee-1", "blikje", "2026-09-02T12:00:00")
+  ];
+
+  assert.deepEqual(model.lastSelection("employee-1"), { boter: 1, blikje: 1 });
+});
+
+test("een leeg bedrijf kan worden verwijderd", () => {
+  const { model } = createModel();
+  const mvie = model.companies.find(({ name }) => name === "MVIE");
+
+  assert.equal(model.removeCompany(mvie.id), true);
+  assert.equal(model.findCompany(mvie.id), undefined);
+});
+
+test("consumptiepunt wijzigen houdt dezelfde id", () => {
+  const { model, point } = createModel();
+
+  model.savePoint({ id: point.id, name: "Kantine", companyId: point.companyId, offeredProductIds: ["ei"] });
+
+  assert.equal(model.points.length, 1);
+  assert.equal(model.findPoint(point.id).name, "Kantine");
+});
+
+test("een onbekende medewerker kan geen producten kiezen", () => {
+  const { model } = createModel();
+
+  assert.deepEqual(model.productsForEmployee("bestaat-niet"), []);
 });

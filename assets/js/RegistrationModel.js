@@ -4,6 +4,7 @@ import {
   DEFAULT_PRODUCTS,
   DEFAULT_COMPANIES
 } from "./config.js";
+import { createId } from "./ids.js";
 
 // Voorraadstatus van één product op een consumptiepunt, met de tekst die op het scherm staat.
 export const STOCK_STATUS = {
@@ -11,6 +12,12 @@ export const STOCK_STATUS = {
   low: "Bijbestellen",
   ok: "Op voorraad"
 };
+
+// Hoogste prijs (in euro) die een product mag hebben. Deze waarde moet gelijk zijn aan MAX_PRICE
+// in DataStore.js: DataStore gooit bij het laden producten en registraties met een hogere prijs
+// weg. Het model en het productformulier (RegistrationApp) gebruiken deze ene constante, zodat
+// er nooit een prijs wordt opgeslagen die na herladen verdwijnt.
+export const MAX_PRICE = 1000;
 
 /**
  * RegistrationModel — de gegevens en alle regels van de applicatie (het "Model" in MVC).
@@ -26,7 +33,8 @@ export const STOCK_STATUS = {
  *     hoe of waar dat gebeurt, dus de opslag is later te vervangen door een database.
  *   - RegistrationView: leest gegevens uit het model om ze te tonen (verandert niets).
  *   - RegistrationApp: roept de methodes aan die iets wijzigen, en daarna save().
- *   - CsvExport: leest registraties, producten en de loonmaand voor de export.
+ *   - CsvExport: leest registraties, prijzen en de loonmaand voor de export.
+ *   - ids.js: maakt de unieke id's voor nieuwe gegevens.
  *
  * Belangrijk: wijzigingen maken altijd nieuwe arrays en objecten in plaats van bestaande
  * aan te passen. Daardoor kan RegistrationApp een wijziging terugdraaien met
@@ -36,9 +44,31 @@ export class RegistrationModel {
   // Het model krijgt de opslaglaag mee en start met de opgeslagen gegevens,
   // of met demogegevens als er nog niets is opgeslagen.
   // Oude gegevens zijn dan al door DataStore.migrate omgezet.
+  // `loadProblem` neemt over wat de opslag meldt ("skipped", "unreadable" of null), zodat de
+  // controller de gebruiker kan waarschuwen.
   constructor(store) {
     this.store = store;
     this.state = store.load() || this.createSeedState();
+    this.loadProblem = store.loadProblem || null;
+  }
+
+  // Laadt de gegevens opnieuw uit de opslag, bijvoorbeeld omdat een ander tabblad iets heeft
+  // opgeslagen. Geeft true terug als er gegevens waren; anders blijft de huidige status staan.
+  // `loadProblem` wordt ook hier bijgewerkt, zodat de controller ziet of de nieuwe gegevens
+  // in orde waren (ook als er niets bruikbaars geladen kon worden).
+  reload() {
+    const data = this.store.load();
+    this.loadProblem = this.store.loadProblem || null;
+    if (!data) return false;
+
+    this.state = data;
+    return true;
+  }
+
+  // Hoort deze opslagsleutel bij de gegevens van deze applicatie? (null betekent dat de hele
+  // opslag is leeggemaakt.) Wordt gebruikt om wijzigingen uit andere tabbladen te herkennen.
+  isStorageKey(key) {
+    return key === null || key === this.store.key;
   }
 
   // ------------------------------------------------------------------
@@ -49,13 +79,13 @@ export class RegistrationModel {
   // en voorbeeldmedewerkers die aan dat punt gekoppeld zijn.
   createSeedState() {
     const companies = DEFAULT_COMPANIES.map((name) => ({
-      id: crypto.randomUUID(),
+      id: createId(),
       name,
       employerNumber: ""
     }));
 
     const demoPoint = {
-      id: crypto.randomUUID(),
+      id: createId(),
       name: "Hoofdkantoor",
       companyId: companies[0].id,
       products: {}
@@ -68,7 +98,7 @@ export class RegistrationModel {
       const parts = name.split(" ");
 
       return {
-        id: crypto.randomUUID(),
+        id: createId(),
         name,
         firstName: parts[0],
         lastName: parts.slice(1).join(" "),
@@ -103,6 +133,17 @@ export class RegistrationModel {
       points: [...this.state.points],
       auditLog: [...this.state.auditLog]
     };
+  }
+
+  // Wist alle gegevens (ook de reservekopieën in de opslag) en start opnieuw met de
+  // demogegevens. Wordt gebruikt door de knop "Alle gegevens wissen": op een gedeelde tablet
+  // moeten persoonsgegevens volledig verwijderd kunnen worden (AVG, recht op vergetelheid).
+  // Een opslag zonder clearAll (zoals de nep-opslag in de tests) wordt overgeslagen.
+  wipeAll() {
+    if (typeof this.store.clearAll === "function") this.store.clearAll();
+
+    this.state = this.createSeedState();
+    this.loadProblem = null;
   }
 
   // Herstelt de vorige status wanneer opslaan niet lukt.
@@ -144,40 +185,74 @@ export class RegistrationModel {
   // Registraties
   // ------------------------------------------------------------------
 
-  // Voegt precies één product toe met het huidige tijdstip en haalt het van de
-  // voorraad van het consumptiepunt van de medewerker af.
-  addRegistration(employeeId, productId = "blikje") {
+  // Voegt precies één product toe en haalt het van de voorraad van het consumptiepunt van de
+  // medewerker af.
+  //   - `createdAt` is het tijdstip van de registratie: standaard nu. Bij een correctie "+" kan
+  //     de beheerder een eerdere datum kiezen, bijvoorbeeld voor een vergeten blikje van vorige maand.
+  //   - Alleen een product dat het punt aanbiedt, hoort bij de voorraad. `pointId` in de
+  //     registratie is dat punt (anders null), zodat een correctie het product later weer naar
+  //     dat punt terugzet. Ligt het tijdstip vóór de laatste telling, dan zat het product al niet
+  //     meer in de getelde voorraad; dan gaat er niets van de voorraad af (net als bij
+  //     removeLastRegistration, dat dan ook niets terugzet).
+  //   - `correction: true` betekent dat de beheerder de registratie heeft toegevoegd. Die telt
+  //     niet mee als "vorige keer" in het productvenster van de medewerker.
+  //   - `price` is de prijs op het moment van registreren. Verandert de prijs later, dan
+  //     blijft een oude maand in de CSV-export hetzelfde bedrag houden.
+  //   - `employerNumber` is om dezelfde reden het werkgevernummer op het moment van registreren
+  //     (zie registrationEmployerNumber). Is er dan nog geen nummer, dan wordt het niet bewaard.
+  addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date() } = {}) {
     const employee = this.findEmployee(employeeId);
-    const pointId = employee?.pointId || null;
+    const point = this.findPoint(employee?.pointId);
+    const offered = Boolean(point?.products[productId]?.offered);
+    const employerNumber = this.employerNumberFor(employee);
 
     const registration = {
-      id: crypto.randomUUID(),
+      id: createId(),
       employeeId,
       productId,
-      pointId,
-      createdAt: new Date().toISOString()
+      price: this.productPrice(productId),
+      pointId: offered ? point.id : null,
+      createdAt: createdAt.toISOString()
     };
+    if (employerNumber) registration.employerNumber = employerNumber;
+    if (correction) registration.correction = true;
     this.state.registrations = [...this.registrations, registration];
 
-    if (pointId) this.changeStock(pointId, productId, -1);
+    const entry = this.stockEntry(point?.id, productId);
+    const madeAfterCount = !entry?.countedAt || createdAt.getTime() >= Date.parse(entry.countedAt);
+    if (offered && madeAfterCount) this.changeStock(point.id, productId, -1);
+  }
+
+  // Zoekt de meest recente registratie van deze medewerker (en van dit product, als dat is
+  // meegegeven). Dit is precies de registratie die removeLastRegistration zou verwijderen,
+  // zodat de controller vooraf kan laten zien wat er wordt gecorrigeerd.
+  // Geeft undefined terug als er geen registratie is.
+  lastRegistration(employeeId, productId) {
+    const newestFirst = [...this.registrations].reverse();
+
+    return newestFirst.find((item) => {
+      const sameEmployee = item.employeeId === employeeId;
+      const sameProduct = !productId || item.productId === productId;
+      return sameEmployee && sameProduct;
+    });
   }
 
   // Verwijdert de meest recente registratie van deze medewerker (en van dit product,
   // als dat is meegegeven). Geeft false terug als er niets te verwijderen was.
   removeLastRegistration(employeeId, productId) {
-    const newestFirst = [...this.registrations].reverse();
-    const registration = newestFirst.find((item) => {
-      const sameEmployee = item.employeeId === employeeId;
-      const sameProduct = !productId || item.productId === productId;
-      return sameEmployee && sameProduct;
-    });
-
+    const registration = this.lastRegistration(employeeId, productId);
     if (!registration) return false;
 
     this.state.registrations = this.registrations.filter((item) => item.id !== registration.id);
 
-    // Het product gaat terug naar de voorraad van het punt waar het vandaan kwam.
-    if (registration.pointId) {
+    // Het product gaat terug naar de voorraad van het punt waar het vandaan kwam, maar alleen
+    // als de registratie na de laatste telling is gemaakt. Is de voorraad daarna geteld, dan
+    // zat dit product al niet meer in de getelde hoeveelheid: de telling klopt dan al met de
+    // werkelijkheid, en er een product bij optellen zou de voorraad juist onjuist maken.
+    const entry = this.stockEntry(registration.pointId, registration.productId);
+    const madeAfterCount = !entry?.countedAt || Date.parse(registration.createdAt) >= Date.parse(entry.countedAt);
+
+    if (registration.pointId && madeAfterCount) {
       this.changeStock(registration.pointId, registration.productId, 1);
     }
 
@@ -193,10 +268,13 @@ export class RegistrationModel {
 
   // Wat koos deze medewerker de vorige keer? Neemt de laatste registratie en alles wat binnen
   // een minuut daarvoor is geregistreerd (één keer "Registreren" kan meerdere producten bevatten).
-  // Alleen producten die het eigen consumptiepunt nu aanbiedt, tellen mee.
+  // Alleen producten die het eigen consumptiepunt nu aanbiedt, tellen mee, en correcties van de
+  // beheerder niet: die heeft de medewerker niet zelf gekozen.
   // Geeft per product-id het aantal terug, bijvoorbeeld { blikje: 2, ei: 1 }, of {} als er niets is.
   lastSelection(employeeId) {
-    const own = this.registrations.filter((registration) => registration.employeeId === employeeId);
+    const own = this.registrations.filter(
+      (registration) => registration.employeeId === employeeId && !registration.correction
+    );
     if (own.length === 0) return {};
 
     const times = own.map((registration) => new Date(registration.createdAt).getTime());
@@ -214,6 +292,14 @@ export class RegistrationModel {
     return selection;
   }
 
+  // Heeft deze medewerker zelf al eens iets geregistreerd? Correcties van de beheerder tellen
+  // niet mee. Wordt gebruikt voor de begroeting "welkom terug".
+  hasOwnRegistration(employeeId) {
+    return this.registrations.some(
+      (registration) => registration.employeeId === employeeId && !registration.correction
+    );
+  }
+
   // Telt alle registraties die aan één medewerker gekoppeld zijn.
   countForEmployee(employeeId) {
     return this.registrations.filter((registration) => registration.employeeId === employeeId).length;
@@ -225,7 +311,7 @@ export class RegistrationModel {
 
     for (const registration of this.registrations) {
       if (registration.employeeId === employeeId) {
-        total += this.productPrice(registration.productId);
+        total += this.registrationPrice(registration);
       }
     }
 
@@ -272,10 +358,28 @@ export class RegistrationModel {
     return this.employees.find((employee) => employee.id === employeeId);
   }
 
+  // Mag een medewerker aan dit bedrijf en dit consumptiepunt worden gekoppeld?
+  //   - geen bedrijf (null of leeg) mag; een opgegeven bedrijf moet nog bestaan;
+  //   - geen consumptiepunt mag; een opgegeven punt moet nog bestaan én bij dat bedrijf horen.
+  // Een formulier dat al open stond, kan een bedrijf of punt bevatten dat een ander tabblad
+  // intussen heeft verwijderd. Zonder deze controle zou de medewerker naar iets wijzen dat er
+  // niet meer is (en dus geen producten meer kunnen kiezen).
+  isValidAssignment(companyId, pointId) {
+    if (companyId && !this.findCompany(companyId)) return false;
+    if (!pointId) return true;
+
+    const point = this.findPoint(pointId);
+    return Boolean(point) && point.companyId === companyId;
+  }
+
   // Maakt een nieuwe medewerker aan met een unieke id en een kleur voor de avatar.
+  // Geeft false terug (en verandert niets) als het bedrijf of consumptiepunt niet (meer) klopt
+  // (zie isValidAssignment), anders true. Zo weigert persist in de controller de wijziging.
   addEmployee(employeeData) {
+    if (!this.isValidAssignment(employeeData.companyId, employeeData.pointId)) return false;
+
     const newEmployee = {
-      id: crypto.randomUUID(),
+      id: createId(),
       ...employeeData,
       name: `${employeeData.firstName} ${employeeData.lastName}`.trim(),
       active: true,
@@ -283,15 +387,37 @@ export class RegistrationModel {
     };
 
     this.state.employees = [...this.employees, newEmployee];
+    return true;
   }
 
   // Wijzigt de gegevens van een bestaande medewerker. Id, kleur en status blijven staan.
+  // Geeft false terug (en verandert niets) als de medewerker niet meer bestaat of als het
+  // bedrijf of consumptiepunt niet (meer) klopt; anders true. Velden die niet worden meegegeven,
+  // blijven staan. Daarom wordt gecontroleerd hoe de medewerker er ná de wijziging uitziet.
   updateEmployee(employeeId, employeeData) {
+    const current = this.findEmployee(employeeId);
+    if (!current) return false;
+
+    const changed = { ...current, ...employeeData };
+    if (!this.isValidAssignment(changed.companyId, changed.pointId)) return false;
+
     const name = `${employeeData.firstName} ${employeeData.lastName}`.trim();
 
     this.state.employees = this.employees.map((employee) => {
       if (employee.id !== employeeId) return employee;
       return { ...employee, ...employeeData, name };
+    });
+    return true;
+  }
+
+  // Zet alle medewerkers van een consumptiepunt over naar een ander bedrijf, bijvoorbeeld als
+  // het punt bij een ander bedrijf wordt ondergebracht. Alleen `companyId` verandert: de naam
+  // wordt niet opnieuw opgebouwd (zoals updateEmployee doet), zodat die precies blijft staan.
+  // Er worden nieuwe objecten gemaakt, zodat snapshot/restore blijft werken.
+  moveEmployeesOfPoint(pointId, companyId) {
+    this.state.employees = this.employees.map((employee) => {
+      if (employee.pointId !== pointId) return employee;
+      return { ...employee, companyId };
     });
   }
 
@@ -303,9 +429,20 @@ export class RegistrationModel {
     });
   }
 
-  // Verwijdert een medewerker definitief; registraties blijven historisch bewaard.
+  // Heeft deze medewerker minstens één registratie (eigen keuze of correctie)?
+  employeeHasRegistrations(employeeId) {
+    return this.registrations.some((registration) => registration.employeeId === employeeId);
+  }
+
+  // Verwijdert een medewerker definitief, maar alleen als er geen registraties aan hangen.
+  // Anders zou de CSV-export die registraties tonen als "Verwijderd", zonder looncode en
+  // personeelsnummer. Zo'n medewerker kan beter inactief worden gezet.
+  // Geeft false terug (en verandert niets) als de medewerker registraties heeft.
   removeEmployee(employeeId) {
+    if (this.employeeHasRegistrations(employeeId)) return false;
+
     this.state.employees = this.employees.filter((employee) => employee.id !== employeeId);
+    return true;
   }
 
   // Een afwijkend werkgevernummer bij de medewerker (bijv. per teamleider) gaat voor;
@@ -313,6 +450,16 @@ export class RegistrationModel {
   employerNumberFor(employee) {
     if (employee?.employerNumber) return employee.employerNumber;
     return this.findCompany(employee?.companyId)?.employerNumber || "";
+  }
+
+  // Werkgevernummer van één registratie: het nummer dat bij het registreren is bewaard. Zo blijft
+  // een oude loonmaand in de CSV-export hetzelfde, ook als de medewerker later naar een ander
+  // bedrijf gaat of het nummer van het bedrijf verandert. Oude registraties (van voor deze regel)
+  // en registraties van toen er nog geen nummer was ingevuld, gebruiken het huidige nummer.
+  // Wordt gebruikt door de CSV-export (CsvExport.buildRows).
+  registrationEmployerNumber(registration) {
+    if (registration.employerNumber) return registration.employerNumber;
+    return this.employerNumberFor(this.findEmployee(registration.employeeId));
   }
 
   // ------------------------------------------------------------------
@@ -333,16 +480,29 @@ export class RegistrationModel {
     return this.findProduct(productId)?.price || 0;
   }
 
+  // Prijs van één registratie: de prijs die bij het registreren is bewaard. Oude registraties
+  // van voor deze regel hebben nog geen prijs; die tellen met de huidige productprijs.
+  // Wordt gebruikt door totalCostForEmployee en de CSV-export, zodat beide hetzelfde bedrag geven.
+  registrationPrice(registration) {
+    return Number.isFinite(registration.price) ? registration.price : this.productPrice(registration.productId);
+  }
+
   // Voegt een productsoort toe of wijzigt naam en prijs van een bestaand product.
+  // De prijs wordt afgerond op hele centen, zodat het scherm en de CSV-export hetzelfde bedrag gebruiken.
+  // Een prijs die geen getal is of niet tussen 0 en MAX_PRICE (tot en met) ligt, wordt geweigerd:
+  // DataStore zou zo'n product (en de registraties ervan) bij het volgende laden weggooien.
+  // Geeft true terug als het product is opgeslagen, anders false (en verandert er niets).
   saveProduct(productData) {
-    const product = { ...productData, price: Number(productData.price) };
+    const product = { ...productData, price: Math.round(Number(productData.price) * 100) / 100 };
+    const priceAllowed = Number.isFinite(product.price) && product.price >= 0 && product.price <= MAX_PRICE;
+    if (!priceAllowed) return false;
 
     if (this.findProduct(product.id)) {
       this.state.products = this.products.map((item) => (item.id === product.id ? product : item));
-      return;
+      return true;
     }
 
-    const newProduct = { ...product, id: crypto.randomUUID() };
+    const newProduct = { ...product, id: createId() };
     this.state.products = [...this.products, newProduct];
 
     // Een nieuw product staat bij ieder consumptiepunt uit; de beheerder zet het zelf aan.
@@ -353,6 +513,7 @@ export class RegistrationModel {
         [newProduct.id]: { offered: false, stock: 0, minimum: 0 }
       }
     }));
+    return true;
   }
 
   // Verwijdert een product alleen wanneer het nog niet in registraties wordt gebruikt.
@@ -392,7 +553,7 @@ export class RegistrationModel {
 
   // Voegt een bedrijf toe of wijzigt naam en werkgevernummer van een bestaand bedrijf.
   saveCompany({ id, name, employerNumber }) {
-    const company = { id: id || crypto.randomUUID(), name, employerNumber };
+    const company = { id: id || createId(), name, employerNumber };
 
     if (this.findCompany(id)) {
       this.state.companies = this.companies.map((item) => (item.id === id ? { ...item, ...company } : item));
@@ -429,11 +590,16 @@ export class RegistrationModel {
 
   // Voegt een consumptiepunt toe of wijzigt naam, bedrijf en aanbod.
   // De voorraad en het minimum van bestaande producten blijven behouden.
+  // Een punt hoort altijd bij een bedrijf. Bestaat dat bedrijf niet (meer), bijvoorbeeld omdat
+  // een ander tabblad het heeft verwijderd, dan wordt er niets opgeslagen en komt er false terug.
+  // Anders true.
   savePoint({ id, name, companyId, offeredProductIds }) {
+    if (!this.findCompany(companyId)) return false;
+
     const existing = this.findPoint(id);
 
     const point = {
-      id: existing ? id : crypto.randomUUID(),
+      id: existing ? id : createId(),
       name,
       companyId,
       products: {}
@@ -448,6 +614,7 @@ export class RegistrationModel {
     } else {
       this.state.points = [...this.points, point];
     }
+    return true;
   }
 
   // Verwijdert een consumptiepunt alleen als er geen medewerkers meer aan gekoppeld zijn.
@@ -496,9 +663,16 @@ export class RegistrationModel {
     this.updateStockEntry(pointId, productId, (entry) => ({ ...entry, stock: entry.stock + amount }));
   }
 
-  // Vervangt de voorraad door een getelde hoeveelheid.
+  // De voorraadregel van één product op één punt, of undefined als die niet bestaat.
+  stockEntry(pointId, productId) {
+    return this.findPoint(pointId)?.products[productId];
+  }
+
+  // Vervangt de voorraad door een getelde hoeveelheid en onthoudt wanneer er is geteld
+  // (`countedAt`). Zo weet removeLastRegistration of een registratie al in de telling zat.
   setStock(pointId, productId, stock) {
-    this.updateStockEntry(pointId, productId, (entry) => ({ ...entry, stock }));
+    const countedAt = new Date().toISOString();
+    this.updateStockEntry(pointId, productId, (entry) => ({ ...entry, stock, countedAt }));
   }
 
   // Stelt het minimum in; op of onder dit aantal moet er worden bijbesteld.
@@ -537,7 +711,7 @@ export class RegistrationModel {
   // Bewaart een controleerbaar logboek van wijzigingen door de beheerder.
   logAdminAction(action, details) {
     const entry = {
-      id: crypto.randomUUID(),
+      id: createId(),
       action,
       details,
       createdAt: new Date().toISOString()

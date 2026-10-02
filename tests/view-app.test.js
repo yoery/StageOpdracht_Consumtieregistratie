@@ -9,7 +9,7 @@ import { createModel } from "./helpers.js";
 // Nep-view: onthoudt meldingen, en iedere render-methode doet niets.
 // `$` geeft een nep-element terug, zodat classList-aanroepen werken.
 const createFakeView = () => {
-  const fakeElement = { classList: { add() {}, remove() {}, toggle() {} }, dataset: {}, value: "" };
+  const fakeElement = { classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, dataset: {}, value: "", focus() {}, setAttribute() {} };
   const target = { toasts: [], $: () => fakeElement };
   target.showToast = (message) => target.toasts.push(message);
 
@@ -106,6 +106,7 @@ test("correctie van de beheerder komt in het logboek met product- en medewerkern
 test("export zonder registraties toont een melding", () => {
   const { app, view } = createApp();
 
+  app.adminLoggedIn = true;
   app.exportCsv();
 
   assert.deepEqual(view.toasts, ["Geen registraties om te exporteren voor deze filters."]);
@@ -117,7 +118,9 @@ test("controller gebruikt de meegegeven export (compositie)", () => {
   const fakeExport = { download: (employee, month) => { calls.push([employee, month]); return true; } };
   const view = createFakeView();
 
-  new RegistrationApp(model, view, fakeExport).exportCsv();
+  const app = new RegistrationApp(model, view, fakeExport);
+  app.adminLoggedIn = true;
+  app.exportCsv();
 
   assert.equal(calls.length, 1);
   assert.deepEqual(view.toasts, []);
@@ -190,4 +193,20 @@ test("lege toestand in een tabel beslaat alle kolommen", () => {
   const view = new RegistrationView(null);
 
   assert.ok(view.emptyTableRow(4, { title: "Leeg" }).startsWith('<tr><td colspan="4"'));
+});
+
+test("maand in het filter toont ook de loonmaand", () => {
+  const { model } = createModel();
+  const view = new RegistrationView(model);
+
+  assert.equal(view.monthLabel("2026-09"), "september 2026 (loonmaand oktober 2026)");
+  assert.equal(view.monthLabel("2026-12"), "december 2026 (loonmaand januari 2027)");
+});
+
+test("lege keuze en lege naam geven een lege tekst", () => {
+  const { model } = createModel();
+  const view = new RegistrationView(model);
+
+  assert.equal(view.describeSelection({}), "");
+  assert.equal(view.initials(""), "");
 });

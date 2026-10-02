@@ -7,8 +7,8 @@
  *   - het bestand laten downloaden in de browser.
  *
  * Verbonden met:
- *   - RegistrationModel: levert registraties, medewerkers, producten, het werkgevernummer
- *     en de loonmaand (payrollPeriod).
+ *   - RegistrationModel: levert registraties, medewerkers, de prijs per registratie
+ *     (registrationPrice), het werkgevernummer en de loonmaand (payrollPeriod).
  *   - RegistrationApp: roept download() aan als de beheerder op "CSV exporteren" klikt,
  *     en toont een melding als er niets te exporteren is.
  *
@@ -41,11 +41,15 @@ export class CsvExport {
       if (!this.matchesFilters(registration, selectedEmployee, selectedMonth)) continue;
 
       const { year, month } = this.model.payrollPeriod(new Date(registration.createdAt));
-      const key = `${registration.employeeId}-${year}-${month}`;
+      // Het werkgevernummer van het moment van registreren. Is dat binnen één maand veranderd
+      // (de medewerker ging naar een ander bedrijf), dan komen er twee regels: één per nummer.
+      const employerNumber = this.model.registrationEmployerNumber(registration);
+      const key = JSON.stringify([registration.employeeId, year, month, employerNumber]);
 
       if (!grouped.has(key)) {
         grouped.set(key, {
           employee: this.model.findEmployee(registration.employeeId),
+          employerNumber,
           year,
           month,
           total: 0,
@@ -55,7 +59,9 @@ export class CsvExport {
 
       const group = grouped.get(key);
       group.total += 1;
-      group.price += this.model.productPrice(registration.productId);
+      // De prijs van het moment van registreren, zodat een oude maand niet verandert
+      // als een productprijs later wordt aangepast.
+      group.price += this.model.registrationPrice(registration);
     }
 
     const rows = [...grouped.values()].map((group) => this.toRow(group));
@@ -73,13 +79,13 @@ export class CsvExport {
   }
 
   // Zet een opgetelde groep om naar één regel met de vaste kolomnamen.
-  toRow({ employee, year, month, total, price }) {
+  toRow({ employee, employerNumber, year, month, total, price }) {
     return {
       Jaar: year,
       Maand: month,
       Looncode: employee?.payrollCode || "",
       Personeelsnummer: employee?.personnelNumber || "",
-      Werkgevernummer: this.model.employerNumberFor(employee),
+      Werkgevernummer: employerNumber,
       Naam: employee?.name || "Verwijderd",
       Totaal: total,
       Prijs: Number(price.toFixed(2))
@@ -95,10 +101,14 @@ export class CsvExport {
 
   // Maakt één CSV-veld veilig: quotes rond speciale tekens en geen formules
   // (een naam die met = + - @ begint zou Excel anders als formule uitvoeren).
+  // Ook spaties, tabs of enters vóór zo'n teken tellen mee: Excel slaat die bij het inlezen
+  // soms over, waardoor " =1+1" of een enter gevolgd door "=cmd" toch een formule wordt.
+  // Een veld dat met een tab of enter begint, krijgt (zoals altijd al) ook een apostrof.
   escapeField(value) {
     let text = String(value ?? "");
 
-    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    const startsAsFormula = /^[ \t\r\n]*[=+\-@]/.test(text);
+    if (startsAsFormula || /^[\t\r]/.test(text)) text = `'${text}`;
     if (/[";\r\n]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
 
     return text;
@@ -153,7 +163,9 @@ export class CsvExport {
     document.body.append(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    // Het tijdelijke adres pas na een seconde opruimen: in sommige browsers stopt de download
+    // anders voordat die echt begonnen is.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     return true;
   }

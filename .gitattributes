@@ -1,0 +1,4 @@
+# Meegeleverde bibliotheek, modellen en lettertypes nooit door git laten aanpassen (geen
+# omzetting van regeleinden), zodat de SHA-256-controlegetallen overal kloppen.
+assets/vendor/** -text
+assets/fonts/** -text

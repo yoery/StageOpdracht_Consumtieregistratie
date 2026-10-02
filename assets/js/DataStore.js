@@ -1,10 +1,33 @@
 import { DEFAULT_PRODUCTS, DEFAULT_COMPANIES, COLORS } from "./config.js";
+import { createId } from "./ids.js";
 
 // Oude product-id's uit een eerdere versie en hun nieuwe naam.
 const OLD_PRODUCT_IDS = {
   melk: "glas-melk",
   brood: "sneetje-brood"
 };
+
+// Toegestane tekens in een id: letters, cijfers, - en _ (maximaal 64 tekens).
+// UUID's en id's als "blikje" of "glas-melk" passen hierin.
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+// Namen die in JavaScript een speciale betekenis hebben voor objecten. Een id met zo'n naam
+// zou bij het opbouwen van een voorraadlijst ({ [id]: ... }) de werking van het object
+// veranderen; daarom zijn ze als id niet toegestaan.
+const RESERVED_IDS = new Set(["__proto__", "constructor", "prototype"]);
+
+// Maximale lengte van tekst (namen, codes, logboekregels). Langere waarden zijn vrijwel zeker
+// geknoeid en kunnen de pagina onbruikbaar maken. De formulieren laten maximaal 100 tekens toe.
+const MAX_TEXT = 200;
+const MAX_CODE = 64;
+const MAX_AUDIT_TEXT = 500;
+
+// Een kleur moet een hexcode met zes tekens zijn, bijvoorbeeld #d8f1e8.
+const SAFE_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+// De hoogste prijs die we als geldig accepteren. Een hogere prijs is vrijwel zeker een
+// typefout of geknoeide gegevens.
+const MAX_PRICE = 1000;
 
 /**
  * DataStore — de opslaglaag: leest en schrijft alle gegevens in de browser (localStorage).
@@ -17,6 +40,7 @@ const OLD_PRODUCT_IDS = {
  * Verbonden met:
  *   - RegistrationModel: krijgt een DataStore mee in de constructor en roept load() en save() aan.
  *   - config.js: standaardproducten, bedrijven en kleuren voor het omzetten van oude gegevens.
+ *   - ids.js: maakt de id's van bedrijven en consumptiepunten die bij het omzetten ontstaan.
  *
  * Alleen deze class weet dat de gegevens in localStorage staan. Voor een echte database
  * kan een andere class met dezelfde methodes load() en save() worden gebruikt; de rest
@@ -24,8 +48,16 @@ const OLD_PRODUCT_IDS = {
  */
 export class DataStore {
   // De sleutel waaronder de gegevens in localStorage staan.
+  // `loadProblem` zegt na load() of er iets mis was met de opgeslagen gegevens:
+  //   null         = alles goed;
+  //   "skipped"    = een paar beschadigde regels zijn overgeslagen, de rest is geladen;
+  //   "unreadable" = de gegevens waren helemaal onleesbaar; het model start met demogegevens;
+  //   "unavailable" = de browseropslag kon niet worden gelezen (bijvoorbeeld geblokkeerd). Dan is
+  //                   niet bekend of er gegevens zijn; er mag dus ook niets als "leeg" worden behandeld.
+  // In beide gevallen staat er een reservekopie van de oorspronkelijke gegevens in localStorage.
   constructor(key) {
     this.key = key;
+    this.loadProblem = null;
   }
 
   // ------------------------------------------------------------------
@@ -33,24 +65,95 @@ export class DataStore {
   // ------------------------------------------------------------------
 
   // Leest de opgeslagen gegevens. Geeft null terug als er niets is opgeslagen of als de
-  // gegevens beschadigd zijn; het model start dan met demogegevens.
+  // gegevens helemaal onleesbaar zijn; het model start dan met demogegevens.
+  // Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum) worden
+  // overgeslagen, zodat niet alle andere gegevens verloren gaan.
   load() {
+    this.loadProblem = null;
+
+    let value;
     try {
-      const value = localStorage.getItem(this.key);
-      if (!value) return null;
+      value = localStorage.getItem(this.key);
+    } catch (error) {
+      this.loadProblem = "unavailable";
+      return null;
+    }
+    if (!value) return null;
 
-      const data = this.migrate(JSON.parse(value));
+    try {
+      const parsed = JSON.parse(value);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Geen object");
 
-      if (!this.isValid(data)) {
-        console.warn("Ongeldige opgeslagen gegevens; de demo wordt opnieuw gestart.");
-        return null;
+      const migrated = this.migrate(parsed);
+      const data = this.removeInvalidItems(migrated);
+      const skipped = this.countSkipped(parsed, data);
+
+      if (skipped > 0) {
+        this.keepBackup(value);
+        this.loadProblem = "skipped";
+        console.warn(`${skipped} beschadigde regel(s) in de opgeslagen gegevens overgeslagen; er is een reservekopie gemaakt.`);
       }
 
       return data;
     } catch (error) {
-      console.warn("Opgeslagen gegevens konden niet worden gelezen; de demo wordt opnieuw gestart.", error);
+      this.keepBackup(value);
+      this.loadProblem = "unreadable";
+      console.warn("Opgeslagen gegevens konden niet worden gelezen; de demo wordt opnieuw gestart. Er is een reservekopie gemaakt.", error);
       return null;
     }
+  }
+
+  // Bewaart de oorspronkelijke (beschadigde) gegevens onder een eigen sleutel, zodat ze niet
+  // verloren gaan als de applicatie daarna nieuwe gegevens opslaat.
+  // Er zijn hooguit twee reservekopieën, zodat de opslag niet volloopt:
+  //   "<sleutel>-backup"         = de eerste kopie; die wordt nooit overschreven;
+  //   "<sleutel>-backup-laatste" = de nieuwste andere kopie; die wordt steeds vervangen.
+  // Staat dezelfde kopie er al als eerste kopie, dan gebeurt er niets.
+  keepBackup(value) {
+    try {
+      const [firstKey, latestKey] = this.backupKeys();
+      const existing = localStorage.getItem(firstKey);
+      if (existing === value) return;
+
+      localStorage.setItem(existing === null ? firstKey : latestKey, value);
+    } catch (error) {
+      // Geen ruimte voor een reservekopie: dan blijft alleen de melding in de console.
+    }
+  }
+
+  // De twee sleutels van de reservekopieën: de eerste en de laatste.
+  backupKeys() {
+    return [`${this.key}-backup`, `${this.key}-backup-laatste`];
+  }
+
+  // Wist alle gegevens van deze applicatie uit de browser: de gegevens zelf, beide
+  // reservekopieën en oude kopieën met een tijdstempel ("<sleutel>-backup-1726000000000")
+  // uit een eerdere versie. Wordt gebruikt door de knop "Alle gegevens wissen".
+  // De nep-opslag in de tests kent geen `length` en `key()`; dan worden alleen de vaste
+  // sleutels gewist.
+  clearAll() {
+    try {
+      const keys = [this.key, ...this.backupKeys(), ...this.oldBackupKeys()];
+      for (const key of keys) localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      console.error("De gegevens konden niet worden gewist.", error);
+      return false;
+    }
+  }
+
+  // Zoekt de oude reservekopieën met een tijdstempel achter de naam. Alleen mogelijk als de
+  // opslag kan opsommen welke sleutels er zijn (localStorage.length en localStorage.key).
+  oldBackupKeys() {
+    if (typeof localStorage.length !== "number" || typeof localStorage.key !== "function") return [];
+
+    const prefix = `${this.key}-backup-`;
+    const found = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length))) found.push(key);
+    }
+    return found;
   }
 
   // Schrijft de volledige applicatiestatus naar de browseropslag.
@@ -69,15 +172,20 @@ export class DataStore {
   // Controleren
   // ------------------------------------------------------------------
 
+  // De controle per soort gegeven. Wordt gebruikt om beschadigde regels over te slaan.
+  validators() {
+    return {
+      employees: (employee) => this.isValidEmployee(employee),
+      registrations: (registration) => this.isValidRegistration(registration),
+      products: (product) => this.isValidProduct(product),
+      companies: (company) => this.isValidCompany(company),
+      points: (point) => this.isValidPoint(point)
+    };
+  }
+
   // Zijn alle onderdelen aanwezig en in de juiste vorm?
   isValid(data) {
-    return (
-      this.allValid(data?.employees, (employee) => this.isValidEmployee(employee)) &&
-      this.allValid(data?.registrations, (registration) => this.isValidRegistration(registration)) &&
-      this.allValid(data?.products, (product) => this.isValidProduct(product)) &&
-      this.allValid(data?.companies, (company) => this.isValidCompany(company)) &&
-      this.allValid(data?.points, (point) => this.isValidPoint(point))
-    );
+    return Object.entries(this.validators()).every(([name, check]) => this.allValid(data?.[name], check));
   }
 
   // Hulpfunctie: is dit een lijst waarvan ieder item de controle doorstaat?
@@ -85,39 +193,129 @@ export class DataStore {
     return Array.isArray(list) && list.every(check);
   }
 
+  // Geeft de gegevens terug zonder de regels die de controle niet doorstaan.
+  removeInvalidItems(data) {
+    const cleaned = { ...data };
+
+    for (const [name, check] of Object.entries(this.validators())) {
+      cleaned[name] = data[name].filter(check);
+    }
+
+    return cleaned;
+  }
+
+  // Hoeveel regels uit de opgeslagen gegevens zijn er na het controleren afgevallen?
+  // (Lijsten die bij het omzetten zijn aangevuld, zoals de standaardproducten, tellen niet als verlies.)
+  countSkipped(stored, cleaned) {
+    const lists = [...Object.keys(this.validators()), "auditLog"];
+
+    return lists.reduce((total, name) => {
+      const storedCount = Array.isArray(stored[name]) ? stored[name].length : 0;
+      return total + Math.max(0, storedCount - cleaned[name].length);
+    }, 0);
+  }
+
+  // Is dit een object (en geen null, tekst of getal)? Andere waarden in een lijst worden overgeslagen.
+  isObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  // Is dit een veilige id: alleen letters, cijfers, - en _ (zie SAFE_ID)?
+  // De view zet id's in HTML-attributen, zoals data-edit-product="...". Een id met tekens als
+  // " < > zou daar uit het attribuut kunnen breken en eigen HTML of CSS op de pagina zetten
+  // (bijvoorbeeld als iemand de opgeslagen gegevens in de browser heeft aangepast).
+  // Daarom wordt iedere id en iedere verwijzing naar een id bij het laden hiermee gecontroleerd.
+  isSafeId(value) {
+    return typeof value === "string" && SAFE_ID.test(value) && !RESERVED_IDS.has(value);
+  }
+
+  // Is dit tekst van hooguit `maxLength` tekens? Met `required` mag de tekst niet leeg zijn.
+  // Codes (looncode, personeelsnummer) kunnen in oude gegevens ook een getal zijn; daarom wordt
+  // de lengte van de tekstvorm gecontroleerd.
+  isText(value, maxLength = MAX_TEXT, { required = false } = {}) {
+    if (typeof value !== "string") return false;
+    if (required && value.trim() === "") return false;
+    return value.length <= maxLength;
+  }
+
+  isShortCode(value) {
+    return String(value ?? "").length <= MAX_CODE;
+  }
+
+  // Een verwijzing die ook leeg (null) mag zijn, bijvoorbeeld een medewerker zonder bedrijf.
+  // Staat er wel iets, dan moet het een veilige id zijn.
+  isSafeOptionalId(value) {
+    return value === null || value === undefined || this.isSafeId(value);
+  }
+
+  // Is dit een geldige kleur in de vorm #rrggbb? De kleur komt in een style-attribuut terecht,
+  // dus andere tekst (zoals "red; background: url(...)") mag er niet in.
+  isSafeColor(value) {
+    return typeof value === "string" && SAFE_COLOR.test(value);
+  }
+
+  // Is dit een geldige prijs: een echt getal van 0 tot en met MAX_PRICE?
+  isValidPrice(value) {
+    return Number.isFinite(value) && value >= 0 && value <= MAX_PRICE;
+  }
+
+  // Een medewerker moet een veilige id, een naam, een geldige kleur en een status hebben.
+  // Bedrijf en consumptiepunt mogen leeg zijn, maar als ze er staan moeten het veilige id's zijn.
   isValidEmployee(employee) {
     return (
-      typeof employee?.id === "string" &&
-      typeof employee.name === "string" &&
-      employee.name.trim() !== "" &&
-      typeof employee.color === "string" &&
-      typeof employee.active === "boolean"
+      this.isSafeId(employee?.id) &&
+      this.isText(employee.name, MAX_TEXT * 2 + 1, { required: true }) &&
+      this.isText(employee.firstName ?? "") &&
+      this.isText(employee.lastName ?? "") &&
+      this.isShortCode(employee.payrollCode) &&
+      this.isShortCode(employee.personnelNumber) &&
+      this.isShortCode(employee.employerNumber) &&
+      this.isSafeColor(employee.color) &&
+      typeof employee.active === "boolean" &&
+      this.isSafeOptionalId(employee.companyId) &&
+      this.isSafeOptionalId(employee.pointId)
     );
   }
 
+  // Een registratie moet een veilige id, medewerker, product en geldige datum hebben.
+  // De prijs is optioneel (oude registraties hebben er nog geen), maar als die er staat,
+  // moet het een geldige prijs zijn; anders zou de CSV-export een verkeerd bedrag tonen.
+  // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
+  // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
   isValidRegistration(registration) {
+    const hasValidPrice = registration?.price === undefined || this.isValidPrice(registration.price);
+    const hasValidEmployerNumber =
+      registration?.employerNumber === undefined ||
+      (typeof registration.employerNumber === "string" && this.isShortCode(registration.employerNumber));
+
     return (
-      typeof registration?.id === "string" &&
-      typeof registration.employeeId === "string" &&
-      typeof registration.productId === "string" &&
+      this.isSafeId(registration?.id) &&
+      this.isSafeId(registration.employeeId) &&
+      this.isSafeId(registration.productId) &&
+      this.isSafeOptionalId(registration.pointId) &&
       typeof registration.createdAt === "string" &&
-      !Number.isNaN(Date.parse(registration.createdAt))
+      !Number.isNaN(Date.parse(registration.createdAt)) &&
+      hasValidPrice &&
+      hasValidEmployerNumber
     );
   }
 
+  // Een product moet een veilige id, een naam en een geldige prijs hebben.
   isValidProduct(product) {
-    return typeof product?.id === "string" && typeof product.name === "string" && Number.isFinite(product.price);
+    return this.isSafeId(product?.id) && this.isText(product.name) && this.isValidPrice(product.price);
   }
 
+  // Een bedrijf moet een veilige id en een naam hebben.
   isValidCompany(company) {
-    return typeof company?.id === "string" && typeof company.name === "string";
+    return this.isSafeId(company?.id) && this.isText(company.name) && this.isShortCode(company.employerNumber);
   }
 
+  // Een consumptiepunt moet een veilige id, een naam, een bedrijf en een voorraadlijst hebben.
   isValidPoint(point) {
     return (
-      typeof point?.id === "string" &&
-      typeof point.name === "string" &&
-      typeof point.companyId === "string" &&
+      this.isSafeId(point?.id) &&
+      this.isText(point.name) &&
+      this.isSafeId(point.companyId) &&
       point.products !== null &&
       typeof point.products === "object"
     );
@@ -129,79 +327,164 @@ export class DataStore {
 
   // Zet opgeslagen gegevens om naar de huidige opbouw. Ontbrekende velden krijgen een
   // standaardwaarde, zodat ook gegevens uit een oudere versie blijven werken.
+  // Waarden in een lijst die geen object zijn (bijvoorbeeld null), worden overgeslagen.
+  // Staat er bij `companies` iets anders dan een lijst, dan zijn de gegevens beschadigd. Dan
+  // gooit deze methode een fout, zodat load() de gegevens als onleesbaar behandelt en er een
+  // reservekopie komt. Anders zouden alle consumptiepunten (en hun voorraad) worden vervangen.
   migrate(data) {
-    const products = this.migrateProducts(data.products);
-    let employees = (data.employees || []).map((employee, index) => this.migrateEmployee(employee, index));
-    let companies = data.companies;
-    let points = data.points;
+    const objects = (list) => (Array.isArray(list) ? list.filter((item) => this.isObject(item)) : []);
 
-    // Oude gegevens hebben nog geen bedrijven en consumptiepunten: die worden hier aangemaakt.
-    if (!Array.isArray(companies)) {
+    if (data.companies !== undefined && !Array.isArray(data.companies)) {
+      throw new Error("De bedrijvenlijst is beschadigd");
+    }
+
+    const products = this.migrateProducts(data.products);
+    let employees = objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index));
+    let companies = objects(data.companies);
+    let points = objects(data.points);
+
+    // Oude gegevens hebben nog geen bedrijven en consumptiepunten (het veld ontbreekt):
+    // die worden hier aangemaakt.
+    if (data.companies === undefined) {
       ({ companies, points, employees } = this.migrateCompanies(employees, products));
     }
 
     return {
       employees,
-      registrations: (data.registrations || []).map((registration) => this.migrateRegistration(registration)),
+      registrations: objects(data.registrations).map((registration) => this.migrateRegistration(registration)),
       products,
       companies,
-      points: (Array.isArray(points) ? points : []).map((point) => this.completePointStock(point, products)),
-      auditLog: Array.isArray(data.auditLog) ? data.auditLog : []
+      points: points.map((point) => this.completePointStock(point, products)),
+      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry)) : []
     };
   }
 
   // Opgeslagen producten gaan voor, zodat gewijzigde prijzen en verwijderde producten bewaard
   // blijven. Alleen oude gegevens zonder productlijst krijgen de standaardproducten.
+  // Een lege lijst blijft leeg: dan heeft de beheerder alle producten zelf verwijderd.
+  // De prijs wordt omgezet met toNumber: een lege of ontbrekende prijs wordt dan NaN, zodat
+  // isValidProduct het product overslaat (met Number(null) = 0 zou het gratis worden).
+  // Oude product-id's ("melk", "brood") krijgen hun nieuwe naam, net als in de registraties.
   migrateProducts(storedProducts) {
-    if (Array.isArray(storedProducts) && storedProducts.length > 0) {
-      return storedProducts.map((product) => ({ ...product, price: Number(product.price) }));
+    if (Array.isArray(storedProducts)) {
+      return storedProducts
+        .filter((product) => this.isObject(product))
+        .map((product) => ({
+          ...product,
+          id: this.renameProductId(product.id),
+          price: this.toNumber(product.price)
+        }));
     }
     return DEFAULT_PRODUCTS.map((product) => ({ ...product }));
   }
 
+  // Zet een opgeslagen waarde om naar een getal. Anders dan Number() geeft dit NaN (geen getal)
+  // bij null, undefined, lege tekst en andere soorten waarden, zodat die als ongeldig tellen.
+  // Een getal als tekst ("0.70") wordt wel gewoon omgezet.
+  toNumber(value) {
+    if (typeof value === "number") return value;
+    if (typeof value === "string" && value.trim() !== "") return Number(value);
+    return NaN;
+  }
+
+  // Geeft de nieuwe naam van een oude product-id, of de id zelf als die niet veranderd is.
+  // Object.hasOwn zorgt dat een id als "constructor" niet per ongeluk iets van het object zelf vindt.
+  renameProductId(productId) {
+    return Object.hasOwn(OLD_PRODUCT_IDS, productId) ? OLD_PRODUCT_IDS[productId] : productId;
+  }
+
+  // Zet de oude product-id's in de voorraadlijst van een consumptiepunt om naar de nieuwe.
+  // Staat de nieuwe id er al, dan gaat die voor en vervalt de oude regel.
+  renameStockKeys(stock) {
+    const renamed = {};
+
+    for (const [productId, entry] of Object.entries(stock || {})) {
+      const newId = this.renameProductId(productId);
+      if (newId !== productId && stock[newId]) continue;
+      renamed[newId] = entry;
+    }
+
+    return renamed;
+  }
+
   // Vult ontbrekende velden van een medewerker aan. Een oude naam als "Anna van der Berg"
-  // wordt opgesplitst in voornaam "Anna van der" en achternaam "Berg".
+  // wordt opgesplitst in voornaam "Anna van der" en achternaam "Berg". Een naam van één woord
+  // ("Anna") wordt alleen de voornaam; de achternaam blijft dan leeg.
+  // Een ontbrekende of ongeldige kleur (geen #rrggbb) wordt vervangen door een kleur uit COLORS.
+  // De medewerker zelf blijft dus bewaard; alleen de kleur verandert.
   migrateEmployee(employee, index) {
     const nameParts = String(employee.name || "").trim().split(/\s+/);
+    const hasLastName = nameParts.length > 1;
     const fullName = employee.name || `${employee.firstName || ""} ${employee.lastName || ""}`.trim();
 
     return {
       ...employee,
       name: fullName,
-      firstName: employee.firstName || nameParts.slice(0, -1).join(" ") || nameParts[0] || "",
-      lastName: employee.lastName || nameParts.slice(-1)[0] || "",
+      firstName: employee.firstName || (hasLastName ? nameParts.slice(0, -1).join(" ") : nameParts[0]) || "",
+      lastName: employee.lastName || (hasLastName ? nameParts.at(-1) : ""),
       payrollCode: employee.payrollCode || "",
       personnelNumber: employee.personnelNumber || "",
       employerNumber: employee.employerNumber ? String(employee.employerNumber) : "",
       companyId: employee.companyId || null,
       pointId: employee.pointId || null,
       active: employee.active !== false,
-      color: employee.color || COLORS[index % COLORS.length]
+      color: this.isSafeColor(employee.color) ? employee.color : COLORS[index % COLORS.length]
     };
   }
 
   // Zet oude product-id's om; een registratie zonder product wordt een blikje.
   migrateRegistration(registration) {
-    const productId = OLD_PRODUCT_IDS[registration.productId] || registration.productId || "blikje";
+    const productId = this.renameProductId(registration.productId) || "blikje";
     return { ...registration, productId };
   }
 
   // Ieder consumptiepunt krijgt een voorraadregel voor ieder product; nieuwe producten staan uit.
+  // Voorraad en minimum worden altijd getallen (een getal als tekst, zoals "5", zou bij optellen
+  // anders "51" worden in plaats van 6). De voorraad mag negatief zijn (er is dan meer
+  // geregistreerd dan geteld), het minimum niet: een negatief minimum wordt 0.
+  // Het tijdstip van de laatste telling (`countedAt`) blijft bewaard als het een geldige datum is;
+  // removeLastRegistration gebruikt dat om te bepalen of een product terug naar de voorraad gaat.
   completePointStock(point, products) {
+    const stock = this.renameStockKeys(point.products);
     const completedProducts = {};
 
     for (const product of products) {
-      completedProducts[product.id] = point.products?.[product.id] || { offered: false, stock: 0, minimum: 0 };
+      const entry = this.isObject(stock[product.id]) ? stock[product.id] : {};
+      const amount = this.toNumber(entry.stock);
+      const minimum = this.toNumber(entry.minimum);
+
+      completedProducts[product.id] = {
+        offered: entry.offered === true,
+        stock: Number.isFinite(amount) ? amount : 0,
+        minimum: Number.isFinite(minimum) ? Math.max(0, minimum) : 0
+      };
+
+      const hasValidCount = typeof entry.countedAt === "string" && !Number.isNaN(Date.parse(entry.countedAt));
+      if (hasValidCount) completedProducts[product.id].countedAt = entry.countedAt;
     }
 
     return { ...point, products: completedProducts };
+  }
+
+  // Een logboekregel moet een actie, details en een geldige datum hebben. Ongeldige regels
+  // worden bij het laden overgeslagen, zodat één beschadigde regel het logboek niet laat vastlopen.
+  // De id is optioneel (heel oude regels hebben er geen), maar als die er staat moet het een
+  // veilige id zijn, net als bij de andere gegevens.
+  isValidAuditEntry(entry) {
+    return (
+      this.isSafeOptionalId(entry?.id) &&
+      this.isText(entry?.action, MAX_AUDIT_TEXT) &&
+      this.isText(entry.details, MAX_AUDIT_TEXT) &&
+      typeof entry.createdAt === "string" &&
+      !Number.isNaN(Date.parse(entry.createdAt))
+    );
   }
 
   // Zet de oude vrije tekstvelden bedrijfsnaam en werkgevernummer om naar echte bedrijven.
   // Ieder bedrijf met medewerkers krijgt één consumptiepunt met alle producten, zodat
   // medewerkers na de update dezelfde producten blijven zien als ervoor.
   migrateCompanies(employees, products) {
-    const companies = DEFAULT_COMPANIES.map((name) => ({ id: crypto.randomUUID(), name, employerNumber: "" }));
+    const companies = DEFAULT_COMPANIES.map((name) => ({ id: createId(), name, employerNumber: "" }));
     const points = [];
 
     // Zoekt een bedrijf op naam (hoofdletters maken niet uit), of maakt het aan.
@@ -209,7 +492,7 @@ export class DataStore {
       let company = companies.find((item) => item.name.toLowerCase() === name.toLowerCase());
 
       if (!company) {
-        company = { id: crypto.randomUUID(), name, employerNumber: "" };
+        company = { id: createId(), name, employerNumber: "" };
         companies.push(company);
       }
 
@@ -221,7 +504,7 @@ export class DataStore {
       let point = points.find((item) => item.companyId === company.id);
 
       if (!point) {
-        point = { id: crypto.randomUUID(), name: company.name, companyId: company.id, products: {} };
+        point = { id: createId(), name: company.name, companyId: company.id, products: {} };
         for (const product of products) {
           point.products[product.id] = { offered: true, stock: 0, minimum: 0 };
         }
