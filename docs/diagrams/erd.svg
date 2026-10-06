@@ -1,0 +1,316 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1850" height="1100" viewBox="0 0 1850 1100" role="img" aria-labelledby="title desc">
+  <title id="title">ERD productiedatabase</title>
+  <desc id="desc">Entity-relationshipdiagram van DATABASE-SCHEMA.sql: companies, consumption_points, point_products, products, employees, registrations, admins en audit_log, met sleutels en kardinaliteiten.</desc>
+  <defs>
+    <style>
+      text { font-family: "DM Sans", sans-serif; fill: #163540; }
+      .kop { font-family: "Space Grotesk", "DM Sans", sans-serif; font-weight: 700; }
+      .sub { fill: #71858a; }
+      .lbl { font-size: 13.5px; fill: #71858a; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+      .lijn { fill: none; stroke: #163540; stroke-width: 1.6; }
+      .stip { fill: none; stroke: #163540; stroke-width: 1.5; stroke-dasharray: 7 5; }
+    </style>
+    <!-- gevulde pijlpunt (aanroep, gegevensstroom) -->
+    <marker id="pijl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#163540"/>
+    </marker>
+    <!-- open pijlpunt (UML: associatie en afhankelijkheid) -->
+    <marker id="open" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <rect width="1850" height="1100" fill="#ffffff"/>
+<text x="40" y="50" font-size="28" class="kop">ERD – productiedatabase (DATABASE-SCHEMA.sql)</text>
+<text x="40" y="78" font-size="15" class="sub">Tabellen met primaire sleutels (PK), vreemde sleutels (FK), unieke kolommen (UQ) en kardinaliteiten (kraaienpootnotatie)</text>
+<g>
+<rect x="40" y="110" width="360" height="188" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,110 H394 A6,6 0 0 1 400,116 V148 H40 V116 A6,6 0 0 1 46,110 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="54" y="135" font-size="17" fill="#ffffff" class="kop">companies</text>
+<text x="52" y="168" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="104" y="168" font-size="13.5" font-weight="700">company_id</text>
+<text x="388" y="168" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="42" y="175" width="356" height="24" fill="#f8fbfa"/>
+<text x="52" y="192" font-size="11.5" font-weight="700" fill="#71858a">UQ</text>
+<text x="104" y="192" font-size="13.5">name</text>
+<text x="388" y="192" text-anchor="end" font-size="13" class="sub">varchar(150)</text>
+<text x="52" y="216" font-size="11.5" font-weight="700" fill="#71858a">UQ</text>
+<text x="104" y="216" font-size="13.5">employer_number</text>
+<text x="388" y="216" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+<rect x="42" y="223" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="240" font-size="13.5">active</text>
+<text x="388" y="240" text-anchor="end" font-size="13" class="sub">boolean</text>
+<text x="104" y="264" font-size="13.5">created_at</text>
+<text x="388" y="264" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="42" y="271" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="288" font-size="13.5">updated_at</text>
+<text x="388" y="288" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<g>
+<rect x="510" y="110" width="360" height="188" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M516,110 H864 A6,6 0 0 1 870,116 V148 H510 V116 A6,6 0 0 1 516,110 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="524" y="135" font-size="17" fill="#ffffff" class="kop">consumption_points</text>
+<text x="522" y="168" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="574" y="168" font-size="13.5" font-weight="700">point_id</text>
+<text x="858" y="168" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="512" y="175" width="356" height="24" fill="#f8fbfa"/>
+<text x="522" y="192" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="574" y="192" font-size="13.5">company_id</text>
+<text x="858" y="192" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="522" y="216" font-size="11.5" font-weight="700" fill="#71858a">UQ</text>
+<text x="574" y="216" font-size="13.5">name</text>
+<text x="858" y="216" text-anchor="end" font-size="13" class="sub">varchar(150)</text>
+<rect x="512" y="223" width="356" height="24" fill="#f8fbfa"/>
+<text x="574" y="240" font-size="13.5">active</text>
+<text x="858" y="240" text-anchor="end" font-size="13" class="sub">boolean</text>
+<text x="574" y="264" font-size="13.5">created_at</text>
+<text x="858" y="264" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="512" y="271" width="356" height="24" fill="#f8fbfa"/>
+<text x="574" y="288" font-size="13.5">updated_at</text>
+<text x="858" y="288" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<g>
+<rect x="980" y="110" width="360" height="212" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M986,110 H1334 A6,6 0 0 1 1340,116 V148 H980 V116 A6,6 0 0 1 986,110 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="994" y="135" font-size="17" fill="#ffffff" class="kop">point_products</text>
+<text x="992" y="168" font-size="11.5" font-weight="700" fill="#087252">PK, FK</text>
+<text x="1044" y="168" font-size="13.5" font-weight="700">point_id</text>
+<text x="1328" y="168" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="982" y="175" width="356" height="24" fill="#f8fbfa"/>
+<text x="992" y="192" font-size="11.5" font-weight="700" fill="#087252">PK, FK</text>
+<text x="1044" y="192" font-size="13.5" font-weight="700">product_id</text>
+<text x="1328" y="192" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="1044" y="216" font-size="13.5">offered</text>
+<text x="1328" y="216" text-anchor="end" font-size="13" class="sub">boolean</text>
+<rect x="982" y="223" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="240" font-size="13.5">stock</text>
+<text x="1328" y="240" text-anchor="end" font-size="13" class="sub">integer</text>
+<text x="1044" y="264" font-size="13.5">minimum</text>
+<text x="1328" y="264" text-anchor="end" font-size="13" class="sub">integer</text>
+<rect x="982" y="271" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="288" font-size="13.5">counted_at</text>
+<text x="1328" y="288" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<text x="1044" y="312" font-size="13.5">updated_at</text>
+<text x="1328" y="312" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<g>
+<rect x="1450" y="110" width="360" height="188" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1456,110 H1804 A6,6 0 0 1 1810,116 V148 H1450 V116 A6,6 0 0 1 1456,110 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="1464" y="135" font-size="17" fill="#ffffff" class="kop">products</text>
+<text x="1462" y="168" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="1514" y="168" font-size="13.5" font-weight="700">product_id</text>
+<text x="1798" y="168" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="1452" y="175" width="356" height="24" fill="#f8fbfa"/>
+<text x="1462" y="192" font-size="11.5" font-weight="700" fill="#71858a">UQ</text>
+<text x="1514" y="192" font-size="13.5">name</text>
+<text x="1798" y="192" text-anchor="end" font-size="13" class="sub">varchar(150)</text>
+<text x="1514" y="216" font-size="13.5">price</text>
+<text x="1798" y="216" text-anchor="end" font-size="13" class="sub">numeric(10,2)</text>
+<rect x="1452" y="223" width="356" height="24" fill="#f8fbfa"/>
+<text x="1514" y="240" font-size="13.5">active</text>
+<text x="1798" y="240" text-anchor="end" font-size="13" class="sub">boolean</text>
+<text x="1514" y="264" font-size="13.5">created_at</text>
+<text x="1798" y="264" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="1452" y="271" width="356" height="24" fill="#f8fbfa"/>
+<text x="1514" y="288" font-size="13.5">updated_at</text>
+<text x="1798" y="288" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<g>
+<rect x="40" y="440" width="360" height="332" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,440 H394 A6,6 0 0 1 400,446 V478 H40 V446 A6,6 0 0 1 46,440 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="54" y="465" font-size="17" fill="#ffffff" class="kop">employees</text>
+<text x="52" y="498" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="104" y="498" font-size="13.5" font-weight="700">employee_id</text>
+<text x="388" y="498" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="42" y="505" width="356" height="24" fill="#f8fbfa"/>
+<text x="52" y="522" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="104" y="522" font-size="13.5">company_id</text>
+<text x="388" y="522" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="52" y="546" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="104" y="546" font-size="13.5">point_id</text>
+<text x="388" y="546" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="42" y="553" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="570" font-size="13.5">first_name</text>
+<text x="388" y="570" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+<text x="104" y="594" font-size="13.5">last_name</text>
+<text x="388" y="594" text-anchor="end" font-size="13" class="sub">varchar(150)</text>
+<rect x="42" y="601" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="618" font-size="13.5">payroll_code</text>
+<text x="388" y="618" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+<text x="52" y="642" font-size="11.5" font-weight="700" fill="#71858a">UQ</text>
+<text x="104" y="642" font-size="13.5">personnel_number</text>
+<text x="388" y="642" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+<rect x="42" y="649" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="666" font-size="13.5">employer_number</text>
+<text x="388" y="666" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+<text x="104" y="690" font-size="13.5">active</text>
+<text x="388" y="690" text-anchor="end" font-size="13" class="sub">boolean</text>
+<rect x="42" y="697" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="714" font-size="13.5">color</text>
+<text x="388" y="714" text-anchor="end" font-size="13" class="sub">varchar(20)</text>
+<text x="104" y="738" font-size="13.5">created_at</text>
+<text x="388" y="738" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="42" y="745" width="356" height="24" fill="#f8fbfa"/>
+<text x="104" y="762" font-size="13.5">updated_at</text>
+<text x="388" y="762" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<g>
+<rect x="510" y="440" width="360" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M516,440 H864 A6,6 0 0 1 870,446 V478 H510 V446 A6,6 0 0 1 516,440 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="524" y="465" font-size="17" fill="#ffffff" class="kop">registrations</text>
+<text x="522" y="498" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="574" y="498" font-size="13.5" font-weight="700">registration_id</text>
+<text x="858" y="498" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="512" y="505" width="356" height="24" fill="#f8fbfa"/>
+<text x="522" y="522" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="574" y="522" font-size="13.5">employee_id</text>
+<text x="858" y="522" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="522" y="546" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="574" y="546" font-size="13.5">product_id</text>
+<text x="858" y="546" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="512" y="553" width="356" height="24" fill="#f8fbfa"/>
+<text x="522" y="570" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="574" y="570" font-size="13.5">point_id</text>
+<text x="858" y="570" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="522" y="594" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="574" y="594" font-size="13.5">registered_by_admin_id</text>
+<text x="858" y="594" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="512" y="601" width="356" height="24" fill="#f8fbfa"/>
+<text x="574" y="618" font-size="13.5">registered_at</text>
+<text x="858" y="618" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<text x="574" y="642" font-size="13.5">amount</text>
+<text x="858" y="642" text-anchor="end" font-size="13" class="sub">integer</text>
+<rect x="512" y="649" width="356" height="24" fill="#f8fbfa"/>
+<text x="574" y="666" font-size="13.5">price</text>
+<text x="858" y="666" text-anchor="end" font-size="13" class="sub">numeric(8,2)</text>
+<text x="574" y="690" font-size="13.5">employer_number</text>
+<text x="858" y="690" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+</g>
+<g>
+<rect x="980" y="440" width="360" height="332" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M986,440 H1334 A6,6 0 0 1 1340,446 V478 H980 V446 A6,6 0 0 1 986,440 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="994" y="465" font-size="17" fill="#ffffff" class="kop">admins</text>
+<text x="992" y="498" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="1044" y="498" font-size="13.5" font-weight="700">admin_id</text>
+<text x="1328" y="498" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="982" y="505" width="356" height="24" fill="#f8fbfa"/>
+<text x="992" y="522" font-size="11.5" font-weight="700" fill="#71858a">UQ</text>
+<text x="1044" y="522" font-size="13.5">email</text>
+<text x="1328" y="522" text-anchor="end" font-size="13" class="sub">varchar(320)</text>
+<text x="1044" y="546" font-size="13.5">password_hash</text>
+<text x="1328" y="546" text-anchor="end" font-size="13" class="sub">text</text>
+<rect x="982" y="553" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="570" font-size="13.5">display_name</text>
+<text x="1328" y="570" text-anchor="end" font-size="13" class="sub">varchar(150)</text>
+<text x="1044" y="594" font-size="13.5">role</text>
+<text x="1328" y="594" text-anchor="end" font-size="13" class="sub">varchar(30)</text>
+<rect x="982" y="601" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="618" font-size="13.5">active</text>
+<text x="1328" y="618" text-anchor="end" font-size="13" class="sub">boolean</text>
+<text x="1044" y="642" font-size="13.5">last_login_at</text>
+<text x="1328" y="642" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="982" y="649" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="666" font-size="13.5">failed_login_count</text>
+<text x="1328" y="666" text-anchor="end" font-size="13" class="sub">integer</text>
+<text x="1044" y="690" font-size="13.5">locked_until</text>
+<text x="1328" y="690" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="982" y="697" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="714" font-size="13.5">mfa_enabled</text>
+<text x="1328" y="714" text-anchor="end" font-size="13" class="sub">boolean</text>
+<text x="1044" y="738" font-size="13.5">created_at</text>
+<text x="1328" y="738" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+<rect x="982" y="745" width="356" height="24" fill="#f8fbfa"/>
+<text x="1044" y="762" font-size="13.5">updated_at</text>
+<text x="1328" y="762" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<g>
+<rect x="1450" y="440" width="360" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1456,440 H1804 A6,6 0 0 1 1810,446 V478 H1450 V446 A6,6 0 0 1 1456,440 Z" fill="#159a72" stroke="#159a72" stroke-width="1.8"/>
+<text x="1464" y="465" font-size="17" fill="#ffffff" class="kop">audit_log</text>
+<text x="1462" y="498" font-size="11.5" font-weight="700" fill="#087252">PK</text>
+<text x="1514" y="498" font-size="13.5" font-weight="700">audit_id</text>
+<text x="1798" y="498" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="1452" y="505" width="356" height="24" fill="#f8fbfa"/>
+<text x="1462" y="522" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="1514" y="522" font-size="13.5">admin_id</text>
+<text x="1798" y="522" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="1514" y="546" font-size="13.5">action</text>
+<text x="1798" y="546" text-anchor="end" font-size="13" class="sub">varchar(100)</text>
+<rect x="1452" y="553" width="356" height="24" fill="#f8fbfa"/>
+<text x="1462" y="570" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="1514" y="570" font-size="13.5">employee_id</text>
+<text x="1798" y="570" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="1462" y="594" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="1514" y="594" font-size="13.5">product_id</text>
+<text x="1798" y="594" text-anchor="end" font-size="13" class="sub">uuid</text>
+<rect x="1452" y="601" width="356" height="24" fill="#f8fbfa"/>
+<text x="1462" y="618" font-size="11.5" font-weight="700" fill="#176b8b">FK</text>
+<text x="1514" y="618" font-size="13.5">registration_id</text>
+<text x="1798" y="618" text-anchor="end" font-size="13" class="sub">uuid</text>
+<text x="1514" y="642" font-size="13.5">details</text>
+<text x="1798" y="642" text-anchor="end" font-size="13" class="sub">text</text>
+<rect x="1452" y="649" width="356" height="24" fill="#f8fbfa"/>
+<text x="1514" y="666" font-size="13.5">metadata</text>
+<text x="1798" y="666" text-anchor="end" font-size="13" class="sub">jsonb</text>
+<text x="1514" y="690" font-size="13.5">created_at</text>
+<text x="1798" y="690" text-anchor="end" font-size="13" class="sub">timestamptz</text>
+</g>
+<!-- Relaties -->
+<path d="M400,187 H510" class="lijn"/>
+<path d="M408,195 L408,179 M415,195 L415,179" fill="none" stroke="#163540" stroke-width="1.6"/>
+<path d="M494,187 L510,178 M494,187 L510,196 M494,187 L510,187" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="486" cy="187" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M870,163 H980" class="lijn"/>
+<path d="M878,171 L878,155 M885,171 L885,155" fill="none" stroke="#163540" stroke-width="1.6"/>
+<path d="M964,163 L980,154 M964,163 L980,172 M964,163 L980,163" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="956" cy="163" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1450,187 H1340" class="lijn"/>
+<path d="M1442,179 L1442,195 M1435,179 L1435,195" fill="none" stroke="#163540" stroke-width="1.6"/>
+<path d="M1356,187 L1340,196 M1356,187 L1340,178 M1356,187 L1340,187" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1364" cy="187" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M120,298 V440" class="lijn"/>
+<path d="M112,306 L128,306" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="120" cy="318" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M120,424 L129,440 M120,424 L111,440 M120,424 L120,440" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="120" cy="416" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M690,298 V440" class="lijn"/>
+<path d="M682,306 L698,306" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="690" cy="318" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M690,424 L699,440 M690,424 L681,440 M690,424 L690,440" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="690" cy="416" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1700,298 V440" class="lijn"/>
+<path d="M1692,306 L1708,306" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1700" cy="318" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1700,424 L1709,440 M1700,424 L1691,440 M1700,424 L1700,440" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1700" cy="416" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M570,298 V355 H330 V440" class="lijn"/>
+<path d="M562,306 L578,306" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="570" cy="318" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M330,424 L339,440 M330,424 L321,440 M330,424 L330,440" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="330" cy="416" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1520,298 V395 H820 V440" class="lijn"/>
+<path d="M1512,306 L1528,306 M1512,313 L1528,313" fill="none" stroke="#163540" stroke-width="1.6"/>
+<path d="M820,424 L829,440 M820,424 L811,440 M820,424 L820,440" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="820" cy="416" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M400,517 H510" class="lijn"/>
+<path d="M408,525 L408,509 M415,525 L415,509" fill="none" stroke="#163540" stroke-width="1.6"/>
+<path d="M494,517 L510,508 M494,517 L510,526 M494,517 L510,517" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="486" cy="517" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M980,589 H870" class="lijn"/>
+<path d="M972,581 L972,597" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="960" cy="589" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M886,589 L870,598 M886,589 L870,580 M886,589 L870,589" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="894" cy="589" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1340,517 H1450" class="lijn"/>
+<path d="M1348,525 L1348,509" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1360" cy="517" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1434,517 L1450,508 M1434,517 L1450,526 M1434,517 L1450,517" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1426" cy="517" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M760,700 V815 H1560 V700" class="lijn"/>
+<path d="M752,708 L768,708" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="760" cy="720" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1560,716 L1551,700 M1560,716 L1569,700 M1560,716 L1560,700" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1560" cy="724" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M220,772 V860 H1760 V700" class="lijn"/>
+<path d="M212,780 L228,780" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="220" cy="792" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<path d="M1760,716 L1751,700 M1760,716 L1769,700 M1760,716 L1760,700" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="1760" cy="724" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<!-- Legenda -->
+<rect x="40" y="905" width="560" height="170" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
+<text x="58" y="935" font-size="16" class="kop">Legenda</text>
+<path d="M70,965 L150,965" class="lijn"/>
+<path d="M142,957 L142,973 M135,957 L135,973" fill="none" stroke="#163540" stroke-width="1.6"/>
+<text x="168" y="970" font-size="13.5">precies één (verplichte FK, NOT NULL)</text>
+<path d="M70,1000 L150,1000" class="lijn"/>
+<path d="M142,992 L142,1008" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="130" cy="1000" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<text x="168" y="1005" font-size="13.5">nul of één (FK mag leeg zijn)</text>
+<path d="M70,1035 L150,1035" class="lijn"/>
+<path d="M134,1035 L150,1026 M134,1035 L150,1044 M134,1035 L150,1035" fill="none" stroke="#163540" stroke-width="1.6"/><circle cx="126" cy="1035" r="5" fill="#ffffff" stroke="#163540" stroke-width="1.6"/>
+<text x="168" y="1040" font-size="13.5">nul, één of meer</text>
+<rect x="640" y="905" width="1170" height="170" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
+<text x="658" y="935" font-size="16" class="kop">Toelichting</text>
+<text x="658" y="963" font-size="13.5">PK = primaire sleutel · FK = vreemde sleutel · UQ = uniek: namen zonder verschil in hoofdletters, de naam van een punt binnen het bedrijf,</text>
+<text x="658" y="987" font-size="13.5">de bedrijfsnaam onder actieve bedrijven; employer_number en personnel_number alleen als ze zijn ingevuld</text>
+<text x="658" y="1011" font-size="13.5">point_products: aanbod, voorraad en minimum per consumptiepunt en product; counted_at = tijdstip van de laatste telling (NULL = nooit geteld)</text>
+<text x="658" y="1035" font-size="13.5">admins.role: 'admin' (beheerder) of 'system_admin' (systeembeheerder) · registrations bewaart prijs en werkgevernummer van dat moment</text>
+<text x="658" y="1059" font-size="13.5">Views: stock_alerts (wat moet worden bijbesteld) · monthly_employee_consumption: maandtotalen per consumptiemaand (dashboard)</text>
+</svg>

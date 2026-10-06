@@ -330,7 +330,7 @@ export class RegistrationView {
             <summary>
               <strong>${this.escapeHtml(employee.name)}</strong>
               <span class="correction-count">
-                ${this.model.countForEmployee(employee.id)} producten ·
+                ${this.productCountText(this.model.countForEmployee(employee.id))} ·
                 € ${this.model.totalCostForEmployee(employee.id).toFixed(2).replace(".", ",")}
               </span>
             </summary>
@@ -579,7 +579,21 @@ export class RegistrationView {
     this.$("#newEmployeePoint").value = points.some(({ id }) => id === pointId) ? pointId : "";
   }
 
+  // Aantal medewerkers met het juiste woord: "1 medewerker", maar "0 medewerkers" en
+  // "2 medewerkers". Wordt gebruikt in de lijst met bedrijven en consumptiepunten
+  // (renderAdminCompanies).
+  employeeCountText(count) {
+    return `${count} ${count === 1 ? "medewerker" : "medewerkers"}`;
+  }
+
+  // Aantal producten met het juiste woord: "1 product", maar "0 producten" en "2 producten".
+  // Wordt gebruikt in de correctielijst van het beheer (renderCorrectionEmployees).
+  productCountText(count) {
+    return `${count} ${count === 1 ? "product" : "producten"}`;
+  }
+
   // Rendert de bedrijven met hun consumptiepunten in het beheertabblad.
+  // Het aantal medewerkers staat in enkelvoud of meervoud (zie employeeCountText).
   renderAdminCompanies() {
     this.$("#adminCompanyList").innerHTML = this.model.sortedCompanies().map((company) => {
       const employeeCount = this.model.employees.filter(({ companyId }) => companyId === company.id).length;
@@ -592,7 +606,7 @@ export class RegistrationView {
         return `<div class="admin-employee-item admin-point-item">
           <span>
             <strong>${this.escapeHtml(point.name)}</strong>
-            <small>${offered} van ${this.model.products.length} producten · ${pointEmployees} medewerkers</small>
+            <small>${offered} van ${this.model.products.length} producten · ${this.employeeCountText(pointEmployees)}</small>
           </span>
           <div class="admin-item-actions">
             <button class="table-action" data-edit-point="${this.escapeHtml(point.id)}">Aanbod wijzigen</button>
@@ -605,7 +619,7 @@ export class RegistrationView {
         <div class="admin-employee-item">
           <span>
             <strong>${this.escapeHtml(company.name)}</strong>
-            <small>Werkgevernummer ${this.escapeHtml(company.employerNumber || "onbekend")} · ${employeeCount} medewerkers</small>
+            <small>Werkgevernummer ${this.escapeHtml(company.employerNumber || "onbekend")} · ${this.employeeCountText(employeeCount)}</small>
           </span>
           <div class="admin-item-actions">
             <button class="table-action" data-add-point="${this.escapeHtml(company.id)}">${icon("plus")} Consumptiepunt</button>

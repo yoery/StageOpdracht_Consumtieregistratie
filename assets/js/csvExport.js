@@ -103,12 +103,13 @@ export class CsvExport {
   // (een naam die met = + - @ begint zou Excel anders als formule uitvoeren).
   // Ook spaties, tabs of enters vóór zo'n teken tellen mee: Excel slaat die bij het inlezen
   // soms over, waardoor " =1+1" of een enter gevolgd door "=cmd" toch een formule wordt.
-  // Een veld dat met een tab of enter begint, krijgt (zoals altijd al) ook een apostrof.
+  // Een veld dat met een tab, "\r" of "\n" begint, krijgt altijd een apostrof, ook als er geen
+  // formuleteken volgt: zo blijft het begin van het veld zichtbaar en kan Excel het niet wegpoetsen.
   escapeField(value) {
     let text = String(value ?? "");
 
     const startsAsFormula = /^[ \t\r\n]*[=+\-@]/.test(text);
-    if (startsAsFormula || /^[\t\r]/.test(text)) text = `'${text}`;
+    if (startsAsFormula || /^[\t\r\n]/.test(text)) text = `'${text}`;
     if (/[";\r\n]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
 
     return text;

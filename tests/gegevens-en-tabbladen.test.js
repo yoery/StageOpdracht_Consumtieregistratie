@@ -339,6 +339,7 @@ test("het model slaat geen consumptiepunt op bij een bedrijf dat niet bestaat", 
 
 const STORAGE_SELECTORS = [...FORM_SELECTORS, "#pointFormTitle", "#pointName", "#pointCompany",
   "#employeeFormTitle", "#employeeFormHelp", "#employeeSaveContinueButton",
+  '#employeeForm [data-save-mode="close"]',
   "#newEmployeeFirstName", "#newEmployeeLastName", "#newEmployeePayrollCode",
   "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber"];
 
@@ -414,6 +415,48 @@ test("is de opslag in een ander venster gewist, dan wist dit tabblad ook alles e
   assert.equal(view.$("#productForm").dataset.editingId, undefined);
   assert.ok(calledNames(view).includes("renderAll"));
   assert.equal(toastTexts(view).at(-1), "De gegevens zijn in een ander venster gewist.");
+});
+
+test("'Alle gegevens wissen' in een ander tabblad: dit tabblad wist ook, logt uit en laat de opslag met rust", () => {
+  const { app, model, view } = createApp(WIPE_SELECTORS);
+  const demoState = createModel().model.state;
+  let cleared = 0;
+  model.store = { ...otherTabStore(demoState), clearAll: () => { cleared += 1; } };
+  app.adminLoggedIn = true;
+  app.openEmployeeProducts("employee-1");
+
+  // Het andere tabblad verwijdert de gegevenssleutel (DataStore.clearAll) en slaat daarna de demo op.
+  app.handleStorageChange({ key: "tvb-test", oldValue: "{}", newValue: null });
+
+  assert.equal(cleared, 0, "de opslag van het andere tabblad wordt niet opnieuw gewist");
+  assert.equal(app.adminLoggedIn, false);
+  assert.equal(app.selectedEmployeeId, null);
+  assert.equal(model.state, demoState, "de nieuwe demogegevens uit de opslag zijn geladen");
+  assert.equal(toastTexts(view).at(-1), "De gegevens zijn in een ander venster gewist.");
+});
+
+test("met twee echte DataStores: wissen in tabblad A wordt in tabblad B overgenomen zonder heen-en-weer", () => {
+  const storeA = createDataStore();
+  const modelA = new RegistrationModel(storeA);
+  modelA.addRegistration(modelA.employees[0].id, "blikje");
+  modelA.save();
+  const modelB = new RegistrationModel(new DataStore("test"));
+  const { app } = createApp(WIPE_SELECTORS, { model: modelB });
+  assert.equal(modelB.registrations.length, 1);
+
+  // Tabblad A: Alle gegevens wissen en de demogegevens opslaan.
+  const oldValue = localStorage.getItem("test");
+  modelA.wipeAll();
+  modelA.save();
+  const newValue = localStorage.getItem("test");
+
+  // Tabblad B krijgt daarna twee meldingen van de browser: sleutel weg, en daarna de nieuwe demo.
+  app.handleStorageChange({ key: "test", oldValue, newValue: null });
+  app.handleStorageChange({ key: "test", oldValue: null, newValue });
+
+  assert.equal(localStorage.getItem("test"), newValue, "de demogegevens van tabblad A staan er nog");
+  assert.equal(modelB.registrations.length, 0);
+  assert.deepEqual(modelB.employees.map(({ id }) => id), modelA.employees.map(({ id }) => id));
 });
 
 test("met een echte DataStore: na het leegmaken van localStorage schrijft dit tabblad de oude gegevens niet terug", () => {

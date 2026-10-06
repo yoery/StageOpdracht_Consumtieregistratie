@@ -136,7 +136,7 @@ test("updateEmployee van een onbekende medewerker verandert niets", () => {
 test("medewerker met registraties kan niet definitief worden verwijderd; zonder registraties wel", () => {
   const { model } = createModel();
   model.addRegistration("employee-1", "blikje");
-  addEmployee(model);
+  addEmployee(model, { active: false });
 
   assert.equal(model.removeEmployee("employee-1"), false);
   assert.ok(model.findEmployee("employee-1"));

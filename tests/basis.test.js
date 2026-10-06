@@ -387,6 +387,8 @@ test("addEmployee voegt medewerker toe", () => {
 
 test("removeEmployee verwijdert medewerker", () => {
   const model = createModel();
+  // Alleen een inactieve medewerker kan worden verwijderd (zie tests/to-controle.test.js).
+  model.setEmployeeActive("employee-1", false);
 
   model.removeEmployee("employee-1");
 

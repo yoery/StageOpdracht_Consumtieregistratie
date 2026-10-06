@@ -1836,8 +1836,15 @@ footer {
     align-items:stretch;
     flex-wrap:wrap
   }
+  /* Op een smal scherm krijgt ieder filter de hele breedte. min-width:0 laat de keuzelijst
+     krimpen, anders duwt een lange maandnaam het veld buiten het beheervenster. */
   .filter-row label {
-    min-width:45%
+    flex:1 1 100%;
+    min-width:0
+  }
+  .filter-row select {
+    width:100%;
+    min-width:0
   }
   .export-button {
     width:100%

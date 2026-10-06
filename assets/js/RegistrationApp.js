@@ -140,8 +140,17 @@ export class RegistrationApp {
   // Heeft het andere tabblad de hele opslag leeggemaakt (`event.key` is dan null) en staat er
   // niets meer in, dan wist dit tabblad ook alles (zie handleStorageCleared). Anders zou dit
   // tabblad bij de volgende wijziging zijn oude gegevens weer terugschrijven.
+  //
+  // Heeft het andere tabblad op `Alle gegevens wissen` geklikt, dan wordt de gegevenssleutel
+  // verwijderd (`event.newValue` is null; alleen DataStore.clearAll doet dat). Dan wist dit
+  // tabblad ook alles uit het geheugen, logt uit en vergeet de gezichten, maar laat de opslag
+  // met rust: het andere tabblad zet er meteen de nieuwe demogegevens in.
   handleStorageChange(event) {
     if (!this.model.isStorageKey(event.key)) return;
+    if (event.key !== null && event.newValue === null) {
+      this.handleStorageCleared({ keepStore: true });
+      return;
+    }
     if (!this.model.reload()) {
       // Niets te laden en ook niets beschadigd: de opslag is in een ander venster gewist.
       if (event.key === null && !this.model.loadProblem) {
@@ -262,8 +271,11 @@ export class RegistrationApp {
   // opgeslagen: de opslag is al leeg, en de volgende wijziging slaat de nieuwe gegevens op.
   // Alles wat open staat (productvenster, camera, formulieren, beheerscherm) gaat dicht, want
   // het hoort bij gegevens die niet meer bestaan. Ingestelde gezichten (demo) worden vergeten.
-  handleStorageCleared() {
-    this.model.wipeAll();
+  // Met `keepStore: true` (na `Alle gegevens wissen` in een ander tabblad) wordt de opslag niet
+  // aangeraakt: staan de nieuwe demogegevens van dat tabblad er al, dan worden die geladen.
+  handleStorageCleared({ keepStore = false } = {}) {
+    this.model.wipeAll({ clearStore: !keepStore });
+    if (keepStore) this.model.reload();
     this.faceDemo.enrolledIds().forEach((employeeId) => this.faceDemo.forget(employeeId));
 
     if (!this.view.$("#faceModal").classList.contains("hidden")) this.closeFaceModal();
@@ -408,7 +420,8 @@ export class RegistrationApp {
     return wrongFields.length === 0;
   }
 
-  // Toont bij het naamveld dat de naam al bestaat, en zet de focus op dat veld.
+  // Toont bij een veld dat de waarde al bestaat (een naam of een werkgevernummer), en zet de
+  // focus op dat veld.
   showDuplicateNameError(fieldSelector, message) {
     const field = this.view.$(fieldSelector);
     this.view.showFieldError(field, message);
@@ -422,6 +435,19 @@ export class RegistrationApp {
 
   hide(selector) {
     this.view.$(selector).classList.add("hidden");
+  }
+
+  // Zet de opslagknoppen van het medewerkers- of productformulier goed. Bij toevoegen staan er
+  // twee knoppen: `Opslaan` (secundair) en `Opslaan + opnieuw` (primair, groen). Bij wijzigen
+  // is er alleen `Opslaan`; die wordt dan de primaire knop, net als bij bedrijf en consumptiepunt.
+  // Wordt gebruikt door openEmployeeForm, openEditEmployeeForm, openProductForm en openEditProductForm.
+  setSaveButtons(formSelector, continueSelector, withContinue) {
+    if (withContinue) this.show(continueSelector);
+    else this.hide(continueSelector);
+
+    const closeButton = this.view.$(`${formSelector} [data-save-mode="close"]`);
+    closeButton.classList.toggle("primary-button", !withContinue);
+    closeButton.classList.toggle("secondary-button", withContinue);
   }
 
   // Onthoudt welk element de focus had vlak voordat een venster opengaat (meestal de knop
@@ -574,11 +600,12 @@ export class RegistrationApp {
   // Correctie met "+": voegt als beheerder één product toe voor een medewerker, op de datum uit
   // het datumveld (standaard vandaag; zie readCorrectionDate en confirmOldMonthAddition).
   // Is de medewerker intussen verwijderd (bijvoorbeeld in een ander tabblad), dan wordt er
-  // niets opgeslagen; anders zou er een registratie zonder medewerker ontstaan.
+  // niets opgeslagen; anders zou er een registratie zonder medewerker ontstaan. De melding
+  // komt van showMissing, net als bij andere gegevens die niet meer bestaan.
   // De logboekregel wordt in dezelfde keer opgeslagen als de registratie (zie persist).
   addCorrection(employeeId, productId, now = new Date()) {
     if (!this.model.findEmployee(employeeId)) {
-      this.view.showToast("Deze medewerker bestaat niet meer. Er is niets opgeslagen.", { tone: "error" });
+      this.showMissing("Deze medewerker");
       return false;
     }
 
@@ -608,7 +635,8 @@ export class RegistrationApp {
     return true;
   }
 
-  // Correctie met "−": verwijdert de laatste registratie van dit product bij deze medewerker.
+  // Correctie met "−": verwijdert de laatst ingevoerde registratie van dit product bij deze
+  // medewerker (volgorde van invoer, niet de datum; zie RegistrationModel.lastRegistration).
   // Is die registratie uit een eerdere maand, dan vraagt de app eerst om bevestiging (zie
   // confirmOldMonthRemoval). Kiest de beheerder "Annuleren", dan verandert er niets.
   removeCorrection(employeeId, productId) {
@@ -676,20 +704,32 @@ export class RegistrationApp {
     this.view.showToast("Medewerkerstatus gewijzigd", { tone: "success" });
   }
 
-  // Verwijdert een (inactieve) medewerker definitief, na bevestiging.
+  // Verwijdert een inactieve medewerker zonder registraties definitief, na bevestiging.
   // Een medewerker met registraties wordt niet verwijderd: die registraties zijn nodig voor de
   // loonadministratie (export) en anders staat er "Verwijderd" in plaats van een naam. Daarom
   // wordt dan niet om bevestiging gevraagd, maar uitgelegd dat deactiveren genoeg is.
+  // Een actieve medewerker moet eerst op inactief worden gezet. De view toont de knop alleen bij
+  // een inactieve medewerker zonder registraties, maar een knop kan verouderd zijn (bijvoorbeeld
+  // als een ander tabblad de medewerker intussen weer actief heeft gezet). Het model
+  // (removeEmployee) controleert hetzelfde nog een keer.
   // De naam wordt vóór het verwijderen opgezocht, want daarna bestaat de medewerker niet meer.
   removeEmployee(employeeId) {
     // Bestaat de medewerker niet meer (verwijderd in een ander tabblad), dan niets doen en melden.
-    if (!this.model.findEmployee(employeeId)) {
+    const employee = this.model.findEmployee(employeeId);
+    if (!employee) {
       this.showMissing("Deze medewerker");
       return;
     }
     if (this.model.employeeHasRegistrations(employeeId)) {
       this.view.showToast(
         "Deze medewerker heeft registraties en kan niet definitief worden verwijderd. Deactiveren is voldoende.",
+        { tone: "error", duration: 5000 }
+      );
+      return;
+    }
+    if (employee.active) {
+      this.view.showToast(
+        "Zet deze medewerker eerst op inactief. Alleen een inactieve medewerker kan definitief worden verwijderd.",
         { tone: "error", duration: 5000 }
       );
       return;
@@ -716,6 +756,8 @@ export class RegistrationApp {
   }
 
   // Verwijdert een product, maar alleen als het nog nooit is geregistreerd.
+  // Net als bij een bedrijf en een consumptiepunt vraagt de app eerst om bevestiging
+  // (window.confirm); kiest de beheerder "Annuleren", dan verandert er niets.
   removeProduct(productId) {
     // Bestaat het product niet meer (verwijderd in een ander tabblad), dan niets doen en melden.
     if (!this.model.findProduct(productId)) {
@@ -729,8 +771,10 @@ export class RegistrationApp {
       return;
     }
 
-    // Lukt opslaan niet, dan toont persist zelf de melding "Opslaan mislukt".
     const productName = this.model.productName(productId);
+    if (!window.confirm(`Product ${productName} verwijderen?`)) return;
+
+    // Lukt opslaan niet, dan toont persist zelf de melding "Opslaan mislukt".
     const saved = this.persist(
       () => this.model.removeProduct(productId),
       { action: "Product verwijderd", details: productName }
@@ -1145,7 +1189,7 @@ export class RegistrationApp {
     this.view.populateEmployeeCompanySelects();
     delete form.dataset.editingId;
 
-    this.show("#employeeSaveContinueButton");
+    this.setSaveButtons("#employeeForm", "#employeeSaveContinueButton", true);
     this.view.$("#employeeFormTitle").textContent = "Medewerker toevoegen";
     this.view.$("#employeeFormHelp").textContent = "Vul de gegevens in en kies daarna hoe je verder wilt gaan.";
     this.openModal("#employeeFormModal");
@@ -1166,7 +1210,7 @@ export class RegistrationApp {
 
     this.view.$("#employeeForm").dataset.editingId = employee.id;
     this.rememberEditing("#employeeForm", employee);
-    this.hide("#employeeSaveContinueButton");
+    this.setSaveButtons("#employeeForm", "#employeeSaveContinueButton", false);
     this.view.$("#employeeFormTitle").textContent = "Medewerker wijzigen";
     this.view.$("#employeeFormHelp").textContent = "Pas de gegevens aan en klik daarna op Opslaan.";
     this.view.$("#newEmployeeFirstName").value = employee.firstName;
@@ -1301,7 +1345,7 @@ export class RegistrationApp {
     this.view.clearFieldErrors(form);
     delete form.dataset.editingId;
 
-    this.show("#consumptionSaveContinueButton");
+    this.setSaveButtons("#productForm", "#consumptionSaveContinueButton", true);
     this.view.$("#productFormTitle").textContent = "Product toevoegen";
     this.view.$("#productFormHelp").textContent = "Vul de productnaam en prijs in.";
     this.openModal("#productFormModal");
@@ -1326,7 +1370,7 @@ export class RegistrationApp {
     this.view.$("#productFormTitle").textContent = "Product wijzigen";
     this.view.$("#productFormHelp").textContent = "Pas de productnaam of prijs aan.";
     this.openModal("#productFormModal");
-    this.hide("#consumptionSaveContinueButton");
+    this.setSaveButtons("#productForm", "#consumptionSaveContinueButton", false);
     this.view.$("#productName").focus();
   }
 
@@ -1431,6 +1475,8 @@ export class RegistrationApp {
 
   // Leest het bedrijfsformulier en voegt een bedrijf toe of wijzigt een bestaand bedrijf.
   // Is het bedrijf dat gewijzigd wordt intussen verwijderd, dan wordt er niets opgeslagen.
+  // Naam en werkgevernummer moeten uniek zijn; een dubbele waarde krijgt een foutmelding bij
+  // het veld (showDuplicateNameError) en er wordt niets opgeslagen.
   saveCompany(event) {
     event.preventDefault();
 
@@ -1451,6 +1497,13 @@ export class RegistrationApp {
     );
     if (nameTaken) {
       this.showDuplicateNameError("#companyName", "Er bestaat al een bedrijf met deze naam.");
+      return;
+    }
+
+    // Het werkgevernummer moet ook uniek zijn (als het is ingevuld); het model controleert dat
+    // in saveCompany nog een keer. De melding komt bij het veld, net als bij een dubbele naam.
+    if (this.model.isEmployerNumberTaken(employerNumber, editingId || null)) {
+      this.showDuplicateNameError("#companyEmployerNumber", "Er bestaat al een bedrijf met dit werkgevernummer.");
       return;
     }
 

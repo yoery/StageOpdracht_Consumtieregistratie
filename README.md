@@ -40,7 +40,7 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  *.test.js                 # 435 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum)
+  *.test.js                 # 480 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle)
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
   app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
@@ -55,15 +55,15 @@ archief/
 - Admin-demo via de knop rechtsboven (elk ingevuld wachtwoord werkt).
 - Admin-overzicht met medewerker- en maandfilters.
 - Registraties corrigeren met `+` en `−`, medewerkers toevoegen/wijzigen en actief/inactief zetten.
-- Inactieve medewerkers zonder registraties kunnen daarna ook definitief worden verwijderd; medewerkers met registraties worden alleen gedeactiveerd, zodat de export klopt.
-- Producten en prijzen beheren. Standaard zijn blikje €0,65, sneetje brood €0,10, boter €0,10, zoet beleg €0,20, glas melk €0,20, beleg €0,50, ei €0,50 en yoghurt €0,50.
+- Inactieve medewerkers zonder registraties kunnen daarna ook definitief worden verwijderd (na bevestiging); medewerkers met registraties worden alleen gedeactiveerd, zodat de export klopt. Een actieve medewerker moet eerst op inactief worden gezet; ook het model controleert dit.
+- Producten en prijzen beheren; een product dat nooit is geregistreerd, kan na bevestiging worden verwijderd. Standaard zijn blikje €0,65, sneetje brood €0,10, boter €0,10, zoet beleg €0,20, glas melk €0,20, beleg €0,50, ei €0,50 en yoghurt €0,50.
 - Medewerkers zien geen persoonlijke aantallen of persoonlijke kosten; deze informatie is alleen beschikbaar voor de admin.
 - Producten toevoegen via een formulier met `Opslaan` en `Opslaan + opnieuw`.
-- Bedrijvenbeheer: de 13 bedrijven van TVB staan erin; bedrijven toevoegen, naam en standaard werkgevernummer wijzigen (per medewerker kan een afwijkend werkgevernummer worden ingevuld). Een bedrijf kan meerdere consumptiepunten hebben, en per consumptiepunt zet je aan welke producten er worden aangeboden. Medewerkers hebben een vast consumptiepunt en zien alleen de producten van dat punt. Een nieuw product staat overal uit tot de beheerder het aanzet.
+- Bedrijvenbeheer: de 13 bedrijven van TVB staan erin; bedrijven toevoegen, naam en standaard werkgevernummer wijzigen (per medewerker kan een afwijkend werkgevernummer worden ingevuld). Bedrijfsnaam en werkgevernummer zijn uniek. Een bedrijf kan meerdere consumptiepunten hebben, en per consumptiepunt zet je aan welke producten er worden aangeboden. Medewerkers hebben een vast consumptiepunt en zien alleen de producten van dat punt. Een nieuw product staat overal uit tot de beheerder het aanzet.
 - Voorraadbeheer per consumptiepunt: iedere registratie haalt 1 van de voorraad af, leveringen en tellingen worden geboekt (hele getallen tot 100.000), en per product is er een minimum. Een bijbestellijst toont alles wat op is of bijbesteld moet worden.
 - Correcties in een oude maand vragen eerst om bevestiging, omdat die loonmaand mogelijk al is verwerkt. Iedere beheerwijziging wordt samen met de logboekregel opgeslagen.
 - Knop `Alle gegevens wissen` in het tabblad Logboek: wist na twee bevestigingen alle gegevens, reservekopieën en ingestelde gezichten op de tablet (AVG, recht op vergetelheid), logt uit en zet de demogegevens terug.
-- Beveiliging in de demo: alle waarden in HTML worden ge-escapet, opgeslagen id's, kleuren en prijzen worden bij het laden gecontroleerd, een Content-Security-Policy en `no-referrer` in `index.html`, lettertypes en face-api zelf gehost (geen Google Fonts of CDN) en CSV-velden zijn beschermd tegen formules. Zie het TO, hoofdstuk 13, voor wat er vóór productie nog moet gebeuren.
+- Beveiliging in de demo: alle waarden in HTML worden ge-escapet, opgeslagen id's, kleuren en prijzen worden bij het laden gecontroleerd (ook dubbele id's, registraties van meer dan een dag in de toekomst en tellingen in de toekomst), een Content-Security-Policy en `no-referrer` in `index.html`, lettertypes en face-api zelf gehost (geen Google Fonts of CDN) en CSV-velden zijn beschermd tegen formules. Zie het TO, hoofdstuk 13, voor wat er vóór productie nog moet gebeuren.
 - CSV-export (te openen in Excel) met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. Jaar en Maand zijn de loonmaand: consumpties worden verwerkt in de maand erna (september → oktober, december → januari).
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
 - Persoonlijk welkom in het productvenster en een knop "Zelfde als vorige keer" met de keuze van de vorige keer.
