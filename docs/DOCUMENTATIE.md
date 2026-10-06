@@ -28,6 +28,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `archief/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
 | `archief/app.test.js` | Back-up van de oude tests bij die versie; wordt niet meer uitgevoerd |
 | `README.md` | Korte startinformatie voor het project |
+| `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-BLIKJESREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het sjabloon `docs/tvbsjabloon.docx`: voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
 | `docs/` | Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie |
 | `docs/wireframes/` | Low-fidelity (`lofi-…`), mid-fidelity (`midfi-…`) en high-fidelity (`w…`) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9) |
 | `tests/` | Unit tests (480) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, de controller, de beveiliging en regressietests voor opgeloste bugs |
