@@ -472,12 +472,14 @@ test("punt 9: de rol 'manager' bestaat niet meer; alleen 'admin' en 'system_admi
   assert.ok(schema.includes("CHECK (role IN ('admin', 'system_admin'))"));
 });
 
-test("punt 9: het SQL-bestand houdt CRLF-regeleinden", () => {
+// Git slaat het bestand op met LF; op Windows (core.autocrlf) staat het lokaal met CRLF. Daarom
+// wordt alleen gecontroleerd dat de regeleinden niet door elkaar staan, niet welke soort het is.
+test("punt 9: het SQL-bestand heeft overal dezelfde regeleinden", () => {
   const lineFeeds = (schema.match(/\n/g) || []).length;
   const crlf = (schema.match(/\r\n/g) || []).length;
 
   assert.ok(lineFeeds > 0);
-  assert.equal(crlf, lineFeeds);
+  assert.ok(crlf === 0 || crlf === lineFeeds, "geen mengsel van LF en CRLF");
 });
 
 // ------------------------------------------------------------------
