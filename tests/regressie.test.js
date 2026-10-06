@@ -66,6 +66,7 @@ test("bug 2: meerdere spaties tellen als één bij de initialen", () => {
 
 test("bug 3: mislukt opslaan bij product verwijderen geeft alleen 'Opslaan mislukt'", () => {
   const { app, model, view } = createApp({ storeOptions: { failSave: true } });
+  globalThis.window = { confirm: () => true }; // product verwijderen vraagt nu eerst om bevestiging
 
   app.removeProduct("boter");
 
@@ -90,6 +91,7 @@ test("bug 4: na 'Meer laden' blijft het logboek even lang na een wijziging", () 
 test("bug 5: een verwijderde medewerker wordt ook in de demo gezichtsherkenning vergeten", () => {
   const { app, model, faceDemo } = createApp();
   faceDemo.enroll("employee-1", [0.1, 0.2]);
+  model.setEmployeeActive("employee-1", false); // alleen een inactieve medewerker kan worden verwijderd
   globalThis.window = { confirm: () => true };
 
   app.removeEmployee("employee-1");

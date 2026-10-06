@@ -29,9 +29,12 @@ CREATE TABLE consumption_points (
     active boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT consumption_points_name_not_blank CHECK (length(btrim(name)) > 0),
-    CONSTRAINT consumption_points_name_unique UNIQUE (company_id, name)
+    CONSTRAINT consumption_points_name_not_blank CHECK (length(btrim(name)) > 0)
 );
+
+-- Naam van een punt is uniek binnen het bedrijf; hoofdletters tellen niet (zoals in de app).
+CREATE UNIQUE INDEX consumption_points_name_unique
+    ON consumption_points (company_id, lower(name));
 
 CREATE TABLE employees (
     employee_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,9 +69,12 @@ CREATE TABLE products (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT products_name_not_blank CHECK (length(btrim(name)) > 0),
-    CONSTRAINT products_price_non_negative CHECK (price >= 0),
-    CONSTRAINT products_name_unique UNIQUE (name)
+    CONSTRAINT products_price_non_negative CHECK (price >= 0)
 );
+
+-- Productnaam is uniek; hoofdletters tellen niet (zoals in de app).
+CREATE UNIQUE INDEX products_name_unique
+    ON products (lower(name));
 
 -- Aanbod en voorraad per consumptiepunt per product.
 -- Een nieuw product krijgt bij ieder punt een regel met offered = false.
@@ -78,6 +84,10 @@ CREATE TABLE point_products (
     offered boolean NOT NULL DEFAULT false,
     stock integer NOT NULL DEFAULT 0,
     minimum integer NOT NULL DEFAULT 0,
+    -- Tijdstip van de laatste telling van de voorraad; NULL = nooit geteld.
+    -- Een registratie van vóór dit tijdstip verandert de voorraad niet (ook niet bij een
+    -- correctie), omdat het product dan al niet meer in de getelde voorraad zat.
+    counted_at timestamptz,
     updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (point_id, product_id),
     CONSTRAINT point_products_minimum_non_negative CHECK (minimum >= 0)
@@ -108,8 +118,10 @@ CREATE TABLE admins (
     -- De backend maakt en controleert de hash; de database ziet het wachtwoord nooit.
     password_hash text NOT NULL,
     display_name varchar(150) NOT NULL,
-    -- 'system_admin' = de systeembeheerder uit hoofdstuk 3 van het TO
-    -- (technisch beheer, gebruikersbeheer); 'admin' en 'manager' beheren de gegevens.
+    -- Rollen uit hoofdstuk 3 van het TO:
+    --   'admin'        = de beheerder (beheert medewerkers, producten, bedrijven, voorraad
+    --                    en registraties);
+    --   'system_admin' = de systeembeheerder (technisch beheer, gebruikersbeheer).
     role varchar(30) NOT NULL DEFAULT 'admin',
     active boolean NOT NULL DEFAULT true,
     last_login_at timestamptz,
@@ -122,7 +134,7 @@ CREATE TABLE admins (
     mfa_enabled boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT admins_role_valid CHECK (role IN ('admin', 'manager', 'system_admin')),
+    CONSTRAINT admins_role_valid CHECK (role IN ('admin', 'system_admin')),
     CONSTRAINT admins_failed_login_count_non_negative CHECK (failed_login_count >= 0),
     CONSTRAINT admins_display_name_not_blank CHECK (length(btrim(display_name)) > 0)
 );
@@ -134,7 +146,9 @@ CREATE TABLE registrations (
     registration_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id uuid NOT NULL REFERENCES employees(employee_id) ON DELETE RESTRICT,
     product_id uuid NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
-    -- Consumptiepunt waar de voorraad van af ging.
+    -- Consumptiepunt dat het product aanbood (NULL als het punt het product niet aanbood).
+    -- Er ging alleen voorraad af als de registratie niet vóór de laatste telling
+    -- (point_products.counted_at) lag.
     point_id uuid REFERENCES consumption_points(point_id) ON DELETE SET NULL,
     registered_by_admin_id uuid REFERENCES admins(admin_id) ON DELETE SET NULL,
     registered_at timestamptz NOT NULL DEFAULT now(),
@@ -237,7 +251,7 @@ VALUES
     ('Beleg', 0.50),
     ('Ei', 0.50),
     ('Yoghurt', 0.50)
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT ((lower(name))) DO NOTHING;
 
 -- Maandoverzicht voor het admin-dashboard.
 -- De kosten gebruiken de prijs die bij de registratie is bewaard (r.price), niet de huidige productprijs.

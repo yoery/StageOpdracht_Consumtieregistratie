@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1075" viewBox="0 0 1500 1075" role="img" aria-labelledby="title desc">
+  <title id="title">Architectuur van de demo</title>
+  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp), model (RegistrationModel, CsvExport, FaceRecognitionDemo), opslag (DataStore) en localStorage. main.js maakt alle objecten aan en koppelt ze.</desc>
+  <defs>
+    <style>
+      text { font-family: "DM Sans", sans-serif; fill: #163540; }
+      .kop { font-family: "Space Grotesk", "DM Sans", sans-serif; font-weight: 700; }
+      .sub { fill: #71858a; }
+      .lbl { font-size: 13.5px; fill: #71858a; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+      .lijn { fill: none; stroke: #163540; stroke-width: 1.6; }
+      .stip { fill: none; stroke: #163540; stroke-width: 1.5; stroke-dasharray: 7 5; }
+    </style>
+    <!-- gevulde pijlpunt (aanroep, gegevensstroom) -->
+    <marker id="pijl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#163540"/>
+    </marker>
+    <!-- open pijlpunt (UML: associatie en afhankelijkheid) -->
+    <marker id="open" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="1075" fill="#ffffff"/>
+<text x="40" y="50" font-size="28" class="kop">Architectuur van de demo</text>
+<text x="40" y="78" font-size="15" class="sub">MVC-lagen in de browser en hoe main.js alle onderdelen aan elkaar koppelt</text>
+<!-- Lagen -->
+<rect x="30" y="100" width="1140" height="70" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="140" font-size="16" class="kop">Gebruiker</text>
+<rect x="30" y="184" width="1140" height="100" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="231" font-size="16" class="kop">Pagina</text>
+<text x="48" y="250" font-size="13" class="sub">HTML en CSS</text>
+<rect x="30" y="298" width="1140" height="128" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="359" font-size="16" class="kop">View</text>
+<text x="48" y="378" font-size="13" class="sub">weergave</text>
+<rect x="30" y="440" width="1140" height="128" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="501" font-size="16" class="kop">Controller</text>
+<text x="48" y="520" font-size="13" class="sub">besturing</text>
+<rect x="30" y="582" width="1140" height="136" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="647" font-size="16" class="kop">Model</text>
+<text x="48" y="666" font-size="13" class="sub">gegevens en regels</text>
+<rect x="30" y="732" width="1140" height="104" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="781" font-size="16" class="kop">Opslag</text>
+<text x="48" y="800" font-size="13" class="sub">opslaglaag</text>
+<rect x="30" y="850" width="1140" height="150" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<text x="48" y="921" font-size="16" class="kop">Browser en</text>
+<text x="48" y="941" font-size="16" class="kop">buitenwereld</text>
+<!-- Onderdelen -->
+<rect x="560" y="110" width="300" height="50" rx="12" fill="#ffffff" stroke="#71858a" stroke-width="1.4" class="box"/>
+<text x="710" y="141" text-anchor="middle" font-size="17" class="kop">Medewerker en beheerder</text>
+
+<rect x="380" y="196" width="670" height="76" rx="12" fill="#ffffff" stroke="#71858a" stroke-width="1.4" class="box"/>
+<text x="715" y="225" text-anchor="middle" font-size="17" class="kop">index.html + styles.css</text>
+<text x="715" y="247" text-anchor="middle" font-size="13.5">knoppen, formulieren, lijsten en vensters (DOM)</text>
+<rect x="230" y="312" width="430" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="445" y="342" text-anchor="middle" font-size="17" class="kop">RegistrationView</text>
+<text x="445" y="364" text-anchor="middle" font-size="13.5">tekent lijsten, tabellen, vensters en meldingen;</text>
+<text x="445" y="383" text-anchor="middle" font-size="13.5">leest het model, verandert zelf niets (icons.js)</text>
+<rect x="860" y="312" width="290" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="1005" y="342" text-anchor="middle" font-size="17" class="kop">ThemeManager</text>
+<text x="1005" y="364" text-anchor="middle" font-size="13.5">licht, donker, auto of systeem;</text>
+<text x="1005" y="383" text-anchor="middle" font-size="13.5">staat los, bewaart keuze (tvb-theme)</text>
+<rect x="230" y="454" width="920" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="690" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller)</text>
+<text x="690" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren, controleert invoer en stuurt model, view, export en camerademo aan;</text>
+<text x="690" y="525" text-anchor="middle" font-size="13.5">persist(): wijziging en logboekregel in één keer opslaan, anders allebei terugdraaien</text>
+<rect x="230" y="596" width="330" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="395" y="626" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
+<text x="395" y="648" text-anchor="middle" font-size="13.5">registraties, medewerkers, producten,</text>
+<text x="395" y="667" text-anchor="middle" font-size="13.5">bedrijven, voorraad, loonmaand, logboek</text>
+<rect x="640" y="596" width="240" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="760" y="626" text-anchor="middle" font-size="17" class="kop">CsvExport</text>
+<text x="760" y="648" text-anchor="middle" font-size="13.5">per medewerker, loonmaand</text>
+<text x="760" y="667" text-anchor="middle" font-size="13.5">en werkgevernummer</text>
+<rect x="920" y="596" width="230" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="1035" y="626" text-anchor="middle" font-size="16" class="kop">FaceRecognitionDemo</text>
+<text x="1035" y="648" text-anchor="middle" font-size="13.5">demo, uit te zetten</text>
+<text x="1035" y="667" text-anchor="middle" font-size="13.5">in config.js (FACE_DEMO)</text>
+<rect x="230" y="746" width="330" height="76" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="395" y="775" text-anchor="middle" font-size="17" class="kop">DataStore</text>
+<text x="395" y="797" text-anchor="middle" font-size="13.5">laden, controleren, omzetten, opslaan</text>
+<g class="box">
+    <path d="M230,874 V976 A165,12 0 0 0 560,976 V874" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+    <ellipse cx="395" cy="874" rx="165" ry="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+  </g>
+<text x="395" y="916" text-anchor="middle" font-size="17" class="kop">localStorage</text>
+<text x="395" y="938" text-anchor="middle" font-size="13.5">tvb-blikjesregistratie (gegevens)</text>
+<text x="395" y="957" text-anchor="middle" font-size="13.5">tvb-theme (gekozen thema)</text>
+<rect x="640" y="862" width="240" height="126" rx="12" fill="#fdf1e7" stroke="#a55a16" stroke-width="1.8" class="box"/>
+<text x="760" y="896" text-anchor="middle" font-size="17" class="kop">CSV-bestand</text>
+<text x="760" y="918" text-anchor="middle" font-size="13.5">openen in Excel en</text>
+<text x="760" y="937" text-anchor="middle" font-size="13.5">aanleveren bij de</text>
+<text x="760" y="956" text-anchor="middle" font-size="13.5">loonadministratie</text>
+<rect x="920" y="862" width="230" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="1035" y="896" text-anchor="middle" font-size="16" class="kop">Camera + face-api</text>
+<text x="1035" y="918" text-anchor="middle" font-size="13.5">modellen uit</text>
+<text x="1035" y="937" text-anchor="middle" font-size="13.5">assets/vendor/face-api/;</text>
+<text x="1035" y="956" text-anchor="middle" font-size="13.5">beeld alleen in geheugen</text>
+<!-- Verbindingen -->
+<path d="M710,160 L710,194" class="lijn" marker-end="url(#pijl)"/>
+<text x="722" y="182" class="lbl">klikt en tikt</text>
+<path d="M445,312 L445,274" class="lijn" marker-end="url(#pijl)"/>
+<text x="457" y="293" class="lbl">tekent HTML</text>
+<path d="M1005,312 L1005,274" class="lijn" marker-end="url(#pijl)"/>
+<text x="1017" y="293" class="lbl">zet data-theme</text>
+<path d="M700,272 L700,452" class="lijn" marker-end="url(#pijl)"/>
+<text x="712" y="352" class="lbl">klik, toets,</text>
+<text x="712" y="369" class="lbl">formulier</text>
+<path d="M445,454 L445,414" class="lijn" marker-end="url(#pijl)"/>
+<text x="457" y="438" class="lbl">render…()</text>
+<path d="M395,554 L395,594" class="lijn" marker-end="url(#pijl)"/>
+<text x="407" y="578" class="lbl">wijzigt en leest</text>
+<path d="M760,554 L760,594" class="lijn" marker-end="url(#pijl)"/>
+<text x="772" y="578" class="lbl">download()</text>
+<path d="M1035,554 L1035,594" class="lijn" marker-end="url(#pijl)"/>
+<text x="1047" y="578" class="lbl">camerademo</text>
+<path d="M230,392 H214 V672 H228" class="lijn" marker-end="url(#pijl)"/>
+<text x="206" y="532" text-anchor="middle" class="lbl" transform="rotate(-90 206 532)">leest gegevens</text>
+<path d="M640,650 L562,650" class="lijn" marker-end="url(#pijl)"/>
+<text x="588" y="640" text-anchor="middle" class="lbl">leest</text>
+<path d="M395,704 L395,744" class="lijn" marker-end="url(#pijl)"/>
+<text x="407" y="728" class="lbl">load() / save()</text>
+<path d="M395,822 L395,860" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
+<text x="407" y="846" class="lbl">JSON</text>
+<path d="M760,704 L760,860" class="lijn" marker-end="url(#pijl)"/>
+<text x="772" y="786" class="lbl">downloadt</text>
+<path d="M1035,704 L1035,860" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
+<text x="1047" y="778" class="lbl">laadt modellen,</text>
+<text x="1047" y="795" class="lbl">leest camerabeeld</text>
+<path d="M560,960 H620 V556" class="stip" marker-end="url(#pijl)"/>
+<text x="614" y="760" text-anchor="middle" class="lbl" transform="rotate(-90 614 760)">storage-event (ander tabblad)</text>
+<!-- main.js en modules zonder class -->
+<rect x="1230" y="298" width="250" height="424" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="1355" y="332" text-anchor="middle" font-size="19" class="kop">main.js</text>
+<text x="1355" y="354" text-anchor="middle" font-size="13" class="sub">startpunt: maakt alle</text>
+<text x="1355" y="372" text-anchor="middle" font-size="13" class="sub">objecten aan en koppelt ze</text>
+<text x="1250" y="410" font-size="13" font-weight="700" fill="#176b8b">1</text>
+<text x="1268" y="410" font-size="13">new ThemeManager()</text>
+<text x="1284" y="428" font-size="13">.initialize()</text>
+<text x="1250" y="462" font-size="13" font-weight="700" fill="#176b8b">2</text>
+<text x="1268" y="462" font-size="13">new DataStore(STORAGE_KEY)</text>
+<text x="1250" y="496" font-size="13" font-weight="700" fill="#176b8b">3</text>
+<text x="1268" y="496" font-size="13">new RegistrationModel(store)</text>
+<text x="1250" y="530" font-size="13" font-weight="700" fill="#176b8b">4</text>
+<text x="1268" y="530" font-size="13">new RegistrationView(model)</text>
+<text x="1250" y="564" font-size="13" font-weight="700" fill="#176b8b">5</text>
+<text x="1268" y="564" font-size="13">new CsvExport(model)</text>
+<text x="1250" y="598" font-size="13" font-weight="700" fill="#176b8b">6</text>
+<text x="1268" y="598" font-size="13">new FaceRecognitionDemo()</text>
+<text x="1250" y="632" font-size="13" font-weight="700" fill="#176b8b">7</text>
+<text x="1268" y="632" font-size="13">new RegistrationApp(model,</text>
+<text x="1284" y="650" font-size="13">view, csvExport, faceDemo)</text>
+<text x="1250" y="684" font-size="13" font-weight="700" fill="#176b8b">8</text>
+<text x="1268" y="684" font-size="13">app.initialize()</text>
+<path d="M1176,312 H1192 V822 H1176" class="stip"/>
+<path d="M1228,560 L1194,560" class="stip" marker-end="url(#open)"/>
+<rect x="1230" y="862" width="250" height="126" rx="12" fill="#f8fbfa" stroke="#71858a" stroke-width="1.4" class="box"/>
+<text x="1355" y="892" text-anchor="middle" font-size="14" class="kop">config.js · ids.js · icons.js</text>
+<text x="1355" y="915" text-anchor="middle" font-size="13">vaste waarden, createId()</text>
+<text x="1355" y="934" text-anchor="middle" font-size="13">en SVG-iconen; gebruikt</text>
+<text x="1355" y="953" text-anchor="middle" font-size="13">door de classes</text>
+<!-- Legenda -->
+<path d="M40,1040 L90,1040" class="lijn" marker-end="url(#pijl)"/>
+<text x="100" y="1045" font-size="13.5">roept aan of geeft gegevens door</text>
+<path d="M340,1040 L390,1040" class="stip" marker-end="url(#pijl)"/>
+<text x="400" y="1045" font-size="13.5">gebeurtenis uit de browser</text>
+<path d="M620,1040 L670,1040" class="stip" marker-end="url(#open)"/>
+<text x="680" y="1045" font-size="13.5">maakt het object aan (bij het opstarten)</text>
+</svg>

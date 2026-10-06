@@ -29,6 +29,11 @@ const SAFE_COLOR = /^#[0-9a-fA-F]{6}$/;
 // typefout of geknoeide gegevens.
 const MAX_PRICE = 1000;
 
+// Hoe ver een registratie in de toekomst mag liggen ten opzichte van het moment van laden:
+// één dag (in milliseconden). Een klein verschil kan ontstaan doordat de klok van een tablet
+// iets afwijkt; een registratie die meer dan een dag later ligt, is vrijwel zeker geknoeid.
+const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+
 /**
  * DataStore — de opslaglaag: leest en schrijft alle gegevens in de browser (localStorage).
  *
@@ -66,9 +71,12 @@ export class DataStore {
 
   // Leest de opgeslagen gegevens. Geeft null terug als er niets is opgeslagen of als de
   // gegevens helemaal onleesbaar zijn; het model start dan met demogegevens.
-  // Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum) worden
+  // Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum, een
+  // registratie van meer dan een dag in de toekomst of een tweede regel met dezelfde id) worden
   // overgeslagen, zodat niet alle andere gegevens verloren gaan.
-  load() {
+  // `now` is het moment van laden; de datums worden daarmee vergeleken. Het is mee te geven,
+  // zodat dit met vaste datums te testen is.
+  load(now = new Date()) {
     this.loadProblem = null;
 
     let value;
@@ -84,8 +92,8 @@ export class DataStore {
       const parsed = JSON.parse(value);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Geen object");
 
-      const migrated = this.migrate(parsed);
-      const data = this.removeInvalidItems(migrated);
+      const migrated = this.migrate(parsed, now);
+      const data = this.removeInvalidItems(migrated, now);
       const skipped = this.countSkipped(parsed, data);
 
       if (skipped > 0) {
@@ -173,19 +181,23 @@ export class DataStore {
   // ------------------------------------------------------------------
 
   // De controle per soort gegeven. Wordt gebruikt om beschadigde regels over te slaan.
-  validators() {
+  // `now` is het moment van laden (zie load); registraties worden daarmee vergeleken.
+  validators(now = new Date()) {
     return {
       employees: (employee) => this.isValidEmployee(employee),
-      registrations: (registration) => this.isValidRegistration(registration),
+      registrations: (registration) => this.isValidRegistration(registration, now),
       products: (product) => this.isValidProduct(product),
       companies: (company) => this.isValidCompany(company),
       points: (point) => this.isValidPoint(point)
     };
   }
 
-  // Zijn alle onderdelen aanwezig en in de juiste vorm?
-  isValid(data) {
-    return Object.entries(this.validators()).every(([name, check]) => this.allValid(data?.[name], check));
+  // Zijn alle onderdelen aanwezig en in de juiste vorm, en komt iedere id per lijst maar één
+  // keer voor (zie hasUniqueIds)?
+  isValid(data, now = new Date()) {
+    return Object.entries(this.validators(now)).every(
+      ([name, check]) => this.allValid(data?.[name], check) && this.hasUniqueIds(data[name])
+    );
   }
 
   // Hulpfunctie: is dit een lijst waarvan ieder item de controle doorstaat?
@@ -193,13 +205,38 @@ export class DataStore {
     return Array.isArray(list) && list.every(check);
   }
 
-  // Geeft de gegevens terug zonder de regels die de controle niet doorstaan.
-  removeInvalidItems(data) {
+  // Hulpfunctie: komt iedere id in deze lijst maar één keer voor?
+  hasUniqueIds(list) {
+    return this.withoutDuplicateIds(list).length === list.length;
+  }
+
+  // Geeft de lijst terug waarin iedere id maar één keer voorkomt: de eerste regel met een id
+  // blijft staan, latere regels met dezelfde id vallen af. Regels zonder id (zoals heel oude
+  // logboekregels) blijven altijd staan.
+  // Twee regels met dezelfde id zijn vrijwel zeker geknoeid of half gekopieerd. Zonder deze stap
+  // zou bijvoorbeeld "Wijzigen" of "Verwijderen" op de ene regel ook de andere raken.
+  withoutDuplicateIds(list) {
+    const seen = new Set();
+
+    return list.filter((item) => {
+      if (item?.id === undefined || item?.id === null) return true;
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }
+
+  // Geeft de gegevens terug zonder de regels die de controle niet doorstaan en zonder tweede
+  // regels met een id die al eerder in dezelfde lijst stond (zie withoutDuplicateIds).
+  // Ook het logboek wordt zo opgeschoond. De afgevallen regels tellen in countSkipped mee, zodat
+  // load() een reservekopie maakt en loadProblem op "skipped" zet (de controller toont dan een melding).
+  removeInvalidItems(data, now = new Date()) {
     const cleaned = { ...data };
 
-    for (const [name, check] of Object.entries(this.validators())) {
-      cleaned[name] = data[name].filter(check);
+    for (const [name, check] of Object.entries(this.validators(now))) {
+      cleaned[name] = this.withoutDuplicateIds(data[name].filter(check));
     }
+    if (Array.isArray(data.auditLog)) cleaned.auditLog = this.withoutDuplicateIds(data.auditLog);
 
     return cleaned;
   }
@@ -282,7 +319,10 @@ export class DataStore {
   // moet het een geldige prijs zijn; anders zou de CSV-export een verkeerd bedrag tonen.
   // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
   // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
-  isValidRegistration(registration) {
+  // Het tijdstip (`createdAt`) mag hooguit één dag na `now` (het moment van laden) liggen
+  // (zie MAX_FUTURE_MS). Een registratie ver in de toekomst is geknoeid en zou anders in een
+  // verkeerde loonmaand in de CSV-export terechtkomen.
+  isValidRegistration(registration, now = new Date()) {
     const hasValidPrice = registration?.price === undefined || this.isValidPrice(registration.price);
     const hasValidEmployerNumber =
       registration?.employerNumber === undefined ||
@@ -295,6 +335,7 @@ export class DataStore {
       this.isSafeOptionalId(registration.pointId) &&
       typeof registration.createdAt === "string" &&
       !Number.isNaN(Date.parse(registration.createdAt)) &&
+      Date.parse(registration.createdAt) - now.getTime() <= MAX_FUTURE_MS &&
       hasValidPrice &&
       hasValidEmployerNumber
     );
@@ -331,7 +372,9 @@ export class DataStore {
   // Staat er bij `companies` iets anders dan een lijst, dan zijn de gegevens beschadigd. Dan
   // gooit deze methode een fout, zodat load() de gegevens als onleesbaar behandelt en er een
   // reservekopie komt. Anders zouden alle consumptiepunten (en hun voorraad) worden vervangen.
-  migrate(data) {
+  // `now` is het moment van laden; completePointStock gebruikt het om een telling in de
+  // toekomst weg te laten.
+  migrate(data, now = new Date()) {
     const objects = (list) => (Array.isArray(list) ? list.filter((item) => this.isObject(item)) : []);
 
     if (data.companies !== undefined && !Array.isArray(data.companies)) {
@@ -354,7 +397,7 @@ export class DataStore {
       registrations: objects(data.registrations).map((registration) => this.migrateRegistration(registration)),
       products,
       companies,
-      points: points.map((point) => this.completePointStock(point, products)),
+      points: points.map((point) => this.completePointStock(point, products, now)),
       auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry)) : []
     };
   }
@@ -442,9 +485,12 @@ export class DataStore {
   // Voorraad en minimum worden altijd getallen (een getal als tekst, zoals "5", zou bij optellen
   // anders "51" worden in plaats van 6). De voorraad mag negatief zijn (er is dan meer
   // geregistreerd dan geteld), het minimum niet: een negatief minimum wordt 0.
-  // Het tijdstip van de laatste telling (`countedAt`) blijft bewaard als het een geldige datum is;
-  // removeLastRegistration gebruikt dat om te bepalen of een product terug naar de voorraad gaat.
-  completePointStock(point, products) {
+  // Het tijdstip van de laatste telling (`countedAt`) blijft bewaard als het een geldige datum is
+  // die niet na `now` (het moment van laden) ligt. addRegistration en removeLastRegistration
+  // gebruiken dat om te bepalen of de voorraad verandert. Een telling in de toekomst wordt
+  // weggelaten (de voorraad telt dan als "niet geteld"): anders zou iedere nieuwe registratie
+  // vóór die telling liggen en zou de voorraad nooit meer veranderen.
+  completePointStock(point, products, now = new Date()) {
     const stock = this.renameStockKeys(point.products);
     const completedProducts = {};
 
@@ -459,7 +505,8 @@ export class DataStore {
         minimum: Number.isFinite(minimum) ? Math.max(0, minimum) : 0
       };
 
-      const hasValidCount = typeof entry.countedAt === "string" && !Number.isNaN(Date.parse(entry.countedAt));
+      const countedTime = typeof entry.countedAt === "string" ? Date.parse(entry.countedAt) : NaN;
+      const hasValidCount = !Number.isNaN(countedTime) && countedTime <= now.getTime();
       if (hasValidCount) completedProducts[product.id].countedAt = entry.countedAt;
     }
 

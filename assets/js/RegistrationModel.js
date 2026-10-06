@@ -139,8 +139,11 @@ export class RegistrationModel {
   // demogegevens. Wordt gebruikt door de knop "Alle gegevens wissen": op een gedeelde tablet
   // moeten persoonsgegevens volledig verwijderd kunnen worden (AVG, recht op vergetelheid).
   // Een opslag zonder clearAll (zoals de nep-opslag in de tests) wordt overgeslagen.
-  wipeAll() {
-    if (typeof this.store.clearAll === "function") this.store.clearAll();
+  // Met `clearStore: false` wordt alleen het geheugen leeggemaakt en blijft de opslag met rust.
+  // Dat gebruikt RegistrationApp.handleStorageCleared als een ander tabblad al heeft gewist en
+  // daarna zelf de nieuwe demogegevens opslaat: die mogen hier niet opnieuw worden gewist.
+  wipeAll({ clearStore = true } = {}) {
+    if (clearStore && typeof this.store.clearAll === "function") this.store.clearAll();
 
     this.state = this.createSeedState();
     this.loadProblem = null;
@@ -185,15 +188,16 @@ export class RegistrationModel {
   // Registraties
   // ------------------------------------------------------------------
 
-  // Voegt precies één product toe en haalt het van de voorraad van het consumptiepunt van de
-  // medewerker af.
+  // Voegt precies één product toe en haalt het (meestal) van de voorraad van het consumptiepunt
+  // van de medewerker af.
   //   - `createdAt` is het tijdstip van de registratie: standaard nu. Bij een correctie "+" kan
   //     de beheerder een eerdere datum kiezen, bijvoorbeeld voor een vergeten blikje van vorige maand.
-  //   - Alleen een product dat het punt aanbiedt, hoort bij de voorraad. `pointId` in de
-  //     registratie is dat punt (anders null), zodat een correctie het product later weer naar
-  //     dat punt terugzet. Ligt het tijdstip vóór de laatste telling, dan zat het product al niet
-  //     meer in de getelde voorraad; dan gaat er niets van de voorraad af (net als bij
-  //     removeLastRegistration, dat dan ook niets terugzet).
+  //   - `pointId` in de registratie is het consumptiepunt dat het product aanbood (anders null).
+  //     Zo weet removeLastRegistration later naar welk punt het product terug moet.
+  //   - Er gaat alleen voorraad af als het punt het product aanbiedt én de registratie niet vóór
+  //     de laatste telling (`countedAt`) ligt. Ligt het tijdstip vóór die telling, dan zat het
+  //     product al niet meer in de getelde voorraad; dan verandert de voorraad niet (net als bij
+  //     removeLastRegistration, dat dan ook niets terugzet). `pointId` wordt dan wel bewaard.
   //   - `correction: true` betekent dat de beheerder de registratie heeft toegevoegd. Die telt
   //     niet mee als "vorige keer" in het productvenster van de medewerker.
   //   - `price` is de prijs op het moment van registreren. Verandert de prijs later, dan
@@ -223,9 +227,12 @@ export class RegistrationModel {
     if (offered && madeAfterCount) this.changeStock(point.id, productId, -1);
   }
 
-  // Zoekt de meest recente registratie van deze medewerker (en van dit product, als dat is
-  // meegegeven). Dit is precies de registratie die removeLastRegistration zou verwijderen,
-  // zodat de controller vooraf kan laten zien wat er wordt gecorrigeerd.
+  // Zoekt de laatst ingevoerde registratie van deze medewerker (en van dit product, als dat is
+  // meegegeven). "Laatst ingevoerd" gaat op de volgorde van invoer (de volgorde in de lijst),
+  // niet op de datum: een correctie "+" met een eerdere datum die als laatste is toegevoegd,
+  // is dus de laatste registratie. Dit is precies de registratie die removeLastRegistration zou
+  // verwijderen (correctie "−"), zodat de controller vooraf kan vragen of een oude loonmaand
+  // mag worden aangepast (confirmOldMonthRemoval).
   // Geeft undefined terug als er geen registratie is.
   lastRegistration(employeeId, productId) {
     const newestFirst = [...this.registrations].reverse();
@@ -237,8 +244,8 @@ export class RegistrationModel {
     });
   }
 
-  // Verwijdert de meest recente registratie van deze medewerker (en van dit product,
-  // als dat is meegegeven). Geeft false terug als er niets te verwijderen was.
+  // Verwijdert de laatst ingevoerde registratie van deze medewerker (en van dit product,
+  // als dat is meegegeven; zie lastRegistration). Geeft false terug als er niets te verwijderen was.
   removeLastRegistration(employeeId, productId) {
     const registration = this.lastRegistration(employeeId, productId);
     if (!registration) return false;
@@ -434,12 +441,18 @@ export class RegistrationModel {
     return this.registrations.some((registration) => registration.employeeId === employeeId);
   }
 
-  // Verwijdert een medewerker definitief, maar alleen als er geen registraties aan hangen.
-  // Anders zou de CSV-export die registraties tonen als "Verwijderd", zonder looncode en
-  // personeelsnummer. Zo'n medewerker kan beter inactief worden gezet.
-  // Geeft false terug (en verandert niets) als de medewerker registraties heeft.
+  // Verwijdert een medewerker definitief, maar alleen een inactieve medewerker zonder registraties.
+  //   - Met registraties zou de CSV-export die tonen als "Verwijderd", zonder looncode en
+  //     personeelsnummer. Zo'n medewerker kan beter inactief blijven.
+  //   - Een actieve medewerker moet eerst inactief worden gezet (setEmployeeActive). Zo wordt
+  //     niemand per ongeluk verwijderd die nog op de tablet registreert.
+  // De view toont de knop "Verwijderen" alleen in dit geval, maar het model controleert het zelf
+  // ook, zodat een oude knop (bijvoorbeeld van vóór een wijziging in een ander tabblad) niets
+  // verkeerds kan doen. Geeft false terug (en verandert niets) als de medewerker niet bestaat,
+  // actief is of registraties heeft; anders true.
   removeEmployee(employeeId) {
-    if (this.employeeHasRegistrations(employeeId)) return false;
+    const employee = this.findEmployee(employeeId);
+    if (!employee || employee.active || this.employeeHasRegistrations(employeeId)) return false;
 
     this.state.employees = this.employees.filter((employee) => employee.id !== employeeId);
     return true;
@@ -551,15 +564,34 @@ export class RegistrationModel {
     return [...this.companies].sort((a, b) => a.name.localeCompare(b.name, "nl"));
   }
 
+  // Heeft een ander bedrijf dan `exceptCompanyId` al dit werkgevernummer? Een leeg nummer telt
+  // niet: meerdere bedrijven mogen (nog) geen nummer hebben. Spaties voor en achter tellen niet mee.
+  // Wordt gebruikt door saveCompany (hieronder) en door het bedrijfsformulier in RegistrationApp.
+  // Past bij de UNIQUE-regel op companies.employer_number in docs/DATABASE-SCHEMA.sql.
+  isEmployerNumberTaken(employerNumber, exceptCompanyId = null) {
+    const number = String(employerNumber ?? "").trim();
+    if (number === "") return false;
+
+    return this.companies.some(
+      (company) => company.id !== exceptCompanyId && String(company.employerNumber ?? "").trim() === number
+    );
+  }
+
   // Voegt een bedrijf toe of wijzigt naam en werkgevernummer van een bestaand bedrijf.
+  // Een werkgevernummer moet uniek zijn (zie isEmployerNumberTaken). Heeft een ander bedrijf het
+  // al, dan wordt er niets opgeslagen en komt er false terug; anders true.
   saveCompany({ id, name, employerNumber }) {
+    const existing = this.findCompany(id);
+    if (this.isEmployerNumberTaken(employerNumber, existing ? id : null)) return false;
+
     const company = { id: id || createId(), name, employerNumber };
 
-    if (this.findCompany(id)) {
+    if (existing) {
       this.state.companies = this.companies.map((item) => (item.id === id ? { ...item, ...company } : item));
     } else {
       this.state.companies = [...this.companies, company];
     }
+    return true;
   }
 
   // Verwijdert een bedrijf alleen als er geen medewerkers of consumptiepunten meer aan hangen.

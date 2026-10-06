@@ -132,6 +132,7 @@ test("correctie '−' in de huidige maand vraagt niet om bevestiging", () => {
 test("een wijziging en de logboekregel worden in één keer opgeslagen", () => {
   const { app, model } = createApp();
   const counter = countSaves(model);
+  globalThis.window = { confirm: () => true }; // product verwijderen vraagt nu eerst om bevestiging
 
   app.removeProduct("boter");
 

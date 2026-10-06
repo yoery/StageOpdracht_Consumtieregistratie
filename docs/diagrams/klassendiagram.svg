@@ -1,0 +1,279 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="1450" viewBox="0 0 1960 1450" role="img" aria-labelledby="title desc">
+  <title id="title">Klassendiagram JavaScript</title>
+  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager en FaceRecognitionDemo, met de modules main.js, config.js, ids.js en icons.js.</desc>
+  <defs>
+    <style>
+      text { font-family: "DM Sans", sans-serif; fill: #163540; }
+      .kop { font-family: "Space Grotesk", "DM Sans", sans-serif; font-weight: 700; }
+      .sub { fill: #71858a; }
+      .lbl { font-size: 13.5px; fill: #71858a; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+      .lijn { fill: none; stroke: #163540; stroke-width: 1.6; }
+      .stip { fill: none; stroke: #163540; stroke-width: 1.5; stroke-dasharray: 7 5; }
+    </style>
+    <!-- gevulde pijlpunt (aanroep, gegevensstroom) -->
+    <marker id="pijl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#163540"/>
+    </marker>
+    <!-- open pijlpunt (UML: associatie en afhankelijkheid) -->
+    <marker id="open" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <rect width="1960" height="1450" fill="#ffffff"/>
+<text x="40" y="50" font-size="28" class="kop">Klassendiagram – JavaScript van de demo</text>
+<text x="40" y="78" font-size="15" class="sub">Classes met de belangrijkste attributen en methodes (selectie) en hun onderlinge relaties</text>
+<g>
+<rect x="800" y="96" width="320" height="108" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M806,96 H1114 A6,6 0 0 1 1120,102 V152 H800 V102 A6,6 0 0 1 806,96 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="960" y="117" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="960" y="140" text-anchor="middle" font-size="17" class="kop">main.js</text>
+<text x="812" y="172" font-size="13">maakt alle objecten aan en roept</text>
+<text x="812" y="191" font-size="13">app.initialize() aan</text>
+</g>
+<g>
+<rect x="40" y="250" width="320" height="317" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,250 H354 A6,6 0 0 1 360,256 V292 H40 V256 A6,6 0 0 1 46,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="200" y="278" text-anchor="middle" font-size="17" class="kop">ThemeManager</text>
+<text x="52" y="312" font-size="13" text-decoration="underline">+ STORAGE_KEY: string</text>
+<text x="52" y="331" font-size="13" text-decoration="underline">+ LAST_THEME_KEY: string</text>
+<text x="52" y="350" font-size="13" text-decoration="underline">+ MODES: string[]</text>
+<text x="52" y="369" font-size="13">+ mode: string</text>
+<text x="52" y="388" font-size="13">+ switchButton: Element</text>
+<text x="52" y="407" font-size="13">+ modeButtons: NodeList</text>
+<path d="M40,420 L360,420" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="440" font-size="13">+ initialize()</text>
+<text x="52" y="459" font-size="13">+ loadMode(): string</text>
+<text x="52" y="478" font-size="13">+ setMode(mode)</text>
+<text x="52" y="497" font-size="13">+ toggle()</text>
+<text x="52" y="516" font-size="13">+ resolveTheme(mode, systemDark, date)</text>
+<text x="52" y="535" font-size="13">+ isDarkOutside(date): boolean</text>
+<text x="52" y="554" font-size="13">+ apply()</text>
+</g>
+<g>
+<rect x="420" y="250" width="420" height="374" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M426,250 H834 A6,6 0 0 1 840,256 V292 H420 V256 A6,6 0 0 1 426,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="630" y="278" text-anchor="middle" font-size="17" class="kop">RegistrationView</text>
+<text x="432" y="312" font-size="13">+ model: RegistrationModel</text>
+<text x="432" y="331" font-size="13">+ $: (selector) =&gt; Element</text>
+<path d="M420,344 L840,344" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="432" y="364" font-size="13">+ renderAll()</text>
+<text x="432" y="383" font-size="13">+ renderEmployees()</text>
+<text x="432" y="402" font-size="13">+ renderStats()</text>
+<text x="432" y="421" font-size="13">+ renderEmployeeProducts(employeeId, …)</text>
+<text x="432" y="440" font-size="13">+ renderAdmin()</text>
+<text x="432" y="459" font-size="13">+ renderCorrectionEmployees()</text>
+<text x="432" y="478" font-size="13">+ renderAdminEmployees()</text>
+<text x="432" y="497" font-size="13">+ renderAdminProducts()</text>
+<text x="432" y="516" font-size="13">+ renderAdminCompanies()</text>
+<text x="432" y="535" font-size="13">+ renderStock()</text>
+<text x="432" y="554" font-size="13">+ renderAuditLog(limit)</text>
+<text x="432" y="573" font-size="13">+ showToast(message, opties)</text>
+<text x="432" y="592" font-size="13">+ showFieldError(field, message)</text>
+<text x="432" y="611" font-size="13">+ escapeHtml(value): string</text>
+</g>
+<g>
+<rect x="940" y="250" width="480" height="716" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M946,250 H1414 A6,6 0 0 1 1420,256 V292 H940 V256 A6,6 0 0 1 946,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1180" y="278" text-anchor="middle" font-size="17" class="kop">RegistrationApp</text>
+<text x="952" y="312" font-size="13">+ model: RegistrationModel</text>
+<text x="952" y="331" font-size="13">+ view: RegistrationView</text>
+<text x="952" y="350" font-size="13">+ csvExport: CsvExport</text>
+<text x="952" y="369" font-size="13">+ faceDemo: FaceRecognitionDemo</text>
+<text x="952" y="388" font-size="13">+ adminLoggedIn: boolean</text>
+<text x="952" y="407" font-size="13">+ selectedEmployeeId: string | null</text>
+<text x="952" y="426" font-size="13">+ selectedProducts: object</text>
+<text x="952" y="445" font-size="13">+ auditLogLimit: number</text>
+<text x="952" y="464" font-size="13">+ currentDay: string</text>
+<text x="952" y="483" font-size="13">+ editingCopies: Map</text>
+<path d="M940,496 L1420,496" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="952" y="516" font-size="13">+ initialize()</text>
+<text x="952" y="535" font-size="13">+ registerEventListeners()</text>
+<text x="952" y="554" font-size="13">+ handleStorageChange(event)</text>
+<text x="952" y="573" font-size="13">+ refreshIfNewDay(now)</text>
+<text x="952" y="592" font-size="13">+ persist(change, audit): boolean</text>
+<text x="952" y="611" font-size="13">+ openEmployeeProducts(employeeId)</text>
+<text x="952" y="630" font-size="13">+ repeatLastSelection()</text>
+<text x="952" y="649" font-size="13">+ registerSelectedProducts()</text>
+<text x="952" y="668" font-size="13">+ login(event)</text>
+<text x="952" y="687" font-size="13">+ logout()</text>
+<text x="952" y="706" font-size="13">+ readCorrectionDate(now)</text>
+<text x="952" y="725" font-size="13">+ addCorrection(employeeId, productId)</text>
+<text x="952" y="744" font-size="13">+ removeCorrection(employeeId, productId)</text>
+<text x="952" y="763" font-size="13">+ saveEmployee(event)</text>
+<text x="952" y="782" font-size="13">+ removeEmployee(employeeId)</text>
+<text x="952" y="801" font-size="13">+ saveProduct(event)</text>
+<text x="952" y="820" font-size="13">+ saveCompany(event)</text>
+<text x="952" y="839" font-size="13">+ savePoint(event)</text>
+<text x="952" y="858" font-size="13">+ saveStockField(input)</text>
+<text x="952" y="877" font-size="13">+ bookDelivery(productId)</text>
+<text x="952" y="896" font-size="13">+ loadMoreAudit()</text>
+<text x="952" y="915" font-size="13">+ exportCsv()</text>
+<text x="952" y="934" font-size="13">+ wipeAllData()</text>
+<text x="952" y="953" font-size="13">+ openFaceModal(mode, employeeId)</text>
+</g>
+<g>
+<rect x="1520" y="250" width="400" height="374" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1526,250 H1914 A6,6 0 0 1 1920,256 V292 H1520 V256 A6,6 0 0 1 1526,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1720" y="278" text-anchor="middle" font-size="17" class="kop">FaceRecognitionDemo</text>
+<text x="1532" y="312" font-size="13">+ settings: object (FACE_DEMO)</text>
+<text x="1532" y="331" font-size="13">+ mediaDevices: MediaDevices</text>
+<text x="1532" y="350" font-size="13">+ faceapi: object | null</text>
+<text x="1532" y="369" font-size="13">+ stream: MediaStream | null</text>
+<text x="1532" y="388" font-size="13">+ knownFaces: Map</text>
+<text x="1532" y="407" font-size="13">+ lastCandidate: string | null</text>
+<text x="1532" y="426" font-size="13">+ streak: number</text>
+<path d="M1520,439 L1920,439" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1532" y="459" font-size="13">+ isAvailable(): boolean</text>
+<text x="1532" y="478" font-size="13">+ load(): Promise</text>
+<text x="1532" y="497" font-size="13">+ startCamera(video): Promise</text>
+<text x="1532" y="516" font-size="13">+ stopCamera(video)</text>
+<text x="1532" y="535" font-size="13">+ readFace(video): Promise</text>
+<text x="1532" y="554" font-size="13">+ enroll(employeeId, descriptor)</text>
+<text x="1532" y="573" font-size="13">+ forget(employeeId)</text>
+<text x="1532" y="592" font-size="13">+ findMatch(descriptor)</text>
+<text x="1532" y="611" font-size="13">+ confirm(employeeId, required): boolean</text>
+</g>
+<g>
+<rect x="40" y="720" width="320" height="241" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,720 H354 A6,6 0 0 1 360,726 V762 H40 V726 A6,6 0 0 1 46,720 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="200" y="748" text-anchor="middle" font-size="17" class="kop">DataStore</text>
+<text x="52" y="782" font-size="13">+ key: string</text>
+<text x="52" y="801" font-size="13">+ loadProblem: string | null</text>
+<path d="M40,814 L360,814" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="834" font-size="13">+ load(now): object | null</text>
+<text x="52" y="853" font-size="13">+ save(data): boolean</text>
+<text x="52" y="872" font-size="13">+ clearAll(): boolean</text>
+<text x="52" y="891" font-size="13">+ keepBackup(value)</text>
+<text x="52" y="910" font-size="13">+ migrate(data): object</text>
+<text x="52" y="929" font-size="13">+ removeInvalidItems(data): object</text>
+<text x="52" y="948" font-size="13">+ isValidRegistration(r): boolean</text>
+</g>
+<g>
+<rect x="420" y="720" width="420" height="697" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M426,720 H834 A6,6 0 0 1 840,726 V762 H420 V726 A6,6 0 0 1 426,720 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="630" y="748" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
+<text x="432" y="782" font-size="13">+ store: DataStore</text>
+<text x="432" y="801" font-size="13">+ state: object</text>
+<text x="432" y="820" font-size="13">+ loadProblem: string | null</text>
+<text x="432" y="839" font-size="13">«get» employees, registrations, products</text>
+<text x="432" y="858" font-size="13">«get» companies, points, auditLog</text>
+<path d="M420,871 L840,871" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="432" y="891" font-size="13">+ reload()</text>
+<text x="432" y="910" font-size="13">+ snapshot(): object</text>
+<text x="432" y="929" font-size="13">+ restore(snapshot)</text>
+<text x="432" y="948" font-size="13">+ save(): boolean</text>
+<text x="432" y="967" font-size="13">+ wipeAll()</text>
+<text x="432" y="986" font-size="13">+ addRegistration(employeeId, productId, opties)</text>
+<text x="432" y="1005" font-size="13">+ lastRegistration(employeeId, productId)</text>
+<text x="432" y="1024" font-size="13">+ removeLastRegistration(employeeId, productId)</text>
+<text x="432" y="1043" font-size="13">+ lastSelection(employeeId): object</text>
+<text x="432" y="1062" font-size="13">+ countForDate(date): number</text>
+<text x="432" y="1081" font-size="13">+ countForMonth(date): number</text>
+<text x="432" y="1100" font-size="13">+ payrollPeriod(date)</text>
+<text x="432" y="1119" font-size="13">+ addEmployee(employeeData)</text>
+<text x="432" y="1138" font-size="13">+ updateEmployee(employeeId, employeeData)</text>
+<text x="432" y="1157" font-size="13">+ setEmployeeActive(employeeId, active)</text>
+<text x="432" y="1176" font-size="13">+ removeEmployee(employeeId)</text>
+<text x="432" y="1195" font-size="13">+ saveProduct(productData)</text>
+<text x="432" y="1214" font-size="13">+ removeProduct(productId)</text>
+<text x="432" y="1233" font-size="13">+ saveCompany({ id, name, employerNumber })</text>
+<text x="432" y="1252" font-size="13">+ removeCompany(companyId)</text>
+<text x="432" y="1271" font-size="13">+ savePoint({ id, name, companyId, … })</text>
+<text x="432" y="1290" font-size="13">+ removePoint(pointId)</text>
+<text x="432" y="1309" font-size="13">+ moveEmployeesOfPoint(pointId, companyId)</text>
+<text x="432" y="1328" font-size="13">+ setStock(pointId, productId, stock)</text>
+<text x="432" y="1347" font-size="13">+ setMinimum(pointId, productId, minimum)</text>
+<text x="432" y="1366" font-size="13">+ changeStock(pointId, productId, amount)</text>
+<text x="432" y="1385" font-size="13">+ stockAlerts(): array</text>
+<text x="432" y="1404" font-size="13">+ logAdminAction(action, details)</text>
+</g>
+<g>
+<rect x="1520" y="720" width="400" height="184" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1526,720 H1914 A6,6 0 0 1 1920,726 V762 H1520 V726 A6,6 0 0 1 1526,720 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1720" y="748" text-anchor="middle" font-size="17" class="kop">CsvExport</text>
+<text x="1532" y="782" font-size="13">+ model: RegistrationModel</text>
+<path d="M1520,795 L1920,795" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1532" y="815" font-size="13">+ buildRows(selectedEmployee, selectedMonth)</text>
+<text x="1532" y="834" font-size="13">+ toCsv(rows): string</text>
+<text x="1532" y="853" font-size="13">+ escapeField(value): string</text>
+<text x="1532" y="872" font-size="13">+ fileName(selectedMonth): string</text>
+<text x="1532" y="891" font-size="13">+ download(selectedEmployee, selectedMonth)</text>
+</g>
+<!-- «create»-afhankelijkheden vanuit main.js -->
+<path d="M960,204 V210" class="stip"/>
+<path d="M200,210 H1940" class="stip"/>
+<text x="1130" y="202" class="lbl">«create»</text>
+<path d="M200,210 V248" class="stip" marker-end="url(#open)"/>
+<path d="M630,210 V248" class="stip" marker-end="url(#open)"/>
+<path d="M1180,210 V248" class="stip" marker-end="url(#open)"/>
+<path d="M1720,210 V248" class="stip" marker-end="url(#open)"/>
+<path d="M390,210 V690 H200 V718" class="stip" marker-end="url(#open)"/>
+<path d="M920,210 V690 H760 V718" class="stip" marker-end="url(#open)"/>
+<path d="M1940,210 V770 H1922" class="stip" marker-end="url(#open)"/>
+<!-- Associaties -->
+<path d="M940,430 H842" class="lijn" marker-end="url(#open)"/>
+<text x="850" y="422" font-size="13" class="lbl">view</text>
+<text x="850" y="448" font-size="13" class="lbl">1</text>
+<path d="M1420,430 H1518" class="lijn" marker-end="url(#open)"/>
+<text x="1512" y="422" text-anchor="end" font-size="13" class="lbl">faceDemo</text>
+<text x="1512" y="448" text-anchor="end" font-size="13" class="lbl">1</text>
+<path d="M1420,800 H1518" class="lijn" marker-end="url(#open)"/>
+<text x="1512" y="792" text-anchor="end" font-size="13" class="lbl">csvExport</text>
+<text x="1512" y="818" text-anchor="end" font-size="13" class="lbl">1</text>
+<path d="M940,870 H842" class="lijn" marker-end="url(#open)"/>
+<text x="850" y="862" font-size="13" class="lbl">model</text>
+<text x="850" y="888" font-size="13" class="lbl">1</text>
+<path d="M630,624 V718" class="lijn" marker-end="url(#open)"/>
+<text x="640" y="674" font-size="13" class="lbl">model</text>
+<text x="640" y="692" font-size="13" class="lbl">1</text>
+<path d="M1720,904 V1040 H842" class="lijn" marker-end="url(#open)"/>
+<text x="850" y="1032" font-size="13" class="lbl">model</text>
+<text x="850" y="1058" font-size="13" class="lbl">1</text>
+<path d="M420,870 H362" class="lijn" marker-end="url(#open)"/>
+<text x="412" y="862" text-anchor="end" font-size="13" class="lbl">store</text>
+<text x="412" y="888" text-anchor="end" font-size="13" class="lbl">1</text>
+<!-- Modules zonder class -->
+<g>
+<rect x="940" y="1110" width="410" height="165" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M946,1110 H1344 A6,6 0 0 1 1350,1116 V1166 H940 V1116 A6,6 0 0 1 946,1110 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1145" y="1131" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1145" y="1154" text-anchor="middle" font-size="17" class="kop">config.js</text>
+<text x="952" y="1186" font-size="13">+ STORAGE_KEY, COLORS, SEED_EMPLOYEES,</text>
+<text x="952" y="1205" font-size="13">   DEFAULT_COMPANIES, DEFAULT_PRODUCTS,</text>
+<text x="952" y="1224" font-size="13">   DAYLIGHT_HOURS, FACE_DEMO</text>
+<text x="952" y="1243" font-size="13">gebruikt door: DataStore, RegistrationModel,</text>
+<text x="952" y="1262" font-size="13">ThemeManager, FaceRecognitionDemo, main.js</text>
+</g>
+<g>
+<rect x="1380" y="1110" width="260" height="146" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1386,1110 H1634 A6,6 0 0 1 1640,1116 V1166 H1380 V1116 A6,6 0 0 1 1386,1110 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1510" y="1131" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1510" y="1154" text-anchor="middle" font-size="17" class="kop">ids.js</text>
+<text x="1392" y="1186" font-size="13">+ createId(): string</text>
+<text x="1392" y="1205" font-size="13">gebruikt door: DataStore,</text>
+<text x="1392" y="1224" font-size="13">RegistrationModel,</text>
+<text x="1392" y="1243" font-size="13">RegistrationApp</text>
+</g>
+<g>
+<rect x="1670" y="1110" width="250" height="127" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1676,1110 H1914 A6,6 0 0 1 1920,1116 V1166 H1670 V1116 A6,6 0 0 1 1676,1110 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1795" y="1131" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1795" y="1154" text-anchor="middle" font-size="17" class="kop">icons.js</text>
+<text x="1682" y="1186" font-size="13">+ icon(name): string</text>
+<text x="1682" y="1205" font-size="13">gebruikt door:</text>
+<text x="1682" y="1224" font-size="13">RegistrationView</text>
+</g>
+<!-- Legenda -->
+<rect x="40" y="1030" width="320" height="250" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
+<text x="58" y="1060" font-size="16" class="kop">Legenda</text>
+<path d="M58,1092 L128,1092" class="lijn" marker-end="url(#open)"/>
+<text x="140" y="1088" font-size="13">associatie: houdt een</text>
+<text x="140" y="1105" font-size="13">verwijzing vast (rolnaam, 1)</text>
+<path d="M58,1138 L128,1138" class="stip" marker-end="url(#open)"/>
+<text x="140" y="1134" font-size="13">afhankelijkheid «create»:</text>
+<text x="140" y="1151" font-size="13">main.js maakt het object</text>
+<text x="58" y="1186" font-size="13">+ openbaar   onderstreept = static</text>
+<text x="58" y="1210" font-size="13">«get» = getter (alleen lezen)</text>
+<text x="58" y="1234" font-size="13">«module» = bestand zonder class</text>
+<text x="58" y="1258" font-size="13" class="sub">Alleen een selectie van de methodes</text>
+</svg>

@@ -180,8 +180,9 @@ test("controle 4, punt P: een medewerker met registraties wordt niet verwijderd"
   assert.ok(model.findEmployee("employee-1"));
 });
 
-test("controle 4, punt P: een medewerker zonder registraties wordt wel verwijderd", () => {
+test("controle 4, punt P: een inactieve medewerker zonder registraties wordt wel verwijderd", () => {
   const { model } = createModel();
+  model.setEmployeeActive("employee-1", false);
 
   assert.equal(model.employeeHasRegistrations("employee-1"), false);
   assert.equal(model.removeEmployee("employee-1"), true);
