@@ -20,7 +20,7 @@ const path = require("path");
 
 const [templateDir, input, outDir, coverTitle, coverSubtitle] = process.argv.slice(2);
 const mdDir = path.dirname(input);
-const md = fs.readFileSync(input, "utf8").replace(/^﻿/, "").replace(/\r\n/g, "\n");
+const md = fs.readFileSync(input, "utf8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
 
 // ---------------------------------------------------------------- hulpfuncties
 
