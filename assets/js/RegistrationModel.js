@@ -108,7 +108,8 @@ export class RegistrationModel {
         companyId: demoPoint.companyId,
         pointId: demoPoint.id,
         active: true,
-        color: COLORS[index % COLORS.length]
+        color: COLORS[index % COLORS.length],
+        badgeId: ""
       };
     });
 
@@ -363,6 +364,22 @@ export class RegistrationModel {
   // Zoekt een medewerker op basis van de unieke id.
   findEmployee(employeeId) {
     return this.employees.find((employee) => employee.id === employeeId);
+  }
+
+  // Zoekt de medewerker bij wie dit pasnummer hoort (herkennen met de pas, zie BadgeReader).
+  // Het pasnummer moet al genormaliseerd zijn (BadgeReader.normalize). Een leeg pasnummer hoort
+  // bij niemand. Of de medewerker actief is, controleert de controller.
+  findEmployeeByBadge(badgeId) {
+    if (!badgeId) return undefined;
+    return this.employees.find((employee) => employee.badgeId === badgeId);
+  }
+
+  // Hoort dit pasnummer al bij een andere medewerker? De medewerker die nu wordt gewijzigd
+  // (`exceptEmployeeId`) telt niet mee: die mag zijn eigen pas houden. Een leeg pasnummer
+  // (geen pas) is nooit bezet.
+  isBadgeTaken(badgeId, exceptEmployeeId = null) {
+    const owner = this.findEmployeeByBadge(badgeId);
+    return Boolean(owner) && owner.id !== exceptEmployeeId;
   }
 
   // Mag een medewerker aan dit bedrijf en dit consumptiepunt worden gekoppeld?

@@ -22,6 +22,10 @@ const MAX_TEXT = 200;
 const MAX_CODE = 64;
 const MAX_AUDIT_TEXT = 500;
 
+// Een pasnummer (van de NFC-pas, zie BadgeReader.js) bestaat alleen uit hoofdletters en cijfers,
+// hooguit 64 tekens. Leeg ("") betekent: geen pas gekoppeld.
+const SAFE_BADGE_ID = /^[A-Z0-9]{0,64}$/;
+
 // Een kleur moet een hexcode met zes tekens zijn, bijvoorbeeld #d8f1e8.
 const SAFE_COLOR = /^#[0-9a-fA-F]{6}$/;
 
@@ -291,6 +295,12 @@ export class DataStore {
     return typeof value === "string" && SAFE_COLOR.test(value);
   }
 
+  // Is dit een geldig pasnummer: tekst met alleen hoofdletters en cijfers, hooguit 64 tekens
+  // (zie SAFE_BADGE_ID)? Een lege tekst is ook goed: dan is er geen pas gekoppeld.
+  isSafeBadgeId(value) {
+    return typeof value === "string" && SAFE_BADGE_ID.test(value);
+  }
+
   // Is dit een geldige prijs: een echt getal van 0 tot en met MAX_PRICE?
   isValidPrice(value) {
     return Number.isFinite(value) && value >= 0 && value <= MAX_PRICE;
@@ -298,9 +308,12 @@ export class DataStore {
 
   // Een medewerker moet een veilige id, een naam, een geldige kleur en een status hebben.
   // Bedrijf en consumptiepunt mogen leeg zijn, maar als ze er staan moeten het veilige id's zijn.
+  // Het pasnummer is optioneel; als het er staat, moet het een geldig pasnummer zijn. Een ongeldig
+  // pasnummer is bij het laden al leeggemaakt (zie migrateEmployee), zodat de medewerker blijft bestaan.
   isValidEmployee(employee) {
     return (
       this.isSafeId(employee?.id) &&
+      (employee.badgeId === undefined || this.isSafeBadgeId(employee.badgeId)) &&
       this.isText(employee.name, MAX_TEXT * 2 + 1, { required: true }) &&
       this.isText(employee.firstName ?? "") &&
       this.isText(employee.lastName ?? "") &&
@@ -382,7 +395,9 @@ export class DataStore {
     }
 
     const products = this.migrateProducts(data.products);
-    let employees = objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index));
+    let employees = this.withoutDuplicateBadges(
+      objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index))
+    );
     let companies = objects(data.companies);
     let points = objects(data.points);
 
@@ -455,6 +470,8 @@ export class DataStore {
   // ("Anna") wordt alleen de voornaam; de achternaam blijft dan leeg.
   // Een ontbrekende of ongeldige kleur (geen #rrggbb) wordt vervangen door een kleur uit COLORS.
   // De medewerker zelf blijft dus bewaard; alleen de kleur verandert.
+  // Hetzelfde geldt voor het pasnummer: oude gegevens zonder pasnummer en een ongeldig pasnummer
+  // (geen tekst, andere tekens dan A-Z en 0-9, of langer dan 64 tekens) worden "" (geen pas).
   migrateEmployee(employee, index) {
     const nameParts = String(employee.name || "").trim().split(/\s+/);
     const hasLastName = nameParts.length > 1;
@@ -471,8 +488,23 @@ export class DataStore {
       companyId: employee.companyId || null,
       pointId: employee.pointId || null,
       active: employee.active !== false,
-      color: this.isSafeColor(employee.color) ? employee.color : COLORS[index % COLORS.length]
+      color: this.isSafeColor(employee.color) ? employee.color : COLORS[index % COLORS.length],
+      badgeId: this.isSafeBadgeId(employee.badgeId) ? employee.badgeId : ""
     };
+  }
+
+  // Een pas mag maar bij één medewerker horen; anders weet de pasjeslezer niet wie er staat.
+  // Komt een pasnummer (door geknoeide gegevens) toch twee keer voor, dan houdt de eerste
+  // medewerker de pas en wordt het pasnummer bij de latere medewerkers leeggemaakt.
+  withoutDuplicateBadges(employees) {
+    const seen = new Set();
+
+    return employees.map((employee) => {
+      if (!employee.badgeId) return employee;
+      if (seen.has(employee.badgeId)) return { ...employee, badgeId: "" };
+      seen.add(employee.badgeId);
+      return employee;
+    });
   }
 
   // Zet oude product-id's om; een registratie zonder product wordt een blikje.

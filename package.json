@@ -5,7 +5,7 @@
   "description": "Unit tests voor de TVB consumptieregistratie",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/basis.test.js tests/datastore.test.js tests/model.test.js tests/csv-export.test.js tests/view-app.test.js tests/theme.test.js tests/welcome-face.test.js tests/controller.test.js tests/regressie.test.js tests/controle4-model.test.js tests/controle4-ui.test.js tests/opslag-model-export.test.js tests/controller-robuustheid.test.js tests/beveiliging-config.test.js tests/gegevens-en-tabbladen.test.js tests/werkgever-en-correctiedatum.test.js tests/to-controle.test.js"
+    "test": "node --test tests/basis.test.js tests/datastore.test.js tests/model.test.js tests/csv-export.test.js tests/view-app.test.js tests/theme.test.js tests/welcome-face.test.js tests/controller.test.js tests/regressie.test.js tests/controle4-model.test.js tests/controle4-ui.test.js tests/opslag-model-export.test.js tests/controller-robuustheid.test.js tests/beveiliging-config.test.js tests/gegevens-en-tabbladen.test.js tests/werkgever-en-correctiedatum.test.js tests/to-controle.test.js tests/pas.test.js"
   },
   "engines": {
     "node": ">=20"

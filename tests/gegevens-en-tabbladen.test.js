@@ -237,7 +237,8 @@ test("persist weigert een medewerker die naar een verwijderd bedrijf wijst", () 
 const EMPLOYEE_SELECTORS = [
   "#employeeForm", "#employeeFormModal",
   "#newEmployeeFirstName", "#newEmployeeLastName", "#newEmployeePayrollCode",
-  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber", "#newEmployeeCompany", "#newEmployeePoint"
+  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber", "#newEmployeeCompany", "#newEmployeePoint",
+  "#newEmployeeBadgeId"
 ];
 
 // Vult het medewerkersformulier met een nieuwe medewerker bij het gekozen bedrijf en punt.
@@ -341,7 +342,7 @@ const STORAGE_SELECTORS = [...FORM_SELECTORS, "#pointFormTitle", "#pointName", "
   "#employeeFormTitle", "#employeeFormHelp", "#employeeSaveContinueButton",
   '#employeeForm [data-save-mode="close"]',
   "#newEmployeeFirstName", "#newEmployeeLastName", "#newEmployeePayrollCode",
-  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber"];
+  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber", "#newEmployeeBadgeId"];
 
 test("het aanbod van een punt dat in een ander tabblad is gewijzigd, sluit het open formulier", () => {
   const { app, model, view } = createApp(STORAGE_SELECTORS);

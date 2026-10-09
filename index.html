@@ -357,6 +357,11 @@
           <input id="newEmployeeEmployerNumber" type="number" aria-describedby="employerNumberHint">
         </label>
         <p class="field-hint" id="employerNumberHint">Leeg laten = werkgevernummer van het bedrijf.</p>
+        <!-- Pas koppelen (BadgeReader.js): de USB-NFC-lezer typt het pasnummer in dit veld. -->
+        <label>Pasnummer
+          <input id="newEmployeeBadgeId" maxlength="100" autocomplete="off" spellcheck="false" aria-describedby="badgeIdHint">
+        </label>
+        <p class="field-hint" id="badgeIdHint">Klik in dit veld en houd de pas tegen de lezer. Leeg laten = geen pas.</p>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-employee-modal>Annuleren</button>
           <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>

@@ -9,7 +9,8 @@
  *   - DataStore: standaardproducten, bedrijven en kleuren bij het omzetten van oude gegevens;
  *   - RegistrationModel: de producten, bedrijven, kleuren en voorbeeldmedewerkers;
  *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto";
- *   - FaceRecognitionDemo en RegistrationApp: FACE_DEMO, de instellingen van de demo.
+ *   - FaceRecognitionDemo en RegistrationApp: FACE_DEMO, de instellingen van de demo;
+ *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer).
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -88,6 +89,21 @@ export const FACE_DEMO = {
   matchThreshold: 0.5,
   // Hoe lang er maximaal naar een bekend gezicht wordt gezocht, in milliseconden.
   scanTimeoutMs: 20000
+};
+
+// Herkennen met de pas (zie BadgeReader.js). Een USB-NFC-lezer gedraagt zich als een toetsenbord:
+// bij het aanbieden van een pas "typt" hij razendsnel het pasnummer, meestal gevolgd door Enter.
+// Zet enabled op false om het herkennen met de pas helemaal uit te zetten.
+//   - minLength: zo veel tekens moet een pasnummer minstens hebben;
+//   - maxKeyIntervalMs: hoogstens zo veel milliseconden tussen twee tekens. Een lezer typt binnen
+//     een paar milliseconden, een mens doet er meestal meer dan 100 over;
+//   - endDelayMs: zo lang stilte na de laatste toets telt als einde van de scan, voor lezers
+//     die geen Enter of Tab sturen.
+export const BADGE_READER = {
+  enabled: true,
+  minLength: 6,
+  maxKeyIntervalMs: 40,
+  endDelayMs: 120
 };
 
 // Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.

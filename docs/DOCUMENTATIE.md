@@ -13,7 +13,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
 | `assets/css/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
 | `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
-| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang en de instellingen van de demo gezichtsherkenning (`FACE_DEMO`) |
+| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang, de instellingen van de demo gezichtsherkenning (`FACE_DEMO`) en van de pasjeslezer (`BADGE_READER`) |
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
@@ -23,6 +23,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `assets/js/icons.js` | De SVG-iconen van de website, met de hulpfunctie `icon(naam)` |
 | `assets/js/ids.js` | De functie `createId()` voor unieke id's; werkt ook als de website via een netwerkadres zonder https wordt geopend |
 | `assets/js/FaceRecognitionDemo.js` | Class `FaceRecognitionDemo`: de uitschakelbare demo gezichtsherkenning (zie 4.15) |
+| `assets/js/BadgeReader.js` | Class `BadgeReader`: herkennen met de pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.16) |
 | `assets/fonts/` | De lettertypes DM Sans en Space Grotesk (woff2), zelf gehost in plaats van via Google Fonts. Licentie: SIL Open Font License 1.1 (`LICENSE.txt`) |
 | `assets/vendor/face-api/` | De bibliotheek face-api (`face-api.esm.js`, versie 1.7.15) en de drie modellen voor de demo gezichtsherkenning, met de MIT-licentie (`LICENSE`). Samen ongeveer 8 MB, waarvan 6,4 MB het herkenningsmodel. Wordt alleen geladen als iemand de demo gebruikt. `README.md` in deze map noemt de bron en een SHA-256-controlegetal per bestand |
 | `archief/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
@@ -31,13 +32,14 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-BLIKJESREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het sjabloon `docs/tvbsjabloon.docx`: voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
 | `docs/` | Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie |
 | `docs/wireframes/` | Low-fidelity (`lofi-…`), mid-fidelity (`midfi-…`) en high-fidelity (`w…`) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9) |
-| `tests/` | Unit tests (480) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/` | Unit tests (511) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
 | `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
 | `tests/gegevens-en-tabbladen.test.js` | Tests voor de prijsgrens van 1000 euro, de focus na `Registreren`, "niets gewijzigd" bij opslaan, en verouderde formulieren of een gewiste opslag na een wijziging in een ander tabblad. Gebruikt de strenge nep-view (`createStrictView` in `helpers.js`) |
 | `tests/werkgever-en-correctiedatum.test.js` | Tests voor het werkgevernummer per registratie en de datum bij een correctie `+` |
 | `tests/to-controle.test.js` | Regressietests voor de TO-controle: "1 medewerker"/"2 medewerkers", bevestiging bij product verwijderen, de melding bij een verwijderde medewerker (correctie `+`), alleen een inactieve medewerker zonder registraties verwijderen, uniek werkgevernummer, dubbele id's en datums in de toekomst bij het laden, de apostrof in de CSV, `lastRegistration` en `pointId`, het SQL-schema (`counted_at`, geen rol `manager`), de opslagknoppen bij wijzigen, de filters op een smal scherm en tests voor FR-01, FR-02, FR-04, FR-10 en FR-29 (actieve medewerkers, zoeken op naam, de `−` in het productvenster, alle registraties voor de beheerder, geen bedragen of aantallen op de publieke pagina). Verder: "1 product" in de correctielijst, een klik op de medewerkerkaart (FR-32) en het totaal op de knop `Registreren` (FR-47) |
+| `tests/pas.test.js` | Tests voor herkennen met de pas: wat de `BadgeReader` als scan ziet (Enter, Tab of stilte na de laatste toets; niet bij gewoon typen of een te korte code), het normaliseren van het pasnummer, het productvenster of de melding na een scan, geen herkenning als er een venster open is (wel wordt de Enter van de scan tegengehouden), het zoekveld na een scan, de pas koppelen in het medewerkersformulier (uniek, alleen letters en cijfers, leeg = geen pas), de controle en migratie van `badgeId` in `DataStore`, en dat het pasnummer niet in de CSV-export of het logboek komt |
 | `.gitattributes` | Zorgt dat Git de bestanden in `assets/vendor/` en `assets/fonts/` niet aanpast (geen omzetting van regeleinden), zodat de controlegetallen blijven kloppen |
 | `.github/workflows/ci.yml` | Voert de unit tests automatisch uit op GitHub, met alleen leesrechten en actions die op een commit-SHA zijn vastgezet |
 
@@ -106,6 +108,7 @@ Open het tabblad `Medewerkers`.
 - Vul voornaam, achternaam, looncode en personeelsnummer in.
 - Kies het bedrijf en daarna het vaste consumptiepunt van de medewerker. De keuzelijst toont alleen de punten van het gekozen bedrijf. De medewerker ziet bij het registreren alleen de producten van dat punt, en de voorraad van dat punt gaat omlaag.
 - Het werkgevernummer komt standaard van het bedrijf. Heeft een medewerker een ander werkgevernummer (bijvoorbeeld per teamleider), vul dan `Afwijkend werkgevernummer` in; dat nummer gaat dan voor in de CSV-export.
+- Pas koppelen (optioneel): klik in het veld `Pasnummer` en houd de pas van de medewerker tegen de USB-NFC-lezer. De lezer typt het pasnummer in het veld; de Enter die de lezer daarna stuurt, verstuurt het formulier niet. Leeg laten betekent: geen pas. Een pas weghalen kan door het veld leeg te maken en op te slaan. Zie 4.16.
 - Klik op `Opslaan` om een medewerker toe te voegen. `Opslaan + opnieuw` houdt het bedrijf en consumptiepunt vast voor de volgende collega.
 - Gebruik `Wijzigen` om medewerkergegevens aan te passen.
 - Gebruik `Deactiveren` of `Activeren` om de medewerkerstatus te wijzigen.
@@ -113,6 +116,8 @@ Open het tabblad `Medewerkers`.
 Voornaam, achternaam, looncode, personeelsnummer en bedrijf zijn verplicht, en ook het consumptiepunt als het gekozen bedrijf consumptiepunten heeft. Ontbreekt er iets, dan krijgt het veld een rode rand met een melding eronder en krijgt het eerste foute veld de focus. Looncode, personeelsnummer en een afwijkend werkgevernummer mogen alleen cijfers bevatten; anders verschijnt "Gebruik alleen cijfers." bij het veld. De voornaam en achternaam worden apart opgeslagen (`firstName`, `lastName`); de volledige naam (`name`) wordt daaruit samengesteld.
 
 Een inactieve medewerker zonder registraties kan daarna met `Verwijderen` definitief worden verwijderd; de browser vraagt eerst om bevestiging. Heeft de medewerker registraties, dan staat de knop er niet en is deactiveren voldoende: zo blijven naam, looncode en personeelsnummer beschikbaar voor de CSV-export. Ook bij een actieve medewerker staat de knop er niet. Controller en model controleren dit zelf ook, voor het geval een knop verouderd is (bijvoorbeeld na een wijziging in een ander tabblad): bij registraties verschijnt "Deze medewerker heeft registraties en kan niet definitief worden verwijderd. Deactiveren is voldoende.", bij een actieve medewerker "Zet deze medewerker eerst op inactief. Alleen een inactieve medewerker kan definitief worden verwijderd." Een personeelsnummer mag maar bij één medewerker voorkomen.
+
+Het pasnummer wordt gelijk gemaakt opgeslagen: spaties, `:` en `-` gaan eruit en alles wordt hoofdletters (`04:a1:b2:c3` wordt `04A1B2C3`). Daarna mag het alleen letters en cijfers bevatten, 4 tot en met 64 tekens; anders verschijnt "Gebruik alleen letters en cijfers (4 tot 64 tekens)." bij het veld. Een pas mag maar bij één medewerker horen; anders verschijnt "Deze pas is al gekoppeld aan een andere medewerker." In de medewerkerslijst staat bij medewerkers met een pas het label `Pas gekoppeld`; het pasnummer zelf staat niet in de lijst, niet in het logboek en niet in de CSV-export.
 
 ### 4.6 Producten beheren
 
@@ -207,6 +212,19 @@ Dit is een demo; zie het TO (hoofdstuk 13, Privacy) waarom gezichtsherkenning ni
 3. Voortaan kun je op de beginpagina op `Herken mij met de camera (demo)` klikken. Word je herkend, dan opent je eigen productvenster.
 
 Er worden geen foto's gemaakt of opgeslagen; de herkenning gebeurt op het apparaat zelf. Na het herladen van de pagina is niemand meer ingesteld. Met `Uitzetten` in het productvenster vergeet de demo je gezicht direct; `Alle gegevens wissen` vergeet alle ingestelde gezichten. De bibliotheek en de modellen komen uit het project zelf (`assets/vendor/face-api/`), niet van internet. Met `FACE_DEMO.enabled = false` in `config.js` staat de demo helemaal uit. De camera werkt alleen via `http://localhost` of `https://`.
+
+### 4.16 Herkennen met de pas
+
+Medewerkers kunnen zich ook laten herkennen met hun pas, via een USB-NFC-lezer die op de tablet of laptop is aangesloten. De meeste van die lezers gedragen zich als een toetsenbord: bij het aanbieden van een pas "typen" ze razendsnel het pasnummer, meestal gevolgd door Enter. De website heeft daarvoor geen bibliotheek, driver of licentie nodig.
+
+1. De beheerder koppelt eerst de pas aan de medewerker (zie 4.5, veld `Pasnummer`).
+2. Op de beginpagina houdt de medewerker zijn pas tegen de lezer. Er hoeft niets aangeklikt te worden.
+3. Hoort de pas bij een actieve medewerker, dan opent zijn productvenster met de gewone begroeting plus "Je bent herkend met je pas."
+4. Is de pas onbekend of hoort hij bij een inactieve medewerker, dan verschijnt de melding "Deze pas is niet gekoppeld aan een medewerker. Kies je naam in de lijst of vraag de beheerder om de pas te koppelen." Een onbekende en een inactieve pas krijgen bewust dezelfde melding, zodat er niets over een andere medewerker uitlekt.
+
+Een medewerker herkennen gebeurt alleen op de beginpagina, als er geen venster open is. Is er wel een venster open, dan houdt de website alleen de Enter of Tab tegen waarmee de lezer een scan afsluit, zodat die niet de knop met de focus indrukt (bijvoorbeeld `Registreren`). Staat de focus in het zoekveld, dan haalt de website de getypte tekens van de lezer daar weer uit; het zoekveld heeft na een scan dezelfde inhoud als ervoor. Gewoon typen in het zoekveld werkt zoals altijd: een mens typt veel trager dan de lezer, en dat ziet de website nooit als een scan. De instellingen staan in `BADGE_READER` in `config.js` (minimaal 6 tekens, hooguit 40 milliseconden tussen twee tekens, en 120 milliseconden stilte als einde van de scan voor lezers zonder Enter). Met `BADGE_READER.enabled = false` staat herkennen met de pas helemaal uit. `Alle gegevens wissen` wist ook de gekoppelde pasnummers, want die horen bij de medewerkers.
+
+Let op: het nummer van een pas is niet geheim en kan met goedkope apparatuur worden gekopieerd. Herkennen met de pas is dus gemak, geen bewijs van identiteit. Zie het TO voor de beveiliging en de koppeling met AFAS of het toegangssysteem van TVB in productie.
 
 ## 5. Uitleg van `index.html`
 
@@ -387,7 +405,8 @@ De status heeft deze structuur (de velden staan uitgelegd in hoofdstuk 8):
       companyId: "id-van-bedrijf",
       pointId: "id-van-consumptiepunt",
       active: true,
-      color: "#d8f1e8"
+      color: "#d8f1e8",
+      badgeId: ""
     }
   ],
   registrations: [
@@ -442,14 +461,14 @@ Toegepaste OOP-principes:
 
 - **Encapsulatie:** iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (`model.employees`, `model.products`) en wijzigen ze alleen via methodes (`model.addRegistration`, `model.saveCompany`).
 - **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class.
-- **Compositie:** de controller krijgt het model, de view en de export mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven.
+- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning en de pasjeslezer mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven.
 - **Losse koppeling:** de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes `load()` en `save()`.
 
 #### `DataStore`
 
 Verzorgt het lezen en opslaan van gegevens in `localStorage`. `load` leest de gegevens, zet ze om en slaat losse beschadigde regels over (`removeInvalidItems`). Zijn er regels overgeslagen of zijn de gegevens helemaal onleesbaar, dan bewaart `keepBackup` de oorspronkelijke gegevens als reservekopie en zet `loadProblem` op `"skipped"` of `"unreadable"`; de controller toont dan een melding. Er zijn hooguit twee reservekopieën (`backupKeys`): `tvb-blikjesregistratie-backup` is de eerste en wordt nooit overschreven, `tvb-blikjesregistratie-backup-laatste` is de nieuwste en wordt steeds vervangen. Staat dezelfde kopie er al als eerste, dan gebeurt er niets. Zo loopt de opslag niet vol.
 
-Bij het laden wordt iedere regel gecontroleerd. `isSafeId` eist dat iedere id en iedere verwijzing naar een id alleen letters, cijfers, `-` en `_` bevat (maximaal 64 tekens, `^[A-Za-z0-9_-]{1,64}$`). Zo kan een aangepaste id niet uit een HTML-attribuut breken. `isSafeColor` eist een kleur in de vorm `#rrggbb`, en `isValidPrice` een prijs van 0 tot en met 1000. Een regel met een ongeldige id, verwijzing of prijs wordt overgeslagen; een product zonder prijs (`null` of leeg) ook, zodat het niet gratis wordt. Komt een id binnen één lijst (medewerkers, registraties, producten, bedrijven, consumptiepunten of logboek) meer dan één keer voor, dan blijft alleen de eerste regel staan (`withoutDuplicateIds`). Een registratie met een tijdstip (`createdAt`) van meer dan 24 uur na het moment van laden wordt ook overgeslagen. Net als bij andere overgeslagen regels komen er dan een reservekopie, `loadProblem` `"skipped"` en een melding. Een medewerker met een ongeldige kleur blijft bewaard en krijgt een kleur uit `COLORS`.
+Bij het laden wordt iedere regel gecontroleerd. `isSafeId` eist dat iedere id en iedere verwijzing naar een id alleen letters, cijfers, `-` en `_` bevat (maximaal 64 tekens, `^[A-Za-z0-9_-]{1,64}$`). Zo kan een aangepaste id niet uit een HTML-attribuut breken. `isSafeColor` eist een kleur in de vorm `#rrggbb`, en `isValidPrice` een prijs van 0 tot en met 1000. Een regel met een ongeldige id, verwijzing of prijs wordt overgeslagen; een product zonder prijs (`null` of leeg) ook, zodat het niet gratis wordt. Komt een id binnen één lijst (medewerkers, registraties, producten, bedrijven, consumptiepunten of logboek) meer dan één keer voor, dan blijft alleen de eerste regel staan (`withoutDuplicateIds`). Een registratie met een tijdstip (`createdAt`) van meer dan 24 uur na het moment van laden wordt ook overgeslagen. Net als bij andere overgeslagen regels komen er dan een reservekopie, `loadProblem` `"skipped"` en een melding. Een medewerker met een ongeldige kleur blijft bewaard en krijgt een kleur uit `COLORS`. Hetzelfde geldt voor het pasnummer (`badgeId`): oude gegevens zonder pasnummer en een ongeldig pasnummer (geen tekst, andere tekens dan `A-Z` en `0-9`, of meer dan 64 tekens; `isSafeBadgeId`) worden `""` (geen pas), en de medewerker blijft bestaan. Komt hetzelfde pasnummer bij meer medewerkers voor, dan houdt alleen de eerste het (`withoutDuplicateBadges`).
 
 `clearAll` wist de gegevens, beide reservekopieën en oude reservekopieën met een tijdstempel uit een eerdere versie. Dit wordt gebruikt door de knop `Alle gegevens wissen`.
 
@@ -501,6 +520,10 @@ Regelt het lichte en donkere thema (zie 4.13). Onthoudt de instelling (`system`,
 #### `FaceRecognitionDemo`
 
 De uitschakelbare demo gezichtsherkenning (zie 4.15). De class laadt de bibliotheek face-api pas als iemand de demo gebruikt (`load`), uit `assets/vendor/face-api/` in het project zelf, zet de camera aan en uit (`startCamera`, `stopCamera`; is het venster gesloten terwijl de camera startte, dan zet `startCamera` die camera meteen weer uit) en leest het grootste gezicht in beeld (`readFace`, `largestFace`). Een gezicht wordt bewaard als een rij getallen (een descriptor), alleen in het geheugen (`enroll`, `forget`). `findMatch` zoekt het ingestelde gezicht met de kleinste afstand onder de drempel uit `FACE_DEMO.matchThreshold`, en `confirm` telt pas als dezelfde persoon twee keer achter elkaar is gevonden. De controller krijgt deze class mee in de constructor. Mislukt het afspelen van het camerabeeld nadat de camera al aan stond, dan zet de controller de camera uit. Of er een gezicht wordt vastgelegd, hoort bij één keer openen van het cameravenster (`captureSession`); een vastlegging uit een gesloten venster blokkeert een opnieuw geopend venster dus niet. De camera-functie van de browser (`mediaDevices`) kan worden meegegeven, zodat de camera in de unit tests kan worden nagebootst.
+
+#### `BadgeReader`
+
+Herkent een pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.16). De controller geeft iedere toets op de beginpagina door aan `handleKey` (via `RegistrationApp.handleBadgeKey`, ook als er een venster open is, en dan doet `recognizeBadge` niets). De class houdt een buffer bij van snel getypte tekens met het tijdstip van de laatste toets. Een scan is minstens `minLength` tekens, elk binnen `maxKeyIntervalMs` na het vorige, afgesloten met Enter of Tab, óf `endDelayMs` stilte na de laatste toets (`scheduleEnd`, `finishAfterSilence`). Komt een teken te laat, dan begint er een nieuwe buffer; zo wordt menselijk typen nooit een scan. De Enter of Tab die een scan afsluit, wordt tegengehouden (`preventDefault` en `stopPropagation`), zodat die geen andere actie start. `normalize` haalt spaties, `:` en `-` weg en maakt alles hoofdletters; het medewerkersformulier gebruikt dezelfde methode. Na een scan roept de class `onScan(code)` aan; de controller zoekt dan de medewerker op (`recognizeBadge`, met `RegistrationModel.findEmployeeByBadge`). `onStart` wordt aangeroepen als er een nieuwe buffer begint; de controller onthoudt dan de inhoud van het zoekveld (`rememberSearchBeforeScan`) en zet die na de scan terug (`restoreSearchAfterScan`). De tijd en de timers (`clock`) kunnen worden meegegeven, zodat de unit tests met een nep-klok werken.
 
 #### `icons.js`
 
@@ -632,6 +655,7 @@ De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 | `pointId` | Verwijzing naar het vaste consumptiepunt |
 | `active` | Actief of inactief |
 | `color` | Kleur van de avatar |
+| `badgeId` | Pasnummer van de NFC-pas, genormaliseerd (alleen `A-Z` en `0-9`, hooguit 64 tekens). `""` = geen pas. Uniek per medewerker; staat niet in de CSV-export en niet in het logboek |
 
 ### Registraties
 
@@ -668,6 +692,7 @@ Deze versie is bedoeld als prototype:
 - Er is geen server-side auditlog; het logboek staat alleen in de browser.
 - Bescherming tegen inbedden in een frame (`frame-ancestors` of `X-Frame-Options`) kan alleen met een HTTP-header van de webserver en zit dus niet in de demo.
 - De gezichtsherkenning is alleen een demo. Ingestelde gezichten zijn na het herladen van de pagina weg. Er is geen controle of er een echt, levend gezicht voor de camera staat, en hoe vaak de verkeerde persoon wordt herkend, is niet gemeten. Bij het laden toont de console één onschadelijke CSP-melding over `wasm-eval`, omdat de bibliotheek test of WebAssembly werkt. Zie het TO (hoofdstuk 13) voor de privacyregels en de beveiliging.
+- Herkennen met de pas is gemak, geen bewijs van identiteit: het nummer van een pas is niet geheim en kan worden gekopieerd. In productie komt het pasnummer uit AFAS of het toegangssysteem van TVB, gekoppeld aan het personeelsnummer.
 
 Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig. Het TO (hoofdstuk 13) bevat de volledige lijst van wat vóór productie moet gebeuren.
 

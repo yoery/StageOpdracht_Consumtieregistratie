@@ -29,6 +29,7 @@ assets/
     icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
     ids.js                  # createId(): unieke id's, ook zonder https
     FaceRecognitionDemo.js  # Demo gezichtsherkenning (uit te zetten in config.js)
+    BadgeReader.js          # Herkennen met de pas via een USB-NFC-lezer (uit te zetten in config.js)
   fonts/                    # Lettertypes DM Sans en Space Grotesk (zelf gehost, SIL OFL, zie LICENSE.txt)
   vendor/
     face-api/               # face-api 1.7.15 en de drie modellen voor de demo (MIT, ca. 8 MB)
@@ -41,7 +42,7 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  *.test.js                 # 480 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle)
+  *.test.js                 # 511 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pas)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van docs/tvbsjabloon.docx (voorbeeld bovenin)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
@@ -72,6 +73,7 @@ archief/
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
 - Persoonlijk welkom in het productvenster en een knop "Zelfde als vorige keer" met de keuze van de vorige keer.
 - Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`), niets opgeslagen; uit te zetten in `config.js`. Zie het TO voor de privacy-afweging en toekomstige uitbreidingen (QR-pas, AFAS, barcode, spraak, slim slot).
+- Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer; de beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig; uit te zetten in `config.js`.
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en in de TVB-huisstijl als [`docs/DOCUMENTATIE.docx`](./docs/DOCUMENTATIE.docx) en [`docs/DOCUMENTATIE.pdf`](./docs/DOCUMENTATIE.pdf).
 - Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.

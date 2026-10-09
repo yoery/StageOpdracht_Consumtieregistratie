@@ -408,6 +408,8 @@ export class RegistrationView {
   // Rendert de medewerkerslijst in het beheertabblad, met knoppen om te wijzigen,
   // (de)activeren en verwijderen. Verwijderen kan alleen bij inactieve medewerkers zonder
   // registraties; registraties zijn nodig voor de loonadministratie, dus dan is deactiveren genoeg.
+  // Medewerkers met een gekoppelde pas krijgen het label "Pas gekoppeld". Het pasnummer zelf
+  // staat niet in de lijst; dat is alleen in het formulier "Wijzigen" te zien.
   renderAdminEmployees() {
     const query = this.$("#employeeManagementSearch").value.toLowerCase().trim();
 
@@ -419,7 +421,7 @@ export class RegistrationView {
       employees.map((employee) =>
         `<div class="admin-employee-item">
           <span>
-            <strong>${this.escapeHtml(employee.name)}</strong>
+            <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}</strong>
             <small>
               ${employee.active ? "Actief" : "Inactief"} ·
               ${this.escapeHtml(this.model.companyName(employee.companyId))} ·
@@ -471,6 +473,8 @@ export class RegistrationView {
   // Opent het productvenster van een medewerker. `selectedProducts` komt van de controller
   // en bevat per product-id hoe vaak het al is gekozen, bijvoorbeeld { blikje: 2 }.
   // `face` beschrijft de demo gezichtsherkenning: { available, enrolled, recognized }.
+  // `face.recognizedByBadge` is true als de medewerker net met de pas is herkend (BadgeReader);
+  // de begroeting krijgt dan "Je bent herkend met je pas." op dezelfde plek als bij de camera.
   renderEmployeeProducts(employeeId, selectedProducts = {}, face = {}) {
     const employee = this.model.findEmployee(employeeId);
     if (!employee) return;
@@ -483,6 +487,7 @@ export class RegistrationView {
     const returning = this.model.hasOwnRegistration(employeeId);
     let welcome = `${this.greeting(new Date())} ${employee.firstName || employee.name}${returning ? ", welkom terug." : "."}`;
     if (face.recognized) welcome += " Je bent herkend met de camera.";
+    else if (face.recognizedByBadge) welcome += " Je bent herkend met je pas.";
     this.$("#employeeWelcome").textContent = welcome;
 
     // Aanbeveling op basis van de vorige keer, met één knop om dezelfde keuze te maken.

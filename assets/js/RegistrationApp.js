@@ -1,5 +1,6 @@
 import { CsvExport } from "./csvExport.js";
 import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
+import { BadgeReader } from "./BadgeReader.js";
 import { createId } from "./ids.js";
 import { cssAttributeValue } from "./RegistrationView.js";
 // Hoogste productprijs (1000 euro). Moet gelijk zijn aan MAX_PRICE in DataStore.js; de constante
@@ -27,6 +28,7 @@ const MAX_STOCK_AMOUNT = 100000;
  *   - RegistrationView: tekent het scherm en toont meldingen.
  *   - CsvExport: maakt het CSV-bestand als de beheerder op "CSV exporteren" klikt.
  *   - FaceRecognitionDemo: de demo gezichtsherkenning (camera, herkennen, instellen).
+ *   - BadgeReader: herkent een pas via de USB-NFC-lezer; de controller geeft de toetsen door.
  *   - ids.js: createId() voor de id van een nieuw product (werkt ook zonder https).
  *   - index.html: de knoppen en formulieren waar de event listeners op zitten.
  *
@@ -39,22 +41,29 @@ const MAX_STOCK_AMOUNT = 100000;
  *   6. voorraad
  *   7. event listeners koppelen
  *   8. demo gezichtsherkenning
+ *   9. herkennen met de pas (NFC-lezer)
  */
 export class RegistrationApp {
-  // De controller krijgt het model, de view, de export en de demo gezichtsherkenning mee
-  // (compositie). Wat niet wordt meegegeven, maakt de controller zelf.
-  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo()) {
+  // De controller krijgt het model, de view, de export, de demo gezichtsherkenning en de
+  // pasjeslezer mee (compositie). Wat niet wordt meegegeven, maakt de controller zelf.
+  // De pasjeslezer krijgt hier zijn callbacks: na een scan zoekt de controller de medewerker op
+  // (recognizeBadge), en bij het begin van een mogelijke scan onthoudt hij het zoekveld.
+  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader()) {
     this.model = model;
     this.view = view;
     this.csvExport = csvExport;
     this.faceDemo = faceDemo;
+    this.badgeReader = badgeReader;
+    this.badgeReader.onScan = (code) => this.recognizeBadge(code);
+    this.badgeReader.onStart = () => this.rememberSearchBeforeScan();
 
     // Tijdelijke status van het scherm; deze wordt niet opgeslagen.
     this.adminLoggedIn = false;
     this.auditLogLimit = 20;
     this.selectedEmployeeId = null;
     this.selectedProducts = {}; // per product-id het gekozen aantal, bijv. { blikje: 2 }
-    this.recognizedByFace = false; // is de medewerker in het productvenster herkend met de camera?
+    this.recognizedBy = null;      // hoe is de medewerker in het productvenster herkend: "face" (camera), "badge" (pas) of null
+    this.searchBeforeScan = null;  // inhoud van het zoekveld vlak voordat de pasjeslezer begon te typen
     this.faceSession = 0;          // telt op bij ieder openen en sluiten van het cameravenster
     this.faceMode = null;          // "recognize" (herkennen) of "enroll" (instellen)
     this.cameraReady = false;      // staat de camera echt aan om een gezicht vast te leggen?
@@ -71,6 +80,11 @@ export class RegistrationApp {
   // eerder (gesloten) venster mag een opnieuw geopend venster niet blokkeren.
   get capturing() {
     return this.captureSession !== null && this.captureSession === this.faceSession;
+  }
+
+  // Is de medewerker in het productvenster herkend met de camera (demo gezichtsherkenning)?
+  get recognizedByFace() {
+    return this.recognizedBy === "face";
   }
 
   // ------------------------------------------------------------------
@@ -836,15 +850,17 @@ export class RegistrationApp {
 
   // Opent het persoonlijke productvenster met een lege keuze.
   // `recognized` is true als de medewerker net met de camera is herkend (demo).
+  // `recognizedBy` zegt hoe de medewerker is herkend: "face" (camera) of "badge" (pas, zie
+  // recognizeBadge). Zonder herkenning (naam aangeklikt) blijft het null.
   // De focus gaat naar de eerste "+"-knop (of naar de sluitknop als er geen producten zijn),
   // zodat je met het toetsenbord en een schermlezer meteen in het venster begint.
   // De view toont het venster zelf; hier wordt alleen onthouden waar de focus vandaan kwam,
   // zodat die na het sluiten terug kan (zie closeModal).
-  openEmployeeProducts(employeeId, { recognized = false } = {}) {
+  openEmployeeProducts(employeeId, { recognized = false, recognizedBy = recognized ? "face" : null } = {}) {
     this.rememberOpener("#employeeProductsModal");
     this.selectedEmployeeId = employeeId;
     this.selectedProducts = {};
-    this.recognizedByFace = recognized;
+    this.recognizedBy = recognizedBy;
     this.renderProductWindow();
 
     const firstPlus = this.view.$("#employeeProductList [data-product-increment]");
@@ -863,7 +879,8 @@ export class RegistrationApp {
     this.view.renderEmployeeProducts(this.selectedEmployeeId, this.selectedProducts, {
       available: this.faceDemo.isAvailable(),
       enrolled: this.faceDemo.isEnrolled(this.selectedEmployeeId),
-      recognized: this.recognizedByFace
+      recognized: this.recognizedByFace,
+      recognizedByBadge: this.recognizedBy === "badge"
     });
 
     // De product-id wordt met cssAttributeValue veilig gemaakt voor de zoekopdracht (selector).
@@ -930,7 +947,7 @@ export class RegistrationApp {
     this.closeModal("#employeeProductsModal");
     this.selectedProducts = {};
     this.selectedEmployeeId = null;
-    this.recognizedByFace = false;
+    this.recognizedBy = null;
   }
 
   // Slaat alle gekozen producten in één keer op; ieder stuk wordt één registratie.
@@ -1218,6 +1235,7 @@ export class RegistrationApp {
     this.view.$("#newEmployeePayrollCode").value = employee.payrollCode;
     this.view.$("#newEmployeePersonnelNumber").value = employee.personnelNumber;
     this.view.$("#newEmployeeEmployerNumber").value = employee.employerNumber || "";
+    this.view.$("#newEmployeeBadgeId").value = employee.badgeId || "";
     this.view.populateEmployeeCompanySelects(employee.companyId, employee.pointId);
     this.openModal("#employeeFormModal");
     this.view.$("#newEmployeeFirstName").focus();
@@ -1243,6 +1261,8 @@ export class RegistrationApp {
   // Leest het medewerkersformulier en voegt een medewerker toe of wijzigt een bestaande.
   // Een personeelsnummer mag maar bij één medewerker horen, anders weet de loonadministratie
   // niet bij wie een registratie hoort. Twee medewerkers met dezelfde naam mag wel.
+  // Hetzelfde geldt voor het pasnummer (zie validateBadgeField). Het pasnummer komt niet in het
+  // logboek; daar staat alleen de naam, net als bij andere wijzigingen van een medewerker.
   // Is de medewerker die gewijzigd wordt intussen verwijderd, dan wordt er niets opgeslagen.
   // Hetzelfde geldt als het gekozen bedrijf of consumptiepunt niet meer bestaat (zie
   // validateEmployeeAssignment).
@@ -1256,7 +1276,9 @@ export class RegistrationApp {
       personnelNumber: this.view.$("#newEmployeePersonnelNumber").value.trim(),
       employerNumber: this.view.$("#newEmployeeEmployerNumber").value.trim(),
       companyId: this.view.$("#newEmployeeCompany").value || null,
-      pointId: this.view.$("#newEmployeePoint").value || null
+      pointId: this.view.$("#newEmployeePoint").value || null,
+      // Het pasnummer wordt genormaliseerd opgeslagen ("04:a1:b2:c3" wordt "04A1B2C3"); leeg = geen pas.
+      badgeId: BadgeReader.normalize(this.view.$("#newEmployeeBadgeId").value)
     };
 
     const form = this.view.$("#employeeForm");
@@ -1278,6 +1300,7 @@ export class RegistrationApp {
       numberField.focus();
       return;
     }
+    if (!this.validateBadgeField(employeeData.badgeId, editingId)) return;
     if (!this.validateEmployeeAssignment(employeeData)) return;
 
     // Het model geeft false terug als er toch niets kon worden opgeslagen; persist meldt dat dan.
@@ -1311,6 +1334,29 @@ export class RegistrationApp {
     } else {
       this.closeEmployeeForm();
     }
+  }
+
+  // Controleert het (al genormaliseerde) pasnummer uit het medewerkersformulier:
+  //   - leeg mag: dan heeft de medewerker geen pas;
+  //   - alleen letters en cijfers, 4 tot en met 64 tekens (DataStore accepteert ook niets anders);
+  //   - een pas mag maar bij één medewerker horen, anders weet de lezer niet wie er staat.
+  //     De medewerker die nu wordt gewijzigd (`editingId`) mag zijn eigen pas houden.
+  // Bij een fout krijgt het veld een foutmelding en de focus. Geeft true terug als alles klopt.
+  validateBadgeField(badgeId, editingId) {
+    if (badgeId === "") return true;
+
+    const field = this.view.$("#newEmployeeBadgeId");
+    let message = null;
+    if (!/^[A-Z0-9]{4,64}$/.test(badgeId)) {
+      message = "Gebruik alleen letters en cijfers (4 tot 64 tekens).";
+    } else if (this.model.isBadgeTaken(badgeId, editingId || null)) {
+      message = "Deze pas is al gekoppeld aan een andere medewerker.";
+    }
+    if (!message) return true;
+
+    this.view.showFieldError(field, message);
+    field.focus();
+    return false;
   }
 
   // Bestaan het gekozen bedrijf en consumptiepunt nog, en hoort het punt bij dat bedrijf?
@@ -1895,7 +1941,17 @@ export class RegistrationApp {
 
   // Toetsen: Escape sluit het bovenste venster, Tab blijft binnen een open venster,
   // Ctrl/Cmd + K gaat naar de zoekbalk, en Enter/spatie op een medewerkerrij opent die.
+  // Daarnaast gaat iedere toets naar de pasjeslezer (handleBadgeKey). Die listener staat in de
+  // "capture"-fase, zodat hij vóór de andere listeners komt: zo kan de Enter waarmee de lezer
+  // een scan afsluit worden tegengehouden voordat die bijvoorbeeld een medewerkerrij opent.
+  // In het veld "Pasnummer" doet Enter niets: de lezer stuurt na het pasnummer vaak een Enter,
+  // en die mag het medewerkersformulier niet versturen.
   registerKeyboardEvents() {
+    document.addEventListener("keydown", (event) => this.handleBadgeKey(event), { capture: true });
+    this.view.$("#newEmployeeBadgeId")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") event.preventDefault();
+    });
+
     document.addEventListener("keydown", (event) => {
       const modal = this.topModal();
 
@@ -2152,5 +2208,62 @@ export class RegistrationApp {
     this.cameraReady = false;
     this.faceDemo.stopCamera(this.view.$("#faceVideo"));
     this.closeModal("#faceModal");
+  }
+
+  // ------------------------------------------------------------------
+  // 9. Herkennen met de pas (NFC-lezer)
+  // ------------------------------------------------------------------
+
+  // Geeft iedere toets door aan de pasjeslezer (BadgeReader). Ook als er een venster open is
+  // (productvenster, beheer, een formulier): de lezer houdt dan de Enter of Tab tegen waarmee
+  // een scan eindigt, zodat die niet de knop met de focus indrukt (bijvoorbeeld "Registreren").
+  // De tekens zelf gaan gewoon naar het veld met de focus, zoals het veld "Pasnummer" in het
+  // medewerkersformulier. Een medewerker herkennen gebeurt alleen op de beginpagina: dat
+  // controleert recognizeBadge.
+  handleBadgeKey(event) {
+    this.badgeReader.handleKey(event);
+  }
+
+  // Wordt door de pasjeslezer aangeroepen als er (misschien) een scan begint. De lezer typt
+  // zijn tekens in het veld met de focus; staat die in het zoekveld, dan komen ze daarin.
+  // Daarom wordt de inhoud van het zoekveld hier onthouden, zodat restoreSearchAfterScan die
+  // na de scan kan terugzetten.
+  rememberSearchBeforeScan() {
+    this.searchBeforeScan = this.view.$("#employeeSearch").value;
+  }
+
+  // Zet het zoekveld terug zoals het was vóór de scan en tekent de medewerkerslijst opnieuw.
+  // Zo blijft er geen pasnummer in het zoekveld staan (en verdwijnt de lijst niet achter
+  // "Geen medewerker gevonden").
+  restoreSearchAfterScan() {
+    const search = this.view.$("#employeeSearch");
+    const before = this.searchBeforeScan;
+    this.searchBeforeScan = null;
+    if (before === null || search.value === before) return;
+
+    search.value = before;
+    this.view.renderEmployees();
+  }
+
+  // Wordt door de pasjeslezer aangeroepen met het genormaliseerde pasnummer.
+  //   - hoort de pas bij een actieve medewerker, dan opent zijn productvenster met de tekst
+  //     "Je bent herkend met je pas." (zie RegistrationView.renderEmployeeProducts);
+  //   - anders volgt een melding. Een onbekende pas en de pas van een inactieve medewerker
+  //     krijgen dezelfde melding, zodat er niets over een andere medewerker uitlekt.
+  // Staat er intussen toch een venster open, dan gebeurt er niets (de lezer luistert dan niet).
+  recognizeBadge(code) {
+    this.restoreSearchAfterScan();
+    if (this.topModal()) return;
+
+    const employee = this.model.findEmployeeByBadge(code);
+    if (!employee?.active) {
+      this.view.showToast(
+        "Deze pas is niet gekoppeld aan een medewerker. Kies je naam in de lijst of vraag de beheerder om de pas te koppelen.",
+        { tone: "error", duration: 5000 }
+      );
+      return;
+    }
+
+    this.openEmployeeProducts(employee.id, { recognizedBy: "badge" });
   }
 }
