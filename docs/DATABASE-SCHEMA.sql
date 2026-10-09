@@ -172,13 +172,18 @@ CREATE INDEX registrations_product_date_idx
 CREATE INDEX registrations_date_idx
     ON registrations (registered_at DESC);
 
+-- Het logboek is alleen-toevoegen (append-only): een regel wordt nooit gewijzigd of verwijderd.
+-- Daarom hebben admin_id, employee_id, product_id en registration_id hier bewust geen vreemde
+-- sleutel. Met ON DELETE SET NULL zou de database bij het verwijderen van bijvoorbeeld een
+-- medewerker de logregels zelf aanpassen, en dan is het spoor weg. Het id blijft dus staan, ook
+-- als het gegeven later wordt verwijderd. Zet de naam van dat moment in metadata als die nodig is.
 CREATE TABLE audit_log (
     audit_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id uuid REFERENCES admins(admin_id) ON DELETE SET NULL,
+    admin_id uuid,
     action varchar(100) NOT NULL,
-    employee_id uuid REFERENCES employees(employee_id) ON DELETE SET NULL,
-    product_id uuid REFERENCES products(product_id) ON DELETE SET NULL,
-    registration_id uuid REFERENCES registrations(registration_id) ON DELETE SET NULL,
+    employee_id uuid,
+    product_id uuid,
+    registration_id uuid,
     details text,
     metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -190,6 +195,31 @@ CREATE INDEX audit_log_created_at_idx
 
 CREATE INDEX audit_log_employee_idx
     ON audit_log (employee_id, created_at DESC);
+
+-- Weigert iedere wijziging of verwijdering van een logregel, ook voor een rol met UPDATE- of
+-- DELETE-rechten. Alleen INSERT en SELECT werken nog. Opschonen na de bewaartermijn (AVG) doet
+-- alleen de eigenaar van de tabel in een gepland onderhoudsscript: die zet deze triggers daarvoor
+-- tijdelijk uit (ALTER TABLE audit_log DISABLE TRIGGER ...) en legt dat zelf vast.
+CREATE OR REPLACE FUNCTION audit_log_append_only()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_log is alleen-toevoegen: % is niet toegestaan', TG_OP
+        USING ERRCODE = 'insufficient_privilege';
+END;
+$$;
+
+CREATE TRIGGER audit_log_no_update_or_delete
+    BEFORE UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION audit_log_append_only();
+
+CREATE TRIGGER audit_log_no_truncate
+    BEFORE TRUNCATE ON audit_log
+    FOR EACH STATEMENT EXECUTE FUNCTION audit_log_append_only();
+
+-- Niemand krijgt via PUBLIC rechten om het logboek te wijzigen of te legen.
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS trigger
@@ -302,10 +332,11 @@ GROUP BY
 -- GRANT SELECT, INSERT, UPDATE ON admins TO blikjes_app;
 -- GRANT SELECT ON stock_alerts, monthly_employee_consumption TO blikjes_app;
 --
--- Het logboek is alleen-toevoegen (append-only): de applicatie mag regels lezen en
--- toevoegen, maar niet wijzigen of verwijderen. Zo blijft het logboek controleerbaar.
+-- Het logboek is alleen-toevoegen (append-only): de applicatie krijgt alleen het recht om
+-- regels te lezen en toe te voegen, niet om ze te wijzigen of te verwijderen. De triggers
+-- audit_log_no_update_or_delete en audit_log_no_truncate (bij de tabel audit_log) weigeren
+-- dat bovendien voor iedere rol, ook als er per ongeluk te veel rechten zijn gegeven.
 -- GRANT SELECT, INSERT ON audit_log TO blikjes_app;
--- REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM blikjes_app;
 --
 -- Een aparte rol met alleen leesrechten, bijvoorbeeld voor rapportages.
 -- CREATE ROLE blikjes_rapportage LOGIN PASSWORD '...';

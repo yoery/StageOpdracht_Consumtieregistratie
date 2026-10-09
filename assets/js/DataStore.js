@@ -29,6 +29,22 @@ const SAFE_BADGE_ID = /^[A-Z0-9]{0,64}$/;
 // Een kleur moet een hexcode met zes tekens zijn, bijvoorbeeld #d8f1e8.
 const SAFE_COLOR = /^#[0-9a-fA-F]{6}$/;
 
+// Een code (looncode, personeelsnummer, werkgevernummer) is tekst van hooguit 64 tekens zonder
+// stuurtekens (zoals tab, enter of het nul-teken). Stuurtekens horen niet in een code en kunnen
+// in de CSV-export een veld of regel openbreken. De formulieren laten alleen cijfers toe; oude
+// gegevens kunnen ook letters bevatten (bijvoorbeeld "LC01"), die blijven daarom geldig.
+const SAFE_CODE = /^[^\u0000-\u001F\u007F]{0,64}$/;
+
+// Een tijdstip moet in ISO-vorm staan, zoals toISOString() het maakt ("2026-10-09T08:30:00.000Z").
+// Seconden, milliseconden en de tijdzone mogen ontbreken (dan geldt de lokale tijd). Andere vormen,
+// zoals "1" of "10/9/2026", worden door Date.parse heel verschillend gelezen en zijn daarom ongeldig.
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?$/;
+
+// Het vroegste tijdstip dat als geldig telt: 1 januari 2000. Dezelfde ondergrens geldt voor de
+// datum bij een correctie "+" (RegistrationApp.readCorrectionDate). Een eerder tijdstip is
+// vrijwel zeker geknoeid en geeft rare maandnamen en bestandsnamen in de export.
+const MIN_DATE_MS = Date.UTC(2000, 0, 1);
+
 // De hoogste prijs die we als geldig accepteren. Een hogere prijs is vrijwel zeker een
 // typefout of geknoeide gegevens.
 const MAX_PRICE = 1000;
@@ -271,16 +287,36 @@ export class DataStore {
   }
 
   // Is dit tekst van hooguit `maxLength` tekens? Met `required` mag de tekst niet leeg zijn.
-  // Codes (looncode, personeelsnummer) kunnen in oude gegevens ook een getal zijn; daarom wordt
-  // de lengte van de tekstvorm gecontroleerd.
   isText(value, maxLength = MAX_TEXT, { required = false } = {}) {
     if (typeof value !== "string") return false;
     if (required && value.trim() === "") return false;
     return value.length <= maxLength;
   }
 
+  // Is dit een geldige code (looncode, personeelsnummer, werkgevernummer)? Alleen tekst van hooguit
+  // MAX_CODE tekens zonder stuurtekens (zie SAFE_CODE). Leeg (null of undefined) is ook goed: dan
+  // is er geen code. Een getal uit oude gegevens is bij het laden al omgezet naar tekst (zie
+  // codeText). Andere soorten waarden, zoals een object of een lijst, zijn ongeldig: die zouden in
+  // de export als "[object Object]" of als formule terechtkomen.
   isShortCode(value) {
-    return String(value ?? "").length <= MAX_CODE;
+    if (value === null || value === undefined) return true;
+    return typeof value === "string" && value.length <= MAX_CODE && SAFE_CODE.test(value);
+  }
+
+  // Zet een code uit oude gegevens om naar tekst: een heel getal van 0 of hoger (zoals 100) wordt
+  // "100". Andere waarden blijven zoals ze zijn, zodat isShortCode ze daarna beoordeelt.
+  codeText(value) {
+    return Number.isSafeInteger(value) && value >= 0 ? String(value) : value;
+  }
+
+  // Is dit een geldig tijdstip? Het moet tekst in ISO-vorm zijn (zie ISO_DATE_TIME), een bestaande
+  // datum opleveren, en tussen 1 januari 2000 (MIN_DATE_MS) en `latest` (een tijdstip in
+  // milliseconden) liggen. Wordt gebruikt voor registraties, logboekregels en tellingen.
+  isValidDateTime(value, latest) {
+    if (typeof value !== "string" || !ISO_DATE_TIME.test(value)) return false;
+
+    const time = Date.parse(value);
+    return !Number.isNaN(time) && time >= MIN_DATE_MS && time <= latest;
   }
 
   // Een verwijzing die ook leeg (null) mag zijn, bijvoorbeeld een medewerker zonder bedrijf.
@@ -332,8 +368,9 @@ export class DataStore {
   // moet het een geldige prijs zijn; anders zou de CSV-export een verkeerd bedrag tonen.
   // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
   // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
-  // Het tijdstip (`createdAt`) mag hooguit één dag na `now` (het moment van laden) liggen
-  // (zie MAX_FUTURE_MS). Een registratie ver in de toekomst is geknoeid en zou anders in een
+  // Het tijdstip (`createdAt`) moet een ISO-tijdstip vanaf 1 januari 2000 zijn en mag hooguit
+  // één dag na `now` (het moment van laden) liggen (zie isValidDateTime en MAX_FUTURE_MS). Een
+  // registratie ver in de toekomst of ver in het verleden is geknoeid en zou anders in een
   // verkeerde loonmaand in de CSV-export terechtkomen.
   isValidRegistration(registration, now = new Date()) {
     const hasValidPrice = registration?.price === undefined || this.isValidPrice(registration.price);
@@ -346,9 +383,7 @@ export class DataStore {
       this.isSafeId(registration.employeeId) &&
       this.isSafeId(registration.productId) &&
       this.isSafeOptionalId(registration.pointId) &&
-      typeof registration.createdAt === "string" &&
-      !Number.isNaN(Date.parse(registration.createdAt)) &&
-      Date.parse(registration.createdAt) - now.getTime() <= MAX_FUTURE_MS &&
+      this.isValidDateTime(registration.createdAt, now.getTime() + MAX_FUTURE_MS) &&
       hasValidPrice &&
       hasValidEmployerNumber
     );
@@ -365,13 +400,27 @@ export class DataStore {
   }
 
   // Een consumptiepunt moet een veilige id, een naam, een bedrijf en een voorraadlijst hebben.
+  // De voorraadlijst is een object met een product-id als sleutel. Iedere sleutel moet een veilige
+  // id zijn (zie hasSafeStockKeys), zodat een sleutel als "__proto__" of "constructor" de werking
+  // van het object niet kan veranderen.
   isValidPoint(point) {
     return (
       this.isSafeId(point?.id) &&
       this.isText(point.name) &&
       this.isSafeId(point.companyId) &&
-      point.products !== null &&
-      typeof point.products === "object"
+      this.isObject(point.products) &&
+      this.hasSafeStockKeys(point.products)
+    );
+  }
+
+  // Heeft deze voorraadlijst alleen eigen sleutels die veilige id's zijn, en is het een gewoon
+  // object (het prototype is Object.prototype)? Een object uit JSON.parse met de sleutel
+  // "__proto__" heeft die als eigen sleutel; wordt zo'n object gekopieerd, dan kan de kopie een
+  // ander prototype krijgen. Daarom telt zo'n lijst als ongeldig.
+  hasSafeStockKeys(products) {
+    return (
+      Object.getPrototypeOf(products) === Object.prototype &&
+      Object.keys(products).every((productId) => this.isSafeId(productId))
     );
   }
 
@@ -386,7 +435,10 @@ export class DataStore {
   // gooit deze methode een fout, zodat load() de gegevens als onleesbaar behandelt en er een
   // reservekopie komt. Anders zouden alle consumptiepunten (en hun voorraad) worden vervangen.
   // `now` is het moment van laden; completePointStock gebruikt het om een telling in de
-  // toekomst weg te laten.
+  // toekomst weg te laten, en isValidAuditEntry om een logboekregel in de toekomst over te slaan.
+  // De voorraadlijsten van de consumptiepunten worden alleen opgebouwd voor producten die de
+  // controle doorstaan (isValidProduct). Een geknoeid product met een id als "constructor" krijgt
+  // zo nergens een voorraadregel, ook al valt het product zelf pas later (in removeInvalidItems) af.
   migrate(data, now = new Date()) {
     const objects = (list) => (Array.isArray(list) ? list.filter((item) => this.isObject(item)) : []);
 
@@ -395,16 +447,17 @@ export class DataStore {
     }
 
     const products = this.migrateProducts(data.products);
+    const validProducts = products.filter((product) => this.isValidProduct(product));
     let employees = this.withoutDuplicateBadges(
       objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index))
     );
-    let companies = objects(data.companies);
+    let companies = objects(data.companies).map((company) => this.migrateCompany(company));
     let points = objects(data.points);
 
     // Oude gegevens hebben nog geen bedrijven en consumptiepunten (het veld ontbreekt):
     // die worden hier aangemaakt.
     if (data.companies === undefined) {
-      ({ companies, points, employees } = this.migrateCompanies(employees, products));
+      ({ companies, points, employees } = this.migrateCompanies(employees, validProducts));
     }
 
     return {
@@ -412,9 +465,16 @@ export class DataStore {
       registrations: objects(data.registrations).map((registration) => this.migrateRegistration(registration)),
       products,
       companies,
-      points: points.map((point) => this.completePointStock(point, products, now)),
-      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry)) : []
+      points: points.map((point) => this.completePointStock(point, validProducts, now)),
+      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry, now)) : []
     };
+  }
+
+  // Een werkgevernummer dat als getal is opgeslagen (oude gegevens), wordt tekst (zie codeText).
+  // Een bedrijf zonder werkgevernummer blijft zoals het is.
+  migrateCompany(company) {
+    if (company.employerNumber === undefined) return company;
+    return { ...company, employerNumber: this.codeText(company.employerNumber) };
   }
 
   // Opgeslagen producten gaan voor, zodat gewijzigde prijzen en verwijderde producten bewaard
@@ -453,12 +513,17 @@ export class DataStore {
 
   // Zet de oude product-id's in de voorraadlijst van een consumptiepunt om naar de nieuwe.
   // Staat de nieuwe id er al, dan gaat die voor en vervalt de oude regel.
+  // De nieuwe lijst is een object zonder prototype (Object.create(null)). Een sleutel als
+  // "__proto__" of "constructor" is daarin een gewone sleutel en kan het object niet veranderen.
+  // Sleutels die geen veilige id zijn (zie isSafeId), worden bovendien overgeslagen.
   renameStockKeys(stock) {
-    const renamed = {};
+    const renamed = Object.create(null);
+    if (!this.isObject(stock)) return renamed;
 
-    for (const [productId, entry] of Object.entries(stock || {})) {
+    for (const [productId, entry] of Object.entries(stock)) {
+      if (!this.isSafeId(productId)) continue;
       const newId = this.renameProductId(productId);
-      if (newId !== productId && stock[newId]) continue;
+      if (newId !== productId && Object.hasOwn(stock, newId)) continue;
       renamed[newId] = entry;
     }
 
@@ -482,9 +547,9 @@ export class DataStore {
       name: fullName,
       firstName: employee.firstName || (hasLastName ? nameParts.slice(0, -1).join(" ") : nameParts[0]) || "",
       lastName: employee.lastName || (hasLastName ? nameParts.at(-1) : ""),
-      payrollCode: employee.payrollCode || "",
-      personnelNumber: employee.personnelNumber || "",
-      employerNumber: employee.employerNumber ? String(employee.employerNumber) : "",
+      payrollCode: this.codeText(employee.payrollCode || ""),
+      personnelNumber: this.codeText(employee.personnelNumber || ""),
+      employerNumber: this.codeText(employee.employerNumber || ""),
       companyId: employee.companyId || null,
       pointId: employee.pointId || null,
       active: employee.active !== false,
@@ -521,13 +586,20 @@ export class DataStore {
   // die niet na `now` (het moment van laden) ligt. addRegistration en removeLastRegistration
   // gebruiken dat om te bepalen of de voorraad verandert. Een telling in de toekomst wordt
   // weggelaten (de voorraad telt dan als "niet geteld"): anders zou iedere nieuwe registratie
-  // vóór die telling liggen en zou de voorraad nooit meer veranderen.
+  // vóór die telling liggen en zou de voorraad nooit meer veranderen. Ook een tijdstip dat geen
+  // geldig ISO-tijdstip vanaf 2000 is, wordt weggelaten (zie isValidDateTime).
+  // Alleen producten met een veilige id krijgen een regel (migrate geeft alleen geldige producten
+  // mee). De regels worden opgezocht met Object.hasOwn, zodat een naam als "toString" niet iets
+  // van het object zelf vindt. De nieuwe voorraadlijst is een gewoon object met alleen die regels.
   completePointStock(point, products, now = new Date()) {
     const stock = this.renameStockKeys(point.products);
     const completedProducts = {};
 
     for (const product of products) {
-      const entry = this.isObject(stock[product.id]) ? stock[product.id] : {};
+      if (!this.isSafeId(product.id)) continue;
+
+      const stored = Object.hasOwn(stock, product.id) ? stock[product.id] : null;
+      const entry = this.isObject(stored) ? stored : {};
       const amount = this.toNumber(entry.stock);
       const minimum = this.toNumber(entry.minimum);
 
@@ -537,25 +609,26 @@ export class DataStore {
         minimum: Number.isFinite(minimum) ? Math.max(0, minimum) : 0
       };
 
-      const countedTime = typeof entry.countedAt === "string" ? Date.parse(entry.countedAt) : NaN;
-      const hasValidCount = !Number.isNaN(countedTime) && countedTime <= now.getTime();
-      if (hasValidCount) completedProducts[product.id].countedAt = entry.countedAt;
+      if (this.isValidDateTime(entry.countedAt, now.getTime())) {
+        completedProducts[product.id].countedAt = entry.countedAt;
+      }
     }
 
     return { ...point, products: completedProducts };
   }
 
-  // Een logboekregel moet een actie, details en een geldige datum hebben. Ongeldige regels
+  // Een logboekregel moet een actie, details en een geldig tijdstip hebben. Ongeldige regels
   // worden bij het laden overgeslagen, zodat één beschadigde regel het logboek niet laat vastlopen.
   // De id is optioneel (heel oude regels hebben er geen), maar als die er staat moet het een
   // veilige id zijn, net als bij de andere gegevens.
-  isValidAuditEntry(entry) {
+  // Voor het tijdstip gelden dezelfde regels als bij een registratie: een ISO-tijdstip vanaf
+  // 1 januari 2000 en hooguit één dag na `now` (het moment van laden, zie MAX_FUTURE_MS).
+  isValidAuditEntry(entry, now = new Date()) {
     return (
       this.isSafeOptionalId(entry?.id) &&
       this.isText(entry?.action, MAX_AUDIT_TEXT) &&
       this.isText(entry.details, MAX_AUDIT_TEXT) &&
-      typeof entry.createdAt === "string" &&
-      !Number.isNaN(Date.parse(entry.createdAt))
+      this.isValidDateTime(entry.createdAt, now.getTime() + MAX_FUTURE_MS)
     );
   }
 

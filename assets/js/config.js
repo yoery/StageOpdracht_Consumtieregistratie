@@ -75,8 +75,10 @@ export const DAYLIGHT_HOURS = [
 // Demo gezichtsherkenning (zie FaceRecognitionDemo.js).
 // Zet enabled op false om de demo volledig uit te schakelen; de knoppen verdwijnen dan.
 // De bibliotheek en modellen worden pas geladen als iemand de demo gebruikt.
-// Bibliotheek en modellen (@vladmandic/face-api 1.7.15, MIT-licentie) staan zelf in
-// assets/vendor/face-api/, zodat er tijdens gebruik geen code of gegevens van een externe server komen.
+// Bibliotheek en modellen (@vladmandic/face-api 1.7.15, MIT-licentie, met daarin TensorFlow.js
+// onder de Apache-licentie 2.0) staan zelf in assets/vendor/face-api/, zodat er tijdens gebruik
+// geen code of gegevens van een externe server komen. face-api wordt niet meer onderhouden (de
+// repository is gearchiveerd); daarom is het alleen voor de demo bedoeld (zie de README in die map).
 // Alleen de modellen voor tiny_face_detector, face_landmark_68_tiny en face_recognition zijn meegenomen.
 // De paden worden met import.meta.url omgezet naar volledige adressen. Dat is nodig omdat
 // import() een pad relatief aan het modulebestand oplost, maar loadFromUri() relatief aan de pagina.
@@ -101,7 +103,7 @@ export const FACE_DEMO = {
 //     die geen Enter of Tab sturen.
 export const BADGE_READER = {
   enabled: true,
-  minLength: 6,
+  minLength: 4,
   maxKeyIntervalMs: 40,
   endDelayMs: 120
 };

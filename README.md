@@ -8,7 +8,7 @@ Open de map in VS Code en start [index.html](./index.html) met de extensie **Liv
 
 Dubbelklikken op `index.html` werkt niet: de JavaScript bestaat uit modules en browsers blokkeren die via `file://`.
 
-Tests draaien (Node.js 20+): `npm test`
+Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
 
 ## Mappenstructuur
 
@@ -32,7 +32,7 @@ assets/
     BadgeReader.js          # Herkennen met de pas via een USB-NFC-lezer (uit te zetten in config.js)
   fonts/                    # Lettertypes DM Sans en Space Grotesk (zelf gehost, SIL OFL, zie LICENSE.txt)
   vendor/
-    face-api/               # face-api 1.7.15 en de drie modellen voor de demo (MIT, ca. 8 MB)
+    face-api/               # face-api 1.7.15 en de drie modellen voor de demo (MIT, met TensorFlow.js onder Apache 2.0, ca. 8 MB, niet meer onderhouden en dus alleen voor de demo)
 docs/
   TO-BLIKJESREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
@@ -42,14 +42,14 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  *.test.js                 # 511 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pas)
+  *.test.js                 # 534 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pas, beveiligingsscan)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van docs/tvbsjabloon.docx (voorbeeld bovenin)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
   app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
-.github/workflows/ci.yml    # GitHub Actions: draait npm test op main en development (alleen leesrechten, actions vast op commit-SHA)
+.github/workflows/ci.yml    # GitHub Actions: draait npm test met Node.js 24 op main en development (alleen leesrechten, actions vast op commit-SHA)
 ```
 
 ## Inbegrepen
@@ -68,7 +68,7 @@ archief/
 - Voorraadbeheer per consumptiepunt: iedere registratie haalt 1 van de voorraad af, leveringen en tellingen worden geboekt (hele getallen tot 100.000), en per product is er een minimum. Een bijbestellijst toont alles wat op is of bijbesteld moet worden.
 - Correcties in een oude maand vragen eerst om bevestiging, omdat die loonmaand mogelijk al is verwerkt. Iedere beheerwijziging wordt samen met de logboekregel opgeslagen.
 - Knop `Alle gegevens wissen` in het tabblad Logboek: wist na twee bevestigingen alle gegevens, reservekopieën en ingestelde gezichten op de tablet (AVG, recht op vergetelheid), logt uit en zet de demogegevens terug.
-- Beveiliging in de demo: alle waarden in HTML worden ge-escapet, opgeslagen id's, kleuren en prijzen worden bij het laden gecontroleerd (ook dubbele id's, registraties van meer dan een dag in de toekomst en tellingen in de toekomst), een Content-Security-Policy en `no-referrer` in `index.html`, lettertypes en face-api zelf gehost (geen Google Fonts of CDN) en CSV-velden zijn beschermd tegen formules. Zie het TO, hoofdstuk 13, voor wat er vóór productie nog moet gebeuren.
+- Beveiliging in de demo: alle waarden in HTML worden ge-escapet, opgeslagen id's, kleuren, prijzen, codes en tijdstippen worden bij het laden gecontroleerd (ook dubbele id's, registraties van meer dan een dag in de toekomst, tellingen in de toekomst en speciale sleutels als `__proto__` in de voorraad), iedere beheeractie controleert zelf of er een beheerder is ingelogd, de camera gaat uit als de tijd om is, een Content-Security-Policy en `no-referrer` in `index.html`, lettertypes en face-api zelf gehost (geen Google Fonts of CDN) en CSV-velden zijn beschermd tegen formules. Zie het TO, hoofdstuk 13, voor wat er vóór productie nog moet gebeuren.
 - CSV-export (te openen in Excel) met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. Jaar en Maand zijn de loonmaand: consumpties worden verwerkt in de maand erna (september → oktober, december → januari).
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
 - Persoonlijk welkom in het productvenster en een knop "Zelfde als vorige keer" met de keuze van de vorige keer.

@@ -208,7 +208,7 @@ export class RegistrationModel {
   addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date() } = {}) {
     const employee = this.findEmployee(employeeId);
     const point = this.findPoint(employee?.pointId);
-    const offered = Boolean(point?.products[productId]?.offered);
+    const offered = Boolean(this.pointProduct(point, productId)?.offered);
     const employerNumber = this.employerNumberFor(employee);
 
     const registration = {
@@ -654,7 +654,7 @@ export class RegistrationModel {
       products: {}
     };
     for (const product of this.products) {
-      const oldEntry = existing?.products[product.id] || { stock: 0, minimum: 0 };
+      const oldEntry = this.pointProduct(existing, product.id) || { stock: 0, minimum: 0 };
       point.products[product.id] = { ...oldEntry, offered: offeredProductIds.includes(product.id) };
     }
 
@@ -681,7 +681,16 @@ export class RegistrationModel {
     const point = this.findPoint(pointId);
     if (!point) return [];
 
-    return this.products.filter((product) => point.products[product.id]?.offered);
+    return this.products.filter((product) => this.pointProduct(point, product.id)?.offered);
+  }
+
+  // De voorraadregel van één product binnen een consumptiepunt, of undefined als die er niet is.
+  // De voorraadlijst is een object met de product-id als sleutel. Object.hasOwn zorgt dat alleen
+  // echte regels worden gevonden: een product-id als "toString" of "constructor" (bijvoorbeeld uit
+  // een aangepaste knop op de pagina) vindt dan niet per ongeluk een functie van het object zelf.
+  pointProduct(point, productId) {
+    if (!point?.products || !Object.hasOwn(point.products, productId)) return undefined;
+    return point.products[productId];
   }
 
   // De producten die een medewerker kan kiezen: het aanbod van het eigen consumptiepunt.
@@ -695,11 +704,13 @@ export class RegistrationModel {
 
   // Wijzigt de voorraadregel van één product op één punt zonder bestaande objecten aan te passen,
   // zodat snapshot/restore blijft werken. `change` krijgt een kopie en geeft de nieuwe regel terug.
+  // Bestaat de regel niet (zie pointProduct), dan verandert er niets.
   updateStockEntry(pointId, productId, change) {
     this.state.points = this.points.map((point) => {
-      if (point.id !== pointId || !point.products[productId]) return point;
+      const current = point.id === pointId ? this.pointProduct(point, productId) : undefined;
+      if (!current) return point;
 
-      const newEntry = change({ ...point.products[productId] });
+      const newEntry = change({ ...current });
       return {
         ...point,
         products: { ...point.products, [productId]: newEntry }
@@ -714,7 +725,7 @@ export class RegistrationModel {
 
   // De voorraadregel van één product op één punt, of undefined als die niet bestaat.
   stockEntry(pointId, productId) {
-    return this.findPoint(pointId)?.products[productId];
+    return this.pointProduct(this.findPoint(pointId), productId);
   }
 
   // Vervangt de voorraad door een getelde hoeveelheid en onthoudt wanneer er is geteld
@@ -743,7 +754,7 @@ export class RegistrationModel {
 
     for (const point of this.points) {
       for (const product of this.offeredProducts(point.id)) {
-        const entry = point.products[product.id];
+        const entry = this.pointProduct(point, product.id);
         const status = this.stockStatus(entry);
 
         if (status !== "ok") alerts.push({ point, product, entry, status });

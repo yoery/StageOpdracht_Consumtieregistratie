@@ -151,6 +151,15 @@ export const createStrictView = (selectors = []) => {
   return view;
 };
 
+// Zet de beheerder op ingelogd en geeft de controller terug. Beheeracties (formulieren,
+// correcties, voorraad, export) doen niets zonder ingelogde beheerder (RegistrationApp.requireAdmin).
+// De meeste controllertests gaan over zo'n beheeractie; daarom maken hun createApp-functies de
+// controller met deze hulpfunctie. Tests over inloggen zelf zetten adminLoggedIn weer op false.
+export const asAdmin = (app) => {
+  app.adminLoggedIn = true;
+  return app;
+};
+
 // Een registratie met een vaste datum (lokale tijd), voor tests met maanden.
 export const registration = (id, employeeId, productId, createdAt) => ({
   id,

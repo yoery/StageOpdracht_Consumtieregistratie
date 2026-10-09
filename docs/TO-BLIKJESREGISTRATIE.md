@@ -1,7 +1,7 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.6
+**Versie:** 3.7
 **Datum:** 9 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
@@ -21,6 +21,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.4 | 6 oktober 2026 (commit 259176e) | TO volledig nagelopen: alle eisen gecontroleerd tegen de code en het databaseschema, tegenstrijdigheden opgelost (correcties, voorraad, export), FR-57 t/m FR-64 toegevoegd, MoSCoW-prioriteiten en meetbare NFR's met ID, stakeholders, scope, aannames en begrippen, ontwerpkeuzes, volledig logisch datamodel met ERD, diagrammen (context, architectuur, klassen, ERD, use cases), een traceerbaarheidsmatrix en een testverslag voor de acceptatietests. Tegelijk is de code aangepast op de punten uit deze controle, onder andere: wissen in een ander tabblad wordt overgenomen en "1 medewerker" en "1 product" staan in enkelvoud (zie `tests/to-controle.test.js`). |
 | 3.5 | 9 oktober 2026 | Testplan voor de herkenningsnauwkeurigheid van de demo gezichtsherkenning (hoofdstuk 15) met acceptatiecriterium AC-83: hoe vaak iemand als een ander wordt herkend, een onbekende toch wordt herkend of een medewerker niet wordt herkend. |
 | 3.6 | 9 oktober 2026 | AFAS-koppeling (ontwerp) en herkennen met de pas. Ontwerp van de koppeling met AFAS Profit voor de medewerkergegevens (hoofdstuk 11) met FR-67 en AC-87 t/m AC-89. Herkennen met een USB-NFC-pasjeslezer in de demo (class `BadgeReader`) en een pas koppelen in het beheer, met FR-65, FR-66, UC-20 en AC-84 t/m AC-86. |
+| 3.7 | 9 oktober 2026 | Open punten uit de beveiligingsscan opgelost (hoofdstuk 13). Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`requireAdmin`). Product-id's als `__proto__`, `constructor` of `toString` kunnen de voorraadlijst van een consumptiepunt niet meer verstoren. De camera gaat uit als de tijd voor herkennen of instellen om is. Codes en tijdstippen worden bij het laden strenger gecontroleerd. Het logboek in het databaseschema is echt alleen-toevoegen (triggers). De CI draait op Node.js 24 en de licentie van TensorFlow.js is toegevoegd. Twee bekende beperkingen erbij: registreren op naam van een ander en face-api dat niet meer wordt onderhouden. Nieuw testbestand `tests/beveiligingsscan.test.js` (534 tests in totaal). User stories US-01 t/m US-64 toegevoegd aan het eind van hoofdstuk 10. De diagrammen tonen nu ook de pasjeslezer, `BadgeReader`, UC-20 en de koppeling met AFAS. `BADGE_READER.minLength` is 4, zodat ook het kortste pasnummer dat de beheerder kan koppelen te scannen is. |
 
 ## Inhoudsopgave
 
@@ -234,7 +235,7 @@ De eisen zijn per onderwerp gegroepeerd. De nummers zijn niet veranderd, zodat v
 | ID | Eis | Prioriteit |
 |---|---|---|
 | FR-06 | De beheerder ziet per medewerker het aantal registraties en het totaalbedrag. | Should |
-| FR-09 | Een beheerder kan inloggen en uitloggen. In de demo wordt ieder ingevuld (niet-leeg) e-mailadres en wachtwoord geaccepteerd. `admin@tvb.nl` staat al ingevuld. Sluiten van het beheervenster logt de beheerder uit, en na herladen van de pagina is de beheerder niet meer ingelogd. De CSV-export en `Alle gegevens wissen` werken alleen na inloggen. | Must |
+| FR-09 | Een beheerder kan inloggen en uitloggen. In de demo wordt ieder ingevuld (niet-leeg) e-mailadres en wachtwoord geaccepteerd. `admin@tvb.nl` staat al ingevuld. Sluiten van het beheervenster logt de beheerder uit, en na herladen van de pagina is de beheerder niet meer ingelogd. Alle beheeracties (formulieren, verwijderen, correcties, voorraad, de CSV-export en `Alle gegevens wissen`) werken alleen na inloggen. De controller controleert dat zelf (`requireAdmin`). | Must |
 | FR-10 | Een beheerder kan alle registraties bekijken. | Must |
 | FR-11 | Een beheerder kan filteren op medewerker. | Should |
 | FR-12 | Een beheerder kan filteren op maand. Het filter werkt op de consumptiemaand (de maand van registreren) en toont de bijbehorende loonmaand erbij, bijvoorbeeld "september 2026 (loonmaand oktober 2026)". De CSV-export gebruikt hetzelfde filter. Jaar en Maand in het bestand zijn de loonmaand (consumptiemaand + 1, zie FR-30). | Must |
@@ -369,7 +370,7 @@ In de demo blijven gegevens alleen in dezelfde browser bewaard.
 
 ![Contextdiagram van de blikjesregistratie](diagrams/contextdiagram.png)
 
-*Figuur: contextdiagram. Het systeem met de medewerker, de beheerder, de tablet met browser, de opslag in `localStorage`, het CSV-bestand voor de loonadministratie en (in productie) de server met database.*
+*Figuur: contextdiagram. Het systeem met de medewerker, de beheerder, de tablet met browser, de opslag in `localStorage`, de camera en de pasjeslezer (allebei optioneel), het CSV-bestand voor de loonadministratie en (in productie) de server met database en de koppeling met AFAS Profit.*
 
 Medewerkers en de beheerder gebruiken het systeem in de browser van de tablet. In de demo staan alle gegevens in `localStorage` van die browser. De beheerder maakt een CSV-bestand en stuurt dat naar de loonadministratie. Er is geen directe koppeling met het loonpakket. In productie komen er een server (backend/API) en een PostgreSQL-database tussen.
 
@@ -377,7 +378,7 @@ Medewerkers en de beheerder gebruiken het systeem in de browser van de tablet. I
 
 ![Architectuur van de demo](diagrams/architectuur.png)
 
-*Figuur: architectuur van de demo. View, controller en model in de browser. `DataStore` is de enige class die de gegevens in `localStorage` leest en schrijft (`ThemeManager` bewaart daar alleen de thema-instelling). `CsvExport`, `ThemeManager` en `FaceRecognitionDemo` staan ernaast.*
+*Figuur: architectuur van de demo. View, controller en model in de browser. `DataStore` is de enige class die de gegevens in `localStorage` leest en schrijft (`ThemeManager` bewaart daar alleen de thema-instelling). `CsvExport`, `ThemeManager`, `FaceRecognitionDemo` en `BadgeReader` staan ernaast. De pasjeslezer typt het pasnummer als een toetsenbord in de pagina.*
 
 De hele demo draait in de browser. Er is geen server nodig behalve een eenvoudige webserver die de bestanden levert. De gegevens gaan zo door de lagen:
 
@@ -406,7 +407,7 @@ De medewerkergegevens kunnen in productie uit AFAS Profit komen. Alleen de backe
 
 ![Klassendiagram](diagrams/klassendiagram.png)
 
-*Figuur: klassendiagram van de JavaScript met de belangrijkste attributen, methodes en relaties. De class `BadgeReader` (sinds versie 3.6) staat nog niet in het diagram.*
+*Figuur: klassendiagram van de JavaScript met de belangrijkste attributen, methodes en relaties, inclusief de class `BadgeReader` (sinds versie 3.6).*
 
 De JavaScript is objectgeoriënteerd opgebouwd volgens het MVC-patroon. Er zijn acht classes, ieder in een eigen bestand:
 
@@ -490,9 +491,9 @@ De tablet staat dag en nacht aan. Iedere minuut controleert de controller of de 
 - **localStorage:** tijdelijke opslag in de browser.
 - **CSV-export:** gemaakt met eigen JavaScript, zonder externe bibliotheek.
 - **Lettertypes DM Sans en Space Grotesk:** zelf gehost in `assets/fonts/` (woff2, SIL Open Font License 1.1. SIL International, 2007. Zie `assets/fonts/LICENSE.txt`). De lettertypes komen oorspronkelijk van Google Fonts (z.d.), maar er wordt tijdens gebruik niets van Google Fonts geladen.
-- **face-api (@vladmandic/face-api 1.7.15. Mandic, z.d.):** alleen voor de demo gezichtsherkenning. De bibliotheek en de drie modellen (gezicht vinden, gezichtspunten en herkenning) staan in `assets/vendor/face-api/` (MIT-licentie, samen ongeveer 8 MB, waarvan 6,4 MB het herkenningsmodel). Er wordt tijdens gebruik niets van een CDN geladen.
+- **face-api (@vladmandic/face-api 1.7.15. Mandic, z.d.):** alleen voor de demo gezichtsherkenning. De bibliotheek en de drie modellen (gezicht vinden, gezichtspunten en herkenning) staan in `assets/vendor/face-api/` (MIT-licentie, samen ongeveer 8 MB, waarvan 6,4 MB het herkenningsmodel). Er wordt tijdens gebruik niets van een CDN geladen. In de bibliotheek zit TensorFlow.js 4.22.0 van Google (Apache-licentie 2.0, zie `assets/vendor/face-api/LICENSE-TENSORFLOWJS`). De repository van face-api is gearchiveerd: 1.7.15 is de laatste versie en er komen geen beveiligingsupdates meer (zie hoofdstuk 13).
 - **Content-Security-Policy:** een `<meta>`-tag in `index.html` die de browser alleen bestanden van de eigen server laat laden (zie hoofdstuk 13).
-- **Node.js test runner (`node:test`. Node.js, z.d.):** voor de unit tests, met Node.js 20 of hoger (`"engines": { "node": ">=20" }` in `package.json`). De tests draaien automatisch via GitHub Actions (Node.js 20) bij iedere push en pull request naar `main` en `development`. De workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het GitHub-token niet (`persist-credentials: false`) en gebruikt actions die vastgezet zijn op een commit-SHA.
+- **Node.js test runner (`node:test`. Node.js, z.d.):** voor de unit tests, met Node.js 22 of hoger (`"engines": { "node": ">=22" }` in `package.json`). De tests draaien automatisch via GitHub Actions (Node.js 24, een LTS-versie die nog wordt onderhouden. Node.js 20 is sinds 30 april 2026 end-of-life) bij iedere push en pull request naar `main` en `development`. De workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het GitHub-token niet (`persist-credentials: false`) en gebruikt actions die vastgezet zijn op een commit-SHA.
 
 **Gebruikte browserfuncties:**
 
@@ -620,18 +621,20 @@ De demo heeft geen accounts, dus er wordt niet vastgelegd welke beheerder de wij
 
 - **Id's en verwijzingen** (naar medewerker, product, bedrijf en punt) passen bij `^[A-Za-z0-9_-]{1,64}$` (letters, cijfers, `-` en `_`) en zijn niet `__proto__`, `constructor` of `prototype`. Die drie namen hebben in JavaScript een speciale betekenis en zouden de voorraadlijst van een punt kunnen verstoren.
 - **Dubbele id's** binnen een lijst (ook in het logboek): alleen de eerste regel met die id blijft, de rest wordt overgeslagen. Anders zou bijvoorbeeld `Wijzigen` of `Verwijderen` op de ene regel ook de andere raken.
-- **Tekstlengtes:** namen van producten, bedrijven en punten en de voor- en achternaam hooguit 200 tekens. De volledige naam van een medewerker hooguit 401 tekens (twee keer 200 plus een spatie) en niet leeg. Looncode, personeelsnummer en werkgevernummer hooguit 64 tekens. Actie en details in het logboek hooguit 500 tekens. Dit zijn alleen veiligheidsgrenzen tegen aangepaste gegevens, geen bedrijfsregel: de formulieren laten 100 tekens toe (FR-59).
+- **Tekstlengtes:** namen van producten, bedrijven en punten en de voor- en achternaam hooguit 200 tekens. De volledige naam van een medewerker hooguit 401 tekens (twee keer 200 plus een spatie) en niet leeg. Actie en details in het logboek hooguit 500 tekens. Dit zijn alleen veiligheidsgrenzen tegen aangepaste gegevens, geen bedrijfsregel: de formulieren laten 100 tekens toe (FR-59).
+- **Codes** (looncode, personeelsnummer en werkgevernummer bij een medewerker, bedrijf of registratie) zijn tekst van hooguit 64 tekens zonder stuurtekens zoals tab of enter. Leeg mag. Een object, een lijst of een andere soort waarde is ongeldig, omdat die in de export als vreemde tekst of als formule terecht zou komen. Een heel getal uit oude gegevens (bijvoorbeeld `4411`) wordt eerst omgezet naar tekst (`"4411"`). Letters blijven toegestaan, omdat oude gegevens codes als `LC01` kunnen bevatten. Alleen de formulieren eisen cijfers (FR-59).
+- **Tijdstippen** (`createdAt` van registraties en logboekregels, en `countedAt`) staan in ISO-vorm, zoals `2026-10-09T08:30:00.000Z`. Seconden, milliseconden en de tijdzone mogen ontbreken. Andere vormen, zoals `"1"` of `10/9/2026`, worden door de browser heel verschillend gelezen en zijn daarom ongeldig. Een tijdstip vóór 1 januari 2000 is ook ongeldig. Dat is dezelfde ondergrens als bij een correctie `+` (zie hoofdstuk 14).
 - **Prijzen** zijn een getal van 0 tot en met 1000. Een product zonder prijs (`null` of leeg) telt als ongeldig en wordt dus niet gratis. Bij een registratie is de prijs optioneel (oude registraties hebben er geen), maar als die er staat, moet hij geldig zijn.
-- **Registraties** hebben een geldige datum (`createdAt`) die niet meer dan 1 dag na het moment van laden ligt (een kleine afwijking van de klok van de tablet mag). Een registratie ver in de toekomst is vrijwel zeker geknoeid en zou in een verkeerde loonmaand in de export komen. Een `employerNumber` is optioneel, maar als het er staat, is het tekst van hooguit 64 tekens.
+- **Registraties** hebben een geldig tijdstip (`createdAt`, zie hierboven) dat niet meer dan 1 dag na het moment van laden ligt (een kleine afwijking van de klok van de tablet mag). Een registratie ver in de toekomst is vrijwel zeker geknoeid en zou in een verkeerde loonmaand in de export komen. Een `employerNumber` is optioneel, maar als het er staat, is het tekst van hooguit 64 tekens.
 - **Medewerkers** hebben een status (`active`) en een kleur in de vorm `#rrggbb`. De status wordt vóór de controle al omgezet (`migrateEmployee`): alleen de waarde `false` wordt inactief, iedere andere waarde (ook een ontbrekende) wordt actief. De controle op een boolean slaat daardoor in de praktijk nooit een medewerker over. Een medewerker met een ongeldige kleur blijft bewaard en krijgt een standaardkleur. Het pasnummer (`badgeId`) is optioneel. Staat het er, dan moet het tekst zijn met alleen hoofdletters en cijfers (`^[A-Z0-9]{0,64}$`). Een ongeldig pasnummer wordt leeggemaakt (`""`, geen pas). De medewerker blijft bewaard.
-- **Consumptiepunten** hebben een bedrijfs-id in de juiste vorm (zie id's hierboven) en een voorraadlijst. Of dat bedrijf ook bestaat, wordt bij het laden niet gecontroleerd.
-- **Logboekregels** hebben een actie, details en een geldige datum. De id is optioneel (heel oude regels hebben er geen).
+- **Consumptiepunten** hebben een bedrijfs-id in de juiste vorm (zie id's hierboven) en een voorraadlijst. Of dat bedrijf ook bestaat, wordt bij het laden niet gecontroleerd. De voorraadlijst is een gewoon object met een product-id als sleutel, en iedere sleutel moet een veilige id zijn (`isValidPoint`, `hasSafeStockKeys`).
+- **Logboekregels** hebben een actie, details en een geldig tijdstip (zie hierboven) dat niet meer dan 1 dag na het moment van laden ligt, net als bij registraties. De id is optioneel (heel oude regels hebben er geen).
 
 **Waarden die worden rechtgezet (zonder melding)**
 
-- Een `countedAt` (tijdstip van de laatste telling) die geen geldige datum is of in de toekomst ligt, wordt weggelaten. Het product telt dan als "niet geteld", zodat de voorraad niet geblokkeerd raakt: anders zou geen enkele registratie de voorraad nog verlagen.
+- Een `countedAt` (tijdstip van de laatste telling) die geen geldig tijdstip is (zie hierboven) of in de toekomst ligt, wordt weggelaten. Het product telt dan als "niet geteld", zodat de voorraad niet geblokkeerd raakt: anders zou geen enkele registratie de voorraad nog verlagen.
 - Voorraad en minimum worden altijd getallen (een getal als tekst, zoals `"5"`, zou bij optellen anders `"51"` worden). Een ongeldige waarde wordt 0. Een negatief minimum wordt 0. Een negatieve voorraad mag (er is dan meer geregistreerd dan geteld).
-- Ieder consumptiepunt krijgt een voorraadregel voor ieder product. Ontbrekende producten staan uit.
+- Ieder consumptiepunt krijgt een voorraadregel voor ieder geldig product. Ontbrekende producten staan uit. Sleutels in de opgeslagen voorraadlijst die geen veilige id zijn (zoals `__proto__`, `constructor` of `kapot id`) worden overgeslagen, net als regels van een product dat zelf ongeldig is. Zo kan een geknoeide sleutel de voorraadlijst niet veranderen en komt er via een sleutel als `__proto__` geen voorraad binnen. Het model zoekt een voorraadregel alleen op als eigen sleutel van de lijst (`Object.hasOwn` in `RegistrationModel.pointProduct`), zodat een product-id als `toString` niets van het object zelf vindt.
 - Een ongeldig pasnummer wordt leeggemaakt (zie Medewerkers hierboven). Komt hetzelfde pasnummer bij meer medewerkers voor, dan houdt de eerste medewerker de pas en wordt het pasnummer bij de anderen leeggemaakt. Anders weet de pasjeslezer niet wie er staat.
 
 **Oude gegevens omzetten (migratie)**
@@ -661,7 +664,7 @@ Het logische datamodel hieronder geldt voor de productieversie. De kolom "In SQL
 
 ![ERD van het productieschema](diagrams/erd.png)
 
-*Figuur: ERD van het productieschema (`DATABASE-SCHEMA.sql`) met primaire en vreemde sleutels en kardinaliteiten.*
+*Figuur: ERD van het productieschema (`DATABASE-SCHEMA.sql`) met primaire en vreemde sleutels en kardinaliteiten. `audit_log` is alleen-toevoegen en heeft bewust geen vreemde sleutels, daarom staan er geen relatielijnen bij die tabel.*
 
 De relaties in het kort: een bedrijf heeft nul of meer consumptiepunten en nul of meer medewerkers. Een medewerker hoort bij hooguit één bedrijf en één consumptiepunt. Per consumptiepunt en product is er één regel aanbod en voorraad. Een registratie hoort bij precies één medewerker en één product, en bij hooguit één consumptiepunt en één beheerder (bij een correctie). Een logboekregel hoort bij hooguit één beheerder, medewerker, product en registratie.
 
@@ -761,16 +764,16 @@ Deze tabel bestaat alleen in productie. De demo heeft geen accounts.
 | Veld | In SQL | Type | Sleutel | Uitleg |
 |---|---|---|---|---|
 | `LogID` | `audit_id` | UUID | PK | Uniek nummer van de logregel (demo: `id`) |
-| `BeheerderID` | `admin_id` | UUID | FK → Beheerders | Wie de wijziging deed (niet in de demo) |
+| `BeheerderID` | `admin_id` | UUID | Verwijst naar Beheerders (geen FK) | Wie de wijziging deed (niet in de demo) |
 | `Actie` | `action` | Tekst (100) | | Bijvoorbeeld "Registratie verwijderd" (demo: `action`) |
-| `MedewerkerID` | `employee_id` | UUID | FK → Medewerkers | Betrokken medewerker (niet in de demo) |
-| `ProductID` | `product_id` | UUID | FK → Producten | Betrokken product (niet in de demo) |
-| `RegistratieID` | `registration_id` | UUID | FK → Registraties | Betrokken registratie (niet in de demo) |
+| `MedewerkerID` | `employee_id` | UUID | Verwijst naar Medewerkers (geen FK) | Betrokken medewerker (niet in de demo) |
+| `ProductID` | `product_id` | UUID | Verwijst naar Producten (geen FK) | Betrokken product (niet in de demo) |
+| `RegistratieID` | `registration_id` | UUID | Verwijst naar Registraties (geen FK) | Betrokken registratie (niet in de demo) |
 | `Details` | `details` | Tekst | | Uitleg over de actie (demo: `details`) |
 | `Metadata` | `metadata` | JSON (`jsonb`) | | Extra gegevens, bijvoorbeeld oude en nieuwe waarde (niet in de demo) |
 | `DatumTijd` | `created_at` | DatumTijd | | Moment van de actie (demo: `createdAt`) |
 
-In de demo bestaat een logregel alleen uit `id`, `action`, `details` en `createdAt`. Alle vreemde sleutels in het logboek staan op `ON DELETE SET NULL`, zodat een logregel blijft bestaan als de beheerder, medewerker of het product later wordt verwijderd.
+In de demo bestaat een logregel alleen uit `id`, `action`, `details` en `createdAt`. Het logboek is alleen-toevoegen (append-only): een regel wordt nooit gewijzigd of verwijderd. Twee triggers (`audit_log_no_update_or_delete` en `audit_log_no_truncate`) weigeren `UPDATE`, `DELETE` en `TRUNCATE`, ook als een rol daar wel rechten voor heeft. Alleen de eigenaar van de tabel kan de triggers bewust uitzetten. Daarom hebben de verwijzingen in het logboek bewust geen vreemde sleutel. Met `ON DELETE SET NULL` zou de database bij het verwijderen van een medewerker of product de logregels zelf aanpassen, en dan is het spoor weg. Nu blijft de id staan, ook als het gegeven later wordt verwijderd. De naam van dat moment kan in `metadata` worden bewaard. Opschonen na de bewaartermijn doet alleen de eigenaar van de tabel in een gepland onderhoudsscript, dat de triggers daarvoor tijdelijk uitzet en dat zelf vastlegt.
 
 ### Productieschema
 
@@ -812,7 +815,7 @@ Gebruik voor `password_hash` een sterk wachtwoordalgoritme zoals Argon2id (of an
 Onderaan het schema staan als voorbeeld (in commentaar):
 
 - **Rollen met zo weinig rechten als nodig:** de applicatie logt in met een eigen rol (`blikjes_app`) die geen tabellen mag aanmaken of verwijderen, en er is een aparte rol met alleen leesrechten voor rapportages.
-- **Logboek alleen-toevoegen:** de applicatie mag regels in `audit_log` lezen en toevoegen, maar niet wijzigen of verwijderen.
+- **Logboek alleen-toevoegen:** de applicatie krijgt op `audit_log` alleen het recht om regels te lezen en toe te voegen. Dit deel staat niet in commentaar, maar wordt echt uitgevoerd: de triggers bij de tabel `audit_log` weigeren wijzigen, verwijderen en leegmaken, ook voor een rol die daar per ongeluk rechten voor heeft gekregen, en `REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM PUBLIC` haalt die rechten weg bij alle rollen die ze via `PUBLIC` zouden krijgen.
 - **Bewaartermijn en anonimiseren:** registraties niet langer bewaren dan nodig (bijvoorbeeld de fiscale bewaarplicht van 7 jaar. Belastingdienst, z.d.) en daarna verwijderen of anonimiseren. Bij uit dienst na de bewaartermijn naam, looncode en personeelsnummer anonimiseren.
 - **Queries:** alleen geparametriseerde queries, nooit invoer van gebruikers in de SQL-tekst.
 
@@ -1472,7 +1475,7 @@ W35 tot en met W40 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W13 – Herken mij met de camera (demo)](wireframes/w13-gezicht-herkennen.jpg)
 
-**Omschrijving.** Na een klik op `Herken mij met de camera (demo)` op de beginpagina opent dit venster: `Herken mij`, met de uitleg "Plaats je gezicht binnen het kader en kijk recht in de camera." De status is hier "Geen gezicht in beeld. Plaats je gezicht binnen het kader." Andere statussen zijn "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken." en "Bijna herkend. Blijf even rustig in het kader kijken." Pas als dezelfde actieve medewerker twee keer achter elkaar wordt herkend, telt het. Lukt het na 20 seconden niet, dan staat er "Niet herkend. Sluit dit venster en kies je naam in de lijst." Is er nog niemand ingesteld, dan opent het venster niet en verschijnt een melding.
+**Omschrijving.** Na een klik op `Herken mij met de camera (demo)` op de beginpagina opent dit venster: `Herken mij`, met de uitleg "Plaats je gezicht binnen het kader en kijk recht in de camera." De status is hier "Geen gezicht in beeld. Plaats je gezicht binnen het kader." Andere statussen zijn "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken." en "Bijna herkend. Blijf even rustig in het kader kijken." Pas als dezelfde actieve medewerker twee keer achter elkaar wordt herkend, telt het. Lukt het na 20 seconden niet, dan gaat de camera uit en staat er "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst." Is er nog niemand ingesteld, dan opent het venster niet en verschijnt een melding.
 
 **UI-principes:**
 - *Feedback:* de status verandert terwijl de camera zoekt.
@@ -1931,9 +1934,11 @@ Dit hoofdstuk beschrijft wat de gebruikers met het systeem doen. Er zijn drie ac
 - **Beheerder:** logt in en beheert registraties, medewerkers, producten, bedrijven, consumptiepunten, voorraad, logboek en export.
 - **Systeem:** doet zelf iets zonder dat een gebruiker op een knop klikt (de dagwissel na middernacht en het overnemen van wijzigingen uit een ander tabblad).
 
+Na de use cases staan aan het eind van dit hoofdstuk de [user stories](#user-stories): in één zin per functie wat de medewerker of de beheerder wil bereiken en waarom, met de FR's, use cases en acceptatiecriteria die erbij horen.
+
 ![Use-casediagram](diagrams/use-cases.png)
 
-*Figuur: use-casediagram met de actoren Medewerker, Beheerder en Systeem en de use cases UC-01 tot en met UC-19 uit dit hoofdstuk. UC-03, UC-04 en UC-05 zijn getekend als «extend» van UC-02. UC-20 (sinds versie 3.6) staat nog niet in het diagram.*
+*Figuur: use-casediagram met de actoren Medewerker, Beheerder en Systeem en de use cases UC-01 tot en met UC-20 uit dit hoofdstuk. UC-03, UC-04, UC-05 en UC-20 zijn getekend als «extend» van UC-02.*
 
 UC-03, UC-04 en UC-05 (de demo gezichtsherkenning) zijn een uitbreiding («extend») van UC-02 Product registreren: ze zijn vrijwillig en alleen beschikbaar als de demo aan staat, en ze komen altijd uit bij het productvenster van UC-02. UC-03 en UC-05 starten vanuit het productvenster (de link `Gezichtsherkenning instellen (demo)` en `Uitzetten`). UC-04 opent na herkenning het productvenster (UC-02, pad A6). Zonder deze drie use cases werkt UC-02 precies hetzelfde. UC-20 Herkend worden met de pas is op dezelfde manier een uitbreiding van UC-02: na herkenning opent het productvenster (UC-02, pad A9). De pas koppelen hoort bij UC-10 Medewerker beheren.
 
@@ -2081,7 +2086,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 
 - **E1 Nog niemand ingesteld:** is er geen gezicht van een actieve medewerker ingesteld, dan opent de camera niet en verschijnt "Er is nog niemand ingesteld voor gezichtsherkenning. Kies je naam en zet het aan in het productvenster."
 - **A1 Tussenstatus:** tijdens het zoeken toont het venster "Geen gezicht in beeld. Plaats je gezicht binnen het kader.", "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken." of "Bijna herkend. Blijf even rustig in het kader kijken."
-- **E2 Niet herkend na de time-out:** na 20 seconden (`FACE_DEMO.scanTimeoutMs`) stopt het zoeken met "Niet herkend. Sluit dit venster en kies je naam in de lijst."
+- **E2 Niet herkend na de time-out:** na 20 seconden (`FACE_DEMO.scanTimeoutMs`) stopt het zoeken, gaat de camera uit en staat er "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst."
 - **E3 Inactieve medewerker:** het gezicht van een gedeactiveerde medewerker wordt niet herkend. Het blijft wel bewaard, zodat het na opnieuw activeren weer werkt.
 - **E4 Model laadt niet of geen cameratoegang:** zoals UC-03, E1 en E2.
 
@@ -2306,7 +2311,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 | **ID** | UC-12 |
 | **Actor** | Beheerder |
 | **Doel** | Bedrijven toevoegen, de naam en het werkgevernummer wijzigen en een leeg bedrijf verwijderen. |
-| **Gerelateerde FR's** | FR-33, FR-41, FR-55, FR-57, FR-59, FR-61 |
+| **Gerelateerde FR's** | FR-23, FR-33, FR-41, FR-55, FR-57, FR-59, FR-61 |
 | **Preconditie** | De beheerder is ingelogd en het tabblad `Bedrijven` is open. |
 
 **Hoofdscenario:**
@@ -2527,7 +2532,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 
 1. De medewerker houdt de pas tegen de lezer.
 2. De lezer typt razendsnel het pasnummer, gevolgd door Enter (of Tab).
-3. De controller geeft iedere toets door aan `BadgeReader.handleKey` (`RegistrationApp.handleBadgeKey`, een `keydown`-listener in de capture-fase, zodat die vóór de andere toetsen-listeners komt). `BadgeReader` ziet een scan: minstens 6 tekens (`minLength`), elk binnen 40 milliseconden na het vorige teken (`maxKeyIntervalMs`), afgesloten met Enter of Tab. De Enter of Tab die de scan afsluit, wordt tegengehouden, zodat die geen andere actie start (bijvoorbeeld een medewerkerrij openen).
+3. De controller geeft iedere toets door aan `BadgeReader.handleKey` (`RegistrationApp.handleBadgeKey`, een `keydown`-listener in de capture-fase, zodat die vóór de andere toetsen-listeners komt). `BadgeReader` ziet een scan: minstens 4 tekens (`minLength`, even kort als het kortste pasnummer dat de beheerder kan koppelen), elk binnen 40 milliseconden na het vorige teken (`maxKeyIntervalMs`), afgesloten met Enter of Tab. De Enter of Tab die de scan afsluit, wordt tegengehouden, zodat die geen andere actie start (bijvoorbeeld een medewerkerrij openen).
 4. `BadgeReader.normalize` maakt het pasnummer gelijk (spaties, `:` en `-` weg, hoofdletters) en geeft het door aan de controller (`onScan`).
 5. De controller (`RegistrationApp.recognizeBadge`) zoekt de medewerker met dat pasnummer (`RegistrationModel.findEmployeeByBadge`) en controleert of die actief is.
 6. Het productvenster van die medewerker opent (`openEmployeeProducts` met `recognizedBy: "badge"`) met de begroeting en daarachter "Je bent herkend met je pas." De medewerker gaat verder met UC-02 vanaf stap 3.
@@ -2543,6 +2548,166 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 - **E2 Inactieve medewerker:** hoort de pas bij een inactieve medewerker, dan verschijnt dezelfde melding als bij E1. Het systeem maakt bewust geen onderscheid, zodat er niets uitlekt over een andere medewerker.
 
 **Postconditie:** Het productvenster van de herkende medewerker is open (UC-02, pad A9), of er is een melding verschenen en er is niets veranderd. Het pasnummer wordt nergens opgeslagen of gelogd bij het herkennen.
+
+### User stories
+
+Een user story beschrijft in één zin wat een gebruiker met het systeem wil bereiken en waarom. Iedere story heeft de vorm "Als <rol> wil ik <doel>, zodat <waarde>." Een story zegt dus niet hoe het systeem iets doet, maar wat het voor de gebruiker oplevert. De stories hieronder beschrijven alles wat de demo nu al kan. Ze zijn gecontroleerd tegen de code in `assets/js/` en `index.html`: er staat geen story bij een functie die niet bestaat.
+
+De stories hangen samen met de rest van dit document:
+
+- **FR (hoofdstuk 4):** de functionele eisen die de story uitwerken. Een story kan bij meer dan één FR horen en een FR kan bij meer dan één story horen.
+- **UC (dit hoofdstuk):** de use case die stap voor stap beschrijft hoe de gebruiker het doel bereikt, met de alternatieve paden en foutmeldingen.
+- **AC (hoofdstuk 15):** de acceptatiecriteria waarmee wordt getest of de story klaar is.
+
+De prioriteit volgt de MoSCoW-prioriteit van de gekoppelde FR's uit hoofdstuk 4. Horen er meerdere FR's bij een story, dan geldt de hoogste. Een "–" betekent dat er geen use case of acceptatiecriterium bij hoort.
+
+De rollen zijn de rollen uit hoofdstuk 3: de medewerker en de beheerder. Het thema kan door iedere gebruiker van de tablet worden gekozen (UC-06). Die stories staan daarom in een eigen groep. De systeembeheerder bestaat alleen in productie en heeft in de demo geen functies. Daarom zijn er voor die rol geen stories.
+
+#### Medewerker: eigen naam vinden
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-01 | Als medewerker wil ik op de beginpagina alle actieve medewerkers zien, zodat ik mijn eigen naam kan kiezen zonder in te loggen. | Must | FR-01 | UC-01 | AC-16 |
+| US-02 | Als medewerker wil ik in het zoekveld "Zoek op voor- of achternaam..." een deel van mijn naam typen (eventueel na `Ctrl K`), zodat ik mijn naam snel vind in een lange lijst. | Must | FR-02 | UC-01 | AC-01, AC-02 |
+| US-03 | Als medewerker wil ik de medewerkers gegroepeerd per bedrijf zien en met het bedrijfsfilter één bedrijf kunnen kiezen, zodat ik alleen mijn eigen collega's hoef te doorzoeken. | Should | FR-31 | UC-01 | AC-61 |
+| US-04 | Als medewerker wil ik bij "Geen medewerker gevonden" met de knop `Zoekopdracht wissen` in één keer de hele lijst terugzien, zodat ik na een tikfout snel opnieuw kan zoeken. | Must | FR-02 | UC-01 | AC-39 |
+
+#### Medewerker: producten registreren
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-05 | Als medewerker wil ik op mijn eigen medewerkerkaart tikken en dan alleen de producten van mijn eigen consumptiepunt zien, zodat ik niet hoef te zoeken tussen producten die hier niet liggen. | Must | FR-32, FR-37 | UC-02 | AC-80, AC-22 |
+| US-06 | Als medewerker wil ik per product met `+` en `−` het aantal kiezen en op de knop `Registreren (n)` het totaal zien, zodat ik een verkeerde keuze kan herstellen voordat ik iets opsla. | Must | FR-03, FR-47 | UC-02 | AC-36 |
+| US-07 | Als medewerker wil ik alle gekozen producten met één klik op `Registreren` vastleggen, waarbij de datum en het tijdstip vanzelf worden opgeslagen, zodat het registreren maar een paar seconden kost en de kosten via de loonadministratie worden verrekend. | Must | FR-03, FR-05, FR-07, FR-08 | UC-02 | AC-03, AC-04, AC-05 |
+| US-08 | Als medewerker wil ik na het registreren een melding zien met mijn naam en de producten, bijvoorbeeld "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd", zodat ik zeker weet dat het goed is gegaan en op de juiste naam staat. | Should | FR-48 | UC-02 | AC-37 |
+| US-09 | Als medewerker wil ik zien wat ik de vorige keer koos en dat met `Zelfde als vorige keer` klaarzetten, zodat ik mijn vaste keuze niet steeds opnieuw hoef in te tikken. | Could | FR-50 | UC-02 | AC-41, AC-42 |
+| US-10 | Als medewerker wil ik in het productvenster persoonlijk worden begroet ("Goedemorgen Lotte, welkom terug."), zodat ik direct zie dat het venster van mij is. | Could | FR-49 | UC-02 | AC-41 |
+| US-11 | Als medewerker wil ik dat er op de tablet geen persoonlijke aantallen of bedragen te zien zijn, zodat collega's die na mij de tablet gebruiken niet zien wat ik heb gebruikt. | Must | FR-29 | UC-02 | AC-06 |
+| US-12 | Als medewerker wil ik op de beginpagina de tegels "Vandaag geregistreerd" en "Deze maand" zien, zodat ik merk dat het registreren door het hele team gebeurt. | Could | FR-62 | UC-02, UC-18 | AC-70 |
+| US-13 | Als medewerker wil ik dat de datum bovenaan en de tegels na middernacht vanzelf bij de nieuwe dag horen, zodat ik ook op een tablet die dag en nacht aanstaat de juiste gegevens zie. | Should | FR-53 | UC-18 | AC-47 |
+
+#### Medewerker: herkennen met de pas
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-14 | Als medewerker wil ik mijn pas tegen de pasjeslezer houden, waarna mijn eigen productvenster opent met "Je bent herkend met je pas.", zodat ik mijn naam niet hoef te zoeken. | Should | FR-65 | UC-20 | AC-84 |
+| US-15 | Als medewerker wil ik bij een pas die niet (meer) aan mij is gekoppeld een duidelijke melding krijgen, zodat ik weet dat ik mijn naam in de lijst moet kiezen of de beheerder moet vragen de pas te koppelen. | Should | FR-65 | UC-20 | AC-86 |
+
+#### Medewerker: demo gezichtsherkenning
+
+Deze stories horen bij FR-51. Die eis is alleen als demo gebouwd en wordt voor productie niet gebouwd (Won't), omdat een gezicht een biometrisch gegeven is.
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-16 | Als medewerker wil ik vrijwillig, na het zetten van het vinkje voor deelname, mijn gezicht instellen via `Gezichtsherkenning instellen (demo)`, zodat ik zelf bepaal of ik aan de demo meedoe. | Won't (productie), alleen demo | FR-51 | UC-03 | AC-43 |
+| US-17 | Als medewerker wil ik op de beginpagina met `Herken mij met de camera (demo)` worden herkend, waarna mijn eigen productvenster opent, zodat ik mijn naam niet hoef te zoeken. | Won't (productie), alleen demo | FR-51 | UC-04 | AC-44, AC-83 |
+| US-18 | Als medewerker wil ik in het productvenster met `Uitzetten` mijn ingestelde gezicht direct laten vergeten, zodat ik op ieder moment kan stoppen met de demo. | Won't (productie), alleen demo | FR-51 | UC-05 | – |
+
+#### Medewerker en beheerder: thema
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-19 | Als medewerker of beheerder wil ik dat de website standaard het thema van mijn apparaat volgt (`Systeem`), zodat ik niets hoef in te stellen. | Could | FR-43 | UC-06 | AC-32 |
+| US-20 | Als medewerker of beheerder wil ik met de slider in de bovenbalk zelf licht of donker kiezen en die keuze bewaard zien na herladen, zodat het scherm past bij de plek waar de tablet staat. | Could | FR-44, FR-46 | UC-06 | AC-33 |
+| US-21 | Als medewerker of beheerder wil ik met `Auto` het thema overdag licht en na zonsondergang donker laten zijn, zodat het scherm zich vanzelf aanpast aan het licht. | Could | FR-45 | UC-06 | AC-34 |
+| US-22 | Als medewerker of beheerder wil ik dat ook het donkere thema de huiskleuren van TVB gebruikt en op alle schermen goed leesbaar is, zodat de website in beide thema's herkenbaar blijft. | Could | FR-42 | UC-06 | AC-35 |
+
+#### Beheerder: inloggen en registraties bekijken
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-23 | Als beheerder wil ik via `Admin login` inloggen in de `Beheerdersomgeving`, zodat alleen ik bij het beheer en de export kan. | Must | FR-09 | UC-07 | AC-10 |
+| US-24 | Als beheerder wil ik met `Uitloggen` uitloggen en ook vanzelf uitgelogd zijn als ik het beheervenster sluit, zodat de volgende gebruiker van de gedeelde tablet niet in het beheer komt. | Must | FR-09 | UC-07 | AC-29, AC-30 |
+| US-25 | Als beheerder wil ik in het tabblad `Registraties` alle registraties zien met medewerker, product, aantal en datum en tijd, de nieuwste bovenaan, zodat ik kan nagaan wie wat heeft geregistreerd. | Must | FR-10 | UC-08 | AC-55 |
+| US-26 | Als beheerder wil ik de registraties filteren op `Medewerker` en op `Maand`, met bij iedere maand de bijbehorende loonmaand, zodat ik snel de gegevens van één persoon of één loonperiode vind. | Must | FR-11, FR-12 | UC-08 | AC-13 |
+| US-27 | Als beheerder wil ik bij `Medewerker corrigeren` per medewerker het aantal producten en het totaalbedrag zien, zodat ik vragen van een medewerker over de inhouding kan beantwoorden. | Should | FR-06 | UC-08 | AC-54 |
+
+#### Beheerder: registraties corrigeren
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-28 | Als beheerder wil ik bij `Medewerker corrigeren` met `+` een vergeten registratie toevoegen, zodat de verrekening toch klopt als een medewerker vergat te registreren. | Must | FR-13 | UC-09 | AC-11 |
+| US-29 | Als beheerder wil ik bij `Datum bij toevoegen (+)` een eerdere datum kiezen (niet later dan vandaag) en een bevestigingsvraag krijgen als die in een eerdere maand valt, zodat een vergeten registratie in de juiste maand komt en ik niet per ongeluk een al verwerkte loonmaand wijzig. | Must | FR-56 | UC-09 | AC-52, AC-53 |
+| US-30 | Als beheerder wil ik met `−` de laatst ingevoerde registratie van een product bij een medewerker verwijderen, zodat ik een verkeerde registratie kan herstellen zonder andere registraties te raken. | Must | FR-14 | UC-09 | AC-12, AC-78 |
+| US-31 | Als beheerder wil ik een bevestigingsvraag krijgen als ik met `−` een registratie uit een andere maand verwijder, zodat ik niet ongemerkt een loonmaand wijzig die mogelijk al is verwerkt. | Must | FR-54 | UC-09 | AC-46 |
+| US-32 | Als beheerder wil ik dat een medewerker een opgeslagen registratie niet zelf kan verlagen of verwijderen, zodat alleen gecontroleerde correcties via het beheer de gegevens veranderen. | Must | FR-04 | UC-02 | AC-06 |
+| US-33 | Als beheerder wil ik dat registraties blijven bestaan als een medewerker, product of consumptiepunt wordt gedeactiveerd of verwijderd, en dat ze de prijs en het werkgevernummer van het moment van registreren houden, zodat een oude maand in de export nooit achteraf verandert. | Must | FR-17, FR-55 | UC-11, UC-12, UC-15 | AC-56, AC-51 |
+
+#### Beheerder: medewerkers beheren
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-34 | Als beheerder wil ik met `Medewerker toevoegen` een nieuwe medewerker aanmaken met bedrijf en vast consumptiepunt, en met `Opslaan + opnieuw` meteen de volgende invoeren, zodat nieuwe collega's snel op de tablet staan. | Must | FR-15, FR-37 | UC-10 | AC-14, AC-22 |
+| US-35 | Als beheerder wil ik met `Wijzigen` de looncode, het personeelsnummer en een eventueel afwijkend werkgevernummer van een medewerker aanpassen, zodat de export de juiste gegevens voor de loonadministratie bevat. | Must | FR-23, FR-41 | UC-10 | AC-15, AC-64 |
+| US-36 | Als beheerder wil ik een medewerker met `Deactiveren` en `Activeren` uit de lijst halen en terugzetten, zodat een collega die uit dienst is niet meer kan registreren en de historie toch bewaard blijft. | Must | FR-01 | UC-10 | AC-16 |
+| US-37 | Als beheerder wil ik een inactieve medewerker zonder registraties met `Verwijderen` definitief verwijderen, terwijl een medewerker met registraties niet verwijderd kan worden, zodat ik foutief aangemaakte medewerkers kan opruimen zonder exportgegevens kwijt te raken. | Must | FR-16 | UC-10 | AC-17, AC-75 |
+| US-38 | Als beheerder wil ik in het veld "Pasnummer" een pas aan een medewerker koppelen door de pas tegen de lezer te houden, en de koppeling weghalen door het veld leeg te maken, zodat de medewerker zich daarna met de eigen pas kan laten herkennen. | Should | FR-66 | UC-10 | AC-85 |
+| US-39 | Als beheerder wil ik bij een fout in een formulier (leeg verplicht veld, letters in een cijferveld of een dubbel nummer of dubbele naam) de melding direct bij het veld zien, zodat ik weet wat ik moet verbeteren en er geen foute gegevens worden opgeslagen. | Must | FR-59 | UC-10, UC-11, UC-12, UC-13 | AC-38, AC-67, AC-77 |
+
+#### Beheerder: producten beheren
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-40 | Als beheerder wil ik dat de acht standaardproducten (zoals Blikje voor € 0,65) met hun prijzen al klaarstaan, zodat de demo direct bruikbaar is zonder eerst producten in te voeren. | Should | FR-22, FR-25, FR-26 | UC-11 | AC-07, AC-58 |
+| US-41 | Als beheerder wil ik met `Product toevoegen` en `Wijzigen` productsoorten en prijzen beheren, zodat het assortiment en de prijzen kloppen met wat er werkelijk ligt. | Must | FR-24 | UC-11 | AC-59 |
+| US-42 | Als beheerder wil ik dat een nieuw product bij alle consumptiepunten uit staat, zodat medewerkers het pas zien als ik het bij hun punt heb aangezet. | Should | FR-36 | UC-11, UC-13 | AC-23 |
+| US-43 | Als beheerder wil ik een product dat nog nooit is geregistreerd na een bevestiging kunnen verwijderen, zodat ik een verkeerd ingevoerd product kan opruimen zonder dat oude registraties hun product kwijtraken. | Must | FR-57 | UC-11 | AC-76 |
+
+#### Beheerder: bedrijven en consumptiepunten
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-44 | Als beheerder wil ik met `Bedrijf toevoegen` en `Wijzigen` bedrijven beheren, met de naam en het standaard werkgevernummer, waarbij de 13 bedrijven van TVB al klaarstaan, zodat iedere medewerker onder het juiste werkgevernummer in de export komt. | Must | FR-33, FR-23, FR-41 | UC-12 | AC-62 |
+| US-45 | Als beheerder wil ik bij een bedrijf met `Consumptiepunt` een punt toevoegen en de naam later wijzigen, zodat ieder bedrijf geen, één of meerdere punten kan hebben. | Should | FR-34 | UC-13 | AC-63 |
+| US-46 | Als beheerder wil ik met `Aanbod wijzigen` per consumptiepunt aanvinken welke producten er worden aangeboden, zodat medewerkers alleen de producten zien die op hun eigen punt liggen. | Must | FR-35, FR-37 | UC-13 | AC-22 |
+| US-47 | Als beheerder wil ik een consumptiepunt naar een ander bedrijf verplaatsen, waarbij de medewerkers van dat punt meeverhuizen, zodat ik bij een reorganisatie niet iedere medewerker los hoef aan te passen. | Could | FR-58 | UC-13 | AC-66 |
+| US-48 | Als beheerder wil ik een consumptiepunt of bedrijf alleen kunnen verwijderen als er niets meer aan hangt, en altijd pas na een bevestiging, zodat er geen medewerkers zonder bedrijf of punt achterblijven. | Must | FR-34, FR-57 | UC-12, UC-13 | AC-28, AC-63, AC-65 |
+
+#### Beheerder: voorraad
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-49 | Als beheerder wil ik dat de voorraad per consumptiepunt vanzelf daalt bij een registratie en weer stijgt bij een correctie met `−`, zodat ik de voorraad niet met de hand hoef bij te houden. | Should | FR-38 | UC-02, UC-09, UC-14 | AC-24, AC-25 |
+| US-50 | Als beheerder wil ik in het tabblad `Voorraad` bij een product het geleverde aantal invullen en op `Toevoegen` klikken, zodat een levering direct in de voorraad staat. | Should | FR-39 | UC-14 | AC-27 |
+| US-51 | Als beheerder wil ik na het tellen de voorraad en per product een minimum invullen, zodat de voorraad in het systeem overeenkomt met wat er echt ligt. | Should | FR-39 | UC-14 | AC-48 |
+| US-52 | Als beheerder wil ik bovenaan de lijst "Bijbestellen" zien met alle aangeboden producten die op zijn of op of onder het minimum zitten, zodat ik in één oogopslag weet wat ik moet bestellen. | Should | FR-40 | UC-14 | AC-26 |
+| US-53 | Als beheerder wil ik bij een consumptiepunt zonder aanbod een uitleg en de knop `Naar Bedrijven` zien, zodat ik weet dat ik eerst het aanbod moet instellen. | Should | FR-35, FR-39 | UC-14 | AC-40 |
+
+#### Beheerder: CSV-export voor de loonadministratie
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-54 | Als beheerder wil ik met `CSV exporteren` een `.csv`-bestand downloaden dat direct in Excel opent, zodat ik de consumpties kan aanleveren bij de loonadministratie. | Must | FR-18 | UC-15 | AC-18 |
+| US-55 | Als beheerder wil ik dat iedere regel de kolommen Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs in die vaste volgorde heeft, zodat de loonadministratie het bestand zonder aanpassingen kan inlezen. | Must | FR-19, FR-28 | UC-15 | AC-19, AC-20 |
+| US-56 | Als beheerder wil ik dat Jaar en Maand in de export de loonmaand zijn (de maand na de consumptie) en dat het maandfilter de bijbehorende loonmaand toont, zodat de consumpties in de juiste salarisstrook worden ingehouden. | Must | FR-30, FR-12 | UC-15 | AC-21, AC-73 |
+| US-57 | Als beheerder wil ik dat de export per medewerker, loonmaand en werkgevernummer één regel heeft en geen totaalregel, zodat iedere regel precies één inhouding is. | Must | FR-20, FR-21 | UC-15 | AC-57, AC-74 |
+| US-58 | Als beheerder wil ik dat een afwijkend werkgevernummer van een medewerker in de export voorgaat op het nummer van het bedrijf en dat oude registraties hun eigen nummer houden, zodat de inhouding bij de juiste werkgever terechtkomt. | Must | FR-41, FR-55 | UC-12, UC-15 | AC-51, AC-64 |
+
+#### Beheerder: logboek en gegevens
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-59 | Als beheerder wil ik in het tabblad `Logboek` alle administratieve wijzigingen zien met actie, details en datum en tijd, zodat ik achteraf kan nagaan wie wat heeft veranderd. | Must | FR-27 | UC-16 | AC-27, AC-60 |
+| US-60 | Als beheerder wil ik het logboek per 20 regels zien, de nieuwste bovenaan, en met `Meer laden` verder terugkijken, zodat het logboek ook bij veel wijzigingen overzichtelijk blijft. | Could | FR-63 | UC-16 | AC-71 |
+| US-61 | Als beheerder wil ik met `Alle gegevens wissen` na twee bevestigingen alle gegevens op de tablet wissen, zodat er geen persoonsgegevens achterblijven als de tablet ergens anders wordt gebruikt. | Must | FR-52 | UC-17 | AC-45 |
+| US-62 | Als beheerder wil ik dat er bij de eerste start en na `Alle gegevens wissen` demogegevens klaarstaan (8 medewerkers, 13 bedrijven, 8 producten en het punt Hoofdkantoor), zodat ik de demo direct kan laten zien. | Should | FR-64 | UC-17 | AC-72 |
+| US-63 | Als beheerder wil ik dat een tweede tabblad de wijzigingen van het eerste overneemt en een verouderd formulier met een melding sluit, zodat ik nooit per ongeluk oude gegevens terugschrijf. | Should | FR-60 | UC-19 | AC-68, AC-82 |
+
+#### Productie, niet in de demo
+
+Deze story hoort bij het ontwerp voor productie (zie [Koppeling met AFAS Profit (ontwerp)](#koppeling-met-afas-profit-ontwerp)). De demo heeft deze functie niet en de knop `Nu synchroniseren` bestaat in de demo niet. De story telt daarom niet mee in de stories van de demo.
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-64 | Als beheerder wil ik dat de medewerkers iedere nacht en na een klik op `Nu synchroniseren` uit AFAS Profit worden overgenomen, waarbij medewerkers uit dienst inactief worden en nooit worden verwijderd, zodat ik nieuwe en vertrokken collega's niet met de hand hoef bij te houden. | Could (productie) | FR-67 | – | AC-87, AC-88, AC-89 |
+
+#### Eisen zonder eigen user story
+
+- **FR-61 (opslaan als één geheel):** deze eis beschrijft hoe het systeem opslaat. Een wijziging en de logboekregel worden samen opgeslagen of samen teruggedraaid. Dat is een technische waarborg zonder eigen gebruikersdoel. De eis ligt onder alle stories van de beheerder waarbij iets wordt opgeslagen (bijvoorbeeld US-28, US-34, US-41, US-44, US-50 en US-61) en onder het registreren (US-07), en wordt getest met AC-09 en AC-69.
+
+Daarnaast bevatten twee eisen met een story ook een technisch deel dat niet in de story staat. Bij FR-16 is dat de controle op drie plekken (view, controller en model). Bij FR-38 is dat de regel dat een registratie van vóór de laatste telling de voorraad niet verandert. Die delen staan in UC-09, UC-10 en UC-14.
+
+**Controle.** Alle FR's uit hoofdstuk 4 (FR-01 tot en met FR-67) komen terug in minstens één user story, behalve FR-61. Die eis staat met de reden in de lijst hierboven. FR-51 komt alleen terug in de stories van de demo gezichtsherkenning (US-16 tot en met US-18) en FR-67 alleen in de productiestory US-64. Alle use cases UC-01 tot en met UC-20 komen bij minstens één story terug.
 
 ## 11. Interfaces
 
@@ -2714,7 +2879,7 @@ De login in de demo is niet echt beveiligd. Elk ingevuld e-mailadres en wachtwoo
 
 ### Autorisatie
 
-De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in de browser. In productie moet de server deze rechten controleren. Controle in de browser alleen is niet genoeg.
+De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in de browser. Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`RegistrationApp.requireAdmin`), en niet alleen doordat de knop in het beheervenster staat. Dat geldt voor wijzigen, verwijderen, correcties, voorraad, exporteren, alles wissen en het openen van een beheerformulier. Zonder ingelogde beheerder gebeurt er niets en verschijnt "Log eerst in als beheerder.". Registreren door een medewerker zelf vraagt geen login. In productie moet de server deze rechten controleren. Controle in de browser alleen is niet genoeg.
 
 ### Wat in de demo al is beveiligd
 
@@ -2722,16 +2887,18 @@ De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in d
 |---|---|---|
 | HTML escapen | Alle tekst én alle waarden in HTML-attributen (zoals id's in `data-…`, `value="…"` en klassen) worden veilig gemaakt voordat ze in de pagina komen. Een naam of id met `"` of `<` kan zo geen eigen HTML of script op de pagina zetten. | `RegistrationView.escapeHtml` |
 | Veilige selectors | Waarden uit id's die in een CSS-selector worden gebruikt (bijvoorbeeld om een statuslabel of knop terug te vinden), worden eerst veilig gemaakt met `CSS.escape`. | `cssAttributeValue` in `RegistrationView.js` |
-| Controle bij het laden | Id's en verwijzingen moeten passen bij `^[A-Za-z0-9_-]{1,64}$`, de namen `__proto__`, `constructor` en `prototype` zijn als id niet toegestaan, prijzen moeten tussen 0 en 1000 liggen, kleuren hebben de vorm `#rrggbb` en teksten hebben een maximale lengte (namen 200 tekens, de volledige naam van een medewerker 401, codes 64 en logboekteksten 500). Komt een id twee keer voor in dezelfde lijst, dan blijft alleen de eerste regel staan. Een registratie met een tijdstip van meer dan één dag in de toekomst wordt overgeslagen, en een tijdstip van een telling (`countedAt`) in de toekomst wordt weggelaten (de voorraad telt dan als niet geteld). Ongeldige regels worden overgeslagen, met een reservekopie en een melding. Een ongeldige kleur wordt vervangen door een standaardkleur. Zo kunnen aangepaste gegevens in `localStorage` niet via een id of kleur in de pagina terechtkomen. | `DataStore.isSafeId`, `isSafeColor`, `isValidPrice`, `isText`, `withoutDuplicateIds`, `isValidRegistration` |
+| Controle bij het laden | Id's en verwijzingen moeten passen bij `^[A-Za-z0-9_-]{1,64}$`, de namen `__proto__`, `constructor` en `prototype` zijn als id niet toegestaan, prijzen moeten tussen 0 en 1000 liggen, kleuren hebben de vorm `#rrggbb` en teksten hebben een maximale lengte (namen 200 tekens, de volledige naam van een medewerker 401, codes 64 en logboekteksten 500). Komt een id twee keer voor in dezelfde lijst, dan blijft alleen de eerste regel staan. Een registratie met een tijdstip van meer dan één dag in de toekomst wordt overgeslagen, en een tijdstip van een telling (`countedAt`) in de toekomst wordt weggelaten (de voorraad telt dan als niet geteld). Ongeldige regels worden overgeslagen, met een reservekopie en een melding. Een ongeldige kleur wordt vervangen door een standaardkleur. Codes zijn tekst zonder stuurtekens (geen object of lijst) en tijdstippen staan in ISO-vorm en liggen niet vóór 2000. Zo kunnen aangepaste gegevens in `localStorage` niet via een id of kleur in de pagina terechtkomen, en geen vreemde waarden in de export zetten. Zie hoofdstuk 8 voor alle regels. | `DataStore.isSafeId`, `isSafeColor`, `isValidPrice`, `isText`, `isShortCode`, `isValidDateTime`, `withoutDuplicateIds`, `isValidRegistration` |
+| Voorraadlijst zonder speciale sleutels | De voorraad van een consumptiepunt is een object met een product-id als sleutel. Bij het laden worden alleen sleutels overgenomen die een veilige id zijn en bij een geldig product horen. Een sleutel als `__proto__` of `constructor` kan het object dus niet veranderen en er geen voorraad in smokkelen. Het model zoekt een regel alleen op als eigen sleutel (`Object.hasOwn`), zodat een product-id als `toString` uit een aangepaste knop geen voorraadregel vindt en er ook geen schrijft. | `DataStore.renameStockKeys`, `completePointStock`, `hasSafeStockKeys`, `RegistrationModel.pointProduct` |
 | Content-Security-Policy | Een `<meta>`-tag (MDN Web Docs, z.d.) laat de browser alleen bestanden van de eigen server laden (`default-src 'self'`). Scripts mogen alleen uit eigen bestanden komen, plus de twee kleine inline scripts in `index.html`, die via hun sha256-hash zijn toegestaan. `style-src` staat ook `'unsafe-inline'` toe, omdat de pagina `style`-attributen gebruikt (bijvoorbeeld de kleur van een avatar). Verder: `object-src 'none'`, `base-uri 'none'` en `form-action 'self'`. Een test controleert dat de hashes kloppen. | `index.html`, `tests/beveiliging-config.test.js` |
 | Geen referrer | `<meta name="referrer" content="no-referrer">`: de browser stuurt bij links en verzoeken het adres van de pagina niet mee. | `index.html` |
 | Geen externe bronnen | De lettertypes (DM Sans en Space Grotesk) staan in `assets/fonts/`, en face-api met de drie modellen staat in `assets/vendor/face-api/`. Er gaan dus geen verzoeken (en geen IP-adressen van medewerkers) naar Google of een CDN. | `assets/fonts/`, `assets/vendor/face-api/`, `config.js` |
-| Controle van face-api | In `assets/vendor/face-api/README.md` staan de versie (1.7.15), de bron en een SHA-256-controlegetal van ieder bestand. Een test rekent de controlegetallen opnieuw uit, zodat een veranderd bestand opvalt. `.gitattributes` zorgt dat Git deze bestanden en de lettertypes niet aanpast (geen omzetting van regeleinden). | `assets/vendor/face-api/README.md`, `.gitattributes`, `tests/beveiliging-config.test.js` |
+| Controle van face-api | In `assets/vendor/face-api/README.md` staan de versie (1.7.15), de bron en een SHA-256-controlegetal van ieder bestand. Een test rekent de controlegetallen opnieuw uit, zodat een veranderd bestand opvalt, en een andere test controleert dat ieder bestand in die map een controlegetal heeft. `.gitattributes` zorgt dat Git deze bestanden en de lettertypes niet aanpast (geen omzetting van regeleinden). De licenties van face-api (MIT) en van de ingebouwde TensorFlow.js (Apache 2.0) staan in dezelfde map. | `assets/vendor/face-api/README.md`, `LICENSE`, `LICENSE-TENSORFLOWJS`, `.gitattributes`, `tests/beveiliging-config.test.js`, `tests/beveiligingsscan.test.js` |
 | Invoer begrensd | De naamvelden in de formulieren (product, voornaam, achternaam, bedrijf en consumptiepunt) accepteren hooguit 100 tekens (`maxlength`). Een prijs moet tussen 0 en 1000 euro liggen. Anders verschijnt een foutmelding bij het veld. Looncode, personeelsnummer en werkgevernummer mogen alleen cijfers bevatten. | `index.html`, `RegistrationApp.isValidPrice`, `RegistrationApp.isDigitsOnly` |
-| Beheeracties alleen na inloggen | `exportCsv` en `wipeAllData` doen niets als er geen beheerder is ingelogd, ook als de methode op een andere manier wordt aangeroepen. | `RegistrationApp.exportCsv`, `RegistrationApp.wipeAllData` |
+| Beheeracties alleen na inloggen | Iedere beheeractie begint met `requireAdmin`: zonder ingelogde beheerder doet de actie niets, ook als de methode op een andere manier wordt aangeroepen of een verborgen knop toch wordt ingedrukt. Dat geldt voor de formulieren (medewerker, product, bedrijf, consumptiepunt), verwijderen, (de)activeren, correcties `+` en `−`, leveringen en tellingen, de export en `Alle gegevens wissen`. Een correctie `+` voor een product dat niet bestaat, wordt geweigerd. | `RegistrationApp.requireAdmin` |
 | CSV-formules | Velden die (eventueel na spaties, tabs of enters) met `=`, `+`, `-` of `@` beginnen, en velden die met een tab, `\r` of `\n` beginnen, krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert (CSV-injectie, zie hoofdstuk 11 en 12). | `CsvExport.escapeField` |
 | Alle gegevens wissen | De beheerder kan alle gegevens, de reservekopieën en de ingestelde gezichten op de tablet wissen, na twee bevestigingen (recht op vergetelheid, AVG). | `RegistrationApp.wipeAllData`, `DataStore.clearAll` |
-| Uitloggen bij sluiten | Sluiten van het beheervenster logt de beheerder uit, zodat de volgende persoon op een gedeelde tablet niet zonder wachtwoord in het beheer komt. | `RegistrationApp.closeAdmin` |
+| Uitloggen bij sluiten | Sluiten van het beheervenster logt de beheerder uit en verbergt ook het dashboard in het venster, zodat de volgende persoon op een gedeelde tablet niet zonder wachtwoord in het beheer komt. | `RegistrationApp.closeAdmin` |
+| Camera uit na de tijdslimiet | Wordt er bij herkennen binnen 20 seconden (`scanTimeoutMs`) niemand herkend, of wordt er bij instellen in die tijd geen gezicht vastgelegd, dan gaat de camera uit. Het venster blijft open met een melding. Zo blijft de camera niet filmen als een medewerker wegloopt zonder het venster te sluiten. | `RegistrationApp.stopCameraAfterTimeout`, `scheduleEnrollTimeout` |
 | Gezichtsdata alleen in het geheugen | Een gezicht wordt alleen vastgelegd na een vinkje voor toestemming, en alleen als rij van 128 getallen in het geheugen bewaard. Niet in `localStorage` en niet op een server. | `FaceRecognitionDemo` |
 | Pasnummer niet zichtbaar of gelogd | Het pasnummer staat niet in de medewerkerslijst (alleen het label "Pas gekoppeld"), niet in het logboek en niet in de CSV-export. Een onbekende pas en een pas van een inactieve medewerker geven dezelfde melding, zodat niets uitlekt over een andere medewerker. Een opgeslagen pasnummer wordt bij het laden gecontroleerd (alleen `A-Z` en `0-9`, hooguit 64 tekens). | `RegistrationView.renderAdminEmployees`, `DataStore.isSafeBadgeId` |
 | Veilige CI | De GitHub Actions-workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het token niet (`persist-credentials: false`) en gebruikt actions die op een commit-SHA zijn vastgezet in plaats van op een tag. | `.github/workflows/ci.yml` |
@@ -2742,7 +2909,9 @@ De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in d
 |---|---|
 | Demo-login | Ieder ingevuld wachtwoord werkt. Iedereen die de tablet heeft, kan in het beheer. |
 | Gegevens leesbaar en aan te passen | Alle gegevens (namen, looncodes, personeelsnummers en wat iemand heeft geregistreerd) staan als gewone tekst in `localStorage` van de tablet. Iedereen met toegang tot het apparaat en de ontwikkelaarstools van de browser kan ze lezen en wijzigen. De controle bij het laden voorkomt dat dit de pagina kapotmaakt of code laat uitvoeren, en vangt sinds deze versie ook dubbele id's, registraties ver in de toekomst en tellingen in de toekomst af. Ze voorkomt niet dat iemand bijvoorbeeld aantallen of prijzen verandert binnen de toegestane grenzen. |
-| Code via de console | Met de ontwikkelaarstools kan iemand de code van de pagina zelf uitvoeren of aanpassen, en zo ook zonder login beheeracties doen. Controle in de browser is daarom nooit een echte beveiliging. |
+| Code via de console | Met de ontwikkelaarstools kan iemand de code van de pagina zelf uitvoeren of aanpassen, of `localStorage` direct wijzigen. De controle `requireAdmin` houdt een verborgen knop of een losse aanroep van een beheermethode tegen, maar wie de code zelf aanpast of `adminLoggedIn` op `true` zet, komt er toch omheen. Controle in de browser is daarom nooit een echte beveiliging. |
+| Registreren op naam van een ander | Iedere medewerker kan in de lijst op de naam van een collega tikken en producten registreren. Die registraties komen via de CSV-export in de loonadministratie van die collega. Op dezelfde manier kan iemand in het productvenster van een collega zijn eigen gezicht instellen en daarna als die collega worden "herkend" (demo gezichtsherkenning). Dit is een bewuste keuze voor de demo: kiezen op naam is snel en werkt zonder pas of pincode, en de demo heeft geen server die een identiteit kan controleren. Wat het risico beperkt: iedere registratie staat met datum en tijd in het beheer, de beheerder kan een registratie corrigeren (FR-13, FR-14) en een ingesteld gezicht is na herladen weg. Een medewerker kan zijn eigen registraties nog niet zelf inzien. Voor productie is een pas, QR-code of persoonlijke pincode nodig, plus een overzicht waarin een medewerker zijn eigen registraties kan controleren (zie hoofdstuk 16). |
+| face-api wordt niet meer onderhouden | De GitHub-repository van face-api is gearchiveerd. Versie 1.7.15 is de laatste en er komen geen beveiligingsupdates meer, ook niet voor de ingebouwde TensorFlow.js 4.22.0. Bij het opnemen waren er geen bekende kwetsbaarheden voor deze versies. Wat het risico beperkt: de bibliotheek staat met een vaste versie en controlegetallen in het project, wordt pas geladen als iemand de demo gebruikt, laadt geen code van een andere server (CSP) en is met `FACE_DEMO.enabled = false` helemaal uit te zetten. Ze is alleen bedoeld voor de demo. Voor productie wordt gezichtsherkenning afgeraden (zie hieronder). Komt er toch herkenning met de camera, dan moet een bibliotheek worden gekozen die nog wordt onderhouden. |
 | Logboek bewaart namen (AVG) | Logboekregels bevatten namen als tekst, bijvoorbeeld "Blikje voor Lotte van Dijk" bij "Registratie toegevoegd", of de naam bij "Medewerker definitief verwijderd". Die regels blijven staan, ook nadat een medewerker definitief is verwijderd. Alleen `Alle gegevens wissen` haalt ze weg. Een verzoek om verwijdering van één medewerker kan in de demo dus niet volledig worden uitgevoerd zonder alles te wissen. In productie hoort het auditlog te verwijzen naar een id en moeten namen na de bewaartermijn worden geanonimiseerd. |
 | Logboek legt niet vast wie iets deed | Een logboekregel bevat actie, details en tijdstip, maar niet welke beheerder de wijziging deed: de demo heeft geen echte gebruikers. Het logboek is daarom geen bewijs van wie wat heeft gedaan. |
 | Opslag kan vollopen | `localStorage` heeft per website een grens van ongeveer 5 MB (de precieze grens verschilt per browser). Er is geen archivering: registraties en logboekregels blijven groeien. Is de opslag vol, dan lukt opslaan niet meer. Iedere wijziging wordt dan teruggedraaid met de melding "Opslaan mislukt. Probeer het opnieuw." Een registratie neemt ongeveer 243 tekens in, dus er passen naar schatting zo'n 20.000 registraties in (berekening bij NFR-17). De demo waarschuwt niet vooraf en is niet geschikt voor jarenlang gebruik. |
@@ -2762,7 +2931,8 @@ De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in d
 | AVG | Een verwerkingsregister en een DPIA (gegevensbeschermingseffectbeoordeling), een vastgestelde bewaartermijn met verwijderen of anonimiseren daarna, en een werkwijze voor het recht op inzage en het recht op verwijdering. Personeelsnummers en looncodes versleuteld opslaan. |
 | Back-ups en archivering | Back-ups van de database, met een geteste manier om ze terug te zetten. Oude registraties na de bewaartermijn archiveren of verwijderen. |
 | Koppeling met AFAS | Het AFAS-token alleen op de server, in een kluis voor geheimen of een omgevingsvariabele, nooit in de browser of in Git. Een App connector met alleen de benodigde GetConnector en alleen de nodige velden (geen adres, geboortedatum of BSN). De verwerking opnemen in het verwerkingsregister. Zie [Koppeling met AFAS Profit (ontwerp)](#koppeling-met-afas-profit-ontwerp). |
-| CI en afhankelijkheden | De actions vastgezet op een commit-SHA houden en Dependabot (of een vergelijkbare dienst) aanzetten, zodat updates van actions en bibliotheken zichtbaar worden. |
+| CI en afhankelijkheden | De actions vastgezet op een commit-SHA houden en Dependabot (of een vergelijkbare dienst) aanzetten, zodat updates van actions en bibliotheken zichtbaar worden. De CI op een Node.js-versie houden die nog wordt onderhouden (nu Node.js 24 LTS). Geen bibliotheken gebruiken die niet meer worden onderhouden, zoals face-api. |
+| Identiteit van de medewerker | Registreren op naam van een ander voorkomen met een pas, QR-code of persoonlijke pincode, en medewerkers hun eigen registraties laten inzien. |
 
 ### Privacy en de demo gezichtsherkenning
 
@@ -2774,7 +2944,7 @@ Om het idee te kunnen laten zien, is het gebouwd als demo (`assets/js/FaceRecogn
 - **Vrijwillig en per medewerker:** een medewerker zet het zelf aan in het eigen productvenster en moet een vinkje zetten voor vrijwillige deelname.
 - **Alles op het apparaat:** de herkenning draait in de browser (bibliotheek face-api). De bibliotheek en de modellen staan in het project zelf (`assets/vendor/face-api/`), dus ook bij het laden gaat er geen verzoek naar een andere server. Er gaan geen beelden naar een server.
 - **Niets bewaard:** er worden geen foto's gemaakt. Van een gezicht wordt alleen een reeks van 128 getallen onthouden, en alleen in het geheugen. Na herladen of sluiten van de pagina is alles weg. Uitzetten kan ook direct.
-- **Camera alleen als het venster open is:** sluiten zet de camera meteen uit. Lukt het starten van het camerabeeld niet nadat de camera al aan stond, dan wordt de camera ook uitgezet. Wordt de medewerker van een open productvenster in een ander tabblad verwijderd of gedeactiveerd, dan sluiten het productvenster en het cameravenster erboven.
+- **Camera alleen als het venster open is:** sluiten zet de camera meteen uit. Is de tijd om (20 seconden zonder herkenning, of 20 seconden zonder vastleggen bij instellen), dan gaat de camera ook uit, terwijl het venster met een melding open blijft. Lukt het starten van het camerabeeld niet nadat de camera al aan stond, dan wordt de camera ook uitgezet. Wordt de medewerker van een open productvenster in een ander tabblad verwijderd of gedeactiveerd, dan sluiten het productvenster en het cameravenster erboven.
 - **Wissen:** `Alle gegevens wissen` vergeet ook alle ingestelde gezichten, en het definitief verwijderen van een medewerker vergeet het gezicht van die medewerker.
 - **Extra zekerheid tegen vergissingen:** het grootste gezicht in beeld telt (de persoon voor de camera), en iemand geldt pas als herkend na twee keer achter elkaar dezelfde uitkomst.
 
@@ -2805,7 +2975,7 @@ Meldingen staan letterlijk zoals de gebruiker ze ziet. Een melding onderaan het 
 | Situatie | Wat doet het systeem? |
 |---|---|
 | Onleesbare opgeslagen gegevens | De oorspronkelijke gegevens worden bewaard als reservekopie, de demo start met voorbeelddata en de gebruiker krijgt de melding "De opgeslagen gegevens waren onleesbaar. De demo is opnieuw gestart. Er staat een reservekopie in de browser." |
-| Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum of van meer dan een dag in de toekomst, een id met verboden tekens, een tweede regel met dezelfde id of een prijs buiten 0 tot en met 1000) | Alleen die regels worden overgeslagen. De rest blijft. Er komt een reservekopie en de melding "Een deel van de opgeslagen gegevens was beschadigd en is overgeslagen. Er staat een reservekopie in de browser." Een medewerker met een ongeldige kleur blijft bewaard en krijgt een standaardkleur. Een telling (`countedAt`) in de toekomst wordt weggelaten. |
+| Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum, een datum vóór 2000 of van meer dan een dag in de toekomst, een id met verboden tekens, een tweede regel met dezelfde id, een prijs buiten 0 tot en met 1000 of een code die geen tekst is) | Alleen die regels worden overgeslagen. De rest blijft. Er komt een reservekopie en de melding "Een deel van de opgeslagen gegevens was beschadigd en is overgeslagen. Er staat een reservekopie in de browser." Een medewerker met een ongeldige kleur blijft bewaard en krijgt een standaardkleur. Een telling (`countedAt`) in de toekomst wordt weggelaten. |
 | Reservekopieën | Er zijn hooguit twee reservekopieën: `tvb-blikjesregistratie-backup` (de eerste, wordt nooit overschreven) en `tvb-blikjesregistratie-backup-laatste` (de nieuwste, wordt steeds vervangen). Zo loopt de opslag niet vol door reservekopieën. |
 | Opslag niet beschikbaar | Kan de browser `localStorage` niet lezen, dan start de demo met voorbeelddata en verschijnt "De opslag van de browser kon niet worden gelezen. De demo start met voorbeeldgegevens. Wijzigingen worden mogelijk niet bewaard." |
 | Opslaan lukt niet (bijvoorbeeld omdat de opslag vol is) | De wijziging én de bijbehorende logboekregel worden samen teruggedraaid en de gebruiker krijgt de melding "Opslaan mislukt. Probeer het opnieuw." |
@@ -2833,7 +3003,7 @@ Meldingen staan letterlijk zoals de gebruiker ze ziet. Een melding onderaan het 
 | Situatie | Wat doet het systeem? |
 |---|---|
 | Inloggen met een leeg e-mailadres of wachtwoord | Het dashboard opent niet. Onder het formulier verschijnt "Vul een e-mailadres en wachtwoord in." |
-| Onbevoegde actie (demo) | Export en `Alle gegevens wissen` doen niets zonder ingelogde beheerder, ook als de methode op een andere manier wordt aangeroepen. Andere beheeracties zijn alleen te bereiken via het dashboard achter de demo-login. Via de ontwikkelaarstools blijft alles mogelijk (zie hoofdstuk 13). |
+| Onbevoegde actie (demo) | Iedere beheeractie (formulieren, verwijderen, correcties, voorraad, export en `Alle gegevens wissen`) doet niets zonder ingelogde beheerder, ook als de methode op een andere manier wordt aangeroepen. Melding: "Log eerst in als beheerder." Wie de code via de ontwikkelaarstools aanpast, komt er toch omheen (zie hoofdstuk 13). |
 | Onbevoegde actie (productie) | De server controleert bij iedere beheeractie de rol, weigert de actie en legt de poging vast in het auditlog. Dit is nog niet gebouwd. |
 
 ### Formulieren van de beheerder
@@ -2901,7 +3071,8 @@ Meldingen staan letterlijk zoals de gebruiker ze ziet. Een melding onderaan het 
 | `Herken mij` terwijl nog niemand (actief) is ingesteld | De camera opent niet. Melding "Er is nog niemand ingesteld voor gezichtsherkenning. Kies je naam en zet het aan in het productvenster." |
 | Model laadt niet | Status in het cameravenster: "De demo kon niet worden geladen. Herlaad de pagina en probeer het opnieuw." |
 | Geen cameratoegang of het camerabeeld start niet | De camera wordt uitgezet (als die al aan stond) en de status wordt "Geen toegang tot de camera. Geef toestemming in de browser, of kies je naam in de lijst." |
-| Niet herkend na de time-out (20 seconden) | Status: "Niet herkend. Sluit dit venster en kies je naam in de lijst." |
+| Niet herkend na de time-out (20 seconden) | De camera gaat uit en het venster blijft open. Status: "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst." |
+| Bij instellen binnen 20 seconden geen gezicht vastgelegd | De camera gaat uit, `Gezicht vastleggen` kan niet meer en het venster blijft open. Status: "De tijd is om en de camera is uitgezet. Sluit dit venster en probeer het opnieuw." Loopt het vastleggen op dat moment nog, dan wordt eerst gewacht tot dat klaar is. |
 | Geen gezicht gevonden bij instellen | Status: "Geen gezicht gevonden. Plaats je gezicht binnen het kader en probeer het opnieuw." Er is niets vastgelegd. |
 | Toestemmingsvinkje weggehaald tijdens het vastleggen | Er wordt niets onthouden. Status: "Er is niets vastgelegd, omdat het vinkje voor toestemming niet meer staat." |
 | Gezicht van een inactieve medewerker voor de camera | Wordt niet herkend (alleen actieve medewerkers tellen). Is alleen een inactieve medewerker ingesteld, dan opent de camera niet (zie hierboven). |
@@ -2947,7 +3118,7 @@ Het systeem wordt op drie niveaus getest:
 
 **Testomgeving:**
 
-- Node.js 20 (`"engines": { "node": ">=20" }` in `package.json`. CI gebruikt `node-version: 20`).
+- Node.js 22 of hoger (`"engines": { "node": ">=22" }` in `package.json`). De CI gebruikt `node-version: 24` (LTS).
 - Tijdzone: de CI-workflow draait op `ubuntu-latest` en stelt geen tijdzone in, dus de tests draaien daar in UTC. Lokaal draaien ze in de tijdzone van de laptop (Europe/Amsterdam). Omdat registraties met lokale datums werken (dag, maand, loonmaand, middernacht), moeten de tests in beide tijdzones slagen.
 - Browser voor de acceptatietests: een recente versie van Microsoft Edge.
 
@@ -3261,10 +3432,11 @@ Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `np
 | `tests/gegevens-en-tabbladen.test.js` | 26 | Bewaren van gegevens en samenwerken met andere tabbladen: de prijsgrens van 1000 euro, voorraad van een verdwenen consumptiepunt, de focus na `Registreren`, "niets gewijzigd" bij opslaan, verouderde keuzes en formulieren na een wijziging in een ander tabblad, een opslag die in een ander tabblad is leeggemaakt, en `Alle gegevens wissen` in een ander tabblad (het tabblad wist ook, logt uit en laat de opslag met rust. Met twee echte `DataStore`s zonder heen-en-weer van events). Gebruikt de strenge nep-view, zodat een verkeerde selector opvalt |
 | `tests/werkgever-en-correctiedatum.test.js` | 19 | Het werkgevernummer per registratie (bewaren, oude maand houdt het oude nummer, twee exportregels bij een ander nummer in één maand, oude registraties, controle bij het laden) en de datum bij een correctie `+` (vandaag, eerdere dag, vorige maand met bevestiging, Annuleren, ongeldige datums, voorraad bij een datum vóór de telling, het datumveld na inloggen en na middernacht) |
 | `tests/to-controle.test.js` | 43 | Regressietests voor de wijzigingen uit de TO-controle (versie 3.4). Ze controleren de teksten "1 medewerker" en "2 medewerkers" bij bedrijven en consumptiepunten, en "1 product" en "2 producten" in de correctielijst. Ze controleren de bevestiging bij het verwijderen van een product (ook `Annuleren`, en geen vraag bij een gebruikt product) en de melding "bestaat niet meer" bij een correctie `+` voor een verwijderde medewerker. Verder: alleen een inactieve medewerker zonder registraties verwijderen (model en controller) en een uniek werkgevernummer per bedrijf (model en formulier). Bij het laden: dubbele id's, registraties meer dan 24 uur in de toekomst en een telling in de toekomst. In de export: CSV-velden die met een tab, `\r` of `\n` beginnen. In het model: `lastRegistration` als laatst ingevoerde registratie en de voorraad bij een registratie vóór de telling. In het SQL-schema: `counted_at`, geen rol `manager` en geen mengsel van LF- en CRLF-regeleinden. In de schermen: de opslagknoppen (bij wijzigen is `Opslaan` primair) en de filters op een smal scherm. Tot slot de eisen die nog geen test hadden: alleen actieve medewerkers in de publieke lijst (FR-01), zoeken op voor- en achternaam, ook op een deel en zonder op hoofdletters te letten (FR-02), de `−` die alleen de keuze verlaagt en geen registratie verwijdert (FR-04), alle registraties nieuwste eerst voor de beheerder (FR-10), geen bedragen of persoonlijke aantallen in de publieke lijst (FR-29), een klik op de medewerkerkaart die het productvenster opent (FR-32) en de knop `Registreren (n)` met het totaal aantal gekozen producten (FR-47) |
-| `tests/pas.test.js` | 31 | Herkennen met de pas (FR-65, FR-66), met nagebootste toetsaanslagen en een nep-klok. `BadgeReader`: een snelle scan met Enter of Tab (die wordt tegengehouden), een scan zonder Enter na `endDelayMs` stilte, menselijk typen en een te korte code zijn geen scan, sneltoetsen en een uitgezette lezer, en `normalize`. De controller: een bekende pas opent het productvenster met "Je bent herkend met je pas.", een onbekende pas en de pas van een inactieve medewerker geven dezelfde melding, geen herkenning als er een venster open is (de Enter van de scan wordt dan wel tegengehouden, een Enter van een mens niet), en het zoekveld heeft na een scan dezelfde inhoud. Pas koppelen: gelijk gemaakt opgeslagen, niet in het logboek, een pas van een andere medewerker en ongeldige tekens of lengte worden geweigerd, leeg laten of weghalen, en het label "Pas gekoppeld". `DataStore`: oude gegevens zonder `badgeId`, een ongeldig of dubbel pasnummer wordt leeggemaakt. Verder: de demogegevens hebben geen pasnummer en het pasnummer staat niet in de CSV-export |
-| **Totaal** | **511** | |
+| `tests/pas.test.js` | 32 | Herkennen met de pas (FR-65, FR-66), met nagebootste toetsaanslagen en een nep-klok. `BadgeReader`: een snelle scan met Enter of Tab (die wordt tegengehouden), een scan zonder Enter na `endDelayMs` stilte, menselijk typen en een te korte code zijn geen scan, sneltoetsen en een uitgezette lezer, en `normalize`. Met de instellingen uit `config.js` is ook het kortste pasnummer (4 tekens) te scannen. De controller: een bekende pas opent het productvenster met "Je bent herkend met je pas.", een onbekende pas en de pas van een inactieve medewerker geven dezelfde melding, geen herkenning als er een venster open is (de Enter van de scan wordt dan wel tegengehouden, een Enter van een mens niet), en het zoekveld heeft na een scan dezelfde inhoud. Pas koppelen: gelijk gemaakt opgeslagen, niet in het logboek, een pas van een andere medewerker en ongeldige tekens of lengte worden geweigerd, leeg laten of weghalen, en het label "Pas gekoppeld". `DataStore`: oude gegevens zonder `badgeId`, een ongeldig of dubbel pasnummer wordt leeggemaakt. Verder: de demogegevens hebben geen pasnummer en het pasnummer staat niet in de CSV-export |
+| `tests/beveiligingsscan.test.js` | 22 | Regressietests voor de punten uit de beveiligingsscan (versie 3.7). Beheeracties zonder ingelogde beheerder doen niets en geven "Log eerst in als beheerder." (alle formulieren, verwijderen, correcties, voorraad, export en wissen), na het sluiten van het beheer werkt een correctie niet meer, het dashboard wordt verborgen, registreren door een medewerker zelf vraagt geen login en een correctie `+` voor een onbekend product wordt geweigerd. Product-id's als `__proto__`, `constructor` en `toString` in de voorraadlijst: bij het laden (ook vanuit JSON-tekst met een eigen sleutel `__proto__`), in `renameStockKeys` en `isValidPoint`, in het model en bij een levering. De camera gaat uit na de tijdslimiet bij herkennen en bij instellen, en een gesloten venster wordt daarna niet meer aangepast. Codes (tekst zonder stuurtekens, getallen worden tekst) en tijdstippen (ISO-vorm, vanaf 2000, niet ver in de toekomst) bij registraties, logboekregels en tellingen. Verder: de CI op Node.js 22 of 24, het logboek in het SQL-schema met triggers en zonder `ON DELETE SET NULL`, de licentie van TensorFlow.js en een controlegetal voor ieder bestand in `assets/vendor/face-api/` |
+| **Totaal** | **534** | |
 
-`tests/helpers.js` bevat de gedeelde hulpfuncties, zoals nep-opslag, een testmodel, een nep-view met nep-elementen en een strenge nep-view (`createStrictView`) die `null` teruggeeft voor onbekende selectors, zodat ook de controller zonder browser te testen is.
+`tests/helpers.js` bevat de gedeelde hulpfuncties, zoals nep-opslag, een testmodel, een nep-view met nep-elementen en een strenge nep-view (`createStrictView`) die `null` teruggeeft voor onbekende selectors, zodat ook de controller zonder browser te testen is. Met `asAdmin` maken de controllertests een controller met een ingelogde beheerder, omdat beheeracties zonder login niets doen.
 
 ## 16. Onderhoud en toekomst
 
@@ -3285,7 +3457,8 @@ Bij nieuwe code moet de verdeling hetzelfde blijven:
 - vormgeving in `assets/css/styles.css`.
 - vaste paginaopbouw in `index.html`.
 - unit tests in `tests/` (gedeelde hulpfuncties in `tests/helpers.js`. Een nieuw testbestand ook toevoegen aan het script `test` in `package.json`).
-- lettertypes in `assets/fonts/` en bibliotheken van anderen in `assets/vendor/`, nooit via een externe server.
+- lettertypes in `assets/fonts/` en bibliotheken van anderen in `assets/vendor/`, nooit via een externe server. Bij iedere bibliotheek horen de licenties van alle onderdelen die erin zitten (zoals `LICENSE` en `LICENSE-TENSORFLOWJS` bij face-api) en een controlegetal per bestand in de README van die map.
+- iedere nieuwe beheeractie in `RegistrationApp` begint met `requireAdmin()`.
 
 Wie een inline script in `index.html` wijzigt, moet ook de sha256-hash in de Content-Security-Policy aanpassen. `tests/beveiliging-config.test.js` faalt anders.
 
@@ -3307,7 +3480,7 @@ Komt er een nieuw veld bij (bijvoorbeeld een EAN-code per product), dan moeten d
 
 **Ontwikkelen en testen:**
 
-1. Installeer Node.js 20 of nieuwer (`package.json` vraagt `node >= 20`). Er zijn geen andere pakketten nodig. `npm install` hoeft niet.
+1. Installeer Node.js 22 of nieuwer, bij voorkeur de LTS-versie 24 die ook de CI gebruikt (`package.json` vraagt `node >= 22`). Er zijn geen andere pakketten nodig. `npm install` hoeft niet.
 2. Draai de tests met `npm test`.
 3. Start de website met een lokale webserver, bijvoorbeeld de VS Code-extensie Live Server. Er is geen buildstap. Als los bestand (`file://`) werkt de pagina niet, omdat de browser dan JavaScript-modules blokkeert.
 4. De camera van de demo gezichtsherkenning werkt alleen via `https://` of `http://localhost`.
@@ -3335,7 +3508,7 @@ Zolang er geen backend is, blijven de gegevens per browser in `localStorage`. Ee
 
 | Beperking | Uitleg | Voorstel |
 |---|---|---|
-| `RegistrationApp` is een grote klasse | `RegistrationApp.js` is 2271 regels lang en bevat alle acties: registreren, correcties, formulieren, voorraad, tabbladen, de demo gezichtsherkenning en het herkennen met de pas. Dat maakt het lastiger om een onderdeel snel te vinden en te testen. | Opsplitsen in kleinere controllers met een eigen taak, bijvoorbeeld een `RegistrationController`, `AdminFormsController`, `StockController` en `FaceDemoController`, die `persist` en de meldingen delen. |
+| `RegistrationApp` is een grote klasse | `RegistrationApp.js` is 2352 regels lang en bevat alle acties: registreren, correcties, formulieren, voorraad, tabbladen, de demo gezichtsherkenning en het herkennen met de pas. Dat maakt het lastiger om een onderdeel snel te vinden en te testen. | Opsplitsen in kleinere controllers met een eigen taak, bijvoorbeeld een `RegistrationController`, `AdminFormsController`, `StockController` en `FaceDemoController`, die `persist` en de meldingen delen. |
 | Logboek bewaart namen en geen actor | Logboekregels bevatten namen als tekst en blijven na het verwijderen van een medewerker staan. Wie de wijziging deed, staat er niet in (zie hoofdstuk 13). | In productie een auditlog op de server met beheerder-id en medewerker-id, en anonimiseren na de bewaartermijn. |
 | Geen grens aan de opslag | Registraties en logboekregels blijven groeien tot `localStorage` vol is (naar schatting na zo'n 20.000 registraties, zie NFR-17). Dan lukt opslaan niet meer. | Een backend met database. Tot die tijd oude jaren exporteren en de tablet wissen. |
 | Geen browser- of end-to-end-tests in CI | De unit tests draaien zonder browser. Schermen en echte klikken worden met de hand getest. | End-to-end-tests toevoegen (bijvoorbeeld met Playwright. Microsoft, z.d.) en die in GitHub Actions draaien. |
@@ -3343,7 +3516,9 @@ Zolang er geen backend is, blijven de gegevens per browser in `localStorage`. Ee
 | Keuzelijsten in het donkere thema (open controle) | Op screenshot W39 zijn de keuzelijsten `Alle medewerkers` en `Alle maanden` licht, terwijl de andere velden donker zijn. In Edge zonder venster is de berekende stijl wel donker (`--paper`) en een gedeeltelijke screenshot toont ze donker. Of een gewoon browservenster ze licht of donker toont, is niet vastgesteld. | In een gewoon venster van Edge (en daarna Chrome en Firefox) het beheer in het donkere thema openen en de keuzelijsten bekijken. W39 zo nodig opnieuw maken. |
 | Alleen in Edge getest | De website is getest in Edge (en de regels in Node.js). In Chrome en Firefox wordt werking verwacht, maar dat is niet getest (NFR-03). Of alles in Safari en op een iPad werkt (bijvoorbeeld de camera en de datumkiezer), is niet gecontroleerd. | De acceptatietests ook in Chrome en Firefox uitvoeren, en vóór gebruik op een iPad ook daar. |
 | Alleen lezers die zich als toetsenbord gedragen | De pasjeslezer werkt alleen met een USB-lezer die het pasnummer als toetsaanslagen typt ("keyboard wedge"). Web NFC (`NDEFReader`) wordt bewust niet gebruikt, omdat dat alleen in Chrome op Android werkt (MDN Web Docs, z.d.). Een lezer die een eigen driver of programma nodig heeft, werkt niet. | Bij de aanschaf een lezer kiezen die als toetsenbord werkt (in de productbeschrijving vaak "keyboard emulation" of "HID keyboard"). |
-| Pasjeslezer niet getest met echte hardware | Het herkennen met de pas is alleen getest met nagebootste toetsaanslagen. Of de standaardwaarden (`minLength` 6, `maxKeyIntervalMs` 40, `endDelayMs` 120) passen bij de lezer die TVB koopt, is nog niet gecontroleerd. | Het [testplan pasjeslezer](#testplan-pasjeslezer-handmatig) uitvoeren zodra de lezer er is, en de waarden in `config.js` zo nodig aanpassen. |
+| Pasjeslezer niet getest met echte hardware | Het herkennen met de pas is alleen getest met nagebootste toetsaanslagen. Of de standaardwaarden (`minLength` 4, `maxKeyIntervalMs` 40, `endDelayMs` 120) passen bij de lezer die TVB koopt, is nog niet gecontroleerd. | Het [testplan pasjeslezer](#testplan-pasjeslezer-handmatig) uitvoeren zodra de lezer er is, en de waarden in `config.js` zo nodig aanpassen. |
+| Registreren op naam van een ander | Iedereen bij de tablet kan op de naam van een collega tikken en registreren, of in diens productvenster een eigen gezicht instellen (demo). De demo controleert niet wie er voor de tablet staat (zie hoofdstuk 13). Een registratie is wel met datum en tijd terug te vinden en door de beheerder te corrigeren. | In productie identificeren met een pas, QR-code of persoonlijke pincode, en een overzicht waarin iedere medewerker zijn eigen registraties ziet en een fout kan melden. |
+| face-api wordt niet meer onderhouden | De repository van face-api is gearchiveerd. Versie 1.7.15 (met TensorFlow.js 4.22.0) krijgt geen beveiligingsupdates meer. In de demo is het risico beperkt: vaste versie met controlegetallen in het project, pas geladen bij gebruik, geen code van andere servers (CSP) en uit te zetten met `FACE_DEMO.enabled = false`. | Alleen voor de demo gebruiken. Niet meenemen naar productie. Komt er toch herkenning met de camera, dan een bibliotheek kiezen die nog wordt onderhouden, en de licenties van alle meegeleverde onderdelen opnemen. |
 | Hetzelfde pasnummer kan er per lezer anders uitzien | Lezers geven het nummer hexadecimaal of decimaal, en soms in een andere bytevolgorde. Dezelfde pas geeft dan op een andere lezer een ander nummer en wordt niet herkend. | Overal dezelfde soort lezer met dezelfde instelling gebruiken, en de pas koppelen met de lezer van het consumptiepunt. |
 
 ### Toekomstige uitbreidingen
@@ -3408,13 +3583,13 @@ Deze matrix laat per functionele eis (hoofdstuk 4) zien in welke use case (hoofd
 | FR-50 | Could | UC-02 | AC-41, AC-42 | `model.test.js`, `welcome-face.test.js`, `regressie.test.js` |
 | FR-62 | Could | UC-02, UC-18 | AC-70 | `basis.test.js`, `model.test.js` |
 | FR-06 | Should | UC-08 | AC-54 | `basis.test.js`, `model.test.js`, `controle4-model.test.js` |
-| FR-09 | Must | UC-07 | AC-10, AC-29, AC-30 | `controller.test.js`, `regressie.test.js`, `controle4-ui.test.js`, `controller-robuustheid.test.js` |
+| FR-09 | Must | UC-07 | AC-10, AC-29, AC-30 | `controller.test.js`, `regressie.test.js`, `controle4-ui.test.js`, `controller-robuustheid.test.js`, `beveiligingsscan.test.js` |
 | FR-10 | Must | UC-08 | AC-55 | `to-controle.test.js` |
 | FR-11 | Should | UC-08 | AC-13 | `csv-export.test.js` |
 | FR-12 | Must | UC-08 | AC-13 | `basis.test.js`, `csv-export.test.js`, `view-app.test.js` |
 | FR-15 | Must | UC-10 | AC-14 | `basis.test.js`, `model.test.js`, `controller.test.js`, `gegevens-en-tabbladen.test.js` |
 | FR-16 | Must | UC-10 | AC-17, AC-75 | `basis.test.js`, `model.test.js`, `controller.test.js`, `controle4-model.test.js`, `controle4-ui.test.js`, `to-controle.test.js` |
-| FR-23 | Must | UC-10 | AC-15 | `basis.test.js`, `controller.test.js` |
+| FR-23 | Must | UC-10, UC-12 | AC-15 | `basis.test.js`, `controller.test.js` |
 | FR-41 | Must | UC-10, UC-12, UC-15 | AC-64 | `basis.test.js`, `model.test.js`, `werkgever-en-correctiedatum.test.js` |
 | FR-67 | Could | – | AC-87, AC-88, AC-89 | – |
 | FR-22 | Should | UC-11 | AC-58 | `basis.test.js` |

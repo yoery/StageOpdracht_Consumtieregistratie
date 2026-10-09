@@ -16,7 +16,8 @@ import {
   createFakeElement,
   createDataStore,
   fakeLocalStorageWithKeys,
-  addEmployee
+  addEmployee,
+  asAdmin
 } from "./helpers.js";
 
 // Alle formulieren en vensters die closeStaleForms en handleStorageCleared opzoeken.
@@ -29,11 +30,12 @@ const FORM_SELECTORS = [
 
 // Controller met een strenge nep-view die alleen de opgegeven selectors kent.
 // Zonder `model` wordt het testmodel gebruikt (employee-1 op Hoofdkantoor van TVB).
+// De beheerder is ingelogd.
 const createApp = (selectors, { model = createModel().model } = {}) => {
   globalThis.document = { activeElement: null };
   const view = createStrictView(selectors);
   const demo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, demo), model, view };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, demo)), model, view };
 };
 
 // Een "submit"-event van een formulier.
@@ -393,7 +395,7 @@ test("een medewerker die in een ander tabblad is gewijzigd, sluit het open medew
 // Bug 7: de opslag is in een ander tabblad helemaal gewist
 // ------------------------------------------------------------------
 
-const WIPE_SELECTORS = [...FORM_SELECTORS, "#faceModal", "#faceVideo", "#employeeProductsModal", "#adminModal", "#loginPassword"];
+const WIPE_SELECTORS = [...FORM_SELECTORS, "#faceModal", "#faceVideo", "#employeeProductsModal", "#adminModal", "#adminView", "#loginPassword"];
 
 test("is de opslag in een ander venster gewist, dan wist dit tabblad ook alles en sluit wat open staat", () => {
   const { app, model, view } = createApp(WIPE_SELECTORS);

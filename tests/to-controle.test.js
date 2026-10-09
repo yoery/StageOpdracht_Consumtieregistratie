@@ -24,18 +24,19 @@ import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { CsvExport } from "../assets/js/csvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import {
-  createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee
+  createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee, asAdmin
 } from "./helpers.js";
 
 // Console-waarschuwingen van DataStore horen bij deze tests; ze maken de uitvoer alleen onrustig.
 console.warn = () => {};
 
-// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB) en een nep-view.
+// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een
+// ingelogde beheerder.
 const createApp = ({ storeOptions, view = createRecordingView() } = {}) => {
   globalThis.document = { activeElement: null, querySelectorAll: () => [] };
   const { model, point } = createModel(storeOptions);
   const faceDemo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, faceDemo), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, faceDemo)), model, view, point };
 };
 
 const toastTexts = (view) => view.toasts.map(({ message }) => message);

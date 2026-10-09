@@ -13,16 +13,17 @@ import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import { DataStore } from "../assets/js/DataStore.js";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import {
-  createModel, createDataStore, createRecordingView, createFakeElement, fakeLocalStorage, registration
+  createModel, createDataStore, createRecordingView, createFakeElement, fakeLocalStorage, registration, asAdmin
 } from "./helpers.js";
 
 console.warn = () => {};
 
+// Controller met het testmodel, een nep-view en een ingelogde beheerder.
 const createApp = ({ storeOptions } = {}) => {
   const { model, point } = createModel(storeOptions);
   const view = createRecordingView();
   const faceDemo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, faceDemo), model, view, point, faceDemo };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, faceDemo)), model, view, point, faceDemo };
 };
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
 

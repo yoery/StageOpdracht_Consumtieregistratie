@@ -68,6 +68,7 @@ export class RegistrationApp {
     this.faceMode = null;          // "recognize" (herkennen) of "enroll" (instellen)
     this.cameraReady = false;      // staat de camera echt aan om een gezicht vast te leggen?
     this.captureSession = null;    // sessienummer van het vastleggen dat nu loopt (zie get capturing)
+    this.enrollTimer = null;       // time-out die de camera uitzet als er niets wordt vastgelegd (zie scheduleEnrollTimeout)
     this.modalCloseActions = new Map(); // venster -> sluitactie (voor de Escape-toets)
     this.modalOpeners = new Map();      // venster -> element dat de focus had toen het venster openging
     this.currentDay = new Date().toDateString(); // de dag die nu op het scherm staat (zie refreshIfNewDay)
@@ -490,6 +491,21 @@ export class RegistrationApp {
     if (opener?.isConnected && opener.getClientRects().length > 0) opener.focus();
   }
 
+  // Controleert of er een beheerder is ingelogd. Iedere beheeractie (wijzigen, verwijderen,
+  // corrigeren, voorraad, exporteren, wissen en het openen van een beheerformulier) begint hiermee.
+  // De knoppen staan alleen in het beheervenster, maar een knop kan ook op een andere manier
+  // worden ingedrukt of een methode kan rechtstreeks worden aangeroepen (bijvoorbeeld als iemand
+  // het verborgen venster zichtbaar maakt). Daarom controleert de controller het zelf, en niet
+  // alleen de weergave. Is er niemand ingelogd, dan gebeurt er niets en volgt een melding.
+  // Let op: dit blijft een controle in de browser. In productie moet de server dit controleren
+  // (zie TO, hoofdstuk 13).
+  requireAdmin() {
+    if (this.adminLoggedIn) return true;
+
+    this.view.showToast("Log eerst in als beheerder.", { tone: "error" });
+    return false;
+  }
+
   // Melding als een gegeven intussen niet meer bestaat, bijvoorbeeld omdat het in een ander
   // tabblad is verwijderd en deze knop of dit formulier nog van vóór die tijd is.
   // `subject` is bijvoorbeeld "Dit product" of "Deze medewerker".
@@ -617,9 +633,16 @@ export class RegistrationApp {
   // niets opgeslagen; anders zou er een registratie zonder medewerker ontstaan. De melding
   // komt van showMissing, net als bij andere gegevens die niet meer bestaan.
   // De logboekregel wordt in dezelfde keer opgeslagen als de registratie (zie persist).
+  // Hetzelfde geldt voor een product dat niet (meer) bestaat: anders zou er een registratie van
+  // "Onbekend product" voor 0 euro ontstaan.
   addCorrection(employeeId, productId, now = new Date()) {
+    if (!this.requireAdmin()) return false;
     if (!this.model.findEmployee(employeeId)) {
       this.showMissing("Deze medewerker");
+      return false;
+    }
+    if (!this.model.findProduct(productId)) {
+      this.showMissing("Dit product");
       return false;
     }
 
@@ -654,6 +677,7 @@ export class RegistrationApp {
   // Is die registratie uit een eerdere maand, dan vraagt de app eerst om bevestiging (zie
   // confirmOldMonthRemoval). Kiest de beheerder "Annuleren", dan verandert er niets.
   removeCorrection(employeeId, productId) {
+    if (!this.requireAdmin()) return;
     if (!this.model.hasRegistration(employeeId, productId)) {
       this.view.showToast("Dit product heeft geen registratie voor deze medewerker", { tone: "error" });
       return;
@@ -695,6 +719,7 @@ export class RegistrationApp {
   // Daarna worden ook de correctielijst en de registratietabel opnieuw getekend, zodat de
   // beheerder overal de actuele gegevens ziet.
   toggleEmployee(employeeId) {
+    if (!this.requireAdmin()) return;
     const employee = this.model.findEmployee(employeeId);
     if (!employee) {
       this.showMissing("Deze medewerker");
@@ -728,6 +753,7 @@ export class RegistrationApp {
   // (removeEmployee) controleert hetzelfde nog een keer.
   // De naam wordt vóór het verwijderen opgezocht, want daarna bestaat de medewerker niet meer.
   removeEmployee(employeeId) {
+    if (!this.requireAdmin()) return;
     // Bestaat de medewerker niet meer (verwijderd in een ander tabblad), dan niets doen en melden.
     const employee = this.model.findEmployee(employeeId);
     if (!employee) {
@@ -773,6 +799,7 @@ export class RegistrationApp {
   // Net als bij een bedrijf en een consumptiepunt vraagt de app eerst om bevestiging
   // (window.confirm); kiest de beheerder "Annuleren", dan verandert er niets.
   removeProduct(productId) {
+    if (!this.requireAdmin()) return;
     // Bestaat het product niet meer (verwijderd in een ander tabblad), dan niets doen en melden.
     if (!this.model.findProduct(productId)) {
       this.showMissing("Dit product");
@@ -799,6 +826,7 @@ export class RegistrationApp {
   // Verwijdert een bedrijf, maar alleen als er geen medewerkers of consumptiepunten aan hangen.
   // Bestaat het bedrijf niet meer (verwijderd in een ander tabblad), dan volgt een melding.
   removeCompany(companyId) {
+    if (!this.requireAdmin()) return;
     if (!this.model.findCompany(companyId)) {
       this.showMissing("Dit bedrijf");
       return;
@@ -824,6 +852,7 @@ export class RegistrationApp {
   // Verwijdert een consumptiepunt, maar alleen als er geen medewerkers meer aan gekoppeld zijn.
   // Bestaat het punt niet meer (verwijderd in een ander tabblad), dan volgt een melding.
   removePoint(pointId) {
+    if (!this.requireAdmin()) return;
     const point = this.model.findPoint(pointId);
     if (!point) {
       this.showMissing("Dit consumptiepunt");
@@ -1056,9 +1085,12 @@ export class RegistrationApp {
   // Sluit het admin-venster (sluitknop, klik op de donkere achtergrond of Escape) en logt de
   // beheerder uit. Op een gedeelde tablet kan de volgende gebruiker anders zonder wachtwoord
   // in het beheerscherm komen. Bij het volgende openen verschijnt dus het loginformulier.
+  // Het dashboard wordt ook verborgen, zodat het niet zichtbaar blijft binnen het gesloten venster
+  // (bijvoorbeeld als iemand het venster via de ontwikkelaarstools weer zichtbaar maakt).
   closeAdmin() {
     this.adminLoggedIn = false;
     this.view.$("#loginPassword").value = "";
+    this.hide("#adminView");
     this.closeModal("#adminModal");
   }
 
@@ -1103,7 +1135,7 @@ export class RegistrationApp {
   exportCsv() {
     // Alleen voor een ingelogde beheerder (de knop staat in het beheer, maar zo kan de export ook
     // niet via een andere weg worden gestart).
-    if (!this.adminLoggedIn) return;
+    if (!this.requireAdmin()) return;
     const selectedEmployee = this.view.$("#filterEmployee").value;
     const selectedMonth = this.view.$("#filterMonth").value;
 
@@ -1120,7 +1152,7 @@ export class RegistrationApp {
   // bevestiging gevraagd. Daarna wordt de beheerder uitgelogd en staan de demogegevens er weer.
   wipeAllData() {
     // Alleen voor een ingelogde beheerder: wissen kan niet ongedaan worden gemaakt.
-    if (!this.adminLoggedIn) return;
+    if (!this.requireAdmin()) return;
     const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet wissen?";
     if (!window.confirm(firstQuestion)) return;
     if (!window.confirm("Weet je het zeker? Dit kan niet ongedaan worden gemaakt.")) return;
@@ -1200,6 +1232,7 @@ export class RegistrationApp {
 
   // Opent een leeg formulier om een medewerker toe te voegen.
   openEmployeeForm() {
+    if (!this.requireAdmin()) return;
     const form = this.view.$("#employeeForm");
     form.reset();
     this.view.clearFieldErrors(form);
@@ -1218,6 +1251,7 @@ export class RegistrationApp {
   // en blijft het formulier dicht. Er wordt een kopie van de medewerker onthouden, zodat het
   // formulier sluit als een ander tabblad deze medewerker intussen wijzigt (zie closeStaleForms).
   openEditEmployeeForm(employeeId) {
+    if (!this.requireAdmin()) return;
     const employee = this.model.findEmployee(employeeId);
     if (!employee) {
       this.showMissing("Deze medewerker");
@@ -1268,6 +1302,7 @@ export class RegistrationApp {
   // validateEmployeeAssignment).
   saveEmployee(event) {
     event.preventDefault();
+    if (!this.requireAdmin()) return;
 
     const employeeData = {
       firstName: this.view.$("#newEmployeeFirstName").value.trim(),
@@ -1386,6 +1421,7 @@ export class RegistrationApp {
 
   // Opent een leeg formulier om een product toe te voegen.
   openProductForm() {
+    if (!this.requireAdmin()) return;
     const form = this.view.$("#productForm");
     form.reset();
     this.view.clearFieldErrors(form);
@@ -1402,6 +1438,7 @@ export class RegistrationApp {
   // Bestaat het product niet meer (verwijderd in een ander tabblad), dan volgt een melding.
   // Er wordt een kopie van het product onthouden (zie rememberEditing en closeStaleForms).
   openEditProductForm(productId) {
+    if (!this.requireAdmin()) return;
     const product = this.model.findProduct(productId);
     if (!product) {
       this.showMissing("Dit product");
@@ -1429,6 +1466,7 @@ export class RegistrationApp {
   // (anders zou het met dezelfde id opnieuw worden aangemaakt).
   saveProduct(event) {
     event.preventDefault();
+    if (!this.requireAdmin()) return;
 
     const form = this.view.$("#productForm");
     const editingId = form.dataset.editingId;
@@ -1486,6 +1524,7 @@ export class RegistrationApp {
   // Opent het bedrijfsformulier: leeg om toe te voegen, of gevuld om te wijzigen.
   // Bij wijzigen wordt een kopie van het bedrijf onthouden (zie rememberEditing en closeStaleForms).
   openCompanyForm(company = null) {
+    if (!this.requireAdmin()) return;
     const form = this.view.$("#companyForm");
     form.reset();
     this.view.clearFieldErrors(form);
@@ -1506,6 +1545,7 @@ export class RegistrationApp {
   // Knop "Wijzigen" bij een bedrijf. Bestaat het bedrijf niet meer (verwijderd in een ander
   // tabblad), dan volgt een melding; anders zou er per ongeluk een leeg "toevoegen"-formulier openen.
   openEditCompanyForm(companyId) {
+    if (!this.requireAdmin()) return;
     const company = this.model.findCompany(companyId);
     if (!company) {
       this.showMissing("Dit bedrijf");
@@ -1525,6 +1565,7 @@ export class RegistrationApp {
   // het veld (showDuplicateNameError) en er wordt niets opgeslagen.
   saveCompany(event) {
     event.preventDefault();
+    if (!this.requireAdmin()) return;
 
     const form = this.view.$("#companyForm");
     const editingId = form.dataset.editingId;
@@ -1567,6 +1608,7 @@ export class RegistrationApp {
   // Bij wijzigen wordt een kopie van naam, bedrijf en aanbod onthouden, zodat het formulier
   // sluit als een ander tabblad die intussen wijzigt (zie rememberEditing en closeStaleForms).
   openPointForm(point = null, companyId = "") {
+    if (!this.requireAdmin()) return;
     const form = this.view.$("#pointForm");
     form.reset();
     this.view.clearFieldErrors(form);
@@ -1586,6 +1628,7 @@ export class RegistrationApp {
   // Knop "Aanbod wijzigen" bij een consumptiepunt. Bestaat het punt niet meer (verwijderd in
   // een ander tabblad), dan volgt een melding in plaats van een leeg formulier.
   openEditPointForm(pointId) {
+    if (!this.requireAdmin()) return;
     const point = this.model.findPoint(pointId);
     if (!point) {
       this.showMissing("Dit consumptiepunt");
@@ -1605,6 +1648,7 @@ export class RegistrationApp {
   // krijgt het bedrijfsveld een foutmelding en wordt de keuzelijst opnieuw gevuld.
   savePoint(event) {
     event.preventDefault();
+    if (!this.requireAdmin()) return;
 
     const form = this.view.$("#pointForm");
     const editingId = form.dataset.editingId;
@@ -1682,6 +1726,7 @@ export class RegistrationApp {
 
   // Boekt een levering: het ingevulde aantal (1 tot en met 100.000) komt bij de voorraad.
   bookDelivery(productId) {
+    if (!this.requireAdmin()) return;
     if (this.isRepeatedDeliveryTap(productId)) return;
 
     const pointId = this.view.$("#stockPointSelect").value;
@@ -1722,6 +1767,7 @@ export class RegistrationApp {
   // Bestaat het punt of het product niet meer (verwijderd in een ander tabblad), dan wordt er
   // niets opgeslagen en komt er geen regel in het logboek, net als bij bookDelivery.
   saveStockField(input) {
+    if (!this.requireAdmin()) return;
     const pointId = this.view.$("#stockPointSelect").value;
     const productId = input.dataset.productId;
     const field = input.dataset.stockField === "stock" ? "stock" : "minimum";
@@ -2085,6 +2131,7 @@ export class RegistrationApp {
       this.cameraReady = true;
       this.updateEnrollButton();
       this.setFaceStatus("Camera staat aan.");
+      this.scheduleEnrollTimeout(session);
     } else {
       this.scanForFace(session);
     }
@@ -2101,6 +2148,8 @@ export class RegistrationApp {
 
   // Kijkt steeds opnieuw of er een bekend gezicht in beeld is, tot iemand is herkend,
   // het venster wordt gesloten of de tijd (FACE_DEMO.scanTimeoutMs) om is.
+  // Is de tijd om, dan wordt de camera uitgezet (zie stopCameraAfterTimeout). Anders zou de
+  // camera blijven filmen tot iemand het venster sluit, ook als de medewerker al is weggelopen.
   async scanForFace(session) {
     const video = this.view.$("#faceVideo");
     const deadline = Date.now() + this.faceDemo.settings.scanTimeoutMs;
@@ -2129,8 +2178,40 @@ export class RegistrationApp {
     }
 
     if (session === this.faceSession) {
-      this.setFaceStatus("Niet herkend. Sluit dit venster en kies je naam in de lijst.", "error");
+      this.stopCameraAfterTimeout();
+      this.setFaceStatus("Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst.", "error");
     }
+  }
+
+  // Zet de camera uit als de tijd om is (bij herkennen en bij instellen), terwijl het venster
+  // open blijft met een melding. Het sessienummer gaat omhoog, zodat een lopende zoektocht of
+  // vastlegging stopt en een time-out van een eerder venster niets meer doet. "Gezicht
+  // vastleggen" kan daarna niet meer (de camera staat uit): de medewerker opent het venster opnieuw.
+  stopCameraAfterTimeout() {
+    this.faceSession += 1;
+    this.cameraReady = false;
+    this.faceDemo.stopCamera(this.view.$("#faceVideo"));
+    this.updateEnrollButton();
+  }
+
+  // Bij het instellen van een gezicht staat de camera aan tot de medewerker op "Gezicht vastleggen"
+  // klikt. Gebeurt dat niet binnen FACE_DEMO.scanTimeoutMs (bijvoorbeeld omdat de medewerker is
+  // weggelopen), dan gaat de camera uit. `session` is het venster waarvoor de tijd loopt: is dat
+  // venster intussen gesloten of opnieuw geopend, dan doet de time-out niets. Tijdens het
+  // vastleggen wordt gewacht tot dat klaar is. closeFaceModal ruimt de wachtende time-out op.
+  scheduleEnrollTimeout(session) {
+    const check = () => {
+      this.enrollTimer = null;
+      if (session !== this.faceSession) return;
+      if (this.capturing) {
+        this.enrollTimer = setTimeout(check, 500);
+        return;
+      }
+      this.stopCameraAfterTimeout();
+      this.setFaceStatus("De tijd is om en de camera is uitgezet. Sluit dit venster en probeer het opnieuw.", "error");
+    };
+    clearTimeout(this.enrollTimer);
+    this.enrollTimer = setTimeout(check, this.faceDemo.settings.scanTimeoutMs);
   }
 
   // Knop "Gezicht vastleggen": leest het gezicht (een paar pogingen) en onthoudt het voor deze medewerker.
@@ -2206,6 +2287,8 @@ export class RegistrationApp {
   closeFaceModal() {
     this.faceSession += 1;
     this.cameraReady = false;
+    clearTimeout(this.enrollTimer);
+    this.enrollTimer = null;
     this.faceDemo.stopCamera(this.view.$("#faceVideo"));
     this.closeModal("#faceModal");
   }

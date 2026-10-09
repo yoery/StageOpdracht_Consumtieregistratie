@@ -10,14 +10,15 @@ import fs from "node:fs";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { CsvExport } from "../assets/js/csvExport.js";
-import { createModel, createDataStore, createRecordingView, registration } from "./helpers.js";
+import { createModel, createDataStore, createRecordingView, registration, asAdmin } from "./helpers.js";
 
-// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB) en een nep-view.
+// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een
+// ingelogde beheerder.
 const createApp = () => {
   globalThis.document = { activeElement: null, querySelectorAll: () => [] };
   const { model, point } = createModel();
   const view = createRecordingView();
-  const app = new RegistrationApp(model, view, undefined, new FaceRecognitionDemo({ enabled: false }, null));
+  const app = asAdmin(new RegistrationApp(model, view, undefined, new FaceRecognitionDemo({ enabled: false }, null)));
   return { app, model, view, point };
 };
 

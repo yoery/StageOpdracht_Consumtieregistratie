@@ -655,7 +655,7 @@ export class RegistrationView {
 
     this.$("#pointProductList").innerHTML = this.model.products.map(({ id, name }) =>
       `<label class="offer-item">
-        <input type="checkbox" name="offeredProduct" value="${this.escapeHtml(id)}" ${point?.products[id]?.offered ? "checked" : ""}>
+        <input type="checkbox" name="offeredProduct" value="${this.escapeHtml(id)}" ${this.model.pointProduct(point, id)?.offered ? "checked" : ""}>
         <span>${this.escapeHtml(name)}</span>
       </label>`
     ).join("");
@@ -711,7 +711,7 @@ export class RegistrationView {
       : products.length === 0
         ? this.emptyTableRow(5, { iconName: "package", title: "Dit consumptiepunt biedt nog geen producten aan.", text: "Zet producten aan via Bedrijven en dan Aanbod wijzigen.", action: this.goToTabButton("companies", "Naar Bedrijven") })
         : products.map(({ id, name }) => {
-          const entry = point.products[id];
+          const entry = this.model.pointProduct(point, id);
           const status = this.model.stockStatus(entry);
 
           return `<tr>
@@ -733,7 +733,7 @@ export class RegistrationView {
   // Werkt alleen het statuslabel van één product in de voorraadtabel bij (na het aanpassen van
   // voorraad of minimum), zodat de invoervelden en de focus blijven staan.
   updateStockStatus(pointId, productId) {
-    const entry = this.model.findPoint(pointId)?.products[productId];
+    const entry = this.model.stockEntry(pointId, productId);
     // De product-id wordt met cssAttributeValue veilig gemaakt voor de selector.
     const badge = document.querySelector(`[data-stock-status="${cssAttributeValue(productId)}"]`);
     if (!entry || !badge) return;

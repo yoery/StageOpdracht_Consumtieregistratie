@@ -25,10 +25,12 @@ jobs:
           # Bewaar het GitHub-token niet in de map; de tests hebben het niet nodig.
           persist-credentials: false
 
+      # Node.js 24 is een LTS-versie die nog wordt onderhouden. Node.js 20 kreeg op 30 april 2026
+      # zijn laatste update (end-of-life). Houd dit gelijk aan "engines" in package.json.
       - name: Node.js instellen
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Controleer Node versie
         run: |

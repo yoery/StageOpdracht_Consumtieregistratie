@@ -8,11 +8,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { BadgeReader } from "../assets/js/BadgeReader.js";
+import { BADGE_READER } from "../assets/js/config.js";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { CsvExport } from "../assets/js/csvExport.js";
-import { createModel, addEmployee, createRecordingView, createFakeElement, createDataStore, registration } from "./helpers.js";
+import { createModel, addEmployee, createRecordingView, createFakeElement, createDataStore, registration, asAdmin } from "./helpers.js";
 
 const SETTINGS = { enabled: true, minLength: 6, maxKeyIntervalMs: 40, endDelayMs: 120 };
 
@@ -189,6 +190,7 @@ test("normalize: spaties, : en - weg en hoofdletters", () => {
 
 // Controller met het testmodel, een nep-view, een BadgeReader met nep-klok en een nep-document.
 // `openModals` bepaalt welke vensters open staan (zie RegistrationApp.topModal).
+// De beheerder is ingelogd, zodat ook het koppelen van een pas in het medewerkersformulier werkt.
 const createApp = () => {
   const { model, point } = createModel();
   model.state.employees[0].badgeId = "04A1B2C3";
@@ -196,7 +198,7 @@ const createApp = () => {
   const clock = createClock();
   const reader = new BadgeReader(SETTINGS, clock);
   const demo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  const app = new RegistrationApp(model, view, undefined, demo, reader);
+  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader));
   const openModals = [];
   globalThis.document = {
     activeElement: null,
@@ -532,4 +534,16 @@ test("het pasnummer staat niet in de CSV-export", () => {
   assert.ok(csv.includes("Test"), "de medewerker staat wel in de export");
   assert.ok(!csv.includes("04A1B2C3"));
   assert.ok(!/pas/i.test(csv.split("\n")[0]), "er is geen kolom voor het pasnummer");
+});
+
+test("met de instellingen uit config.js is ook het kortste pasnummer (4 tekens) te scannen", () => {
+  const clock = createClock();
+  const reader = new BadgeReader(BADGE_READER, clock);
+  const scans = [];
+  reader.onScan = (code) => scans.push(code);
+
+  type(reader, clock, "A1B2", 4, "Enter");
+
+  assert.ok(BADGE_READER.minLength <= 4, "minLength mag niet groter zijn dan het kortste pasnummer dat de beheerder kan koppelen");
+  assert.deepEqual(scans, ["A1B2"]);
 });

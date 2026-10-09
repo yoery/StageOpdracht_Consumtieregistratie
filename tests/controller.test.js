@@ -6,14 +6,15 @@ import assert from "node:assert/strict";
 
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { createModel, createRecordingView, createFakeElement } from "./helpers.js";
+import { createModel, createRecordingView, createFakeElement, asAdmin } from "./helpers.js";
 
-// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB) en een nep-view.
+// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een
+// ingelogde beheerder.
 const createApp = ({ storeOptions, faceDemo } = {}) => {
   const { model, point } = createModel(storeOptions);
   const view = createRecordingView();
   const demo = faceDemo || new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, demo), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, demo)), model, view, point };
 };
 
 // Vult de velden van een formulier en zegt welke velden verplicht zijn en welke vinkjes aan staan.
@@ -392,6 +393,7 @@ test("voorraad tellen: mislukt opslaan zet het veld terug op de opgeslagen waard
 
 test("inloggen zonder wachtwoord toont de foutmelding en logt niet in", () => {
   const { app, view } = createApp();
+  app.adminLoggedIn = false; // deze test begint zonder ingelogde beheerder
   view.$("#loginError").classList.add("hidden");
   view.$("#loginEmail").value = "admin@tvb.nl";
   view.$("#loginPassword").value = "";

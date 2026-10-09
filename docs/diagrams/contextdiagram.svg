@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="940" viewBox="0 0 1500 940" role="img" aria-labelledby="title desc">
   <title id="title">Contextdiagram Blikjesregistratie TVB</title>
-  <desc id="desc">Medewerker en beheerder gebruiken de webapplicatie op een tablet of pc; de demo bewaart gegevens in localStorage, de camera is optioneel en de CSV gaat naar de loonadministratie. Later vervangen een webserver en een gedeelde SQL-database de localStorage.</desc>
+  <desc id="desc">Medewerker en beheerder gebruiken de webapplicatie op een tablet of pc. De demo bewaart gegevens in localStorage, de camera en de pasjeslezer zijn optioneel en de CSV gaat naar de loonadministratie. Later vervangen een webserver en een gedeelde SQL-database de localStorage, en haalt de webserver de medewerkergegevens uit AFAS Profit.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -53,23 +53,30 @@
 <text x="165" y="356" font-size="14" class="lbl">inloggen, beheer, correcties, voorraad</text>
 <path d="M558,415 L150,415" class="lijn" marker-end="url(#pijl)"/>
 <text x="165" y="406" font-size="14" class="lbl">overzichten, logboek, CSV-bestand</text>
-<!-- Opslag en camera in het apparaat -->
+<!-- Opslag, camera en pasjeslezer in het apparaat -->
 <g class="box">
-    <path d="M560,512 V613 A100,12 0 0 0 760,613 V512" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-    <ellipse cx="660" cy="512" rx="100" ry="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+    <path d="M495,512 V613 A85,12 0 0 0 665,613 V512" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+    <ellipse cx="580" cy="512" rx="85" ry="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
   </g>
-<text x="660" y="556" text-anchor="middle" font-size="17" class="kop">localStorage</text>
-<text x="660" y="579" text-anchor="middle" font-size="13">opslag in de browser</text>
-<text x="660" y="597" text-anchor="middle" font-size="13">(alleen deze demo)</text>
-<path d="M660,427 L660,498" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
-<text x="672" y="468" font-size="13" class="lbl">opslaan en laden (JSON)</text>
-<rect x="800" y="500" width="200" height="125" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<text x="900" y="538" text-anchor="middle" font-size="17" class="kop">Camera</text>
-<text x="900" y="562" text-anchor="middle" font-size="13">alleen voor de demo</text>
-<text x="900" y="580" text-anchor="middle" font-size="13">gezichtsherkenning</text>
-<text x="900" y="598" text-anchor="middle" font-size="13">(optioneel)</text>
-<path d="M900,498 L900,427" class="lijn" marker-end="url(#pijl)"/>
-<text x="912" y="468" font-size="13" class="lbl">beeld</text>
+<text x="580" y="556" text-anchor="middle" font-size="17" class="kop">localStorage</text>
+<text x="580" y="579" text-anchor="middle" font-size="13">opslag in de browser</text>
+<text x="580" y="597" text-anchor="middle" font-size="13">(alleen deze demo)</text>
+<path d="M580,427 L580,498" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
+<text x="592" y="468" font-size="13" class="lbl">opslaan en laden (JSON)</text>
+<rect x="700" y="500" width="170" height="125" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="785" y="538" text-anchor="middle" font-size="17" class="kop">Camera</text>
+<text x="785" y="562" text-anchor="middle" font-size="13">alleen voor de demo</text>
+<text x="785" y="580" text-anchor="middle" font-size="13">gezichtsherkenning</text>
+<text x="785" y="598" text-anchor="middle" font-size="13">(optioneel)</text>
+<path d="M785,498 L785,427" class="lijn" marker-end="url(#pijl)"/>
+<text x="797" y="468" font-size="13" class="lbl">beeld</text>
+<rect x="905" y="500" width="170" height="125" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="990" y="538" text-anchor="middle" font-size="17" class="kop">Pasjeslezer</text>
+<text x="990" y="562" text-anchor="middle" font-size="13">USB-NFC-lezer die</text>
+<text x="990" y="580" text-anchor="middle" font-size="13">werkt als toetsenbord</text>
+<text x="990" y="598" text-anchor="middle" font-size="13">(optioneel)</text>
+<path d="M990,498 L990,427" class="lijn" marker-end="url(#pijl)"/>
+<text x="978" y="468" text-anchor="end" font-size="13" class="lbl">pasnummer</text>
 <!-- Loonadministratie -->
 <rect x="1240" y="225" width="230" height="130" rx="14" fill="#fdf1e7" stroke="#a55a16" stroke-width="1.6" class="box"/>
 <text x="1355" y="268" text-anchor="middle" font-size="18" class="kop">Loonadministratie</text>
@@ -79,9 +86,18 @@
 <text x="1165" y="314" text-anchor="middle" font-size="13" class="lbl">CSV-download</text>
 <text x="1165" y="331" text-anchor="middle" font-size="13" class="lbl">per loonmaand</text>
 <text x="1165" y="348" text-anchor="middle" font-size="13" class="lbl">door de beheerder</text>
+<!-- AFAS Profit -->
+<rect x="1240" y="430" width="230" height="130" rx="14" fill="#fdf1e7" stroke="#a55a16" stroke-width="1.6" class="box"/>
+<text x="1355" y="473" text-anchor="middle" font-size="18" class="kop">AFAS Profit</text>
+<text x="1355" y="499" text-anchor="middle" font-size="14">HR- en salarispakket</text>
+<text x="1355" y="519" text-anchor="middle" font-size="14">(medewerkergegevens)</text>
+<path d="M1300,562 V700 H945 V723" class="stip" marker-end="url(#pijl)"/>
+<text x="1312" y="598" font-size="13" class="lbl">medewerkergegevens</text>
+<text x="1312" y="615" font-size="13" class="lbl">https met token</text>
+<text x="1312" y="632" font-size="13" class="lbl">(alleen de server)</text>
 <!-- Productieversie (later) -->
 <rect x="470" y="680" width="1000" height="230" rx="18" fill="none" stroke="#71858a" stroke-width="1.4" stroke-dasharray="8 6"/>
-<text x="490" y="893" font-size="14" font-weight="700" fill="#71858a">Productieversie (later; techniek nog te kiezen)</text>
+<text x="490" y="893" font-size="14" font-weight="700" fill="#71858a">Productieversie (later, techniek nog te kiezen)</text>
 <rect x="700" y="725" width="260" height="110" rx="12" fill="#ffffff" stroke="#71858a" stroke-width="1.6" stroke-dasharray="6 4" class="box"/>
 <text x="830" y="763" text-anchor="middle" font-size="17" class="kop">Webserver</text>
 <text x="830" y="787" text-anchor="middle" font-size="13">backend en API</text>
@@ -99,10 +115,10 @@
   </g>
   <text x="1385" y="836" text-anchor="middle" font-size="16" class="kop">Systeembeheerder</text>
 <path d="M830,652 V723" class="stip" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
-<text x="842" y="706" font-size="13" class="lbl">HTTPS (productie)</text>
-<path d="M660,627 V780 H698" class="stip" marker-end="url(#pijl)"/>
-<text x="648" y="722" text-anchor="end" font-size="13" class="lbl">in productie</text>
-<text x="648" y="739" text-anchor="end" font-size="13" class="lbl">vervangen door</text>
+<text x="818" y="706" text-anchor="end" font-size="13" class="lbl">HTTPS (productie)</text>
+<path d="M640,623 V780 H698" class="stip" marker-end="url(#pijl)"/>
+<text x="628" y="722" text-anchor="end" font-size="13" class="lbl">in productie</text>
+<text x="628" y="739" text-anchor="end" font-size="13" class="lbl">vervangen door</text>
 <path d="M962,783 L1038,783" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
 <text x="1000" y="773" text-anchor="middle" font-size="13" class="lbl">SQL</text>
 <path d="M1350,783 L1262,783" class="lijn" marker-end="url(#pijl)"/>

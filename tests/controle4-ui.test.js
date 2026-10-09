@@ -7,14 +7,15 @@ import fs from "node:fs";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { createModel, createRecordingView, createFakeElement, addEmployee } from "./helpers.js";
+import { createModel, createRecordingView, createFakeElement, addEmployee, asAdmin } from "./helpers.js";
 
-// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB) en een nep-view.
+// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een
+// ingelogde beheerder.
 const createApp = ({ faceDemo } = {}) => {
   const { model, point } = createModel();
   const view = createRecordingView();
   const demo = faceDemo || new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, demo), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, demo)), model, view, point };
 };
 
 const toastTexts = (view) => view.toasts.map(({ message }) => message);

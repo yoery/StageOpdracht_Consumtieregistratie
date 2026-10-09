@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
-import { createModel } from "./helpers.js";
+import { createModel, asAdmin } from "./helpers.js";
 
 // Nep-view: onthoudt meldingen, en iedere render-methode doet niets.
 // `$` geeft een nep-element terug, zodat classList-aanroepen werken.
@@ -18,10 +18,11 @@ const createFakeView = () => {
   });
 };
 
+// Controller met het testmodel, een nep-view en een ingelogde beheerder.
 const createApp = (storeOptions) => {
   const { model, point } = createModel(storeOptions);
   const view = createFakeView();
-  return { app: new RegistrationApp(model, view), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view)), model, view, point };
 };
 
 // RegistrationView
