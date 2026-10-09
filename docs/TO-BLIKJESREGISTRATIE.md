@@ -1,7 +1,7 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
-**Versie:** 3.4
-**Datum:** 6 oktober 2026
+**Versie:** 3.5
+**Datum:** 9 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
 Dit document is het enige ontwerpdocument van het project. Het bevat zowel de functionele kant (aanleiding, gebruikersrollen, eisen, use cases, wireframes en acceptatiecriteria) als de technische uitwerking (architectuur, database, interfaces, beveiliging en tests). Het eerdere functioneel ontwerp is hierin opgenomen.
@@ -18,6 +18,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.1 | 1 oktober 2026 | Persoonlijke begroeting, demo gezichtsherkenning en wireframes toegevoegd; documentatie bijgewerkt. |
 | 3.3 | 2 oktober 2026 | Bugs opgelost, beveiliging verbeterd, correctiedatum en werkgevernummer per registratie toegevoegd. |
 | 3.4 | 6 oktober 2026 (commit 259176e) | TO volledig nagelopen: alle eisen gecontroleerd tegen de code en het databaseschema, tegenstrijdigheden opgelost (correcties, voorraad, export), FR-57 t/m FR-64 toegevoegd, MoSCoW-prioriteiten en meetbare NFR's met ID, stakeholders, scope, aannames en begrippen, ontwerpkeuzes, volledig logisch datamodel met ERD, diagrammen (context, architectuur, klassen, ERD, use cases), een traceerbaarheidsmatrix en een testverslag voor de acceptatietests. Tegelijk is de code aangepast op de punten uit deze controle, onder andere: wissen in een ander tabblad wordt overgenomen en "1 medewerker" en "1 product" staan in enkelvoud (zie `tests/to-controle.test.js`). |
+| 3.5 | 9 oktober 2026 | Testplan voor de herkenningsnauwkeurigheid van de demo gezichtsherkenning (hoofdstuk 15) met acceptatiecriterium AC-83: hoe vaak iemand als een ander wordt herkend, een onbekende toch wordt herkend of een medewerker niet wordt herkend. |
 
 ## Inhoudsopgave
 
@@ -2590,7 +2591,7 @@ De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in d
 | Logboek bewaart namen (AVG) | Logboekregels bevatten namen als tekst, bijvoorbeeld "Blikje voor Lotte van Dijk" bij "Registratie toegevoegd", of de naam bij "Medewerker definitief verwijderd". Die regels blijven staan, ook nadat een medewerker definitief is verwijderd. Alleen `Alle gegevens wissen` haalt ze weg. Een verzoek om verwijdering van één medewerker kan in de demo dus niet volledig worden uitgevoerd zonder alles te wissen. In productie hoort het auditlog te verwijzen naar een id en moeten namen na de bewaartermijn worden geanonimiseerd. |
 | Logboek legt niet vast wie iets deed | Een logboekregel bevat actie, details en tijdstip, maar niet welke beheerder de wijziging deed: de demo heeft geen echte gebruikers. Het logboek is daarom geen bewijs van wie wat heeft gedaan. |
 | Opslag kan vollopen | `localStorage` heeft per website een grens van ongeveer 5 MB (de precieze grens verschilt per browser). Er is geen archivering: registraties en logboekregels blijven groeien. Is de opslag vol, dan lukt opslaan niet meer; iedere wijziging wordt dan teruggedraaid met de melding "Opslaan mislukt. Probeer het opnieuw." Een registratie neemt ongeveer 243 tekens in, dus er passen naar schatting zo'n 20.000 registraties in (berekening bij NFR-17). De demo waarschuwt niet vooraf en is niet geschikt voor jarenlang gebruik. |
-| Geen echte herkenning van een levend gezicht | De demo gezichtsherkenning heeft geen controle of er een echt, levend gezicht voor de camera staat (geen liveness-check). Een foto kan dus mogelijk werken. Hoe vaak de demo de verkeerde persoon herkent, is niet gemeten. |
+| Geen echte herkenning van een levend gezicht | De demo gezichtsherkenning heeft geen controle of er een echt, levend gezicht voor de camera staat (geen liveness-check). Een foto kan dus mogelijk werken. Hoe vaak de demo de verkeerde persoon herkent, is nog niet gemeten; dat gebeurt met het [testplan herkenningsnauwkeurigheid](#testplan-herkenningsnauwkeurigheid-demo) in hoofdstuk 15 (AC-83). |
 | CSP-melding `wasm-eval` | Bij het laden van de demo gezichtsherkenning toont de console één CSP-melding over `wasm-eval`. Die komt doordat de bibliotheek (TensorFlow.js in face-api) test of WebAssembly werkt. De melding is onschadelijk; de demo werkt gewoon. De CSP is hiervoor bewust niet versoepeld. |
 | Inbedden in een frame (clickjacking) | Tegen het inbedden van de pagina in een frame van een andere website helpen alleen `frame-ancestors` of `X-Frame-Options`. Die werken niet via een `<meta>`-tag en moeten als HTTP-header door de webserver worden meegestuurd. Met Live Server is dat niet geregeld. |
 
@@ -2761,7 +2762,60 @@ Niet-functionele eisen hebben geen MoSCoW-prioriteit. Voor een AC die alleen bij
 
 - Er zijn geen end-to-end-tests in een echte browser in de CI; de browsercontroles en acceptatietests gebeuren met de hand.
 - Chrome, Firefox, Safari en de iPad zijn niet getest; alleen Edge (en de unit tests in Node.js). Voor Chrome en Firefox wordt werking verwacht (NFR-03), maar dat is niet aangetoond.
-- De demo gezichtsherkenning is alleen deels getest: de regels (afstand tussen gezichten, grootste gezicht, twee keer bevestigen, toestemming, camera uitzetten) met nep-gegevens; het echte herkennen met een camera alleen met de hand, en hoe vaak de verkeerde persoon wordt herkend is niet gemeten.
+- De demo gezichtsherkenning is alleen deels getest: de regels (afstand tussen gezichten, grootste gezicht, twee keer bevestigen, toestemming, camera uitzetten) met nep-gegevens; het echte herkennen met een camera alleen met de hand, en hoe vaak de verkeerde persoon wordt herkend is nog niet gemeten (zie het testplan hieronder en AC-83).
+
+### Testplan herkenningsnauwkeurigheid (demo)
+
+De unit tests controleren de regels van de demo gezichtsherkenning met nep-gegevens, maar niet hoe vaak de demo met een echte camera de juiste persoon herkent. Dit testplan meet dat. Het model van face-api haalt volgens de makers ongeveer 99,4% nauwkeurigheid op de LFW-benchmark (paren van duidelijke foto's), maar dat getal zegt weinig over een tablet bij een consumptiepunt: daar zijn het licht, de camerahoek en het aantal ingestelde medewerkers anders, en de demo gebruikt de kleine, snelle modellen.
+
+**Wat wordt gemeten:**
+
+| Maat | Betekenis | Berekening |
+|---|---|---|
+| Verwisseling (FAR) | Iemand wordt herkend als een **andere** medewerker. Dit is de ernstigste fout: de registratie komt op de verkeerde naam. | aantal pogingen met een verkeerde naam ÷ alle pogingen |
+| Onbekende herkend | Iemand die **niet** is ingesteld, wordt toch als een medewerker herkend. | aantal keer herkend ÷ pogingen van niet-ingestelde deelnemers |
+| Niet herkend (FRR) | Een ingestelde medewerker wordt binnen 20 seconden (`scanTimeoutMs` in `config.js`) niet herkend en krijgt "Niet herkend". Dit is lastig, maar niet gevaarlijk: de medewerker kiest de naam in de lijst. | aantal keer niet herkend ÷ pogingen van ingestelde deelnemers |
+
+**Voorwaarden vóór de test:**
+
+- De test is besproken met de stagebegeleider en de privacyfunctionaris van TVB (een gezicht is een biometrisch gegeven, zie hoofdstuk 13).
+- Iedere deelnemer doet vrijwillig mee en geeft vooraf schriftelijk toestemming. Weigeren heeft geen gevolgen.
+- Er worden geen foto's of video's gemaakt. De demo bewaart een gezicht alleen als 128 getallen in het geheugen; na herladen of sluiten is alles weg. Daarom gebeurt de hele test in één sessie, zonder de pagina te herladen.
+- In het testverslag staan geen namen, alleen codes (D01, D02, …). De lijst die codes aan namen koppelt, wordt na de test vernietigd.
+- De test gebruikt de demogegevens met fictieve medewerkers; iedere deelnemer krijgt één fictieve medewerker toegewezen.
+
+**Deelnemers:**
+
+- **Groep A (ingesteld):** minimaal 10 deelnemers. Bij iedere deelnemer wordt het gezicht ingesteld bij een eigen fictieve medewerker. Liefst zitten er mensen tussen die op elkaar lijken (bijvoorbeeld familie of dezelfde leeftijd, haarkleur en bril), omdat de kans op verwisseling daar het grootst is.
+- **Groep B (niet ingesteld):** minimaal 5 deelnemers van wie geen gezicht is ingesteld.
+
+**Uitvoering:**
+
+1. Zet de tablet op de plek waar hij bij het consumptiepunt zou staan, met het normale licht.
+2. Stel bij alle deelnemers van groep A het gezicht in (gezichtsherkenning instellen in het eigen productvenster, met het vinkje voor toestemming).
+3. Iedere deelnemer van groep A doet 10 keer "Herken mij met de camera": 5 keer gewoon recht voor de camera, en 5 keer met een verschil (bril op of af, schuin van opzij, meer of minder licht, pet of capuchon).
+4. Iedere deelnemer van groep B doet 5 keer "Herken mij met de camera".
+5. Doe met toestemming van één deelnemer uit groep A ook 3 pogingen met een foto van die deelnemer op een telefoon, om te kijken of een foto werkt (de demo heeft geen controle op een levend gezicht).
+6. Noteer bij iedere poging: code van de deelnemer, groep, variant (gewoon, bril, schuin, licht, foto) en uitkomst: **juist**, **verkeerde naam** (welke code), **niet herkend** of **onbekende herkend**.
+7. Zet na afloop "Gezichtsherkenning uitzetten" bij iedereen en herlaad de pagina, zodat er niets meer in het geheugen staat.
+
+Met 10 deelnemers in groep A zijn dat 100 pogingen, en met 5 in groep B 25 pogingen.
+
+**Hoe de uitkomst te lezen:** een kleine test geeft geen precies percentage. Komt er bij 100 pogingen geen enkele verwisseling voor, dan is de werkelijke kans op een verwisseling met 95% zekerheid kleiner dan ongeveer 3% (de vuistregel "3 gedeeld door het aantal pogingen"). Voor een kleinere foutmarge zijn meer pogingen nodig, bijvoorbeeld 300 voor ongeveer 1%.
+
+**Streefwaarden** (voorstel; vóór de test af te spreken met de begeleider):
+
+| Maat | Streefwaarde in deze test |
+|---|---|
+| Verwisseling | 0 keer in alle pogingen van groep A |
+| Onbekende herkend | 0 keer in alle pogingen van groep B |
+| Niet herkend | hooguit 10% van de pogingen van groep A |
+
+**Wat er met de uitkomst gebeurt:**
+
+- De uitkomsten komen in het testverslag hieronder (AC-83) en de gemeten percentages in hoofdstuk 13, bij het risico "Geen echte herkenning van een levend gezicht".
+- Komt er een verwisseling of een herkende onbekende voor, dan wordt de grens `matchThreshold` in `config.js` strenger gemaakt (bijvoorbeeld van 0,5 naar 0,45) en wordt de test herhaald. Een strengere grens geeft wel vaker "Niet herkend".
+- Werkt de foto, dan bevestigt dat het risico uit hoofdstuk 13; voor echt gebruik is dan in ieder geval een controle op een levend gezicht nodig. Het advies voor de echte toepassing blijft een QR-code of medewerkerspas (hoofdstuk 16).
 
 ### Acceptatiecriteria
 
@@ -2851,6 +2905,7 @@ De kolom "FR/NFR" noemt alleen de eisen uit hoofdstuk 4 (FR) of 5 (NFR) die met 
 | AC-80 | FR-32 | Op de medewerkerkaart van Lotte van Dijk tikken | Het productvenster van Lotte opent met de producten van het eigen consumptiepunt (zie W07). |
 | AC-81 | NFR-01 | Een nieuwe gebruiker die de website niet kent, krijgt zonder uitleg de opdracht "registreer één Blikje voor Lotte van Dijk". De beginpagina staat open en de naam staat op het scherm. Een tweede persoon meet met een stopwatch de tijd vanaf de eerste tik tot de melding verschijnt, en telt het aantal tikken. Herhaal met minstens drie gebruikers. | Iedere gebruiker registreert het product in hooguit 5 seconden en met hooguit 3 tikken (naam, `+`, `Registreren`). |
 | AC-82 | FR-60 | De website in twee tabbladen openen en in tabblad B als beheerder inloggen; in tabblad A als beheerder `Alle gegevens wissen` kiezen en twee keer OK geven | In tabblad B sluit het beheervenster (de beheerder is uitgelogd) en verschijnt "De gegevens zijn in een ander venster gewist."; daarna tonen beide tabbladen dezelfde demogegevens (8 medewerkers, geen registraties). |
+| AC-83 | FR-51 | Het [testplan herkenningsnauwkeurigheid](#testplan-herkenningsnauwkeurigheid-demo) uitvoeren met minimaal 10 ingestelde en 5 niet-ingestelde deelnemers (samen minimaal 125 pogingen) | Geen enkele verwisseling en geen enkele herkende onbekende; een ingestelde deelnemer wordt in minstens 90% van de pogingen binnen 20 seconden herkend. De gemeten percentages staan in het testverslag. |
 
 ### Testverslag acceptatietests
 
@@ -2947,6 +3002,7 @@ Zo wordt het verslag ingevuld:
 | **AC-80** | FR-32 | nog uit te voeren | – | – |
 | **AC-81** | NFR-01 | nog uit te voeren | – | – |
 | **AC-82** | FR-60 | nog uit te voeren | – | – |
+| **AC-83** | FR-51 | nog uit te voeren | – | – |
 
 ### Unit tests
 
@@ -3153,7 +3209,7 @@ Deze matrix laat per functionele eis (hoofdstuk 4) zien in welke use case (hoofd
 | FR-45 | Could | UC-06 | AC-34 | `theme.test.js` |
 | FR-46 | Could | UC-06 | AC-33 | `theme.test.js`, `regressie.test.js` |
 | FR-49 | Could | UC-02 | AC-41 | `welcome-face.test.js`, `regressie.test.js` |
-| FR-51 | Won't (productie); alleen als demo | UC-03, UC-04, UC-05 | AC-43, AC-44 | `welcome-face.test.js`, `controller.test.js`, `regressie.test.js`, `controle4-ui.test.js`, `controller-robuustheid.test.js` |
+| FR-51 | Won't (productie); alleen als demo | UC-03, UC-04, UC-05 | AC-43, AC-44, AC-83 | `welcome-face.test.js`, `controller.test.js`, `regressie.test.js`, `controle4-ui.test.js`, `controller-robuustheid.test.js` |
 | FR-52 | Must | UC-17 | AC-45 | `opslag-model-export.test.js`, `controller-robuustheid.test.js`, `gegevens-en-tabbladen.test.js` |
 | FR-53 | Should | UC-18 | AC-47 | `controller-robuustheid.test.js` |
 | FR-59 | Must | UC-10, UC-11, UC-12, UC-13 | AC-38, AC-67, AC-77 | `controller.test.js`, `regressie.test.js`, `controle4-ui.test.js`, `opslag-model-export.test.js`, `gegevens-en-tabbladen.test.js`, `to-controle.test.js` |
