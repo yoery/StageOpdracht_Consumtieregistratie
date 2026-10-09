@@ -229,10 +229,10 @@ for (const line of lines) {
   if (h && !bookmarks.has(slug(h[2]))) bookmarks.set(slug(h[2]), `k${bookmarks.size + 1}`);
 }
 
-// Gegevens voor het voorblad: de regels **Versie:** en **Datum:** bovenaan het document.
+// Gegevens voor het voorblad: de regels **Auteur:**, **Versie:** en **Datum:** bovenaan het document.
 const meta = {};
 for (const line of lines.slice(0, 15)) {
-  const m = line.match(/^\*\*(Versie|Datum):\*\*\s*(.+)$/);
+  const m = line.match(/^\*\*(Auteur|Versie|Datum):\*\*\s*(.+)$/);
   if (m) meta[m[1]] = m[2].trim();
 }
 
@@ -242,7 +242,7 @@ let skipSection = false; // de Markdown-inhoudsopgave vervalt; Word maakt er een
 let introOpen = false;
 for (let i = 0; i < lines.length; ) {
   const line = lines[i];
-  if (/^# /.test(line) || /^\*\*(Versie|Datum):\*\*/.test(line) || /^<!--/.test(line)) { i++; continue; }
+  if (/^# /.test(line) || /^\*\*(Auteur|Versie|Datum):\*\*/.test(line) || /^<!--/.test(line)) { i++; continue; }
 
   const h = line.match(/^(#{2,4}) (.+)$/);
   if (h) {
@@ -312,9 +312,13 @@ cover = cover.replace("<w:t>TEKST</w:t>", `<w:t>${esc(coverTitle.toUpperCase())}
   .replace(/<w:t xml:space="preserve">SUBTITEL <\/w:t>/, `<w:t xml:space="preserve">${esc(coverSubtitle.toUpperCase())}</w:t>`);
 // Na de ondertitel staan in het sjabloon alleen lege alinea's die het voorblad opvullen. Die
 // vallen weg (het logo staat in de koptekst van de eerste pagina); anders kunnen ze doorlopen
-// naar een lege tweede pagina. Daarna versie en datum (wit, kleiner), als het document die noemt.
+// naar een lege tweede pagina. Daarna de auteur (wit, vet) en versie en datum (wit, kleiner),
+// als het document die bovenaan noemt.
 const subtitleEnd = cover.indexOf("</w:p>", cover.indexOf(esc(coverSubtitle.toUpperCase()))) + "</w:p>".length;
 cover = cover.slice(0, subtitleEnd);
+if (meta.Auteur) {
+  cover += `<w:p><w:pPr><w:spacing w:before="120" w:line="360" w:lineRule="auto"/></w:pPr>${run(meta.Auteur, { color: "FFFFFF", sz: 28, b: true })}</w:p>`;
+}
 if (meta.Versie || meta.Datum) {
   const metaText = [meta.Versie && `Versie ${meta.Versie}`, meta.Datum].filter(Boolean).join("  ·  ");
   cover += `<w:p><w:pPr><w:spacing w:before="120" w:line="360" w:lineRule="auto"/></w:pPr>${run(metaText, { color: "FFFFFF", sz: 24 })}</w:p>`;
