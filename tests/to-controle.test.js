@@ -21,7 +21,7 @@ import fs from "node:fs";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import {
   createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee, asAdmin

@@ -9,7 +9,7 @@ import fs from "node:fs";
 
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { createModel, createDataStore, createRecordingView, registration, asAdmin } from "./helpers.js";
 
 // Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een

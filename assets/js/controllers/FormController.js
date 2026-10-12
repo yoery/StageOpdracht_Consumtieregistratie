@@ -1,8 +1,8 @@
-import { BadgeReader } from "./BadgeReader.js";
-import { createId } from "./ids.js";
+import { BadgeReader } from "../BadgeReader.js";
+import { createId } from "../ids.js";
 // Hoogste productprijs (1000 euro). Moet gelijk zijn aan MAX_PRICE in DataStore.js; de constante
 // staat in het model, zodat het model en het productformulier dezelfde grens gebruiken.
-import { MAX_PRICE } from "./RegistrationModel.js";
+import { MAX_PRICE } from "../RegistrationModel.js";
 
 /**
  * FormController — de vier beheerformulieren: medewerker, product, bedrijf en consumptiepunt

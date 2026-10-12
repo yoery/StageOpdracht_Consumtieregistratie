@@ -1,4 +1,4 @@
-import { cssAttributeValue } from "./RegistrationView.js";
+import { cssAttributeValue } from "../RegistrationView.js";
 
 /**
  * CorrectionController — correcties door de beheerder ("Medewerker corrigeren" in het tabblad

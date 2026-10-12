@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { DataStore } from "../assets/js/DataStore.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 

@@ -8,7 +8,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { createModel, registration } from "./helpers.js";
 
-// Nep-view die alles negeert (zie ook view-app.test.js).
+// Nep-view die alles negeert (zie ook view-en-controller.test.js).
 const createFakeView = () => new Proxy({ toasts: [], $: () => ({ classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, focus() {}, setAttribute() {} }) }, {
   get: (object, property) => (property in object ? object[property] : () => {})
 });

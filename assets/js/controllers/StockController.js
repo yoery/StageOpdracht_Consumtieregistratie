@@ -1,4 +1,4 @@
-import { cssAttributeValue } from "./RegistrationView.js";
+import { cssAttributeValue } from "../RegistrationView.js";
 
 // Hoogste aantal dat de beheerder bij voorraad, minimum of levering mag invullen. Zo komt een
 // tikfout als "240000" in plaats van "24" niet ongemerkt in de voorraad.

@@ -18,15 +18,15 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
 | `assets/js/RegistrationApp.js` | Controller: maakt de acht onderdelen hieronder en koppelt ze, slaat op via `persist`, neemt wijzigingen uit een ander tabblad over, werkt de datum bij na middernacht en koppelt alle klikken en toetsen. Alle methodes van de onderdelen zijn ook via deze class te gebruiken |
-| `assets/js/ModalManager.js` | Class `ModalManager` (onderdeel van de controller): vensters openen en sluiten, de focus terugzetten, Escape en Tab binnen een venster |
-| `assets/js/EmployeeController.js` | Class `EmployeeController` (onderdeel van de controller): zoeken en bedrijfsfilter op de beginpagina, het productvenster en registreren |
-| `assets/js/BadgeController.js` | Class `BadgeController` (onderdeel van de controller): herkennen met de pas, koppelt `BadgeReader` aan de app |
-| `assets/js/FaceController.js` | Class `FaceController` (onderdeel van de controller): het cameravenster van de demo gezichtsherkenning |
-| `assets/js/AdminController.js` | Class `AdminController` (onderdeel van de controller): inloggen, dashboard en tabbladen, logboek, export, `Alle gegevens wissen`, (de)activeren en verwijderen, en `requireAdmin` |
-| `assets/js/CorrectionController.js` | Class `CorrectionController` (onderdeel van de controller): correcties `+` en `−` en het venster `Registratie verwijderen` |
-| `assets/js/StockController.js` | Class `StockController` (onderdeel van de controller): het tabblad Voorraad (leveringen, tellingen en minimum) |
-| `assets/js/FormController.js` | Class `FormController` (onderdeel van de controller): de formulieren voor medewerker, product, bedrijf en consumptiepunt, met de controle van de invoer |
-| `assets/js/csvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
+| `assets/js/controllers/ModalManager.js` | Class `ModalManager` (onderdeel van de controller): vensters openen en sluiten, de focus terugzetten, Escape en Tab binnen een venster |
+| `assets/js/controllers/EmployeeController.js` | Class `EmployeeController` (onderdeel van de controller): zoeken en bedrijfsfilter op de beginpagina, het productvenster en registreren |
+| `assets/js/controllers/BadgeController.js` | Class `BadgeController` (onderdeel van de controller): herkennen met de pas, koppelt `BadgeReader` aan de app |
+| `assets/js/controllers/FaceController.js` | Class `FaceController` (onderdeel van de controller): het cameravenster van de demo gezichtsherkenning |
+| `assets/js/controllers/AdminController.js` | Class `AdminController` (onderdeel van de controller): inloggen, dashboard en tabbladen, logboek, export, `Alle gegevens wissen`, (de)activeren en verwijderen, en `requireAdmin` |
+| `assets/js/controllers/CorrectionController.js` | Class `CorrectionController` (onderdeel van de controller): correcties `+` en `−` en het venster `Registratie verwijderen` |
+| `assets/js/controllers/StockController.js` | Class `StockController` (onderdeel van de controller): het tabblad Voorraad (leveringen, tellingen en minimum) |
+| `assets/js/controllers/FormController.js` | Class `FormController` (onderdeel van de controller): de formulieren voor medewerker, product, bedrijf en consumptiepunt, met de controle van de invoer |
+| `assets/js/CsvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
 | `assets/js/ThemeManager.js` | Class `ThemeManager`: licht en donker thema (Systeem, Auto of zelf kiezen met de slider) |
 | `assets/js/icons.js` | De SVG-iconen van de website, met de hulpfunctie `icon(naam)` |
 | `assets/js/ids.js` | De functie `createId()` voor unieke id's; werkt ook als de website via een netwerkadres zonder https wordt geopend |
@@ -47,7 +47,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tests/gegevens-en-tabbladen.test.js` | Tests voor de prijsgrens van 1000 euro, de focus na `Registreren`, "niets gewijzigd" bij opslaan, en verouderde formulieren of een gewiste opslag na een wijziging in een ander tabblad. Gebruikt de strenge nep-view (`createStrictView` in `helpers.js`) |
 | `tests/werkgever-en-correctiedatum.test.js` | Tests voor het werkgevernummer per registratie en de datum bij een correctie `+` |
 | `tests/to-controle.test.js` | Regressietests voor de TO-controle: "1 medewerker"/"2 medewerkers", bevestiging bij product verwijderen, de melding bij een verwijderde medewerker (correctie `+`), alleen een inactieve medewerker zonder registraties verwijderen, uniek werkgevernummer, dubbele id's en datums in de toekomst bij het laden, de apostrof in de CSV, `lastRegistration` en `pointId`, het SQL-schema (`counted_at`, geen rol `manager`), de opslagknoppen bij wijzigen, de filters op een smal scherm en tests voor FR-01, FR-02, FR-04, FR-10 en FR-29 (actieve medewerkers, zoeken op naam, de `−` in het productvenster, alle registraties voor de beheerder, geen bedragen of aantallen op de publieke pagina). Verder: "1 product" in de correctielijst, een klik op de medewerkerkaart (FR-32) en het totaal op de knop `Registreren` (FR-47) |
-| `tests/pas.test.js` | Tests voor herkennen met de pas: wat de `BadgeReader` als scan ziet (Enter, Tab of stilte na de laatste toets; niet bij gewoon typen of een te korte code), het normaliseren van het pasnummer, het productvenster of de melding na een scan, geen herkenning als er een venster open is (wel wordt de Enter van de scan tegengehouden), het zoekveld na een scan, de pas koppelen in het medewerkersformulier (uniek, alleen letters en cijfers, leeg = geen pas), de controle en migratie van `badgeId` in `DataStore`, en dat het pasnummer niet in de CSV-export of het logboek komt |
+| `tests/pasjeslezer.test.js` | Tests voor herkennen met de pas: wat de `BadgeReader` als scan ziet (Enter, Tab of stilte na de laatste toets; niet bij gewoon typen of een te korte code), het normaliseren van het pasnummer, het productvenster of de melding na een scan, geen herkenning als er een venster open is (wel wordt de Enter van de scan tegengehouden), het zoekveld na een scan, de pas koppelen in het medewerkersformulier (uniek, alleen letters en cijfers, leeg = geen pas), de controle en migratie van `badgeId` in `DataStore`, en dat het pasnummer niet in de CSV-export of het logboek komt |
 | `tests/beveiligingsscan.test.js` | Regressietests voor de beveiligingsscan: beheeracties doen niets zonder ingelogde beheerder, product-id's als `__proto__`, `constructor` en `toString` in de voorraadlijst, de camera die uitgaat na de tijdslimiet, de strengere controle van codes en tijdstippen bij het laden, de Node.js-versie van de CI, het alleen-toevoegen-logboek in het SQL-schema en de licentie van TensorFlow.js |
 | `.gitattributes` | Zorgt dat Git de bestanden in `assets/vendor/` en `assets/fonts/` niet aanpast (geen omzetting van regeleinden), zodat de controlegetallen blijven kloppen |
 | `tests/e2e/` | Browsertests (end-to-end): `app.e2e.test.js` test de echte pagina in headless Edge of Chrome (laden zonder fouten, zoeken, registreren, Escape en focus, inloggen, thema, pas koppelen en herkennen, CSV-export), `browser.js` bevat de webserver en de besturing van de browser via het Chrome DevTools Protocol. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
@@ -645,7 +645,7 @@ De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige p
 
 `renderAdminEmployees` toont alle medewerkers in het beheertabblad.
 
-### CSV-export (class `CsvExport` in `csvExport.js`)
+### CSV-export (class `CsvExport` in `CsvExport.js`)
 
 De export heeft geen externe bibliotheek nodig. Na een klik op `CSV exporteren` roept `AdminController.exportCsv` (alleen als een beheerder is ingelogd) de methode `CsvExport.download` aan:
 

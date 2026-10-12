@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { createModel, addEmployee, registration } from "./helpers.js";
 
 // Model met registraties op vaste datums (lokale tijd).

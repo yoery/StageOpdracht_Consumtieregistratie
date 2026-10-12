@@ -8,7 +8,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { ThemeManager } from "../assets/js/ThemeManager.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import { DataStore } from "../assets/js/DataStore.js";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";

@@ -12,7 +12,7 @@ import { BADGE_READER } from "../assets/js/config.js";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { createModel, addEmployee, createRecordingView, createFakeElement, createDataStore, registration, asAdmin } from "./helpers.js";
 
 const SETTINGS = { enabled: true, minLength: 6, maxKeyIntervalMs: 40, endDelayMs: 120 };

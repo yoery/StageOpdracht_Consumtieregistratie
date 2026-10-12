@@ -26,15 +26,16 @@ assets/
     RegistrationModel.js    # Gegevens en regels
     RegistrationView.js     # Weergave (HTML)
     RegistrationApp.js      # Controller: maakt en koppelt de onderdelen hieronder, opslaan (persist), tabbladen synchroniseren
-    ModalManager.js         # Controller-onderdeel: vensters openen en sluiten, focus
-    EmployeeController.js   # Controller-onderdeel: beginpagina, productvenster en registreren
-    BadgeController.js      # Controller-onderdeel: herkennen met de pas (koppelt BadgeReader aan de app)
-    FaceController.js       # Controller-onderdeel: cameravenster van de demo gezichtsherkenning
-    AdminController.js      # Controller-onderdeel: inloggen, dashboard, logboek, export, wissen, verwijderen
-    CorrectionController.js # Controller-onderdeel: correcties + en − (registratie verwijderen)
-    StockController.js      # Controller-onderdeel: voorraad, leveringen en minimum
-    FormController.js       # Controller-onderdeel: formulieren medewerker, product, bedrijf en consumptiepunt
-    csvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
+    controllers/            # Onderdelen van de controller (RegistrationApp maakt ze aan en geeft zichzelf mee)
+      ModalManager.js       # vensters openen en sluiten, focus
+      EmployeeController.js # beginpagina, productvenster en registreren
+      BadgeController.js    # herkennen met de pas (koppelt BadgeReader aan de app)
+      FaceController.js     # cameravenster van de demo gezichtsherkenning
+      AdminController.js    # inloggen, dashboard, logboek, export, wissen, verwijderen
+      CorrectionController.js # correcties + en − (registratie verwijderen)
+      StockController.js    # voorraad, leveringen en minimum
+      FormController.js     # formulieren medewerker, product, bedrijf en consumptiepunt
+    CsvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
     ThemeManager.js         # Class ThemeManager: licht/donker thema
     icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
     ids.js                  # createId(): unieke id's, ook zonder https
@@ -48,14 +49,13 @@ docs/
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
   DATABASE-SCHEMA.sql       # PostgreSQL-schema voor productie
   *.docx, *.pdf             # Word- en PDF-versies van het TO en de documentatie in de TVB-huisstijl
-  tvbsjabloon.docx          # TVB-sjabloon voor documenten (voorblad, stijlen), basis voor de Word-versies
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
   e2e/                      # 9 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 547 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pas, beveiligingsscan)
+  *.test.js                 # 547 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan)
 tools/
-  md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van docs/tvbsjabloon.docx (voorbeeld bovenin)
+  md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)

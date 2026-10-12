@@ -1,15 +1,15 @@
-import { CsvExport } from "./csvExport.js";
+import { CsvExport } from "./CsvExport.js";
 import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
 import { BadgeReader } from "./BadgeReader.js";
 import { cssAttributeValue } from "./RegistrationView.js";
-import { ModalManager } from "./ModalManager.js";
-import { EmployeeController } from "./EmployeeController.js";
-import { BadgeController } from "./BadgeController.js";
-import { FaceController } from "./FaceController.js";
-import { AdminController } from "./AdminController.js";
-import { CorrectionController } from "./CorrectionController.js";
-import { StockController } from "./StockController.js";
-import { FormController } from "./FormController.js";
+import { ModalManager } from "./controllers/ModalManager.js";
+import { EmployeeController } from "./controllers/EmployeeController.js";
+import { BadgeController } from "./controllers/BadgeController.js";
+import { FaceController } from "./controllers/FaceController.js";
+import { AdminController } from "./controllers/AdminController.js";
+import { CorrectionController } from "./controllers/CorrectionController.js";
+import { StockController } from "./controllers/StockController.js";
+import { FormController } from "./controllers/FormController.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view

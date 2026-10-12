@@ -1,4 +1,4 @@
-import { cssAttributeValue } from "./RegistrationView.js";
+import { cssAttributeValue } from "../RegistrationView.js";
 
 /**
  * EmployeeController — wat een medewerker op de beginpagina doet: zoeken, filteren op bedrijf,

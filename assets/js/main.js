@@ -24,7 +24,7 @@ import { DataStore } from "./DataStore.js";
 import { RegistrationModel } from "./RegistrationModel.js";
 import { RegistrationView } from "./RegistrationView.js";
 import { RegistrationApp } from "./RegistrationApp.js";
-import { CsvExport } from "./csvExport.js";
+import { CsvExport } from "./CsvExport.js";
 import { ThemeManager } from "./ThemeManager.js";
 import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
 import { BadgeReader } from "./BadgeReader.js";
