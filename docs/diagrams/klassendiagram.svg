@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="1570" viewBox="0 0 1960 1570" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="2440" viewBox="0 0 1960 2440" role="img" aria-labelledby="title desc">
   <title id="title">Klassendiagram JavaScript</title>
-  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de modules main.js, config.js, ids.js en icons.js.</desc>
+  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de acht onderdelen van de controller (ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController en FormController) en de modules main.js, config.js, ids.js en icons.js.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -19,7 +19,7 @@
       <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
     </marker>
   </defs>
-  <rect width="1960" height="1570" fill="#ffffff"/>
+  <rect width="1960" height="2440" fill="#ffffff"/>
 <text x="40" y="50" font-size="28" class="kop">Klassendiagram – JavaScript van de demo</text>
 <text x="40" y="78" font-size="15" class="sub">Classes met de belangrijkste attributen en methodes (selectie) en hun onderlinge relaties</text>
 <g>
@@ -72,7 +72,7 @@
 <text x="432" y="611" font-size="13">+ escapeHtml(value): string</text>
 </g>
 <g>
-<rect x="940" y="250" width="480" height="849" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<rect x="940" y="250" width="480" height="602" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M946,250 H1414 A6,6 0 0 1 1420,256 V292 H940 V256 A6,6 0 0 1 946,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
 <text x="1180" y="278" text-anchor="middle" font-size="17" class="kop">RegistrationApp</text>
 <text x="952" y="312" font-size="13">+ model: RegistrationModel</text>
@@ -83,40 +83,27 @@
 <text x="952" y="407" font-size="13">+ adminLoggedIn: boolean</text>
 <text x="952" y="426" font-size="13">+ selectedEmployeeId: string | null</text>
 <text x="952" y="445" font-size="13">+ selectedProducts: object</text>
-<text x="952" y="464" font-size="13">+ auditLogLimit: number</text>
+<text x="952" y="464" font-size="13">+ recognizedBy: string | null</text>
 <text x="952" y="483" font-size="13">+ currentDay: string</text>
-<text x="952" y="502" font-size="13">+ editingCopies: Map</text>
-<text x="952" y="521" font-size="13">+ recognizedBy: string | null</text>
-<path d="M940,534 L1420,534" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="952" y="554" font-size="13">+ initialize()</text>
-<text x="952" y="573" font-size="13">+ registerEventListeners()</text>
-<text x="952" y="592" font-size="13">+ handleStorageChange(event)</text>
-<text x="952" y="611" font-size="13">+ refreshIfNewDay(now)</text>
-<text x="952" y="630" font-size="13">+ persist(change, audit): boolean</text>
-<text x="952" y="649" font-size="13">+ openEmployeeProducts(employeeId, opties)</text>
-<text x="952" y="668" font-size="13">+ repeatLastSelection()</text>
-<text x="952" y="687" font-size="13">+ registerSelectedProducts()</text>
-<text x="952" y="706" font-size="13">+ login(event)</text>
-<text x="952" y="725" font-size="13">+ logout()</text>
-<text x="952" y="744" font-size="13">+ readCorrectionDate(now)</text>
-<text x="952" y="763" font-size="13">+ addCorrection(employeeId, productId)</text>
-<text x="952" y="782" font-size="13">+ removeCorrection(employeeId, productId)</text>
-<text x="952" y="801" font-size="13">+ saveEmployee(event)</text>
-<text x="952" y="820" font-size="13">+ validateBadgeField(badgeId, editingId)</text>
-<text x="952" y="839" font-size="13">+ removeEmployee(employeeId)</text>
-<text x="952" y="858" font-size="13">+ saveProduct(event)</text>
-<text x="952" y="877" font-size="13">+ saveCompany(event)</text>
-<text x="952" y="896" font-size="13">+ savePoint(event)</text>
-<text x="952" y="915" font-size="13">+ saveStockField(input)</text>
-<text x="952" y="934" font-size="13">+ bookDelivery(productId)</text>
-<text x="952" y="953" font-size="13">+ loadMoreAudit()</text>
-<text x="952" y="972" font-size="13">+ exportCsv()</text>
-<text x="952" y="991" font-size="13">+ wipeAllData()</text>
-<text x="952" y="1010" font-size="13">+ openFaceModal(mode, employeeId)</text>
-<text x="952" y="1029" font-size="13">+ handleBadgeKey(event)</text>
-<text x="952" y="1048" font-size="13">+ rememberSearchBeforeScan()</text>
-<text x="952" y="1067" font-size="13">+ restoreSearchAfterScan()</text>
-<text x="952" y="1086" font-size="13">+ recognizeBadge(code)</text>
+<text x="952" y="502" font-size="13">+ modals: ModalManager</text>
+<text x="952" y="521" font-size="13">+ employeePage: EmployeeController</text>
+<text x="952" y="540" font-size="13">+ badge: BadgeController</text>
+<text x="952" y="559" font-size="13">+ face: FaceController</text>
+<text x="952" y="578" font-size="13">+ admin: AdminController</text>
+<text x="952" y="597" font-size="13">+ corrections: CorrectionController</text>
+<text x="952" y="616" font-size="13">+ stock: StockController</text>
+<text x="952" y="635" font-size="13">+ forms: FormController</text>
+<path d="M940,648 L1420,648" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="952" y="668" font-size="13">+ initialize()</text>
+<text x="952" y="687" font-size="13">+ registerEventListeners()</text>
+<text x="952" y="706" font-size="13">+ handleClick(event)</text>
+<text x="952" y="725" font-size="13">+ handleStorageChange(event)</text>
+<text x="952" y="744" font-size="13">+ handleStorageCleared(opties)</text>
+<text x="952" y="763" font-size="13">+ refreshIfNewDay(now)</text>
+<text x="952" y="782" font-size="13">+ persist(change, audit): boolean</text>
+<text x="952" y="801" font-size="13">+ employeeLabel(employeeId): string</text>
+<text x="952" y="820" font-size="13">+ pointLabel(pointId): string</text>
+<text x="952" y="839" font-size="13">+ … doorgeefmethodes (DELEGATES)</text>
 </g>
 <g>
 <rect x="1520" y="250" width="400" height="374" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
@@ -221,16 +208,153 @@
 <text x="1532" y="1081" font-size="13">+ reset()</text>
 </g>
 <g>
-<rect x="1520" y="1130" width="400" height="184" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1526,1130 H1914 A6,6 0 0 1 1920,1136 V1172 H1520 V1136 A6,6 0 0 1 1526,1130 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1720" y="1158" text-anchor="middle" font-size="17" class="kop">CsvExport</text>
-<text x="1532" y="1192" font-size="13">+ model: RegistrationModel</text>
-<path d="M1520,1205 L1920,1205" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1532" y="1225" font-size="13">+ buildRows(selectedEmployee, selectedMonth)</text>
-<text x="1532" y="1244" font-size="13">+ toCsv(rows): string</text>
-<text x="1532" y="1263" font-size="13">+ escapeField(value): string</text>
-<text x="1532" y="1282" font-size="13">+ fileName(selectedMonth): string</text>
-<text x="1532" y="1301" font-size="13">+ download(selectedEmployee, selectedMonth)</text>
+<rect x="940" y="900" width="400" height="184" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M946,900 H1334 A6,6 0 0 1 1340,906 V942 H940 V906 A6,6 0 0 1 946,900 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1140" y="928" text-anchor="middle" font-size="17" class="kop">CsvExport</text>
+<text x="952" y="962" font-size="13">+ model: RegistrationModel</text>
+<path d="M940,975 L1340,975" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="952" y="995" font-size="13">+ buildRows(selectedEmployee, selectedMonth)</text>
+<text x="952" y="1014" font-size="13">+ toCsv(rows): string</text>
+<text x="952" y="1033" font-size="13">+ escapeField(value): string</text>
+<text x="952" y="1052" font-size="13">+ fileName(selectedMonth): string</text>
+<text x="952" y="1071" font-size="13">+ download(selectedEmployee, selectedMonth)</text>
+</g>
+<!-- Onderdelen van de controller -->
+<g>
+<rect x="40" y="1580" width="455" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,1580 H489 A6,6 0 0 1 495,1586 V1622 H40 V1586 A6,6 0 0 1 46,1580 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="267.5" y="1608" text-anchor="middle" font-size="17" class="kop">ModalManager</text>
+<text x="52" y="1642" font-size="13">+ app: RegistrationApp</text>
+<text x="52" y="1661" font-size="13">+ modalCloseActions: Map</text>
+<text x="52" y="1680" font-size="13">+ modalOpeners: Map</text>
+<path d="M40,1693 L495,1693" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="1713" font-size="13">+ show(selector)</text>
+<text x="52" y="1732" font-size="13">+ hide(selector)</text>
+<text x="52" y="1751" font-size="13">+ openModal(modalSelector)</text>
+<text x="52" y="1770" font-size="13">+ closeModal(modalSelector)</text>
+<text x="52" y="1789" font-size="13">+ registerModalClose(modal, buttons, action)</text>
+<text x="52" y="1808" font-size="13">+ topModal(): Element | null</text>
+<text x="52" y="1827" font-size="13">+ keepFocusInModal(event, modal)</text>
+</g>
+<g>
+<rect x="515" y="1580" width="455" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M521,1580 H964 A6,6 0 0 1 970,1586 V1622 H515 V1586 A6,6 0 0 1 521,1580 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="742.5" y="1608" text-anchor="middle" font-size="17" class="kop">EmployeeController</text>
+<text x="527" y="1642" font-size="13">+ app: RegistrationApp</text>
+<path d="M515,1655 L970,1655" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="527" y="1675" font-size="13">+ clearSearch()</text>
+<text x="527" y="1694" font-size="13">+ onCompanyFilterInput()</text>
+<text x="527" y="1713" font-size="13">+ openEmployeeProducts(employeeId, opties)</text>
+<text x="527" y="1732" font-size="13">+ renderProductWindow()</text>
+<text x="527" y="1751" font-size="13">+ incrementProduct(productId)</text>
+<text x="527" y="1770" font-size="13">+ decrementProduct(productId)</text>
+<text x="527" y="1789" font-size="13">+ repeatLastSelection()</text>
+<text x="527" y="1808" font-size="13">+ closeEmployeeProducts()</text>
+<text x="527" y="1827" font-size="13">+ registerSelectedProducts()</text>
+</g>
+<g>
+<rect x="990" y="1580" width="455" height="184" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M996,1580 H1439 A6,6 0 0 1 1445,1586 V1622 H990 V1586 A6,6 0 0 1 996,1580 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1217.5" y="1608" text-anchor="middle" font-size="17" class="kop">BadgeController</text>
+<text x="1002" y="1642" font-size="13">+ app: RegistrationApp</text>
+<text x="1002" y="1661" font-size="13">+ searchBeforeScan: string | null</text>
+<path d="M990,1674 L1445,1674" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1002" y="1694" font-size="13">+ handleBadgeKey(event)</text>
+<text x="1002" y="1713" font-size="13">+ rememberSearchBeforeScan()</text>
+<text x="1002" y="1732" font-size="13">+ restoreSearchAfterScan()</text>
+<text x="1002" y="1751" font-size="13">+ recognizeBadge(code)</text>
+</g>
+<g>
+<rect x="1465" y="1580" width="455" height="355" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1471,1580 H1914 A6,6 0 0 1 1920,1586 V1622 H1465 V1586 A6,6 0 0 1 1471,1580 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1692.5" y="1608" text-anchor="middle" font-size="17" class="kop">FaceController</text>
+<text x="1477" y="1642" font-size="13">+ app: RegistrationApp</text>
+<text x="1477" y="1661" font-size="13">+ faceSession: number</text>
+<text x="1477" y="1680" font-size="13">+ faceMode: string | null</text>
+<text x="1477" y="1699" font-size="13">+ cameraReady: boolean</text>
+<text x="1477" y="1718" font-size="13">+ captureSession: number | null</text>
+<text x="1477" y="1737" font-size="13">+ enrollTimer: number | null</text>
+<text x="1477" y="1756" font-size="13">«get» capturing: boolean</text>
+<path d="M1465,1769 L1920,1769" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1477" y="1789" font-size="13">+ startFaceRecognition()</text>
+<text x="1477" y="1808" font-size="13">+ startFaceEnrollment()</text>
+<text x="1477" y="1827" font-size="13">+ forgetFace()</text>
+<text x="1477" y="1846" font-size="13">+ openFaceModal(mode, employeeId)</text>
+<text x="1477" y="1865" font-size="13">+ scanForFace(session)</text>
+<text x="1477" y="1884" font-size="13">+ captureEnrollment()</text>
+<text x="1477" y="1903" font-size="13">+ stopCameraAfterTimeout()</text>
+<text x="1477" y="1922" font-size="13">+ closeFaceModal()</text>
+</g>
+<g>
+<rect x="40" y="1975" width="455" height="412" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,1975 H489 A6,6 0 0 1 495,1981 V2017 H40 V1981 A6,6 0 0 1 46,1975 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="267.5" y="2003" text-anchor="middle" font-size="17" class="kop">AdminController</text>
+<text x="52" y="2037" font-size="13">+ app: RegistrationApp</text>
+<text x="52" y="2056" font-size="13">+ auditLogLimit: number</text>
+<path d="M40,2069 L495,2069" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="2089" font-size="13">+ requireAdmin(): boolean</text>
+<text x="52" y="2108" font-size="13">+ showMissing(subject)</text>
+<text x="52" y="2127" font-size="13">+ finishAdminChange(message, opties)</text>
+<text x="52" y="2146" font-size="13">+ openAdmin()</text>
+<text x="52" y="2165" font-size="13">+ login(event)</text>
+<text x="52" y="2184" font-size="13">+ logout()</text>
+<text x="52" y="2203" font-size="13">+ closeAdmin()</text>
+<text x="52" y="2222" font-size="13">+ switchTab(activeTab)</text>
+<text x="52" y="2241" font-size="13">+ loadMoreAudit()</text>
+<text x="52" y="2260" font-size="13">+ exportCsv()</text>
+<text x="52" y="2279" font-size="13">+ wipeAllData()</text>
+<text x="52" y="2298" font-size="13">+ toggleEmployee(employeeId)</text>
+<text x="52" y="2317" font-size="13">+ removeEmployee(employeeId)</text>
+<text x="52" y="2336" font-size="13">+ removeProduct(productId)</text>
+<text x="52" y="2355" font-size="13">+ removeCompany(companyId)</text>
+<text x="52" y="2374" font-size="13">+ removePoint(pointId)</text>
+</g>
+<g>
+<rect x="515" y="1975" width="455" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M521,1975 H964 A6,6 0 0 1 970,1981 V2017 H515 V1981 A6,6 0 0 1 521,1975 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="742.5" y="2003" text-anchor="middle" font-size="17" class="kop">CorrectionController</text>
+<text x="527" y="2037" font-size="13">+ app: RegistrationApp</text>
+<text x="527" y="2056" font-size="13">+ removalTarget: object | null</text>
+<path d="M515,2069 L970,2069" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="527" y="2089" font-size="13" text-decoration="underline">+ dateValue(date): string</text>
+<text x="527" y="2108" font-size="13">+ resetCorrectionDate(now)</text>
+<text x="527" y="2127" font-size="13">+ readCorrectionDate(now)</text>
+<text x="527" y="2146" font-size="13">+ addCorrection(employeeId, productId, now)</text>
+<text x="527" y="2165" font-size="13">+ removeCorrection(employeeId, productId)</text>
+<text x="527" y="2184" font-size="13">+ removeChosenRegistration(registrationId)</text>
+<text x="527" y="2203" font-size="13">+ closeRemoveRegistration()</text>
+<text x="527" y="2222" font-size="13">+ confirmOldMonthRemoval(registration)</text>
+</g>
+<g>
+<rect x="990" y="1975" width="455" height="203" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M996,1975 H1439 A6,6 0 0 1 1445,1981 V2017 H990 V1981 A6,6 0 0 1 996,1975 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1217.5" y="2003" text-anchor="middle" font-size="17" class="kop">StockController</text>
+<text x="1002" y="2037" font-size="13">+ app: RegistrationApp</text>
+<text x="1002" y="2056" font-size="13">+ lastDelivery: object | null</text>
+<path d="M990,2069 L1445,2069" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1002" y="2089" font-size="13">+ showStockPoint(pointId)</text>
+<text x="1002" y="2108" font-size="13">+ isTypingInStockTable(): boolean</text>
+<text x="1002" y="2127" font-size="13">+ isRepeatedDeliveryTap(productId, now)</text>
+<text x="1002" y="2146" font-size="13">+ bookDelivery(productId)</text>
+<text x="1002" y="2165" font-size="13">+ saveStockField(input)</text>
+</g>
+<g>
+<rect x="1465" y="1975" width="455" height="298" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1471,1975 H1914 A6,6 0 0 1 1920,1981 V2017 H1465 V1981 A6,6 0 0 1 1471,1975 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1692.5" y="2003" text-anchor="middle" font-size="17" class="kop">FormController</text>
+<text x="1477" y="2037" font-size="13">+ app: RegistrationApp</text>
+<text x="1477" y="2056" font-size="13">+ editingCopies: Map</text>
+<path d="M1465,2069 L1920,2069" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1477" y="2089" font-size="13" text-decoration="underline">+ isValidPrice(value): boolean</text>
+<text x="1477" y="2108" font-size="13" text-decoration="underline">+ isDigitsOnly(value): boolean</text>
+<text x="1477" y="2127" font-size="13">+ validateRequiredFields(form): boolean</text>
+<text x="1477" y="2146" font-size="13">+ closeStaleForms()</text>
+<text x="1477" y="2165" font-size="13">+ openEmployeeForm()</text>
+<text x="1477" y="2184" font-size="13">+ saveEmployee(event)</text>
+<text x="1477" y="2203" font-size="13">+ validateBadgeField(badgeId, editingId)</text>
+<text x="1477" y="2222" font-size="13">+ saveProduct(event)</text>
+<text x="1477" y="2241" font-size="13">+ saveCompany(event)</text>
+<text x="1477" y="2260" font-size="13">+ savePoint(event)</text>
 </g>
 <!-- «create»-afhankelijkheden vanuit main.js -->
 <path d="M960,204 V210" class="stip"/>
@@ -242,7 +366,7 @@
 <path d="M1720,210 V248" class="stip" marker-end="url(#open)"/>
 <path d="M390,210 V690 H200 V718" class="stip" marker-end="url(#open)"/>
 <path d="M920,210 V690 H760 V718" class="stip" marker-end="url(#open)"/>
-<path d="M1940,210 V1180 H1922" class="stip" marker-end="url(#open)"/>
+<path d="M1940,210 V1112 H1240 V1086" class="stip" marker-end="url(#open)"/>
 <path d="M1940,770 H1922" class="stip" marker-end="url(#open)"/>
 <!-- Associaties -->
 <path d="M940,430 H842" class="lijn" marker-end="url(#open)"/>
@@ -254,55 +378,73 @@
 <path d="M1420,800 H1518" class="lijn" marker-end="url(#open)"/>
 <text x="1512" y="792" text-anchor="end" font-size="13" class="lbl">badgeReader</text>
 <text x="1512" y="818" text-anchor="end" font-size="13" class="lbl">1</text>
-<path d="M1380,1099 V1190 H1518" class="lijn" marker-end="url(#open)"/>
-<text x="1512" y="1182" text-anchor="end" font-size="13" class="lbl">csvExport</text>
-<text x="1512" y="1208" text-anchor="end" font-size="13" class="lbl">1</text>
-<path d="M940,870 H842" class="lijn" marker-end="url(#open)"/>
-<text x="850" y="862" font-size="13" class="lbl">model</text>
-<text x="850" y="888" font-size="13" class="lbl">1</text>
+<path d="M1140,852 V898" class="lijn" marker-end="url(#open)"/>
+<text x="1150" y="875" font-size="13" class="lbl">csvExport</text>
+<text x="1150" y="893" font-size="13" class="lbl">1</text>
+<path d="M940,820 H842" class="lijn" marker-end="url(#open)"/>
+<text x="850" y="812" font-size="13" class="lbl">model</text>
+<text x="850" y="838" font-size="13" class="lbl">1</text>
 <path d="M630,624 V718" class="lijn" marker-end="url(#open)"/>
 <text x="640" y="674" font-size="13" class="lbl">model</text>
 <text x="640" y="692" font-size="13" class="lbl">1</text>
-<path d="M1520,1240 H842" class="lijn" marker-end="url(#open)"/>
-<text x="850" y="1232" font-size="13" class="lbl">model</text>
-<text x="850" y="1258" font-size="13" class="lbl">1</text>
+<path d="M940,1000 H842" class="lijn" marker-end="url(#open)"/>
+<text x="850" y="992" font-size="13" class="lbl">model</text>
+<text x="850" y="1018" font-size="13" class="lbl">1</text>
 <path d="M420,870 H362" class="lijn" marker-end="url(#open)"/>
 <text x="412" y="862" text-anchor="end" font-size="13" class="lbl">store</text>
 <text x="412" y="888" text-anchor="end" font-size="13" class="lbl">1</text>
+<!-- Compositie met de onderdelen -->
+<defs><marker id="ruit" viewBox="0 0 16 10" refX="15" refY="5" markerWidth="16" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M1,5 L8,1 L15,5 L8,9 z" fill="#163540"/></marker></defs>
+<path d="M1400,852 V1540" class="lijn" marker-start="url(#ruit)"/>
+<text x="1410" y="1522" font-size="13" class="lbl">8 onderdelen</text>
+<path d="M267.5,1540 H1692.5" class="lijn"/>
+<path d="M267.5,1540 V1578" class="lijn" marker-end="url(#open)"/>
+<path d="M742.5,1540 V1578" class="lijn" marker-end="url(#open)"/>
+<path d="M1217.5,1540 V1578" class="lijn" marker-end="url(#open)"/>
+<path d="M1692.5,1540 V1578" class="lijn" marker-end="url(#open)"/>
+<path d="M1455,1540 V1955" class="lijn"/>
+<path d="M267.5,1955 H1692.5" class="lijn"/>
+<path d="M267.5,1955 V1973" class="lijn" marker-end="url(#open)"/>
+<path d="M742.5,1955 V1973" class="lijn" marker-end="url(#open)"/>
+<path d="M1217.5,1955 V1973" class="lijn" marker-end="url(#open)"/>
+<path d="M1692.5,1955 V1973" class="lijn" marker-end="url(#open)"/>
+<text x="40" y="1490" font-size="17" class="kop">Onderdelen van de controller (sinds versie 3.8)</text>
+<text x="40" y="1510" font-size="13" class="sub">RegistrationApp maakt ze en geeft zichzelf mee (app)</text>
 <!-- Modules zonder class -->
 <g>
-<rect x="940" y="1350" width="410" height="184" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<path d="M946,1350 H1344 A6,6 0 0 1 1350,1356 V1406 H940 V1356 A6,6 0 0 1 946,1350 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
-<text x="1145" y="1371" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
-<text x="1145" y="1394" text-anchor="middle" font-size="17" class="kop">config.js</text>
-<text x="952" y="1426" font-size="13">+ STORAGE_KEY, COLORS, SEED_EMPLOYEES,</text>
-<text x="952" y="1445" font-size="13">   DEFAULT_COMPANIES, DEFAULT_PRODUCTS,</text>
-<text x="952" y="1464" font-size="13">   DAYLIGHT_HOURS, FACE_DEMO, BADGE_READER</text>
-<text x="952" y="1483" font-size="13">gebruikt door: DataStore, RegistrationModel,</text>
-<text x="952" y="1502" font-size="13">ThemeManager, FaceRecognitionDemo,</text>
-<text x="952" y="1521" font-size="13">BadgeReader, main.js</text>
+<rect x="1520" y="1130" width="400" height="203" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1526,1130 H1914 A6,6 0 0 1 1920,1136 V1186 H1520 V1136 A6,6 0 0 1 1526,1130 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1720" y="1151" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1720" y="1174" text-anchor="middle" font-size="17" class="kop">config.js</text>
+<text x="1532" y="1206" font-size="13">+ STORAGE_KEY, COLORS, SEED_EMPLOYEES,</text>
+<text x="1532" y="1225" font-size="13">   DEFAULT_COMPANIES, DEFAULT_PRODUCTS,</text>
+<text x="1532" y="1244" font-size="13">   DAYLIGHT_HOURS, FACE_DEMO,</text>
+<text x="1532" y="1263" font-size="13">   BADGE_READER</text>
+<text x="1532" y="1282" font-size="13">gebruikt door: DataStore, RegistrationModel,</text>
+<text x="1532" y="1301" font-size="13">ThemeManager, FaceRecognitionDemo,</text>
+<text x="1532" y="1320" font-size="13">BadgeReader, main.js</text>
 </g>
 <g>
-<rect x="1380" y="1350" width="260" height="146" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<path d="M1386,1350 H1634 A6,6 0 0 1 1640,1356 V1406 H1380 V1356 A6,6 0 0 1 1386,1350 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
-<text x="1510" y="1371" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
-<text x="1510" y="1394" text-anchor="middle" font-size="17" class="kop">ids.js</text>
-<text x="1392" y="1426" font-size="13">+ createId(): string</text>
-<text x="1392" y="1445" font-size="13">gebruikt door: DataStore,</text>
-<text x="1392" y="1464" font-size="13">RegistrationModel,</text>
-<text x="1392" y="1483" font-size="13">RegistrationApp</text>
+<rect x="1520" y="1340" width="195" height="146" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1526,1340 H1709 A6,6 0 0 1 1715,1346 V1396 H1520 V1346 A6,6 0 0 1 1526,1340 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1617.5" y="1361" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1617.5" y="1384" text-anchor="middle" font-size="17" class="kop">ids.js</text>
+<text x="1532" y="1416" font-size="13">+ createId(): string</text>
+<text x="1532" y="1435" font-size="13">gebruikt door: DataStore,</text>
+<text x="1532" y="1454" font-size="13">RegistrationModel,</text>
+<text x="1532" y="1473" font-size="13">FormController</text>
 </g>
 <g>
-<rect x="1670" y="1350" width="250" height="127" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<path d="M1676,1350 H1914 A6,6 0 0 1 1920,1356 V1406 H1670 V1356 A6,6 0 0 1 1676,1350 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
-<text x="1795" y="1371" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
-<text x="1795" y="1394" text-anchor="middle" font-size="17" class="kop">icons.js</text>
-<text x="1682" y="1426" font-size="13">+ icon(name): string</text>
-<text x="1682" y="1445" font-size="13">gebruikt door:</text>
-<text x="1682" y="1464" font-size="13">RegistrationView</text>
+<rect x="1725" y="1340" width="195" height="127" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1731,1340 H1914 A6,6 0 0 1 1920,1346 V1396 H1725 V1346 A6,6 0 0 1 1731,1340 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1822.5" y="1361" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1822.5" y="1384" text-anchor="middle" font-size="17" class="kop">icons.js</text>
+<text x="1737" y="1416" font-size="13">+ icon(name): string</text>
+<text x="1737" y="1435" font-size="13">gebruikt door:</text>
+<text x="1737" y="1454" font-size="13">RegistrationView</text>
 </g>
 <!-- Legenda -->
-<rect x="40" y="1030" width="320" height="250" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
+<rect x="40" y="1030" width="320" height="300" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
 <text x="58" y="1060" font-size="16" class="kop">Legenda</text>
 <path d="M58,1092 L128,1092" class="lijn" marker-end="url(#open)"/>
 <text x="140" y="1088" font-size="13">associatie: houdt een</text>
@@ -310,8 +452,11 @@
 <path d="M58,1138 L128,1138" class="stip" marker-end="url(#open)"/>
 <text x="140" y="1134" font-size="13">afhankelijkheid «create»:</text>
 <text x="140" y="1151" font-size="13">main.js maakt het object</text>
-<text x="58" y="1186" font-size="13">+ openbaar   onderstreept = static</text>
-<text x="58" y="1210" font-size="13">«get» = getter (alleen lezen)</text>
-<text x="58" y="1234" font-size="13">«module» = bestand zonder class</text>
-<text x="58" y="1258" font-size="13" class="sub">Alleen een selectie van de methodes</text>
+<path d="M58,1184 L128,1184" class="lijn" marker-start="url(#ruit)"/>
+<text x="140" y="1180" font-size="13">compositie: RegistrationApp</text>
+<text x="140" y="1197" font-size="13">maakt en bezit het onderdeel</text>
+<text x="58" y="1234" font-size="13">+ openbaar   onderstreept = static</text>
+<text x="58" y="1258" font-size="13">«get» = getter (alleen lezen)</text>
+<text x="58" y="1282" font-size="13">«module» = bestand zonder class</text>
+<text x="58" y="1306" font-size="13" class="sub">Alleen een selectie van de methodes</text>
 </svg>

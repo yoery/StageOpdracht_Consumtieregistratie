@@ -41,7 +41,7 @@ const SAFE_CODE = /^[^\u0000-\u001F\u007F]{0,64}$/;
 const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?$/;
 
 // Het vroegste tijdstip dat als geldig telt: 1 januari 2000. Dezelfde ondergrens geldt voor de
-// datum bij een correctie "+" (RegistrationApp.readCorrectionDate). Een eerder tijdstip is
+// datum bij een correctie "+" (CorrectionController.readCorrectionDate). Een eerder tijdstip is
 // vrijwel zeker geknoeid en geeft rare maandnamen en bestandsnamen in de export.
 const MIN_DATE_MS = Date.UTC(2000, 0, 1);
 

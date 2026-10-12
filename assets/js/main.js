@@ -13,7 +13,8 @@
  * - RegistrationModel bevat de gegevens en de regels.
  * - RegistrationView tekent het scherm.
  * - CsvExport maakt het CSV-bestand voor de loonadministratie.
- * - RegistrationApp reageert op wat de gebruiker doet.
+ * - RegistrationApp reageert op wat de gebruiker doet. De controller maakt zelf zijn kleinere
+ *   onderdelen (zoals AdminController, FormController en FaceController, zie RegistrationApp.js).
  * - ThemeManager regelt het lichte en donkere thema; die staat los van de rest.
  * - FaceRecognitionDemo is de demo gezichtsherkenning (uit te zetten in config.js).
  * - BadgeReader herkent een pas via een USB-NFC-lezer (uit te zetten in config.js).

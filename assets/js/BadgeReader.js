@@ -23,9 +23,9 @@ import { BADGE_READER } from "./config.js";
  *
  * Verbonden met:
  *   - config.js: BADGE_READER (aan/uit, minimale lengte en de tijden);
- *   - RegistrationApp: geeft iedere keydown op de beginpagina door aan handleKey() en zet de
- *     callbacks onScan (medewerker zoeken en productvenster openen) en onStart (inhoud van het
- *     zoekveld onthouden, zodat die na een scan kan worden teruggezet);
+ *   - BadgeController (onderdeel van de controller RegistrationApp): geeft iedere keydown door
+ *     aan handleKey() en zet de callbacks onScan (medewerker zoeken en productvenster openen) en
+ *     onStart (inhoud van het zoekveld onthouden, zodat die na een scan kan worden teruggezet);
  *   - main.js: maakt de BadgeReader en geeft die aan de controller.
  *
  * Let op (beveiliging): het nummer van een pas is niet geheim en kan met goedkope apparatuur

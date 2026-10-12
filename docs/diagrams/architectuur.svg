@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1075" viewBox="0 0 1760 1075" role="img" aria-labelledby="title desc">
   <title id="title">Architectuur van de demo</title>
-  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp), model (RegistrationModel, CsvExport, FaceRecognitionDemo, BadgeReader), opslag (DataStore) en localStorage, met de camera en de pasjeslezer. main.js maakt alle objecten aan en koppelt ze.</desc>
+  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp met ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController en FormController), model (RegistrationModel, CsvExport, FaceRecognitionDemo, BadgeReader), opslag (DataStore) en localStorage, met de camera en de pasjeslezer. main.js maakt alle objecten aan en koppelt ze.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -59,9 +59,9 @@
 <text x="1005" y="364" text-anchor="middle" font-size="13.5">licht, donker, auto of systeem,</text>
 <text x="1005" y="383" text-anchor="middle" font-size="13.5">staat los en bewaart de keuze (tvb-theme)</text>
 <rect x="230" y="454" width="1160" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
-<text x="810" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller)</text>
-<text x="810" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren, controleert invoer en stuurt model, view, export, camerademo en pasjeslezer aan.</text>
-<text x="810" y="525" text-anchor="middle" font-size="13.5">persist(): wijziging en logboekregel in één keer opslaan, anders allebei terugdraaien.</text>
+<text x="810" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller) met acht onderdelen</text>
+<text x="810" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren en slaat op met persist(): wijziging en logboekregel samen, anders allebei terugdraaien.</text>
+<text x="810" y="525" text-anchor="middle" font-size="13.5">onderdelen: ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController, FormController</text>
 <rect x="230" y="596" width="330" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="395" y="626" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
 <text x="395" y="648" text-anchor="middle" font-size="13.5">registraties, medewerkers, producten,</text>

@@ -15,7 +15,7 @@ export const STOCK_STATUS = {
 
 // Hoogste prijs (in euro) die een product mag hebben. Deze waarde moet gelijk zijn aan MAX_PRICE
 // in DataStore.js: DataStore gooit bij het laden producten en registraties met een hogere prijs
-// weg. Het model en het productformulier (RegistrationApp) gebruiken deze ene constante, zodat
+// weg. Het model en het productformulier (FormController) gebruiken deze ene constante, zodat
 // er nooit een prijs wordt opgeslagen die na herladen verdwijnt.
 export const MAX_PRICE = 1000;
 
@@ -606,7 +606,7 @@ export class RegistrationModel {
 
   // Heeft een ander bedrijf dan `exceptCompanyId` al dit werkgevernummer? Een leeg nummer telt
   // niet: meerdere bedrijven mogen (nog) geen nummer hebben. Spaties voor en achter tellen niet mee.
-  // Wordt gebruikt door saveCompany (hieronder) en door het bedrijfsformulier in RegistrationApp.
+  // Wordt gebruikt door saveCompany (hieronder) en door het bedrijfsformulier in FormController.
   // Past bij de UNIQUE-regel op companies.employer_number in docs/DATABASE-SCHEMA.sql.
   isEmployerNumberTaken(employerNumber, exceptCompanyId = null) {
     const number = String(employerNumber ?? "").trim();

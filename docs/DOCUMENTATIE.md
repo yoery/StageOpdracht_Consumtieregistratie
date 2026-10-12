@@ -17,7 +17,15 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
-| `assets/js/RegistrationApp.js` | Controller: verwerkt klikken, formulieren en toetsenbordacties |
+| `assets/js/RegistrationApp.js` | Controller: maakt de acht onderdelen hieronder en koppelt ze, slaat op via `persist`, neemt wijzigingen uit een ander tabblad over, werkt de datum bij na middernacht en koppelt alle klikken en toetsen. Alle methodes van de onderdelen zijn ook via deze class te gebruiken |
+| `assets/js/ModalManager.js` | Class `ModalManager` (onderdeel van de controller): vensters openen en sluiten, de focus terugzetten, Escape en Tab binnen een venster |
+| `assets/js/EmployeeController.js` | Class `EmployeeController` (onderdeel van de controller): zoeken en bedrijfsfilter op de beginpagina, het productvenster en registreren |
+| `assets/js/BadgeController.js` | Class `BadgeController` (onderdeel van de controller): herkennen met de pas, koppelt `BadgeReader` aan de app |
+| `assets/js/FaceController.js` | Class `FaceController` (onderdeel van de controller): het cameravenster van de demo gezichtsherkenning |
+| `assets/js/AdminController.js` | Class `AdminController` (onderdeel van de controller): inloggen, dashboard en tabbladen, logboek, export, `Alle gegevens wissen`, (de)activeren en verwijderen, en `requireAdmin` |
+| `assets/js/CorrectionController.js` | Class `CorrectionController` (onderdeel van de controller): correcties `+` en `−` en het venster `Registratie verwijderen` |
+| `assets/js/StockController.js` | Class `StockController` (onderdeel van de controller): het tabblad Voorraad (leveringen, tellingen en minimum) |
+| `assets/js/FormController.js` | Class `FormController` (onderdeel van de controller): de formulieren voor medewerker, product, bedrijf en consumptiepunt, met de controle van de invoer |
 | `assets/js/csvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
 | `assets/js/ThemeManager.js` | Class `ThemeManager`: licht en donker thema (Systeem, Auto of zelf kiezen met de slider) |
 | `assets/js/icons.js` | De SVG-iconen van de website, met de hulpfunctie `icon(naam)` |
@@ -447,14 +455,17 @@ Naast de gegevens zelf kunnen er twee reservekopieën in `localStorage` staan: `
 
 ### Objectgeoriënteerde structuur
 
-De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in zeven classes: vijf voor de applicatie zelf, `ThemeManager` voor het lichte en donkere thema en `FaceRecognitionDemo` voor de demo gezichtsherkenning. Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
+De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in zestien classes, ieder in een eigen bestand. Acht daarvan vormen samen de controller: `RegistrationApp` en de onderdelen `ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController` en `FormController`. De andere acht zijn `DataStore`, `RegistrationModel`, `RegistrationView`, `CsvExport`, `ThemeManager` (licht en donker thema), `FaceRecognitionDemo` (demo gezichtsherkenning) en `BadgeReader` (pasjeslezer). Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
 
 ```text
 DataStore ──► RegistrationModel ──► RegistrationView
                      │                     │
                      ├──► CsvExport        │
                      ▼                     ▼
-               RegistrationApp (controller, stuurt model, view, export en FaceRecognitionDemo aan)
+               RegistrationApp (controller, stuurt model, view, export, FaceRecognitionDemo en BadgeReader aan)
+                     │
+                     └──► onderdelen: ModalManager, EmployeeController, BadgeController, FaceController,
+                          AdminController, CorrectionController, StockController, FormController
 
 ThemeManager (los: alleen het thema van de pagina)
 ```
@@ -464,8 +475,8 @@ ThemeManager (los: alleen het thema van de pagina)
 Toegepaste OOP-principes:
 
 - **Encapsulatie:** iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (`model.employees`, `model.products`) en wijzigen ze alleen via methodes (`model.addRegistration`, `model.saveCompany`).
-- **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class.
-- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning en de pasjeslezer mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven.
+- **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class. Ook de besturing zelf is verdeeld: ieder onderdeel van de controller heeft één taak (vensters, beginpagina, pas, camera, beheer, correcties, voorraad, formulieren).
+- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning en de pasjeslezer mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven. De controller maakt wel zelf zijn acht onderdelen en geeft zichzelf daarbij mee.
 - **Losse koppeling:** de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes `load()` en `save()`.
 
 #### `DataStore`
@@ -504,22 +515,51 @@ Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerli
 
 #### `RegistrationApp`
 
-Vormt de controller van de applicatie. Deze class koppelt klik- en formulier-events aan het model en laat daarna de view opnieuw renderen. `handleClick` bevat een lijst van knoppen met de actie die erbij hoort; iedere actie is een eigen, korte methode. De methode `persist(wijziging, logboekregel)` zorgt dat iedere wijziging wordt opgeslagen of automatisch wordt teruggedraaid bij een opslagfout. De logboekregel (bijvoorbeeld `{ action: "Product verwijderd", details: "Blikje" }`) wordt toegevoegd vóórdat er één keer wordt opgeslagen. Zo worden de wijziging en de logboekregel samen opgeslagen of samen teruggedraaid. `finishAdminChange` tekent daarna alle beheeronderdelen opnieuw, ook de registratietabel (zodat bijvoorbeeld een nieuwe productnaam daar meteen staat), zonder nog eens apart op te slaan.
+Vormt de controller van de applicatie. Eerder stond alle besturing in deze ene class (2414 regels). Nu maakt `RegistrationApp` in de constructor acht kleinere onderdelen, elk met één taak (zie hieronder), en houdt zelf alleen wat bij de hele app hoort:
 
-`handleStorageChange` luistert naar het `storage`-event: slaat een ander tabblad iets op, dan laadt het model de gegevens opnieuw (`RegistrationModel.reload`) en wordt alles opnieuw getekend. Daarna ruimt de controller op wat niet meer klopt: `closeStaleForms` sluit een open wijzigformulier van iets dat intussen is verwijderd, en een open productvenster (met het cameravenster erboven) sluit met een melding als de medewerker is verwijderd of gedeactiveerd. Typt de beheerder in de voorraadtabel (`isTypingInStockTable`), dan blijft die tabel staan. Waren de nieuwe gegevens onleesbaar, dan volgt een waarschuwing. Klikt iemand in een ander tabblad op `Alle gegevens wissen`, dan verwijdert dat tabblad de gegevenssleutel (`event.newValue` is dan null). Dit tabblad wist dan ook alles uit het geheugen, logt de beheerder uit, vergeet de gezichten en toont "De gegevens zijn in een ander venster gewist." (`handleStorageCleared({ keepStore: true })`). De opslag zelf blijft met rust, want het andere tabblad zet er meteen de nieuwe demogegevens in; anders zouden de twee tabbladen elkaar steeds opnieuw wissen. Knoppen en formulieren van iets dat niet meer bestaat, geven via `showMissing` een melding in plaats van het gegeven opnieuw aan te maken.
+- het starten (`initialize`) en de dagwissel (`refreshIfNewDay`, `renderTodayLabel`).
+- de melding bij beschadigde opgeslagen gegevens (`showLoadProblem`).
+- de synchronisatie tussen tabbladen (`handleStorageChange`, `handleStorageCleared`).
+- het opslaan met terugdraaien (`persist`) en de namen voor het logboek (`employeeLabel`, `pointLabel`).
+- het koppelen van alle event listeners (`registerEventListeners` en de `register…Events`-methodes) en de algemene kliklistener `handleClick`.
+- de toestand die meerdere onderdelen delen: `adminLoggedIn`, de gekozen medewerker en producten in het productvenster (`selectedEmployeeId`, `selectedProducts`), hoe die medewerker is herkend (`recognizedBy`) en de dag op het scherm (`currentDay`).
 
-Andere methodes:
+Ieder onderdeel krijgt `RegistrationApp` mee in de constructor (`this.app`). Het gebruikt via die verwijzing het model, de view, `persist`, de gedeelde toestand en de methodes van de andere onderdelen. Onderaan `RegistrationApp.js` staat de lijst `DELEGATES`: welke methodes en velden van de onderdelen ook op `RegistrationApp` bestaan. `app.handleBadgeKey(event)` roept zo `BadgeController.handleBadgeKey` aan, en `app.faceSession` leest en wijzigt het veld van `FaceController`. Zo blijft `RegistrationApp` voor `main.js`, `index.html` en de tests één aanspreekpunt, en staat iedere waarde op één plek. De statische hulpmethodes `RegistrationApp.isValidPrice`, `isDigitsOnly` en `dateValue` geven door aan `FormController` en `CorrectionController`.
 
-- `requireAdmin`: iedere beheeractie begint hiermee (formulieren openen en opslaan, verwijderen, (de)activeren, correcties, leveringen en tellingen, export en `Alle gegevens wissen`). Is er geen beheerder ingelogd, dan gebeurt er niets en verschijnt "Log eerst in als beheerder.". Zo werkt een beheeractie ook niet als een verborgen knop toch wordt ingedrukt of de methode op een andere manier wordt aangeroepen. Registreren door een medewerker zelf vraagt geen login.
-- `stopCameraAfterTimeout` en `scheduleEnrollTimeout`: zetten de camera uit als er bij herkennen binnen `FACE_DEMO.scanTimeoutMs` (20 seconden) niemand is herkend, of als er bij instellen in die tijd geen gezicht is vastgelegd. Het venster blijft open met een melding. `closeFaceModal` ruimt een wachtende time-out op.
-- `refreshIfNewDay`: een timer roept deze methode iedere minuut aan. Is de kalenderdag veranderd, dan worden de datum (`renderTodayLabel`) en de totalen (`renderStats`) opnieuw getekend.
-- `openModal` en `closeModal`: openen en sluiten een venster. `openModal` onthoudt welk element de focus had (`rememberOpener`); `closeModal` zet de focus daar weer op, als dat element nog zichtbaar op de pagina staat.
+`handleClick` bevat een lijst van knoppen met de actie die erbij hoort. Iedere actie is een eigen, korte methode in een van de onderdelen. De methode `persist(wijziging, logboekregel)` zorgt dat iedere wijziging wordt opgeslagen of automatisch wordt teruggedraaid bij een opslagfout. De logboekregel (bijvoorbeeld `{ action: "Product verwijderd", details: "Blikje" }`) wordt toegevoegd vóórdat er één keer wordt opgeslagen. Zo worden de wijziging en de logboekregel samen opgeslagen of samen teruggedraaid.
+
+`handleStorageChange` luistert naar het `storage`-event: slaat een ander tabblad iets op, dan laadt het model de gegevens opnieuw (`RegistrationModel.reload`) en wordt alles opnieuw getekend. Daarna ruimt de controller op wat niet meer klopt: `FormController.closeStaleForms` sluit een open wijzigformulier van iets dat intussen is verwijderd of gewijzigd, en een open productvenster (met het cameravenster erboven) sluit met een melding als de medewerker is verwijderd of gedeactiveerd. Typt de beheerder in de voorraadtabel (`StockController.isTypingInStockTable`), dan blijft die tabel staan. Waren de nieuwe gegevens onleesbaar, dan volgt een waarschuwing. Klikt iemand in een ander tabblad op `Alle gegevens wissen`, dan verwijdert dat tabblad de gegevenssleutel (`event.newValue` is dan null). Dit tabblad wist dan ook alles uit het geheugen, logt de beheerder uit, vergeet de gezichten en toont "De gegevens zijn in een ander venster gewist." (`handleStorageCleared({ keepStore: true })`). De opslag zelf blijft met rust, want het andere tabblad zet er meteen de nieuwe demogegevens in. Anders zouden de twee tabbladen elkaar steeds opnieuw wissen.
+
+#### Onderdelen van de controller
+
+**`ModalManager`** opent en sluit de vensters. `openModal` onthoudt welk element de focus had (`rememberOpener`), en `closeModal` zet de focus daar weer op, als dat element nog zichtbaar op de pagina staat. `registerModalClose` koppelt de sluitknoppen en de donkere achtergrond van een venster en onthoudt de sluitactie (`modalCloseActions`) voor de Escape-toets. `topModal` geeft het bovenste open venster, en `keepFocusInModal` houdt de Tab-toets binnen dat venster. `show` en `hide` tonen of verbergen een element.
+
+**`EmployeeController`** is de kant van de medewerker: het zoekveld en het bedrijfsfilter (`clearSearch`, `onCompanyFilterInput`, `selectCompanyFilterOption`), het productvenster (`openEmployeeProducts`, `renderProductWindow`, `incrementProduct`, `decrementProduct`, `repeatLastSelection`, `closeEmployeeProducts`) en registreren (`registerSelectedProducts`, zie hieronder). `removeUnavailableSelections` haalt producten uit de keuze die het consumptiepunt intussen niet meer aanbiedt.
+
+**`BadgeController`** verbindt `BadgeReader` met de app. De constructor zet de callbacks `onScan` en `onStart` van de pasjeslezer. `handleBadgeKey` geeft iedere toets door, `rememberSearchBeforeScan` en `restoreSearchAfterScan` zorgen dat er geen pasnummer in het zoekveld blijft staan, en `recognizeBadge` zoekt na een scan de medewerker op en opent zijn productvenster.
+
+**`FaceController`** bestuurt het cameravenster van de demo gezichtsherkenning (`openFaceModal`, `scanForFace`, `captureEnrollment`, `closeFaceModal`). Ieder venster krijgt een eigen sessienummer (`faceSession`), zodat een zoektocht of vastlegging stopt als het venster sluit. `stopCameraAfterTimeout` en `scheduleEnrollTimeout` zetten de camera uit als er bij herkennen binnen `FACE_DEMO.scanTimeoutMs` (20 seconden) niemand is herkend, of als er bij instellen in die tijd geen gezicht is vastgelegd. Het venster blijft open met een melding. `closeFaceModal` ruimt een wachtende time-out op.
+
+**`AdminController`** is het beheerscherm:
+
+- `requireAdmin`: iedere beheeractie begint hiermee, ook in `CorrectionController`, `StockController` en `FormController` (formulieren openen en opslaan, verwijderen, (de)activeren, correcties, leveringen en tellingen, export en `Alle gegevens wissen`). Is er geen beheerder ingelogd, dan gebeurt er niets en verschijnt "Log eerst in als beheerder.". Zo werkt een beheeractie ook niet als een verborgen knop toch wordt ingedrukt of de methode op een andere manier wordt aangeroepen. Registreren door een medewerker zelf vraagt geen login.
+- `openAdmin`, `login`, `logout`, `closeAdmin`, `showDashboard`, `switchTab` en `loadMoreAudit`: inloggen, uitloggen, het dashboard, de tabbladen en het logboek (zie Adminfuncties hieronder).
+- `finishAdminChange`: tekent na een beheerwijziging alle beheeronderdelen opnieuw, ook de registratietabel (zodat bijvoorbeeld een nieuwe productnaam daar meteen staat), zonder nog eens apart op te slaan.
+- `showMissing`: knoppen en formulieren van iets dat niet meer bestaat, geven hiermee een melding in plaats van het gegeven opnieuw aan te maken.
+- `exportCsv`: laat `CsvExport` het bestand maken (zie CSV-export hieronder).
+- `wipeAllData`: de knop `Alle gegevens wissen`. Doet niets als er geen beheerder is ingelogd. Vraagt twee keer om bevestiging, laat het model alles wissen (`wipeAll`), slaat de nieuwe demogegevens op, vergeet de ingestelde gezichten, logt de beheerder uit en tekent alles opnieuw.
+- `toggleEmployee`, `removeEmployee`, `removeProduct`, `removeCompany` en `removePoint`: de knoppen in de beheerlijsten.
+
+**`CorrectionController`** regelt de correcties in het tabblad Registraties:
+
+- `resetCorrectionDate`, `readCorrectionDate` en `confirmOldMonthAddition`: het datumveld bij de correctie `+`. Na het inloggen staat het op vandaag. Bij `+` wordt de datum gecontroleerd (niet in de toekomst, niet vóór 2000) en volgt bij een eerdere maand een bevestigingsvraag. `addCorrection` voegt de registratie toe met een logboekregel.
 - `removeCorrection`, `removeChosenRegistration` en `closeRemoveRegistration`: de correctie `−`. `removeCorrection` opent het venster `Registratie verwijderen` (ook bij één registratie) en zet de focus op de eerste knop `Verwijderen`. `removeChosenRegistration` verwijdert de gekozen registratie met een logboekregel via `persist`, sluit het venster en tekent de lijsten en de voorraad opnieuw. Bestaat de registratie niet meer, dan volgt via `showMissing` een melding. `refreshRemoveRegistration` werkt de lijst bij na een wijziging in een ander tabblad en sluit het venster als er niets meer te kiezen is. Bij het sluiten van het beheer gaat het venster ook dicht.
 - `confirmOldMonthRemoval`: vraagt bevestiging voordat een correctie met `−` een registratie uit een andere maand verwijdert.
-- `setSaveButtons`: zet de opslagknoppen van het medewerkers- en productformulier goed. Bij toevoegen staan er `Opslaan` (secundair) en `Opslaan + opnieuw` (primair); bij wijzigen alleen `Opslaan`, en die is dan primair.
-- `resetCorrectionDate`, `readCorrectionDate` en `confirmOldMonthAddition`: het datumveld bij de correctie `+`. Na het inloggen staat het op vandaag; bij `+` wordt de datum gecontroleerd (niet in de toekomst, niet vóór 2000) en volgt bij een eerdere maand een bevestigingsvraag.
-- `saveStockField` en `bookDelivery`: controleren dat voorraad en minimum hele getallen van 0 tot en met 100.000 zijn, en een levering van 1 tot en met 100.000. `isRepeatedDeliveryTap` negeert een tweede tik op dezelfde knop `Toevoegen` binnen 800 milliseconden.
-- `wipeAllData`: de knop `Alle gegevens wissen`. Doet niets als er geen beheerder is ingelogd. Vraagt twee keer om bevestiging, laat het model alles wissen (`wipeAll`), slaat de nieuwe demogegevens op, vergeet de ingestelde gezichten, logt de beheerder uit en tekent alles opnieuw.
+- `renderCorrectionList`: tekent de correctielijst opnieuw en geeft de knop `+` of `−` die de focus had, die focus terug.
+
+**`StockController`** regelt het tabblad Voorraad. `saveStockField` en `bookDelivery` controleren dat voorraad en minimum hele getallen van 0 tot en met 100.000 zijn, en een levering van 1 tot en met 100.000. `isRepeatedDeliveryTap` negeert een tweede tik op dezelfde knop `Toevoegen` binnen 800 milliseconden.
+
+**`FormController`** regelt de vier beheerformulieren (medewerker, product, bedrijf en consumptiepunt): openen (`openEmployeeForm`, `openEditEmployeeForm` enzovoort), controleren en opslaan (`saveEmployee`, `saveProduct`, `saveCompany`, `savePoint`) en sluiten. De controles staan in `validateRequiredFields`, `validateNumberFields`, `isValidPrice`, `isDigitsOnly`, `validateBadgeField` en `validateEmployeeAssignment`. `setSaveButtons` zet de opslagknoppen van het medewerkers- en productformulier goed. Bij toevoegen staan er `Opslaan` (secundair) en `Opslaan + opnieuw` (primair), bij wijzigen alleen `Opslaan`, en die is dan primair. Bij het openen van een wijzigformulier onthoudt `rememberEditing` een kopie van het gegeven. `closeStaleForms` vergelijkt die kopie bij een wijziging in een ander tabblad en sluit het formulier als het gegeven intussen is verwijderd of gewijzigd.
 
 #### `CsvExport`
 
@@ -535,7 +575,7 @@ De uitschakelbare demo gezichtsherkenning (zie 4.15). De class laadt de biblioth
 
 #### `BadgeReader`
 
-Herkent een pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.16). De controller geeft iedere toets op de beginpagina door aan `handleKey` (via `RegistrationApp.handleBadgeKey`, ook als er een venster open is, en dan doet `recognizeBadge` niets). De class houdt een buffer bij van snel getypte tekens met het tijdstip van de laatste toets. Een scan is minstens `minLength` tekens, elk binnen `maxKeyIntervalMs` na het vorige, afgesloten met Enter of Tab, óf `endDelayMs` stilte na de laatste toets (`scheduleEnd`, `finishAfterSilence`). Komt een teken te laat, dan begint er een nieuwe buffer; zo wordt menselijk typen nooit een scan. De Enter of Tab die een scan afsluit, wordt tegengehouden (`preventDefault` en `stopPropagation`), zodat die geen andere actie start. `normalize` haalt spaties, `:` en `-` weg en maakt alles hoofdletters; het medewerkersformulier gebruikt dezelfde methode. Na een scan roept de class `onScan(code)` aan; de controller zoekt dan de medewerker op (`recognizeBadge`, met `RegistrationModel.findEmployeeByBadge`). `onStart` wordt aangeroepen als er een nieuwe buffer begint; de controller onthoudt dan de inhoud van het zoekveld (`rememberSearchBeforeScan`) en zet die na de scan terug (`restoreSearchAfterScan`). De tijd en de timers (`clock`) kunnen worden meegegeven, zodat de unit tests met een nep-klok werken.
+Herkent een pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.16). De controller geeft iedere toets op de beginpagina door aan `handleKey` (via `BadgeController.handleBadgeKey`, ook als er een venster open is, en dan doet `recognizeBadge` niets). De class houdt een buffer bij van snel getypte tekens met het tijdstip van de laatste toets. Een scan is minstens `minLength` tekens, elk binnen `maxKeyIntervalMs` na het vorige, afgesloten met Enter of Tab, óf `endDelayMs` stilte na de laatste toets (`scheduleEnd`, `finishAfterSilence`). Komt een teken te laat, dan begint er een nieuwe buffer; zo wordt menselijk typen nooit een scan. De Enter of Tab die een scan afsluit, wordt tegengehouden (`preventDefault` en `stopPropagation`), zodat die geen andere actie start. `normalize` haalt spaties, `:` en `-` weg en maakt alles hoofdletters; het medewerkersformulier gebruikt dezelfde methode. Na een scan roept de class `onScan(code)` aan; de controller zoekt dan de medewerker op (`BadgeController.recognizeBadge`, met `RegistrationModel.findEmployeeByBadge`). `onStart` wordt aangeroepen als er een nieuwe buffer begint; de controller onthoudt dan de inhoud van het zoekveld (`rememberSearchBeforeScan`) en zet die na de scan terug (`restoreSearchAfterScan`). De tijd en de timers (`clock`) kunnen worden meegegeven, zodat de unit tests met een nep-klok werken.
 
 #### `icons.js`
 
@@ -563,14 +603,14 @@ Daarna worden de twee totalen in de statistiekkaarten geplaatst. Na middernacht 
 
 ### `registerSelectedProducts`
 
-De methode `RegistrationApp.registerSelectedProducts` wordt uitgevoerd na een klik op `Registreren` in het productvenster. Voor ieder gekozen product maakt `RegistrationModel.addRegistration` een object aan met:
+De methode `EmployeeController.registerSelectedProducts` wordt uitgevoerd na een klik op `Registreren` in het productvenster. Voor ieder gekozen product maakt `RegistrationModel.addRegistration` een object aan met:
 
 - Een unieke registratie-id.
 - De medewerker-id.
 - De product-id.
 - De huidige datum en tijd in ISO-formaat.
 
-Daarna worden de gegevens via `persist` opgeslagen en alle zichtbare onderdelen opnieuw getekend. Correcties van de beheerder met de `+`-knop lopen via `RegistrationApp.addCorrection` en komen ook in het logboek.
+Daarna worden de gegevens via `persist` opgeslagen en alle zichtbare onderdelen opnieuw getekend. Correcties van de beheerder met de `+`-knop lopen via `CorrectionController.addCorrection` en komen ook in het logboek.
 
 ### `renderAll`
 
@@ -592,7 +632,7 @@ Iedere wijziging loopt via `RegistrationApp.persist`. Eerst wordt een snapshot v
 
 `openAdmin` opent de modal. Als `adminLoggedIn` waar is, wordt het dashboard opnieuw getoond; anders verschijnt het loginformulier.
 
-De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige pagina open is. `closeAdmin` (sluiten van het venster) en `logout` (knop `Uitloggen`) zetten `adminLoggedIn` op `false` en maken het wachtwoordveld leeg. `closeAdmin` verbergt ook het dashboard in het venster. Iedere beheeractie controleert `adminLoggedIn` zelf via `requireAdmin` (zie `RegistrationApp` hierboven).
+De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige pagina open is. `closeAdmin` (sluiten van het venster) en `logout` (knop `Uitloggen`) zetten `adminLoggedIn` op `false` en maken het wachtwoordveld leeg. `closeAdmin` verbergt ook het dashboard in het venster. Iedere beheeractie controleert `adminLoggedIn` zelf via `requireAdmin` (zie `AdminController` hierboven).
 
 `renderAdmin`:
 
@@ -607,7 +647,7 @@ De variabele `adminLoggedIn` houdt de adminstatus alleen bij zolang de huidige p
 
 ### CSV-export (class `CsvExport` in `csvExport.js`)
 
-De export heeft geen externe bibliotheek nodig. Na een klik op `CSV exporteren` roept `RegistrationApp.exportCsv` (alleen als een beheerder is ingelogd) de methode `CsvExport.download` aan:
+De export heeft geen externe bibliotheek nodig. Na een klik op `CSV exporteren` roept `AdminController.exportCsv` (alleen als een beheerder is ingelogd) de methode `CsvExport.download` aan:
 
 1. `buildRows` verzamelt de registraties die bij de filters passen en telt ze per medewerker per loonmaand.
 2. `RegistrationModel.payrollPeriod` bepaalt de loonmaand: de maand na de consumptie (december gaat naar januari van het volgende jaar).
@@ -716,10 +756,11 @@ De applicatie volgt het principe van separation of concerns:
 1. `DataStore` weet hoe gegevens worden opgeslagen.
 2. `RegistrationModel` weet welke gegevens en bedrijfsregels gelden.
 3. `RegistrationView` weet hoe gegevens in HTML worden getoond.
-4. `RegistrationApp` weet welke actie bij een klik of formulier hoort.
+4. `RegistrationApp` weet welke actie bij een klik of formulier hoort. De kleinere onderdelen van de controller (zoals `AdminController`, `FormController` en `FaceController`) voeren die actie uit, ieder voor een eigen deel van het scherm.
 5. `CsvExport` weet hoe het CSV-bestand voor de loonadministratie eruitziet.
 6. `ThemeManager` weet welk thema (licht of donker) actief moet zijn.
 7. `FaceRecognitionDemo` weet hoe de camera en de demo gezichtsherkenning werken.
+8. `BadgeReader` weet wanneer snel getypte tekens een scan van de pasjeslezer zijn.
 
 De schermen zelf staan als screenshots in het TO, hoofdstuk 9, paragraaf Wireframes (`docs/wireframes/`). Die zijn handig om tijdens een presentatie te laten zien welke code bij welk scherm hoort.
 

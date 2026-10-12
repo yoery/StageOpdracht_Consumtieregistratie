@@ -22,7 +22,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.5 | 9 oktober 2026 | Testplan voor de herkenningsnauwkeurigheid van de demo gezichtsherkenning (hoofdstuk 15) met acceptatiecriterium AC-83: hoe vaak iemand als een ander wordt herkend, een onbekende toch wordt herkend of een medewerker niet wordt herkend. |
 | 3.6 | 9 oktober 2026 | AFAS-koppeling (ontwerp) en herkennen met de pas. Ontwerp van de koppeling met AFAS Profit voor de medewerkergegevens (hoofdstuk 11) met FR-67 en AC-87 t/m AC-89. Herkennen met een USB-NFC-pasjeslezer in de demo (class `BadgeReader`) en een pas koppelen in het beheer, met FR-65, FR-66, UC-20 en AC-84 t/m AC-86. |
 | 3.7 | 9 oktober 2026 | Open punten uit de beveiligingsscan opgelost (hoofdstuk 13). Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`requireAdmin`). Product-id's als `__proto__`, `constructor` of `toString` kunnen de voorraadlijst van een consumptiepunt niet meer verstoren. De camera gaat uit als de tijd voor herkennen of instellen om is. Codes en tijdstippen worden bij het laden strenger gecontroleerd. Het logboek in het databaseschema is echt alleen-toevoegen (triggers). De CI draait op Node.js 24 en de licentie van TensorFlow.js is toegevoegd. Twee bekende beperkingen erbij: registreren op naam van een ander en face-api dat niet meer wordt onderhouden. Nieuw testbestand `tests/beveiligingsscan.test.js` (534 tests in totaal). User stories US-01 t/m US-64 toegevoegd aan het eind van hoofdstuk 10. De diagrammen tonen nu ook de pasjeslezer, `BadgeReader`, UC-20 en de koppeling met AFAS. `BADGE_READER.minLength` is 4, zodat ook het kortste pasnummer dat de beheerder kan koppelen te scannen is. |
-| 3.8 | 12 oktober 2026 | Correctie `−` verbeterd: de beheerder kiest in het nieuwe venster `Registratie verwijderen` welke registratie (datum en tijd, product en aantal) weg moet, in plaats van dat altijd de laatst ingevoerde registratie verdwijnt. FR-14, UC-09, W19, US-30, AC-12 en AC-78 aangepast, AC-90 en screenshot W41 toegevoegd. In het logboek staat nu ook wanneer de verwijderde registratie was geregistreerd. De open controle van de keuzelijsten in het donkere thema is uitgevoerd (zie W39): de keuzelijsten en hun opties zijn in beide thema's goed leesbaar (licht 21:1, donker 15,7:1). Daarbij bleek de placeholdertekst in het donkere thema te weinig contrast te hebben (3,4:1). Die gebruikt nu `--muted` (6,9:1). W39 is opnieuw gemaakt en de twee bekende beperkingen over deze punten zijn vervallen. 547 tests in totaal. Nieuw zijn 9 browsertests (`tests/e2e/`) die de echte pagina in headless Edge of Chrome testen, zonder npm-pakketten, en die in GitHub Actions na de unit tests draaien. De melding "… bestaat niet meer. Er is niets opgeslagen." staat in de app nu precies zoals in dit document. |
+| 3.8 | 12 oktober 2026 | Correctie `−` verbeterd: de beheerder kiest in het nieuwe venster `Registratie verwijderen` welke registratie (datum en tijd, product en aantal) weg moet, in plaats van dat altijd de laatst ingevoerde registratie verdwijnt. FR-14, UC-09, W19, US-30, AC-12 en AC-78 aangepast, AC-90 en screenshot W41 toegevoegd. In het logboek staat nu ook wanneer de verwijderde registratie was geregistreerd. De open controle van de keuzelijsten in het donkere thema is uitgevoerd (zie W39): de keuzelijsten en hun opties zijn in beide thema's goed leesbaar (licht 21:1, donker 15,7:1). Daarbij bleek de placeholdertekst in het donkere thema te weinig contrast te hebben (3,4:1). Die gebruikt nu `--muted` (6,9:1). W39 is opnieuw gemaakt en de twee bekende beperkingen over deze punten zijn vervallen. 547 tests in totaal. Nieuw zijn 9 browsertests (`tests/e2e/`) die de echte pagina in headless Edge of Chrome testen, zonder npm-pakketten, en die in GitHub Actions na de unit tests draaien. De melding "… bestaat niet meer. Er is niets opgeslagen." staat in de app nu precies zoals in dit document. De controller is opgesplitst zonder gedragsverandering: `RegistrationApp` (eerst 2414 regels, nu 593) maakt en koppelt acht kleinere classes met elk één taak (`ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController` en `FormController`), en alle methodes blijven via `RegistrationApp` bereikbaar. Hoofdstuk 6 (met het klassendiagram en het architectuurdiagram), de use cases, hoofdstuk 13 en hoofdstuk 16 zijn daarop aangepast, en de bekende beperking "`RegistrationApp` is een grote klasse" is vervallen. |
 
 ## Inhoudsopgave
 
@@ -379,13 +379,13 @@ Medewerkers en de beheerder gebruiken het systeem in de browser van de tablet. I
 
 ![Architectuur van de demo](diagrams/architectuur.png)
 
-*Figuur: architectuur van de demo. View, controller en model in de browser. `DataStore` is de enige class die de gegevens in `localStorage` leest en schrijft (`ThemeManager` bewaart daar alleen de thema-instelling). `CsvExport`, `ThemeManager`, `FaceRecognitionDemo` en `BadgeReader` staan ernaast. De pasjeslezer typt het pasnummer als een toetsenbord in de pagina.*
+*Figuur: architectuur van de demo. View, controller (`RegistrationApp` met zijn acht onderdelen) en model in de browser. `DataStore` is de enige class die de gegevens in `localStorage` leest en schrijft (`ThemeManager` bewaart daar alleen de thema-instelling). `CsvExport`, `ThemeManager`, `FaceRecognitionDemo` en `BadgeReader` staan ernaast. De pasjeslezer typt het pasnummer als een toetsenbord in de pagina.*
 
 De hele demo draait in de browser. Er is geen server nodig behalve een eenvoudige webserver die de bestanden levert. De gegevens gaan zo door de lagen:
 
 - `DataStore` leest bij het starten de gegevens uit `localStorage`, controleert ze en geeft ze aan `RegistrationModel`.
 - `RegistrationModel` houdt alle gegevens in het geheugen en bevat de regels.
-- `RegistrationView` tekent het scherm uit het model. `RegistrationApp` (controller) verwerkt wat de gebruiker doet, laat het model iets wijzigen en laat daarna `DataStore` alles opslaan.
+- `RegistrationView` tekent het scherm uit het model. De controller (`RegistrationApp` met zijn onderdelen) verwerkt wat de gebruiker doet, laat het model iets wijzigen en laat daarna `DataStore` alles opslaan.
 - `CsvExport` maakt de export uit het model in het geheugen, niet uit `localStorage`. Het bestand gaat via de downloadfunctie van de browser naar de computer van de beheerder.
 
 ### Mogelijke productieversie
@@ -408,14 +408,14 @@ De medewerkergegevens kunnen in productie uit AFAS Profit komen. Alleen de backe
 
 ![Klassendiagram](diagrams/klassendiagram.png)
 
-*Figuur: klassendiagram van de JavaScript met de belangrijkste attributen, methodes en relaties, inclusief de class `BadgeReader` (sinds versie 3.6).*
+*Figuur: klassendiagram van de JavaScript met de belangrijkste attributen, methodes en relaties, inclusief de class `BadgeReader` (sinds versie 3.6) en de acht onderdelen van de controller (sinds versie 3.8).*
 
-De JavaScript is objectgeoriënteerd opgebouwd volgens het MVC-patroon. Er zijn acht classes, ieder in een eigen bestand:
+De JavaScript is objectgeoriënteerd opgebouwd volgens het MVC-patroon. Er zijn zestien classes, ieder in een eigen bestand. Acht daarvan vormen samen de controller (zie hieronder). De andere acht zijn:
 
 - `DataStore` (opslag, `DataStore.js`) regelt het opslaan en ophalen van gegevens in `localStorage`, controleert de gegevens bij het laden, zet oude gegevens om en maakt reservekopieën.
 - `RegistrationModel` (model, `RegistrationModel.js`) bevat de gegevens en de regels van de applicatie, inclusief voorraad, loonmaand, verwijderregels en het logboek. Met `snapshot()` en `restore()` kan een wijziging worden teruggedraaid.
 - `RegistrationView` (view, `RegistrationView.js`) zet de gegevens op het scherm en verandert zelf niets. Tekst uit de gegevens wordt met `escapeHtml` veilig gemaakt voordat die in de HTML komt, of met `textContent` gezet.
-- `RegistrationApp` (controller, `RegistrationApp.js`) verwerkt klikken, formulieren en andere acties, controleert de invoer en stuurt het model, de view, de export en de demo gezichtsherkenning aan. Ook de synchronisatie tussen tabbladen en de dagwissel zitten hier.
+- `RegistrationApp` (controller, `RegistrationApp.js`) verwerkt klikken, formulieren en andere acties, controleert de invoer en stuurt het model, de view, de export, de demo gezichtsherkenning en de pasjeslezer aan. De class maakt daarvoor acht kleinere onderdelen (zie [De controller en zijn onderdelen](#de-controller-en-zijn-onderdelen)). Het opslaan (`persist`), de synchronisatie tussen tabbladen en de dagwissel zitten in `RegistrationApp` zelf.
 - `CsvExport` (`csvExport.js`) telt de registraties op per medewerker, loonmaand en werkgevernummer, maakt de CSV-tekst veilig voor Excel en laat het bestand downloaden.
 - `ThemeManager` (`ThemeManager.js`) regelt het lichte en donkere thema (Systeem, Auto, licht en donker) en onthoudt de keuze in de browser. Die class staat los van de andere classes, omdat het thema een weergave-instelling per browser is en geen gegeven van de registratie.
 - `FaceRecognitionDemo` (`FaceRecognitionDemo.js`) is de uitschakelbare demo gezichtsherkenning: camera starten en stoppen, een gezicht omzetten naar een reeks getallen en die vergelijken. De controller krijgt deze class mee in de constructor. De bibliotheek face-api wordt alleen geladen als iemand de demo gebruikt, en komt dan uit het project zelf (`assets/vendor/face-api/`).
@@ -428,7 +428,32 @@ Daarnaast zijn er vier bestanden zonder class:
 - `icons.js` bevat de SVG-iconen en een hulpfunctie om ze in de pagina te zetten.
 - `ids.js` bevat de functie `createId()` voor unieke id's (UUID's). Die gebruikt `crypto.randomUUID()` en anders `crypto.getRandomValues()`, zodat het ook werkt als de website via een netwerkadres zonder https wordt geopend.
 
-Toegepaste OOP-principes: encapsulatie (gegevens alleen via getters en methodes van het model), één verantwoordelijkheid per class, compositie (de controller krijgt model, view, export, de demo gezichtsherkenning en de pasjeslezer mee in de constructor) en losse koppeling (de view kent de controller niet. De opslag is vervangbaar). Bovenaan ieder bestand staat in een comment waarvoor de class is en met welke classes hij verbonden is.
+#### De controller en zijn onderdelen
+
+Tot en met versie 3.7 stond alle besturing in één class van 2414 regels (de bekende beperking "`RegistrationApp` is een grote klasse" in hoofdstuk 16). In versie 3.8 is die class opgesplitst, zonder dat er iets aan het gedrag is veranderd. `RegistrationApp` maakt in de constructor acht onderdelen en geeft zichzelf daarbij mee. Ieder onderdeel heeft één taak en staat in een eigen bestand:
+
+| Class | Bestand | Taak | Regels |
+|---|---|---|---|
+| `RegistrationApp` | `RegistrationApp.js` | Maakt en koppelt de onderdelen, start de app, dagwissel, synchronisatie tussen tabbladen, opslaan met terugdraaien (`persist`), labels voor het logboek, alle event listeners en de algemene kliklistener (`handleClick`) | 593 |
+| `ModalManager` | `ModalManager.js` | Vensters openen en sluiten, de focus terugzetten op het element waarmee een venster werd geopend, Escape en Tab binnen het bovenste venster | 116 |
+| `EmployeeController` | `EmployeeController.js` | De beginpagina: zoeken en bedrijfsfilter, het productvenster (`+`, `−`, `Zelfde als vorige keer`) en registreren | 257 |
+| `BadgeController` | `BadgeController.js` | Herkennen met de pas: geeft de toetsen door aan `BadgeReader`, zet het zoekveld terug en opent na een scan het productvenster | 95 |
+| `FaceController` | `FaceController.js` | Het cameravenster van de demo gezichtsherkenning: herkennen, een gezicht instellen of uitzetten, camera uit na de tijdslimiet | 306 |
+| `AdminController` | `AdminController.js` | Inloggen en uitloggen, dashboard en tabbladen, logboek, export, `Alle gegevens wissen`, (de)activeren en verwijderen, en `requireAdmin` voor iedere beheeractie | 418 |
+| `CorrectionController` | `CorrectionController.js` | Correcties `+` (met datum) en `−` (venster `Registratie verwijderen`) | 249 |
+| `StockController` | `StockController.js` | Het tabblad Voorraad: leveringen, tellingen en minimum | 155 |
+| `FormController` | `FormController.js` | De formulieren voor medewerker, product, bedrijf en consumptiepunt: openen, invoer controleren, opslaan en sluiten als het gegeven in een ander tabblad is gewijzigd | 676 |
+
+De onderdelen werken zo samen:
+
+- Ieder onderdeel gebruikt het model, de view, `persist` en de methodes van de andere onderdelen via `RegistrationApp` (`this.app`). Zo kennen de onderdelen elkaar niet rechtstreeks en is er één plek waar alles samenkomt.
+- Toestand die meerdere onderdelen gebruiken, staat in `RegistrationApp`: of de beheerder is ingelogd (`adminLoggedIn`), welke medewerker en producten in het productvenster zijn gekozen (`selectedEmployeeId`, `selectedProducts`) en hoe die medewerker is herkend (`recognizedBy`). Toestand van één onderdeel staat in dat onderdeel, zoals het sessienummer van het cameravenster (`FaceController.faceSession`) of het venster `Registratie verwijderen` dat open is (`CorrectionController.removalTarget`).
+- Onderaan `RegistrationApp.js` staat een lijst (`DELEGATES`) van de methodes en velden van de onderdelen die ook op `RegistrationApp` bestaan. `app.handleBadgeKey(event)` roept zo `BadgeController.handleBadgeKey` aan, en `app.faceSession` leest en wijzigt het veld van `FaceController`. Daardoor werken `main.js`, de aanroep van de constructor en alle 547 unit tests en 9 browsertests zonder aanpassing. Er is geen kopie van een waarde die uit de pas kan lopen.
+- Iedere beheeractie begint nog steeds met `requireAdmin`, ook in `CorrectionController`, `StockController` en `FormController`.
+
+In de use cases en in hoofdstuk 13 staat bij een methode de class waarin die staat, bijvoorbeeld `AdminController.exportCsv`. Via `RegistrationApp` is dezelfde methode ook als `app.exportCsv` aan te roepen. De grootste class is nu `FormController` (vier formulieren met hun controles). Wordt die later te groot, dan kan ieder formulier een eigen class krijgen.
+
+Toegepaste OOP-principes: encapsulatie (gegevens alleen via getters en methodes van het model), één verantwoordelijkheid per class (ook binnen de controller), compositie (de controller krijgt model, view, export, de demo gezichtsherkenning en de pasjeslezer mee in de constructor, en maakt zelf zijn onderdelen) en losse koppeling (de view kent de controller niet. De opslag is vervangbaar). Bovenaan ieder bestand staat in een comment waarvoor de class is en met welke classes hij verbonden is.
 
 Door deze verdeling blijft de code overzichtelijk. Later kan bijvoorbeeld `localStorage` worden vervangen door een database zonder alles opnieuw te maken.
 
@@ -2043,7 +2068,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 **Hoofdscenario:**
 
 1. De medewerker klikt op de eigen medewerkerrij (of drukt erop op Enter of spatie).
-2. Het productvenster opent (`RegistrationApp.openEmployeeProducts`). Bovenaan staat een begroeting die past bij het tijdstip: "Goedemorgen" (tot 12 uur), "Goedemiddag" (tot 18 uur) of "Goedenavond", met de voornaam, bijvoorbeeld "Goedemorgen Lotte."
+2. Het productvenster opent (`EmployeeController.openEmployeeProducts`). Bovenaan staat een begroeting die past bij het tijdstip: "Goedemorgen" (tot 12 uur), "Goedemiddag" (tot 18 uur) of "Goedenavond", met de voornaam, bijvoorbeeld "Goedemorgen Lotte."
 3. Het venster toont alleen de producten die het eigen consumptiepunt aanbiedt. Er zijn geen persoonlijke aantallen of bedragen te zien.
 4. De medewerker kiest producten met de `+`-knoppen. De knop toont het totaal, bijvoorbeeld `Registreren (3)`.
 5. De medewerker klikt op `Registreren` (`registerSelectedProducts`).
@@ -2189,7 +2214,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 1. De beheerder klikt op `Admin login`.
 2. Het loginformulier opent. Het e-mailadres is al ingevuld (`admin@tvb.nl`). De focus staat op het e-mailveld.
 3. De beheerder vult een wachtwoord in en klikt op `Inloggen`.
-4. In de demo wordt ieder ingevuld e-mailadres en wachtwoord geaccepteerd (`RegistrationApp.login`). Het dashboard opent (de eerste keer op het tabblad `Registraties`), met alle gegevens bijgewerkt en het datumveld van de correctie op vandaag.
+4. In de demo wordt ieder ingevuld e-mailadres en wachtwoord geaccepteerd (`AdminController.login`). Het dashboard opent (de eerste keer op het tabblad `Registraties`), met alle gegevens bijgewerkt en het datumveld van de correctie op vandaag.
 5. De beheerder klikt op `Uitloggen`. Het wachtwoordveld wordt leeggemaakt en het loginformulier verschijnt direct in hetzelfde venster.
 
 **Alternatieve en uitzonderingspaden:**
@@ -2238,7 +2263,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 
 1. De beheerder zoekt de medewerker bij `Medewerker corrigeren` en klapt die open.
 2. Eventueel kiest de beheerder bij `Datum bij toevoegen (+)` een eerdere datum (standaard vandaag).
-3. De beheerder klikt bij een product op `+` (`RegistrationApp.addCorrection`).
+3. De beheerder klikt bij een product op `+` (`CorrectionController.addCorrection`).
 4. `readCorrectionDate` leest de datum. Vandaag krijgt het huidige tijdstip, een eerdere dag 12:00 uur.
 5. `addRegistration` voegt één registratie toe met `correction: true`, de prijs en het werkgevernummer van nu en de gekozen datum.
 6. De voorraad van het consumptiepunt van de medewerker gaat alleen 1 omlaag als dat punt het product aanbiedt **en** het tijdstip van de registratie niet vóór het tijdstip van de laatste telling van dat product (`countedAt`) ligt. Het gaat om het tijdstip uit stap 4: vandaag het huidige tijdstip, een eerdere dag 12:00 uur. Een correctie op de dag van de telling telt dus als "vóór de telling" als de telling na 12:00 uur was.
@@ -2442,7 +2467,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 **Hoofdscenario:**
 
 1. De beheerder kiest eventueel een medewerker en een consumptiemaand (zelfde filters als UC-08). Bij iedere maand staat de bijbehorende loonmaand.
-2. De beheerder klikt op `CSV exporteren` (`RegistrationApp.exportCsv`).
+2. De beheerder klikt op `CSV exporteren` (`AdminController.exportCsv`).
 3. `CsvExport.buildRows` neemt de registraties die bij de filters passen.
 4. Per registratie bepaalt het systeem de loonmaand: de maand na de consumptie (`RegistrationModel.payrollPeriod`).
 5. De registraties worden opgeteld per **medewerker × loonmaand × werkgevernummer**, met de prijs die bij iedere registratie is bewaard (oude registraties zonder prijs: de huidige prijs uit het productbeheer).
@@ -2492,7 +2517,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 **Hoofdscenario:**
 
 1. De beheerder klikt op `Alle gegevens wissen`.
-2. Het systeem vraagt "Alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet wissen?" en daarna "Weet je het zeker? Dit kan niet ongedaan worden gemaakt." (`RegistrationApp.wipeAllData`).
+2. Het systeem vraagt "Alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet wissen?" en daarna "Weet je het zeker? Dit kan niet ongedaan worden gemaakt." (`AdminController.wipeAllData`).
 3. De beheerder klikt twee keer op `OK`.
 4. `RegistrationModel.wipeAll` laat `DataStore.clearAll` de gegevens en alle reservekopieën uit `localStorage` wissen en start opnieuw met de demogegevens (8 medewerkers, 13 bedrijven, 8 producten en het punt Hoofdkantoor bij TVB, zie FR-64).
 5. De demogegevens worden direct opgeslagen, zodat andere open tabbladen ze ook inladen. Die tabbladen wissen ook hun gegevens in het geheugen, loggen uit en vergeten de gezichten (UC-19, A2).
@@ -2570,9 +2595,9 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 
 1. De medewerker houdt de pas tegen de lezer.
 2. De lezer typt razendsnel het pasnummer, gevolgd door Enter (of Tab).
-3. De controller geeft iedere toets door aan `BadgeReader.handleKey` (`RegistrationApp.handleBadgeKey`, een `keydown`-listener in de capture-fase, zodat die vóór de andere toetsen-listeners komt). `BadgeReader` ziet een scan: minstens 4 tekens (`minLength`, even kort als het kortste pasnummer dat de beheerder kan koppelen), elk binnen 40 milliseconden na het vorige teken (`maxKeyIntervalMs`), afgesloten met Enter of Tab. De Enter of Tab die de scan afsluit, wordt tegengehouden, zodat die geen andere actie start (bijvoorbeeld een medewerkerrij openen).
+3. De controller geeft iedere toets door aan `BadgeReader.handleKey` (`BadgeController.handleBadgeKey`, een `keydown`-listener in de capture-fase, zodat die vóór de andere toetsen-listeners komt). `BadgeReader` ziet een scan: minstens 4 tekens (`minLength`, even kort als het kortste pasnummer dat de beheerder kan koppelen), elk binnen 40 milliseconden na het vorige teken (`maxKeyIntervalMs`), afgesloten met Enter of Tab. De Enter of Tab die de scan afsluit, wordt tegengehouden, zodat die geen andere actie start (bijvoorbeeld een medewerkerrij openen).
 4. `BadgeReader.normalize` maakt het pasnummer gelijk (spaties, `:` en `-` weg, hoofdletters) en geeft het door aan de controller (`onScan`).
-5. De controller (`RegistrationApp.recognizeBadge`) zoekt de medewerker met dat pasnummer (`RegistrationModel.findEmployeeByBadge`) en controleert of die actief is.
+5. De controller (`BadgeController.recognizeBadge`) zoekt de medewerker met dat pasnummer (`RegistrationModel.findEmployeeByBadge`) en controleert of die actief is.
 6. Het productvenster van die medewerker opent (`openEmployeeProducts` met `recognizedBy: "badge"`) met de begroeting en daarachter "Je bent herkend met je pas." De medewerker gaat verder met UC-02 vanaf stap 3.
 
 **Alternatieve en uitzonderingspaden:**
@@ -2917,7 +2942,7 @@ De login in de demo is niet echt beveiligd. Elk ingevuld e-mailadres en wachtwoo
 
 ### Autorisatie
 
-De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in de browser. Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`RegistrationApp.requireAdmin`), en niet alleen doordat de knop in het beheervenster staat. Dat geldt voor wijzigen, verwijderen, correcties, voorraad, exporteren, alles wissen en het openen van een beheerformulier. Zonder ingelogde beheerder gebeurt er niets en verschijnt "Log eerst in als beheerder.". Registreren door een medewerker zelf vraagt geen login. In productie moet de server deze rechten controleren. Controle in de browser alleen is niet genoeg.
+De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in de browser. Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`AdminController.requireAdmin`), en niet alleen doordat de knop in het beheervenster staat. Dat geldt voor wijzigen, verwijderen, correcties, voorraad, exporteren, alles wissen en het openen van een beheerformulier. Zonder ingelogde beheerder gebeurt er niets en verschijnt "Log eerst in als beheerder.". Registreren door een medewerker zelf vraagt geen login. In productie moet de server deze rechten controleren. Controle in de browser alleen is niet genoeg.
 
 ### Wat in de demo al is beveiligd
 
@@ -2931,12 +2956,12 @@ De rechten per rol staan in hoofdstuk 3. In de demo zit die controle alleen in d
 | Geen referrer | `<meta name="referrer" content="no-referrer">`: de browser stuurt bij links en verzoeken het adres van de pagina niet mee. | `index.html` |
 | Geen externe bronnen | De lettertypes (DM Sans en Space Grotesk) staan in `assets/fonts/`, en face-api met de drie modellen staat in `assets/vendor/face-api/`. Er gaan dus geen verzoeken (en geen IP-adressen van medewerkers) naar Google of een CDN. | `assets/fonts/`, `assets/vendor/face-api/`, `config.js` |
 | Controle van face-api | In `assets/vendor/face-api/README.md` staan de versie (1.7.15), de bron en een SHA-256-controlegetal van ieder bestand. Een test rekent de controlegetallen opnieuw uit, zodat een veranderd bestand opvalt, en een andere test controleert dat ieder bestand in die map een controlegetal heeft. `.gitattributes` zorgt dat Git deze bestanden en de lettertypes niet aanpast (geen omzetting van regeleinden). De licenties van face-api (MIT) en van de ingebouwde TensorFlow.js (Apache 2.0) staan in dezelfde map. | `assets/vendor/face-api/README.md`, `LICENSE`, `LICENSE-TENSORFLOWJS`, `.gitattributes`, `tests/beveiliging-config.test.js`, `tests/beveiligingsscan.test.js` |
-| Invoer begrensd | De naamvelden in de formulieren (product, voornaam, achternaam, bedrijf en consumptiepunt) accepteren hooguit 100 tekens (`maxlength`). Een prijs moet tussen 0 en 1000 euro liggen. Anders verschijnt een foutmelding bij het veld. Looncode, personeelsnummer en werkgevernummer mogen alleen cijfers bevatten. | `index.html`, `RegistrationApp.isValidPrice`, `RegistrationApp.isDigitsOnly` |
-| Beheeracties alleen na inloggen | Iedere beheeractie begint met `requireAdmin`: zonder ingelogde beheerder doet de actie niets, ook als de methode op een andere manier wordt aangeroepen of een verborgen knop toch wordt ingedrukt. Dat geldt voor de formulieren (medewerker, product, bedrijf, consumptiepunt), verwijderen, (de)activeren, correcties `+` en `−`, leveringen en tellingen, de export en `Alle gegevens wissen`. Een correctie `+` voor een product dat niet bestaat, wordt geweigerd. | `RegistrationApp.requireAdmin` |
+| Invoer begrensd | De naamvelden in de formulieren (product, voornaam, achternaam, bedrijf en consumptiepunt) accepteren hooguit 100 tekens (`maxlength`). Een prijs moet tussen 0 en 1000 euro liggen. Anders verschijnt een foutmelding bij het veld. Looncode, personeelsnummer en werkgevernummer mogen alleen cijfers bevatten. | `index.html`, `FormController.isValidPrice`, `FormController.isDigitsOnly` |
+| Beheeracties alleen na inloggen | Iedere beheeractie begint met `requireAdmin`: zonder ingelogde beheerder doet de actie niets, ook als de methode op een andere manier wordt aangeroepen of een verborgen knop toch wordt ingedrukt. Dat geldt voor de formulieren (medewerker, product, bedrijf, consumptiepunt), verwijderen, (de)activeren, correcties `+` en `−`, leveringen en tellingen, de export en `Alle gegevens wissen`. Een correctie `+` voor een product dat niet bestaat, wordt geweigerd. | `AdminController.requireAdmin` |
 | CSV-formules | Velden die (eventueel na spaties, tabs of enters) met `=`, `+`, `-` of `@` beginnen, en velden die met een tab, `\r` of `\n` beginnen, krijgen een `'` ervoor, zodat Excel ze niet als formule uitvoert (CSV-injectie, zie hoofdstuk 11 en 12). | `CsvExport.escapeField` |
-| Alle gegevens wissen | De beheerder kan alle gegevens, de reservekopieën en de ingestelde gezichten op de tablet wissen, na twee bevestigingen (recht op vergetelheid, AVG). | `RegistrationApp.wipeAllData`, `DataStore.clearAll` |
-| Uitloggen bij sluiten | Sluiten van het beheervenster logt de beheerder uit en verbergt ook het dashboard in het venster, zodat de volgende persoon op een gedeelde tablet niet zonder wachtwoord in het beheer komt. | `RegistrationApp.closeAdmin` |
-| Camera uit na de tijdslimiet | Wordt er bij herkennen binnen 20 seconden (`scanTimeoutMs`) niemand herkend, of wordt er bij instellen in die tijd geen gezicht vastgelegd, dan gaat de camera uit. Het venster blijft open met een melding. Zo blijft de camera niet filmen als een medewerker wegloopt zonder het venster te sluiten. | `RegistrationApp.stopCameraAfterTimeout`, `scheduleEnrollTimeout` |
+| Alle gegevens wissen | De beheerder kan alle gegevens, de reservekopieën en de ingestelde gezichten op de tablet wissen, na twee bevestigingen (recht op vergetelheid, AVG). | `AdminController.wipeAllData`, `DataStore.clearAll` |
+| Uitloggen bij sluiten | Sluiten van het beheervenster logt de beheerder uit en verbergt ook het dashboard in het venster, zodat de volgende persoon op een gedeelde tablet niet zonder wachtwoord in het beheer komt. | `AdminController.closeAdmin` |
+| Camera uit na de tijdslimiet | Wordt er bij herkennen binnen 20 seconden (`scanTimeoutMs`) niemand herkend, of wordt er bij instellen in die tijd geen gezicht vastgelegd, dan gaat de camera uit. Het venster blijft open met een melding. Zo blijft de camera niet filmen als een medewerker wegloopt zonder het venster te sluiten. | `FaceController.stopCameraAfterTimeout`, `scheduleEnrollTimeout` |
 | Gezichtsdata alleen in het geheugen | Een gezicht wordt alleen vastgelegd na een vinkje voor toestemming, en alleen als rij van 128 getallen in het geheugen bewaard. Niet in `localStorage` en niet op een server. | `FaceRecognitionDemo` |
 | Pasnummer niet zichtbaar of gelogd | Het pasnummer staat niet in de medewerkerslijst (alleen het label "Pas gekoppeld"), niet in het logboek en niet in de CSV-export. Een onbekende pas en een pas van een inactieve medewerker geven dezelfde melding, zodat niets uitlekt over een andere medewerker. Een opgeslagen pasnummer wordt bij het laden gecontroleerd (alleen `A-Z` en `0-9`, hooguit 64 tekens). | `RegistrationView.renderAdminEmployees`, `DataStore.isSafeBadgeId` |
 | Veilige CI | De GitHub Actions-workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het token niet (`persist-credentials: false`) en gebruikt actions die op een commit-SHA zijn vastgezet in plaats van op een tag. | `.github/workflows/ci.yml` |
@@ -3491,7 +3516,7 @@ Bij nieuwe code moet de verdeling hetzelfde blijven:
 - opslag in `DataStore` (`DataStore.js`).
 - regels in `RegistrationModel` (`RegistrationModel.js`).
 - HTML-weergave in `RegistrationView` (`RegistrationView.js`).
-- acties in `RegistrationApp` (`RegistrationApp.js`).
+- acties in de controller: `RegistrationApp` (`RegistrationApp.js`) koppelt ze en slaat op, en de actie zelf staat in het onderdeel met die taak (`EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController`, `FormController` of `ModalManager`). Een nieuwe methode van een onderdeel die ook via `RegistrationApp` bereikbaar moet zijn, komt in de lijst `DELEGATES` onderaan `RegistrationApp.js`.
 - export in `CsvExport` (`csvExport.js`).
 - het lichte en donkere thema in `ThemeManager` (`ThemeManager.js`), los van de gegevens.
 - de demo gezichtsherkenning in `FaceRecognitionDemo` (`FaceRecognitionDemo.js`).
@@ -3504,7 +3529,7 @@ Bij nieuwe code moet de verdeling hetzelfde blijven:
 - vaste paginaopbouw in `index.html`.
 - unit tests in `tests/` (gedeelde hulpfuncties in `tests/helpers.js`. Een nieuw testbestand ook toevoegen aan het script `test` in `package.json`).
 - lettertypes in `assets/fonts/` en bibliotheken van anderen in `assets/vendor/`, nooit via een externe server. Bij iedere bibliotheek horen de licenties van alle onderdelen die erin zitten (zoals `LICENSE` en `LICENSE-TENSORFLOWJS` bij face-api) en een controlegetal per bestand in de README van die map.
-- iedere nieuwe beheeractie in `RegistrationApp` begint met `requireAdmin()`.
+- iedere nieuwe beheeractie in de controller begint met `requireAdmin()` (in een onderdeel: `this.app.requireAdmin()`).
 
 Wie een inline script in `index.html` wijzigt, moet ook de sha256-hash in de Content-Security-Policy aanpassen. `tests/beveiliging-config.test.js` faalt anders.
 
@@ -3517,7 +3542,7 @@ Komt er een nieuw veld bij (bijvoorbeeld een EAN-code per product), dan moeten d
 1. **Model:** voeg het veld toe in `RegistrationModel` (aanmaken, wijzigen en eventueel in `createSeedState` voor de demogegevens).
 2. **Migratie:** zorg dat `DataStore.migrate` oude opgeslagen gegevens zonder dit veld omzet (een standaardwaarde invullen), zodat een tablet met oude gegevens blijft werken.
 3. **Validator:** voeg het veld toe aan de controle bij het laden in `DataStore` (`validators`), met type en maximale lengte, zodat aangepaste gegevens worden afgevangen.
-4. **Formulier en weergave:** voeg het veld toe in `index.html` (met `maxlength`), in `RegistrationApp` (lezen en controleren) en in `RegistrationView` (tonen, altijd via `escapeHtml`).
+4. **Formulier en weergave:** voeg het veld toe in `index.html` (met `maxlength`), in `FormController` (lezen en controleren) en in `RegistrationView` (tonen, altijd via `escapeHtml`).
 5. **Test:** schrijf een test voor het nieuwe veld, voor de migratie van oude gegevens en voor een ongeldige waarde.
 6. **Productieschema:** voeg de kolom toe in `docs/DATABASE-SCHEMA.sql`, met dezelfde regels (NOT NULL, lengte, UNIQUE).
 7. **TO:** werk hoofdstuk 8 (databaseontwerp) bij, en waar nodig de eisen, de export (hoofdstuk 12) en de acceptatiecriteria.
@@ -3554,7 +3579,6 @@ Zolang er geen backend is, blijven de gegevens per browser in `localStorage`. Ee
 
 | Beperking | Uitleg | Voorstel |
 |---|---|---|
-| `RegistrationApp` is een grote klasse | `RegistrationApp.js` is 2414 regels lang en bevat alle acties: registreren, correcties, formulieren, voorraad, tabbladen, de demo gezichtsherkenning en het herkennen met de pas. Dat maakt het lastiger om een onderdeel snel te vinden en te testen. | Opsplitsen in kleinere controllers met een eigen taak, bijvoorbeeld een `RegistrationController`, `AdminFormsController`, `StockController` en `FaceDemoController`, die `persist` en de meldingen delen. |
 | Logboek bewaart namen en geen actor | Logboekregels bevatten namen als tekst en blijven na het verwijderen van een medewerker staan. Wie de wijziging deed, staat er niet in (zie hoofdstuk 13). | In productie een auditlog op de server met beheerder-id en medewerker-id, en anonimiseren na de bewaartermijn. |
 | Geen grens aan de opslag | Registraties en logboekregels blijven groeien tot `localStorage` vol is (naar schatting na zo'n 20.000 registraties, zie NFR-17). Dan lukt opslaan niet meer. | Een backend met database. Tot die tijd oude jaren exporteren en de tablet wissen. |
 | Browsertests alleen in Chrome en Edge | De browsertests in `tests/e2e/` draaien in GitHub Actions in Google Chrome en lokaal in Microsoft Edge. Firefox en Safari worden niet automatisch getest. De demo gezichtsherkenning, de correcties in het beheer en een echte pasjeslezer vallen buiten deze tests. | Firefox toevoegen (via WebDriver BiDi) als dat nodig blijkt, en de correcties aan de browsertests toevoegen. |

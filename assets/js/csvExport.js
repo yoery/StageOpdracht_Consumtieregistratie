@@ -9,8 +9,8 @@
  * Verbonden met:
  *   - RegistrationModel: levert registraties, medewerkers, de prijs per registratie
  *     (registrationPrice), het werkgevernummer en de loonmaand (payrollPeriod).
- *   - RegistrationApp: roept download() aan als de beheerder op "CSV exporteren" klikt,
- *     en toont een melding als er niets te exporteren is.
+ *   - AdminController (onderdeel van de controller RegistrationApp): roept download() aan als
+ *     de beheerder op "CSV exporteren" klikt, en toont een melding als er niets te exporteren is.
  *
  * Deze class weet niets van de HTML-pagina; alleen download() gebruikt de browser om
  * het bestand op te slaan.

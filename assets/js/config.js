@@ -9,7 +9,7 @@
  *   - DataStore: standaardproducten, bedrijven en kleuren bij het omzetten van oude gegevens;
  *   - RegistrationModel: de producten, bedrijven, kleuren en voorbeeldmedewerkers;
  *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto";
- *   - FaceRecognitionDemo en RegistrationApp: FACE_DEMO, de instellingen van de demo;
+ *   - FaceRecognitionDemo en FaceController: FACE_DEMO, de instellingen van de demo;
  *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer).
  */
 

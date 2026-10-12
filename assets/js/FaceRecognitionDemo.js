@@ -20,7 +20,8 @@ import { FACE_DEMO } from "./config.js";
  *
  * Verbonden met:
  *   - config.js: FACE_DEMO (adres van de bibliotheek en modellen, drempelwaarde, tijdslimiet);
- *   - RegistrationApp: stuurt de demo aan (instellen, herkennen, venster openen en sluiten);
+ *   - FaceController (onderdeel van de controller RegistrationApp): stuurt de demo aan
+ *     (instellen, herkennen, venster openen en sluiten);
  *   - index.html: het venster #faceModal met het videobeeld #faceVideo.
  */
 export class FaceRecognitionDemo {

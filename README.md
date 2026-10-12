@@ -25,7 +25,15 @@ assets/
     DataStore.js            # Opslag in localStorage
     RegistrationModel.js    # Gegevens en regels
     RegistrationView.js     # Weergave (HTML)
-    RegistrationApp.js      # Controller (klikken en formulieren)
+    RegistrationApp.js      # Controller: maakt en koppelt de onderdelen hieronder, opslaan (persist), tabbladen synchroniseren
+    ModalManager.js         # Controller-onderdeel: vensters openen en sluiten, focus
+    EmployeeController.js   # Controller-onderdeel: beginpagina, productvenster en registreren
+    BadgeController.js      # Controller-onderdeel: herkennen met de pas (koppelt BadgeReader aan de app)
+    FaceController.js       # Controller-onderdeel: cameravenster van de demo gezichtsherkenning
+    AdminController.js      # Controller-onderdeel: inloggen, dashboard, logboek, export, wissen, verwijderen
+    CorrectionController.js # Controller-onderdeel: correcties + en − (registratie verwijderen)
+    StockController.js      # Controller-onderdeel: voorraad, leveringen en minimum
+    FormController.js       # Controller-onderdeel: formulieren medewerker, product, bedrijf en consumptiepunt
     csvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
     ThemeManager.js         # Class ThemeManager: licht/donker thema
     icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
