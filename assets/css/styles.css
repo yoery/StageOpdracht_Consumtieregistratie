@@ -49,7 +49,10 @@
   --gutter:28px;
   color-scheme:light;
   --ink:#163540;
-  --muted:#71858a;
+  /* Uitleg- en bijschrifttekst. Dezelfde grijsgroene tint als eerst (#71858a), iets donkerder
+     gemaakt zodat hij op alle lichte achtergronden de WCAG-norm haalt (minimaal 4,5:1):
+     5,5:1 op wit en 4,6:1 op de lichtste gekleurde vlakken (--error-bg, --mint). */
+  --muted:#5a6c71;
   --green:#159a72;
   --green-dark:#087252;
   --mint:#e8f5ee;
