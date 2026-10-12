@@ -29,7 +29,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `archief/app.js` | Back-up van de originele versie in één bestand; wordt niet meer geladen |
 | `archief/app.test.js` | Back-up van de oude tests bij die versie; wordt niet meer uitgevoerd |
 | `README.md` | Korte startinformatie voor het project |
-| `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-BLIKJESREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het TVB-sjabloon `tvbsjabloon.docx` (dat staat niet in de repository, vraag het op bij TVB): voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
+| `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-BLIKJESREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het sjabloon `docs/tvbsjabloon.docx`: voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
 | `docs/` | Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie |
 | `docs/wireframes/` | Low-fidelity (`lofi-…`), mid-fidelity (`midfi-…`) en high-fidelity (`w…`) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9) |
 | `tests/` | Unit tests (534) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
@@ -724,7 +724,7 @@ De HTML bevat de componenten en vaste ankerpunten met `id`-waarden. De CSS bepaa
 
 ## 11. Mogelijke vervolgstappen
 
-1. Kies een backend, bijvoorbeeld PHP, .NET of een beheerde dienst. Node.js valt af: TVB gebruikt het bij voorkeur niet voor de eigen software (in dit project alleen voor de tests, de CI en het maken van de Word-bestanden).
+1. Kies een backend, bijvoorbeeld PHP, Node.js of een beheerde dienst.
 2. Maak de tabellen uit `docs/DATABASE-SCHEMA.sql` aan (onder andere medewerkers, registraties, producten, bedrijven, consumptiepunten en het logboek). `point_products.counted_at` bewaart het tijdstip van de laatste telling (zoals `countedAt` in de demo), en een beheerder heeft de rol `admin` (beheerder) of `system_admin` (systeembeheerder).
 3. Vervang `localStorage` door API-aanroepen; alleen `DataStore` hoeft daarvoor te veranderen.
 4. Voeg echte admin-authenticatie toe.
