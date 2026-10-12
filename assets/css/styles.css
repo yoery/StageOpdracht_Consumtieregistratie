@@ -136,6 +136,15 @@ body {
 button,input,select {
   font:inherit
 }
+/* Placeholdertekst in het donkere thema, zoals "Alle bedrijven" in het bedrijfsfilter en
+   "Zoek op voor- of achternaam...". De browser tekent die standaard grijs (#757575), ook in het
+   donkere thema. Op de donkere velden (--paper) is dat maar 3,4:1, te weinig voor gewone tekst
+   (WCAG: minimaal 4,5:1). --muted haalt daar 6,9:1. In het lichte thema blijft de grijze kleur
+   van de browser staan (4,6:1). opacity:1, omdat Firefox placeholders anders half doorzichtig maakt. */
+:root[data-theme="dark"] ::placeholder {
+  color:var(--muted);
+  opacity:1
+}
 button {
   cursor:pointer;
   border:0
@@ -1386,6 +1395,43 @@ footer {
   transform:translateY(2px);
   color:var(--green-dark)
 }
+/* Venster "Registratie verwijderen" (correctie "−"): één kader met per registratie een rij,
+   gescheiden door een lijn, net als de correctielijst. Bij veel registraties scrolt de lijst. */
+.remove-registration-modal {
+  max-width:520px
+}
+.remove-registration-list {
+  list-style:none;
+  margin:18px 0 12px;
+  padding:0;
+  border:1px solid var(--line);
+  border-radius:10px;
+  max-height:min(360px,50vh);
+  overflow:auto
+}
+.remove-registration-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px
+}
+.remove-registration-item + .remove-registration-item {
+  border-top:1px solid var(--line)
+}
+.remove-registration-info {
+  display:grid;
+  gap:2px;
+  min-width:0;
+  color:var(--ink);
+  font-size:12px
+}
+.remove-registration-info strong {
+  font-size:13px
+}
+.remove-registration-item .secondary-button {
+  flex-shrink:0
+}
 #productsTab > .primary-button {
   margin-bottom:14px
 }
@@ -1917,7 +1963,7 @@ footer {
   .admin-employee-item small,.correction-count {
     font-size:13px
   }
-  .correction-product-row > span {
+  .correction-product-row > span,.remove-registration-info {
     font-size:14px
   }
 }

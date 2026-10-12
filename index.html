@@ -419,6 +419,21 @@
     </div>
   </div>
 
+  <!-- Correctie "−": de beheerder kiest welke registratie (datum en tijd) wordt verwijderd.
+       Staat na de andere beheervensters, zodat het boven het beheervenster ligt (zie topModal). -->
+  <div class="modal-backdrop hidden" id="removeRegistrationModal" role="dialog" aria-modal="true" aria-labelledby="removeRegistrationTitle" aria-describedby="removeRegistrationHelp">
+    <div class="modal remove-registration-modal">
+      <button class="modal-close" data-close-remove-registration aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Correctie</p>
+      <h2 id="removeRegistrationTitle">Registratie verwijderen</h2>
+      <p class="muted" id="removeRegistrationHelp"></p>
+      <ul class="remove-registration-list" id="removeRegistrationList"></ul>
+      <div class="employee-form-actions">
+        <button class="secondary-button" type="button" data-close-remove-registration>Annuleren</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Demo gezichtsherkenning: camerabeeld met een kader voor het gezicht.
        Wordt gebruikt om een gezicht in te stellen (per medewerker) en om iemand te herkennen. -->
   <div class="modal-backdrop hidden" id="faceModal" role="dialog" aria-modal="true" aria-labelledby="faceTitle">

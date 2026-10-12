@@ -583,7 +583,7 @@ export class DataStore {
   // anders "51" worden in plaats van 6). De voorraad mag negatief zijn (er is dan meer
   // geregistreerd dan geteld), het minimum niet: een negatief minimum wordt 0.
   // Het tijdstip van de laatste telling (`countedAt`) blijft bewaard als het een geldige datum is
-  // die niet na `now` (het moment van laden) ligt. addRegistration en removeLastRegistration
+  // die niet na `now` (het moment van laden) ligt. addRegistration en removeRegistration
   // gebruiken dat om te bepalen of de voorraad verandert. Een telling in de toekomst wordt
   // weggelaten (de voorraad telt dan als "niet geteld"): anders zou iedere nieuwe registratie
   // vóór die telling liggen en zou de voorraad nooit meer veranderen. Ook een tijdstip dat geen

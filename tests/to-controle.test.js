@@ -148,7 +148,7 @@ test("punt 3: correctie '+' voor een verwijderde medewerker geeft de gewone 'bes
   assert.equal(app.addCorrection("weg", "blikje"), false);
 
   assert.equal(model.registrations.length, 0);
-  assert.deepEqual(view.toasts, [{ message: "Deze medewerker bestaat niet meer; er is niets opgeslagen.", tone: "error" }]);
+  assert.deepEqual(view.toasts, [{ message: "Deze medewerker bestaat niet meer. Er is niets opgeslagen.", tone: "error" }]);
 });
 
 // ------------------------------------------------------------------

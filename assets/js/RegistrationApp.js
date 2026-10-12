@@ -74,6 +74,7 @@ export class RegistrationApp {
     this.currentDay = new Date().toDateString(); // de dag die nu op het scherm staat (zie refreshIfNewDay)
     this.lastDelivery = null;      // laatst geboekte levering: { productId, time } (zie bookDelivery)
     this.editingCopies = new Map(); // formulier -> kopie (tekst) van het gegeven bij het openen (zie rememberEditing)
+    this.removalTarget = null;     // { employeeId, productId } zolang het venster "Registratie verwijderen" open is
   }
 
   // Wordt er op dit moment een gezicht vastgelegd in het venster dat nu open is?
@@ -190,6 +191,7 @@ export class RegistrationApp {
     this.renderAuditLog();
 
     this.closeStaleForms();
+    this.refreshRemoveRegistration();
 
     // Een open productvenster blijft open, tenzij de medewerker intussen weg of inactief is.
     if (this.selectedEmployeeId) {
@@ -510,7 +512,7 @@ export class RegistrationApp {
   // tabblad is verwijderd en deze knop of dit formulier nog van vóór die tijd is.
   // `subject` is bijvoorbeeld "Dit product" of "Deze medewerker".
   showMissing(subject) {
-    this.view.showToast(`${subject} bestaat niet meer; er is niets opgeslagen.`, { tone: "error" });
+    this.view.showToast(`${subject} bestaat niet meer. Er is niets opgeslagen.`, { tone: "error" });
   }
 
   // ------------------------------------------------------------------
@@ -528,6 +530,7 @@ export class RegistrationApp {
       ["[data-open-employee]", (button) => this.openEmployeeProducts(button.dataset.openEmployee)],
       ["[data-correction-plus]", (button) => this.addCorrection(button.dataset.correctionPlus, button.dataset.correctionProduct)],
       ["[data-correction-minus]", (button) => this.removeCorrection(button.dataset.correctionMinus, button.dataset.correctionProduct)],
+      ["[data-remove-registration]", (button) => this.removeChosenRegistration(button.dataset.removeRegistration)],
       ["[data-toggle-employee]", (button) => this.toggleEmployee(button.dataset.toggleEmployee)],
       ["[data-remove-employee]", (button) => this.removeEmployee(button.dataset.removeEmployee)],
       ["[data-edit-employee]", (button) => this.openEditEmployeeForm(button.dataset.editEmployee)],
@@ -672,27 +675,59 @@ export class RegistrationApp {
     return true;
   }
 
-  // Correctie met "−": verwijdert de laatst ingevoerde registratie van dit product bij deze
-  // medewerker (volgorde van invoer, niet de datum; zie RegistrationModel.lastRegistration).
-  // Is die registratie uit een eerdere maand, dan vraagt de app eerst om bevestiging (zie
-  // confirmOldMonthRemoval). Kiest de beheerder "Annuleren", dan verandert er niets.
+  // Correctie met "−": opent het venster "Registratie verwijderen" met alle registraties van dit
+  // product bij deze medewerker, de nieuwste datum bovenaan. De beheerder kiest daar zelf welke
+  // registratie weg moet (removeChosenRegistration). Dat gebeurt ook als er maar één registratie
+  // is: zo werkt "−" altijd op dezelfde manier en ziet de beheerder vóór het verwijderen welke
+  // registratie (datum en tijd) verdwijnt. De focus gaat naar de eerste knop "Verwijderen".
+  // Geeft true terug als het venster is geopend.
   removeCorrection(employeeId, productId) {
-    if (!this.requireAdmin()) return;
+    if (!this.requireAdmin()) return false;
     if (!this.model.hasRegistration(employeeId, productId)) {
       this.view.showToast("Dit product heeft geen registratie voor deze medewerker", { tone: "error" });
-      return;
+      return false;
     }
 
-    const lastRegistration = this.model.lastRegistration(employeeId, productId);
-    if (lastRegistration && !this.confirmOldMonthRemoval(lastRegistration)) return;
+    this.removalTarget = { employeeId, productId };
+    this.view.renderRemoveRegistrationList(employeeId, productId);
+    this.openModal("#removeRegistrationModal");
+    this.view.$("#removeRegistrationList [data-remove-registration]")?.focus();
+    return true;
+  }
 
+  // Knop "Verwijderen" in het venster "Registratie verwijderen": verwijdert precies de gekozen
+  // registratie. Is die uit een andere maand, dan vraagt de app eerst om bevestiging (zie
+  // confirmOldMonthRemoval); bij "Annuleren" verandert er niets en blijft het venster open.
+  // Bestaat de registratie niet meer (in een ander tabblad verwijderd), dan wordt er niets
+  // opgeslagen en wordt de lijst in het venster bijgewerkt.
+  // De verwijdering en de logboekregel worden in één keer opgeslagen (zie persist). In de
+  // logboekregel staat ook de datum en tijd van de registratie, zodat terug te vinden is welke
+  // registratie de beheerder heeft gekozen. Daarna sluit het venster en krijgt de knop "−" van
+  // hetzelfde product weer de focus (closeModal en renderCorrectionList).
+  removeChosenRegistration(registrationId) {
+    if (!this.requireAdmin()) return false;
+    const registration = this.model.findRegistration(registrationId);
+    if (!registration) {
+      this.showMissing("Deze registratie");
+      this.refreshRemoveRegistration();
+      return false;
+    }
+    if (!this.confirmOldMonthRemoval(registration)) return false;
+
+    const { employeeId, productId } = registration;
     const productName = this.model.productName(productId);
+    const registeredAt = new Intl.DateTimeFormat("nl-NL", { dateStyle: "long", timeStyle: "short" })
+      .format(new Date(registration.createdAt));
     const saved = this.persist(
-      () => this.model.removeLastRegistration(employeeId, productId),
-      { action: "Registratie verwijderd", details: `${productName} van ${this.employeeLabel(employeeId)}` }
+      () => this.model.removeRegistration(registrationId),
+      {
+        action: "Registratie verwijderd",
+        details: `${productName} van ${this.employeeLabel(employeeId)}, geregistreerd op ${registeredAt}`
+      }
     );
-    if (!saved) return;
+    if (!saved) return false;
 
+    this.closeRemoveRegistration();
     this.renderAuditLog();
     this.view.populateFilters();
     this.renderCorrectionList();
@@ -700,6 +735,28 @@ export class RegistrationApp {
     this.view.renderStock(); // de voorraad komt terug, dus het tabblad Voorraad moet mee
     this.view.renderAll();
     this.view.showToast(`${productName} registratie verwijderd`, { tone: "success" });
+    return true;
+  }
+
+  // Sluit het venster "Registratie verwijderen" (sluitknop, "Annuleren", de achtergrond, Escape
+  // of na het verwijderen). De focus gaat terug naar de knop "−" waarmee het werd geopend.
+  closeRemoveRegistration() {
+    this.removalTarget = null;
+    this.closeModal("#removeRegistrationModal");
+  }
+
+  // Tekent de lijst in het open venster "Registratie verwijderen" opnieuw, bijvoorbeeld als een
+  // ander tabblad intussen een registratie heeft verwijderd. Is er van dit product bij deze
+  // medewerker niets meer over, dan sluit het venster: er valt dan niets meer te kiezen.
+  refreshRemoveRegistration() {
+    if (!this.removalTarget) return;
+
+    const { employeeId, productId } = this.removalTarget;
+    if (!this.model.hasRegistration(employeeId, productId)) {
+      this.closeRemoveRegistration();
+      return;
+    }
+    this.view.renderRemoveRegistrationList(employeeId, productId);
   }
 
   // Komt de registratie uit een andere maand dan de huidige? Dan is die loonmaand misschien al
@@ -1088,6 +1145,8 @@ export class RegistrationApp {
   // Het dashboard wordt ook verborgen, zodat het niet zichtbaar blijft binnen het gesloten venster
   // (bijvoorbeeld als iemand het venster via de ontwikkelaarstools weer zichtbaar maakt).
   closeAdmin() {
+    // Een open venster "Registratie verwijderen" hoort bij het beheer en gaat dus ook dicht.
+    if (this.removalTarget) this.closeRemoveRegistration();
     this.adminLoggedIn = false;
     this.view.$("#loginPassword").value = "";
     this.hide("#adminView");
@@ -1968,6 +2027,9 @@ export class RegistrationApp {
 
     this.view.$("#pointForm").addEventListener("submit", (event) => this.savePoint(event));
     this.registerModalClose("#pointFormModal", "[data-close-point-modal]", () => this.closePointForm());
+
+    // Venster van de correctie "−" (kiezen welke registratie weg moet).
+    this.registerModalClose("#removeRegistrationModal", "[data-close-remove-registration]", () => this.closeRemoveRegistration());
 
     // Zodra de gebruiker een veld met een foutmelding aanpast, verdwijnt die melding.
     for (const formSelector of ["#employeeForm", "#productForm", "#companyForm", "#pointForm"]) {

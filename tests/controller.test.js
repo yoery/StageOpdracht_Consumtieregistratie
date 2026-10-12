@@ -3,8 +3,10 @@
 // (createRecordingView), zodat alles zonder browser kan draaien.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
+import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { createModel, createRecordingView, createFakeElement, asAdmin } from "./helpers.js";
 
@@ -301,16 +303,150 @@ test("correctie '−' zonder registratie geeft een melding", () => {
   assert.deepEqual(toastTexts(view), ["Dit product heeft geen registratie voor deze medewerker"]);
 });
 
-test("correctie '−' verwijdert de laatste registratie, zet de voorraad terug en logt het", () => {
-  const { app, model, view, point } = createApp();
+// Datum en tijd zoals ze in de logboekregel van een correctie "−" staan ("12 oktober 2026 om 10:15").
+const longDateTime = (value) =>
+  new Intl.DateTimeFormat("nl-NL", { dateStyle: "long", timeStyle: "short" }).format(new Date(value));
+
+test("correctie '−' opent eerst het venster met de registraties, ook bij één registratie", () => {
+  const { app, model, view } = createApp();
   model.addRegistration("employee-1", "blikje");
 
+  assert.equal(app.removeCorrection("employee-1", "blikje"), true);
+
+  assert.equal(model.registrations.length, 1, "er is nog niets verwijderd");
+  assert.equal(model.auditLog.length, 0);
+  assert.equal(view.$("#removeRegistrationModal").classList.contains("hidden"), false);
+  assert.deepEqual(view.calls.find(([name]) => name === "renderRemoveRegistrationList"), ["renderRemoveRegistrationList", "employee-1", "blikje"]);
+  assert.equal(view.$("#removeRegistrationList [data-remove-registration]").focused, true);
+  assert.deepEqual(app.removalTarget, { employeeId: "employee-1", productId: "blikje" });
+});
+
+test("correctie '−' verwijdert de gekozen registratie, zet de voorraad terug, logt het en sluit het venster", () => {
+  const { app, model, view, point } = createApp();
+  model.addRegistration("employee-1", "blikje");
+  const chosen = model.registrations[0];
+
   app.removeCorrection("employee-1", "blikje");
+  assert.equal(app.removeChosenRegistration(chosen.id), true);
 
   assert.equal(model.registrations.length, 0);
   assert.equal(model.findPoint(point.id).products.blikje.stock, 24);
-  assert.equal(model.auditLog.at(-1).details, "Blikje van Test Medewerker");
+  assert.equal(model.auditLog.at(-1).action, "Registratie verwijderd");
+  assert.equal(model.auditLog.at(-1).details, `Blikje van Test Medewerker, geregistreerd op ${longDateTime(chosen.createdAt)}`);
   assert.deepEqual(toastTexts(view), ["Blikje registratie verwijderd"]);
+  assert.equal(view.$("#removeRegistrationModal").classList.contains("hidden"), true);
+  assert.equal(app.removalTarget, null);
+});
+
+test("correctie '−': alleen de gekozen registratie verdwijnt, niet de laatst ingevoerde", () => {
+  const { app, model } = createApp();
+  const today = new Date();
+  const earlier = new Date(today.getFullYear(), today.getMonth(), 1, 12);
+  model.addRegistration("employee-1", "blikje", { createdAt: today });
+  model.addRegistration("employee-1", "blikje", { correction: true, createdAt: earlier });
+  const [ofToday, enteredLast] = model.registrations;
+
+  app.removeCorrection("employee-1", "blikje");
+  app.removeChosenRegistration(ofToday.id);
+
+  assert.deepEqual(model.registrations.map(({ id }) => id), [enteredLast.id]);
+});
+
+test("correctie '−': Annuleren (of Escape) sluit het venster zonder iets te veranderen", () => {
+  const { app, model } = createApp();
+  model.addRegistration("employee-1", "blikje");
+  app.removeCorrection("employee-1", "blikje");
+
+  app.closeRemoveRegistration();
+
+  assert.equal(app.view.$("#removeRegistrationModal").classList.contains("hidden"), true);
+  assert.equal(app.removalTarget, null);
+  assert.equal(model.registrations.length, 1);
+  assert.equal(model.auditLog.length, 0);
+});
+
+test("correctie '−': een registratie die intussen niet meer bestaat, geeft een melding en verandert niets", () => {
+  const { app, model, view } = createApp();
+  model.addRegistration("employee-1", "blikje");
+  app.removeCorrection("employee-1", "blikje");
+
+  assert.equal(app.removeChosenRegistration("bestaat-niet"), false);
+
+  assert.equal(model.registrations.length, 1);
+  assert.equal(model.auditLog.length, 0);
+  assert.equal(toastTexts(view).at(-1), "Deze registratie bestaat niet meer. Er is niets opgeslagen.");
+  assert.equal(view.$("#removeRegistrationModal").classList.contains("hidden"), false, "het venster blijft open met een bijgewerkte lijst");
+});
+
+test("correctie '−': is in een ander tabblad alles van dit product verwijderd, dan sluit het venster", () => {
+  const { app, model } = createApp();
+  model.addRegistration("employee-1", "blikje");
+  app.removeCorrection("employee-1", "blikje");
+
+  model.state.registrations = [];
+  app.refreshRemoveRegistration();
+
+  assert.equal(app.view.$("#removeRegistrationModal").classList.contains("hidden"), true);
+  assert.equal(app.removalTarget, null);
+});
+
+test("correctie '−': het beheer sluiten (uitloggen) sluit ook het venster", () => {
+  const { app, model } = createApp();
+  model.addRegistration("employee-1", "blikje");
+  app.removeCorrection("employee-1", "blikje");
+
+  app.closeAdmin();
+
+  assert.equal(app.view.$("#removeRegistrationModal").classList.contains("hidden"), true);
+  assert.equal(app.removalTarget, null);
+  assert.equal(app.removeChosenRegistration(model.registrations[0].id), false, "zonder login gebeurt er niets");
+  assert.equal(model.registrations.length, 1);
+});
+
+test("correctie '−': de knop 'Verwijderen' in het venster roept removeChosenRegistration aan", () => {
+  const { app, model } = createApp();
+  model.addRegistration("employee-1", "blikje");
+  const id = model.registrations[0].id;
+  const button = createFakeElement({ dataset: { removeRegistration: id } });
+
+  app.handleClick({ target: { closest: (selector) => (selector === "[data-remove-registration]" ? button : null) } });
+
+  assert.equal(model.registrations.length, 0);
+});
+
+test("venster 'Registratie verwijderen': datum, product en aantal per registratie, nieuwste bovenaan", () => {
+  const { model } = createModel();
+  const view = new RegistrationView(model);
+  const elements = { "#removeRegistrationHelp": createFakeElement(), "#removeRegistrationList": createFakeElement({ innerHTML: "" }) };
+  view.$ = (selector) => elements[selector];
+  model.state.registrations = [
+    { id: "r-oud", employeeId: "employee-1", productId: "blikje", pointId: null, createdAt: "2026-09-14T10:00:00.000Z", correction: true },
+    { id: "r-nieuw", employeeId: "employee-1", productId: "blikje", pointId: null, createdAt: "2026-10-02T08:30:00.000Z" },
+    { id: "r-ander", employeeId: "employee-1", productId: "ei", pointId: null, createdAt: "2026-10-03T08:30:00.000Z" }
+  ];
+
+  view.renderRemoveRegistrationList("employee-1", "blikje");
+
+  const html = elements["#removeRegistrationList"].innerHTML;
+  assert.equal(elements["#removeRegistrationHelp"].textContent,
+    "Blikje van Test Medewerker. Kies welke registratie weg moet. De nieuwste staat bovenaan.");
+  assert.deepEqual([...html.matchAll(/data-remove-registration="([^"]+)"/g)].map(([, id]) => id), ["r-nieuw", "r-oud"]);
+  assert.match(html, />Verwijderen<\/button>/);
+  assert.equal((html.match(/Blikje · aantal 1/g) || []).length, 2);
+  assert.equal((html.match(/toegevoegd door beheerder/g) || []).length, 1);
+  assert.ok(html.includes(view.formatDate("2026-10-02T08:30:00.000Z")));
+  assert.ok(html.includes(`aria-label="Blikje van ${view.formatDate("2026-09-14T10:00:00.000Z")} verwijderen"`));
+});
+
+test("index.html heeft het venster 'Registratie verwijderen' met kop, sluitknop en Annuleren", () => {
+  const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+  assert.match(html, /id="removeRegistrationModal" role="dialog" aria-modal="true" aria-labelledby="removeRegistrationTitle"/);
+  assert.match(html, /<h2 id="removeRegistrationTitle">Registratie verwijderen<\/h2>/);
+  assert.match(html, /<ul class="remove-registration-list" id="removeRegistrationList"><\/ul>/);
+  assert.equal((html.match(/data-close-remove-registration/g) || []).length, 2);
+  // Het venster ligt boven het beheervenster: het staat er in index.html na.
+  assert.ok(html.indexOf('id="removeRegistrationModal"') > html.indexOf('id="adminModal"'));
 });
 
 // ------------------------------------------------------------------

@@ -194,11 +194,11 @@ export class RegistrationModel {
   //   - `createdAt` is het tijdstip van de registratie: standaard nu. Bij een correctie "+" kan
   //     de beheerder een eerdere datum kiezen, bijvoorbeeld voor een vergeten blikje van vorige maand.
   //   - `pointId` in de registratie is het consumptiepunt dat het product aanbood (anders null).
-  //     Zo weet removeLastRegistration later naar welk punt het product terug moet.
+  //     Zo weet removeRegistration (correctie "−") later naar welk punt het product terug moet.
   //   - Er gaat alleen voorraad af als het punt het product aanbiedt én de registratie niet vóór
   //     de laatste telling (`countedAt`) ligt. Ligt het tijdstip vóór die telling, dan zat het
   //     product al niet meer in de getelde voorraad; dan verandert de voorraad niet (net als bij
-  //     removeLastRegistration, dat dan ook niets terugzet). `pointId` wordt dan wel bewaard.
+  //     removeRegistration, dat dan ook niets terugzet). `pointId` wordt dan wel bewaard.
   //   - `correction: true` betekent dat de beheerder de registratie heeft toegevoegd. Die telt
   //     niet mee als "vorige keer" in het productvenster van de medewerker.
   //   - `price` is de prijs op het moment van registreren. Verandert de prijs later, dan
@@ -231,9 +231,9 @@ export class RegistrationModel {
   // Zoekt de laatst ingevoerde registratie van deze medewerker (en van dit product, als dat is
   // meegegeven). "Laatst ingevoerd" gaat op de volgorde van invoer (de volgorde in de lijst),
   // niet op de datum: een correctie "+" met een eerdere datum die als laatste is toegevoegd,
-  // is dus de laatste registratie. Dit is precies de registratie die removeLastRegistration zou
-  // verwijderen (correctie "−"), zodat de controller vooraf kan vragen of een oude loonmaand
-  // mag worden aangepast (confirmOldMonthRemoval).
+  // is dus de laatste registratie. Dit is de registratie die removeLastRegistration verwijdert.
+  // De correctie "−" in het beheer gebruikt dit niet meer: daar kiest de beheerder zelf welke
+  // registratie weg moet (registrationsFor en removeRegistration).
   // Geeft undefined terug als er geen registratie is.
   lastRegistration(employeeId, productId) {
     const newestFirst = [...this.registrations].reverse();
@@ -245,10 +245,33 @@ export class RegistrationModel {
     });
   }
 
+  // Alle registraties van deze medewerker en dit product, met de nieuwste datum bovenaan (net als
+  // de tabel in het beheer). Bij dezelfde datum en tijd staat de laatst ingevoerde bovenaan.
+  // Dit is de keuzelijst van de correctie "−": de beheerder kiest daaruit welke registratie weg moet.
+  registrationsFor(employeeId, productId) {
+    return [...this.registrations]
+      .reverse()
+      .filter((item) => item.employeeId === employeeId && item.productId === productId)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }
+
+  // Zoekt een registratie op id. Geeft undefined terug als die niet (meer) bestaat.
+  findRegistration(registrationId) {
+    return this.registrations.find((item) => item.id === registrationId);
+  }
+
   // Verwijdert de laatst ingevoerde registratie van deze medewerker (en van dit product,
   // als dat is meegegeven; zie lastRegistration). Geeft false terug als er niets te verwijderen was.
   removeLastRegistration(employeeId, productId) {
     const registration = this.lastRegistration(employeeId, productId);
+    return registration ? this.removeRegistration(registration.id) : false;
+  }
+
+  // Verwijdert precies deze ene registratie (correctie "−", de beheerder heeft hem gekozen).
+  // Geeft false terug als de registratie niet (meer) bestaat, bijvoorbeeld omdat hij in een
+  // ander tabblad al is verwijderd.
+  removeRegistration(registrationId) {
+    const registration = this.findRegistration(registrationId);
     if (!registration) return false;
 
     this.state.registrations = this.registrations.filter((item) => item.id !== registration.id);
@@ -729,7 +752,7 @@ export class RegistrationModel {
   }
 
   // Vervangt de voorraad door een getelde hoeveelheid en onthoudt wanneer er is geteld
-  // (`countedAt`). Zo weet removeLastRegistration of een registratie al in de telling zat.
+  // (`countedAt`). Zo weet removeRegistration of een registratie al in de telling zat.
   setStock(pointId, productId, stock) {
     const countedAt = new Date().toISOString();
     this.updateStockEntry(pointId, productId, (entry) => ({ ...entry, stock, countedAt }));

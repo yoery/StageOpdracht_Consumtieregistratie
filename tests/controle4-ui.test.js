@@ -80,14 +80,15 @@ test("C: correctie '+' voor een medewerker die niet meer bestaat, slaat niets op
 // ------------------------------------------------------------------
 
 test("D: na een correctie '+' of '−' wordt het tabblad Voorraad opnieuw getekend", () => {
-  const { app, view } = createApp();
+  const { app, model, view } = createApp();
 
   app.addCorrection("employee-1", "blikje");
   assert.ok(calledNames(view).includes("renderStock"), "addCorrection");
 
   view.calls.length = 0;
   app.removeCorrection("employee-1", "blikje");
-  assert.ok(calledNames(view).includes("renderStock"), "removeCorrection");
+  app.removeChosenRegistration(model.registrations[0].id);
+  assert.ok(calledNames(view).includes("renderStock"), "removeChosenRegistration");
 });
 
 // ------------------------------------------------------------------
@@ -139,8 +140,11 @@ test("I: na '+' of '−' in de correctielijst krijgt dezelfde knop de focus teru
   app.addCorrection("employee-1", "blikje");
   assert.equal(view.$(plusSelector).focused, true);
 
+  // Bij "−" kiest de beheerder eerst de registratie in een venster. Na het verwijderen sluit dat
+  // venster en krijgt de knop "−" de focus terug.
   globalThis.document = { activeElement: createFakeElement({ dataset: { correctionMinus: "employee-1", correctionProduct: "blikje" } }) };
   app.removeCorrection("employee-1", "blikje");
+  app.removeChosenRegistration(model.registrations[0].id);
   assert.equal(view.$(minusSelector).focused, true);
   assert.equal(model.registrations.length, 0);
 });

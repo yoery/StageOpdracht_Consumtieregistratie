@@ -10,6 +10,8 @@ Dubbelklikken op `index.html` werkt niet: de JavaScript bestaat uit modules en b
 
 Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
 
+Browsertests (end-to-end) draai je met `npm run test:e2e`. Ze openen de echte pagina zonder venster in Microsoft Edge (Windows) of Google Chrome (Linux). Staat de browser ergens anders, zet dan `BROWSER_PATH` op het pad van de browser, bijvoorbeeld `BROWSER_PATH="/usr/bin/chromium" npm run test:e2e`. Er hoeft niets met npm te worden geïnstalleerd. In GitHub Actions draaien ze automatisch na de unit tests.
+
 ## Mappenstructuur
 
 ```text
@@ -42,14 +44,15 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  *.test.js                 # 534 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pas, beveiligingsscan)
+  e2e/                      # 9 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
+  *.test.js                 # 547 unit tests (basis, datastore, model, csv-export, view-app, theme, welcome-face, controller, regressie, controle4-model, controle4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pas, beveiligingsscan)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van docs/tvbsjabloon.docx (voorbeeld bovenin)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
   app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
-.github/workflows/ci.yml    # GitHub Actions: draait npm test met Node.js 24 op main en development (alleen leesrechten, actions vast op commit-SHA)
+.github/workflows/ci.yml    # GitHub Actions: draait npm test en daarna de browsertests met Node.js 24 op main en development (alleen leesrechten, actions vast op commit-SHA)
 ```
 
 ## Inbegrepen

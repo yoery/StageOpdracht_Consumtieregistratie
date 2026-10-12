@@ -1,8 +1,8 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.7
-**Datum:** 9 oktober 2026
+**Versie:** 3.8
+**Datum:** 12 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
 Dit document is het enige ontwerpdocument van het project. Het bevat zowel de functionele kant (aanleiding, gebruikersrollen, eisen, use cases, wireframes en acceptatiecriteria) als de technische uitwerking (architectuur, database, interfaces, beveiliging en tests). Het eerdere functioneel ontwerp is hierin opgenomen.
@@ -22,6 +22,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.5 | 9 oktober 2026 | Testplan voor de herkenningsnauwkeurigheid van de demo gezichtsherkenning (hoofdstuk 15) met acceptatiecriterium AC-83: hoe vaak iemand als een ander wordt herkend, een onbekende toch wordt herkend of een medewerker niet wordt herkend. |
 | 3.6 | 9 oktober 2026 | AFAS-koppeling (ontwerp) en herkennen met de pas. Ontwerp van de koppeling met AFAS Profit voor de medewerkergegevens (hoofdstuk 11) met FR-67 en AC-87 t/m AC-89. Herkennen met een USB-NFC-pasjeslezer in de demo (class `BadgeReader`) en een pas koppelen in het beheer, met FR-65, FR-66, UC-20 en AC-84 t/m AC-86. |
 | 3.7 | 9 oktober 2026 | Open punten uit de beveiligingsscan opgelost (hoofdstuk 13). Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`requireAdmin`). Product-id's als `__proto__`, `constructor` of `toString` kunnen de voorraadlijst van een consumptiepunt niet meer verstoren. De camera gaat uit als de tijd voor herkennen of instellen om is. Codes en tijdstippen worden bij het laden strenger gecontroleerd. Het logboek in het databaseschema is echt alleen-toevoegen (triggers). De CI draait op Node.js 24 en de licentie van TensorFlow.js is toegevoegd. Twee bekende beperkingen erbij: registreren op naam van een ander en face-api dat niet meer wordt onderhouden. Nieuw testbestand `tests/beveiligingsscan.test.js` (534 tests in totaal). User stories US-01 t/m US-64 toegevoegd aan het eind van hoofdstuk 10. De diagrammen tonen nu ook de pasjeslezer, `BadgeReader`, UC-20 en de koppeling met AFAS. `BADGE_READER.minLength` is 4, zodat ook het kortste pasnummer dat de beheerder kan koppelen te scannen is. |
+| 3.8 | 12 oktober 2026 | Correctie `−` verbeterd: de beheerder kiest in het nieuwe venster `Registratie verwijderen` welke registratie (datum en tijd, product en aantal) weg moet, in plaats van dat altijd de laatst ingevoerde registratie verdwijnt. FR-14, UC-09, W19, US-30, AC-12 en AC-78 aangepast, AC-90 en screenshot W41 toegevoegd. In het logboek staat nu ook wanneer de verwijderde registratie was geregistreerd. De open controle van de keuzelijsten in het donkere thema is uitgevoerd (zie W39): de keuzelijsten en hun opties zijn in beide thema's goed leesbaar (licht 21:1, donker 15,7:1). Daarbij bleek de placeholdertekst in het donkere thema te weinig contrast te hebben (3,4:1). Die gebruikt nu `--muted` (6,9:1). W39 is opnieuw gemaakt en de twee bekende beperkingen over deze punten zijn vervallen. 547 tests in totaal. Nieuw zijn 9 browsertests (`tests/e2e/`) die de echte pagina in headless Edge of Chrome testen, zonder npm-pakketten, en die in GitHub Actions na de unit tests draaien. De melding "… bestaat niet meer. Er is niets opgeslagen." staat in de app nu precies zoals in dit document. |
 
 ## Inhoudsopgave
 
@@ -122,7 +123,7 @@ Deze onderdelen horen niet bij deze opdracht. Ze worden wel beschreven, zodat du
 | AFAS Profit | Het HR- en salarispakket van AFAS Software. In productie kunnen de medewerkergegevens daaruit komen (hoofdstuk 11). |
 | Consumptiemaand | De kalendermaand waarin een product is geregistreerd. Het maandfilter in het beheer werkt op de consumptiemaand. |
 | Consumptiepunt | Een plek waar producten staan, bijvoorbeeld een kantine. Een punt hoort bij één bedrijf en heeft een eigen voorraad. |
-| Correctie | Een wijziging door de beheerder: `+` voegt één registratie toe (met een te kiezen datum), `−` verwijdert de laatst ingevoerde registratie van dat product. |
+| Correctie | Een wijziging door de beheerder: `+` voegt één registratie toe (met een te kiezen datum), `−` verwijdert één registratie van dat product, die de beheerder zelf kiest in het venster `Registratie verwijderen`. |
 | CSP | Content-Security-Policy: een regel in `index.html` die de browser alleen bestanden van de eigen server laat laden. |
 | CSV | Comma-separated values: een tekstbestand met één regel per medewerker, loonmaand en werkgevernummer (FR-20). De demo gebruikt puntkomma's, zoals een Nederlandse Excel verwacht. |
 | Connector | Een vaste ingang van AFAS Profit om gegevens op te halen (GetConnector) of te wijzigen (UpdateConnector) via de REST API. |
@@ -296,7 +297,7 @@ De eisen zijn per onderwerp gegroepeerd. De nummers zijn niet veranderd, zodat v
 | ID | Eis | Prioriteit |
 |---|---|---|
 | FR-13 | Een beheerder kan een registratie toevoegen. | Must |
-| FR-14 | Een beheerder kan de laatste registratie van een product verwijderen. "De laatste" is de laatst ingevoerde registratie van dat product bij die medewerker (de volgorde van invoeren, niet de datum). | Must |
+| FR-14 | Een beheerder kan een registratie van een product bij een medewerker verwijderen. Na een klik op `−` kiest de beheerder in een venster welke registratie weg moet. Per registratie staan daar de datum en tijd, het product en het aantal, met de nieuwste datum bovenaan. Het venster verschijnt ook als er maar één registratie is, zodat de beheerder altijd ziet welke registratie verdwijnt. | Must |
 | FR-17 | Registraties verdwijnen niet als een medewerker, product of consumptiepunt wordt gedeactiveerd of verwijderd, en ze houden de prijs en het werkgevernummer van het moment van registreren. Zo verandert een oude maand in de CSV-export niet. Alleen een correctie `−` van de beheerder verwijdert een registratie (en die komt in het logboek). Daarnaast wist `Alle gegevens wissen` alles (FR-52). | Must |
 | FR-27 | Het systeem houdt een logboek bij van administratieve wijzigingen. | Must |
 | FR-54 | Verwijdert de beheerder met `−` een registratie uit een andere maand dan de huidige, dan vraagt het systeem eerst om bevestiging, omdat die loonmaand mogelijk al is verwerkt. | Must |
@@ -494,6 +495,7 @@ De tablet staat dag en nacht aan. Iedere minuut controleert de controller of de 
 - **face-api (@vladmandic/face-api 1.7.15. Mandic, z.d.):** alleen voor de demo gezichtsherkenning. De bibliotheek en de drie modellen (gezicht vinden, gezichtspunten en herkenning) staan in `assets/vendor/face-api/` (MIT-licentie, samen ongeveer 8 MB, waarvan 6,4 MB het herkenningsmodel). Er wordt tijdens gebruik niets van een CDN geladen. In de bibliotheek zit TensorFlow.js 4.22.0 van Google (Apache-licentie 2.0, zie `assets/vendor/face-api/LICENSE-TENSORFLOWJS`). De repository van face-api is gearchiveerd: 1.7.15 is de laatste versie en er komen geen beveiligingsupdates meer (zie hoofdstuk 13).
 - **Content-Security-Policy:** een `<meta>`-tag in `index.html` die de browser alleen bestanden van de eigen server laat laden (zie hoofdstuk 13).
 - **Node.js test runner (`node:test`. Node.js, z.d.):** voor de unit tests, met Node.js 22 of hoger (`"engines": { "node": ">=22" }` in `package.json`). De tests draaien automatisch via GitHub Actions (Node.js 24, een LTS-versie die nog wordt onderhouden. Node.js 20 is sinds 30 april 2026 end-of-life) bij iedere push en pull request naar `main` en `development`. De workflow heeft alleen leesrechten (`permissions: contents: read`), bewaart het GitHub-token niet (`persist-credentials: false`) en gebruikt actions die vastgezet zijn op een commit-SHA.
+- **Browsertests zonder extra pakketten:** de end-to-end-tests in `tests/e2e/` gebruiken ook `node:test`. Ze starten Edge of Chrome zonder venster (`--headless=new`) en sturen die aan via het Chrome DevTools Protocol (Google, z.d.), met de `WebSocket` die in Node.js 22 en hoger zit. Er is dus geen Playwright of Puppeteer nodig en het project houdt geen npm-afhankelijkheden. In GitHub Actions draaien ze in een aparte job, na de unit tests, met Google Chrome dat al op de runner staat.
 
 **Gebruikte browserfuncties:**
 
@@ -1163,9 +1165,10 @@ Van ieder scherm van de high-fidelity versie staat een screenshot in de paragraa
 - Lege lijsten en tabellen tonen een icoon, een korte uitleg en waar nodig een knop, zoals "Zoekopdracht wissen" of "Naar Bedrijven". Dit past bij **hulp en documentatie** en **fouten herstellen**.
 - Meldingen tonen een vinkje bij succes en een uitroepteken in een cirkel bij een fout. De melding zelf heeft altijd dezelfde donkere achtergrond. Het verschil zit in het icoon (en de kleur van het icoon), dus niet alleen in kleur. Dit past bij **zichtbaarheid van de systeemstatus**.
 - Alle iconen zijn eenvoudige SVG-lijntekeningen met dezelfde lijndikte (`assets/js/icons.js`) in plaats van teksttekens, zodat ze op ieder apparaat hetzelfde en scherp zijn. Dit past bij **consistentie en standaarden**.
-- Ieder venster sluit ook met de Escape-toets, en met Tab blijft de focus binnen het open venster in plaats van te verdwijnen naar de pagina erachter. Ctrl K werkt alleen als er geen venster open is. Bij het openen van een venster staat de focus meteen in het venster (in het productvenster op de eerste `+`-knop), en na een druk op `+` of `−` houdt dezelfde knop de focus, zodat je met het toetsenbord meerdere keren kunt drukken. Dit past bij **gebruikerscontrole en vrijheid** en **flexibiliteit en efficiënt gebruik**.
+- Ieder venster sluit ook met de Escape-toets, en met Tab blijft de focus binnen het open venster in plaats van te verdwijnen naar de pagina erachter. Ctrl K werkt alleen als er geen venster open is. Bij het openen van een venster staat de focus meteen in het venster (in het productvenster op de eerste `+`-knop, in het venster `Registratie verwijderen` op de eerste knop `Verwijderen`), en na een druk op `+` of `−` houdt dezelfde knop de focus, zodat je met het toetsenbord meerdere keren kunt drukken. Dit past bij **gebruikerscontrole en vrijheid** en **flexibiliteit en efficiënt gebruik**.
 - Na het sluiten van een venster (kruisje, achtergrond, Escape of na opslaan) gaat de focus terug naar de knop of medewerkerrij waarmee het werd geopend. Wie met het toetsenbord of een schermlezer werkt, hoeft dan niet opnieuw te zoeken waar die was gebleven. Dit past bij **gebruikerscontrole en vrijheid** en bij toegankelijkheid.
 - Acties die niet terug te draaien zijn of die een verwerkte loonmaand kunnen raken, vragen eerst om bevestiging: `Alle gegevens wissen` twee keer. Een correctie met `−` op een registratie uit een andere maand ("Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?"). Een correctie met `+` op een datum in een eerdere maand ("Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?"). En het verwijderen van een inactieve medewerker, een product ("Product <naam> verwijderen?"), een bedrijf of een consumptiepunt. Dit past bij **foutpreventie**.
+- Bij een correctie met `−` kiest de beheerder zelf welke registratie verdwijnt, met de datum en tijd erbij (W41). De beheerder hoeft dus niet te onthouden in welke volgorde de registraties zijn ingevoerd. Dit past bij **herkennen in plaats van herinneren** en **foutpreventie**.
 
 ### Wireframes
 
@@ -1176,6 +1179,7 @@ Deze paragraaf laat ieder scherm van de website zien zoals het nu werkt. Per sch
 - **1 oktober 2026** (rond 12:00 uur): W01 tot en met W17, W21 tot en met W23, W25 tot en met W27, W30 tot en met W32 en W34.
 - **2 oktober 2026:** W18, W19 en W20 (Registraties), opnieuw gemaakt omdat het datumveld `Datum bij toevoegen (+)` is bijgekomen, en W33 (Logboek), opnieuw gemaakt omdat de knop `Alle gegevens wissen` is bijgekomen.
 - **6 oktober 2026** ('s ochtends): W28 en W29 (Bedrijven), opnieuw gemaakt omdat er nu "1 medewerker" staat in plaats van "1 medewerkers". W24 (Medewerker wijzigen), opnieuw gemaakt omdat `Opslaan` daar nu de groene hoofdknop is. En de nieuwe screenshots W35 tot en met W40. W40 is daarna nog een keer gemaakt, omdat de filters op een telefoon nu onder elkaar staan.
+- **12 oktober 2026:** W39 (Beheer in het donkere thema), opnieuw gemaakt bij de controle van de keuzelijsten en omdat de placeholdertekst in het donkere thema nu `--muted` is. En de nieuwe screenshot W41 (registratie kiezen bij `−`). Voor W41 zijn de drie registraties ingevoerd en heeft de beheerder daarna met `+` een Blikje op 14 september toegevoegd voor Lotte van Dijk.
 
 Bij het opnieuw maken zijn steeds dezelfde stappen en demogegevens gebruikt, zodat alleen het bedoelde onderdeel verschilt (en de datum in de banner). Voor W28, W29 en W24 is dat gecontroleerd door de oude en nieuwe afbeelding pixel voor pixel te vergelijken: bij W28 en W29 zijn alleen de datum en de woorden "medewerker(s)" anders, bij W24 alleen de datum en de knop `Opslaan`. Bij W35 is het ochtend, daarom staat daar "Goedemorgen" in plaats van "Goedemiddag". De demogegevens zijn via de website zelf ingevoerd: Lotte van Dijk registreerde 2× Blikje en 1× Ei, Sophie de Boer 1× Yoghurt en 1× Glas melk, en Daan Smit 2× Sneetje brood en 1× Beleg. Daarna zijn in het beheer het consumptiepunt Kantine IT (IT Supervision, alleen Blikje en Glas melk) en Kantine Klik (Klik, geen producten) aangemaakt, is Tom de Groot naar Kantine IT en Eva Meijer naar Kantine Klik verplaatst en is de voorraad Blikje op Hoofdkantoor op 4 gezet. Of een screenshot vóór of na die beheerstappen is gemaakt, hangt af van wat het scherm moet laten zien, niet van de datum. In de screenshots van vóór de beheerstappen (zoals W01 en W05) staan alle medewerkers onder TVB. In de screenshots erna (zoals W02, W11, W28 en W31) staan Tom de Groot onder IT Supervision en Eva Meijer onder Klik. Voor W35 tot en met W40 zijn alleen de drie registraties ingevoerd (zonder de nieuwe consumptiepunten). Daar staan dus alle medewerkers onder TVB. Voor W38 zijn daarna Mark Jansen en Daan Smit op inactief gezet.
 
@@ -1188,7 +1192,7 @@ Een paar dingen om te weten:
 - **W36.** Voor deze screenshot is in de opslag van de browser (localStorage) één registratie met een kapotte datum gezet, en daarna is de pagina opnieuw geladen. De melding komt uit de echte controle bij het laden.
 - **Bevestigingsvragen.** Bij het verwijderen van een medewerker, product ("Product <naam> verwijderen?"), bedrijf of consumptiepunt, bij een correctie met `−` op een registratie uit een andere maand, bij een correctie met `+` op een datum in een eerdere maand en bij `Alle gegevens wissen` vraagt de browser om bevestiging met een eigen venster (`window.confirm`). Dat venster hoort bij de browser en niet bij de website en staat daarom niet tussen de screenshots.
 - **Schermformaten.** De medewerkerskant is vastgelegd op een staande tablet (810 × 1080 pixels), omdat de website op een tablet bij het consumptiepunt wordt gebruikt. Het beheer is vastgelegd op een laptopscherm (1280 × 900). W02 en W03 tonen de beginpagina op een groot scherm (1440 × 900) en een telefoon (390 × 844), W40 het beheer op een telefoon (390 × 844). W15 (waarschuwing bij openen als los bestand) is vastgelegd op 1280 × 800.
-- **Thema.** Alle screenshots staan in het lichte thema, behalve W04 en W39 (donker thema).
+- **Thema.** Alle screenshots staan in het lichte thema, behalve W04 en W39 (donker thema). W04 is gemaakt vóór versie 3.8. Daarop hebben de placeholderteksten (`Zoek op voor- of achternaam...` en `Alle bedrijven`) nog het grijs van de browser. Sinds versie 3.8 zijn die in het donkere thema lichter (`--muted`, zie W39).
 
 #### Gebruikte UI-principes
 
@@ -1225,7 +1229,7 @@ De codes H1 tot en met H10 verwijzen naar de tien heuristieken van Nielsen (1994
 
 #### Overzicht
 
-W35 tot en met W40 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, zodat de nummers van de andere screenshots (en verwijzingen ernaar) niet veranderen, en staan in de lijst en in deze paragraaf direct naast het scherm waar ze bij horen (bijvoorbeeld W35 na de andere schermen van de camera en W37 na W19).
+W35 tot en met W41 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, zodat de nummers van de andere screenshots (en verwijzingen ernaar) niet veranderen, en staan in de lijst en in deze paragraaf direct naast het scherm waar ze bij horen (bijvoorbeeld W35 na de andere schermen van de camera en W41 en W37 na W19).
 
 | Nr. | Naam | Wie |
 |---|---|---|
@@ -1250,6 +1254,7 @@ W35 tot en met W40 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 | W17 | Inloggen met een foutmelding | Beheerder |
 | W18 | Beheer: Registraties | Beheerder |
 | W19 | Beheer: registratie corrigeren | Beheerder |
+| W41 | Beheer: registratie kiezen bij `−` | Beheerder |
 | W37 | Beheer: correctiedatum met foutmelding | Beheerder |
 | W20 | Beheer: filter zonder registraties | Beheerder |
 | W21 | Beheer: Medewerkers | Beheerder |
@@ -1604,7 +1609,7 @@ W35 tot en met W40 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W19 – Beheer: registratie corrigeren](wireframes/w19-registraties-correctie.jpg)
 
-**Omschrijving.** De rij van Lotte van Dijk is opengeklapt. Per product staan een rode `−`-knop, het aantal (Blikje 2, Ei 1, de rest 0) en een groene `+`-knop. `−` verwijdert de laatste registratie van dat product, `+` voegt er één toe op de datum uit `Datum bij toevoegen (+)`. Valt die datum in een eerdere maand, dan vraagt de browser eerst "Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Is bij `−` de laatste registratie uit een andere maand dan de huidige, dan vraagt de browser eerst "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (met de naam van de maand). Iedere correctie geeft een melding en komt in het logboek. De correctie en de logboekregel worden in één keer opgeslagen.
+**Omschrijving.** De rij van Lotte van Dijk is opengeklapt. Per product staan een rode `−`-knop, het aantal (Blikje 2, Ei 1, de rest 0) en een groene `+`-knop. `−` opent het venster `Registratie verwijderen` (W41), waarin de beheerder kiest welke registratie weg moet. `+` voegt er één toe op de datum uit `Datum bij toevoegen (+)`. Valt die datum in een eerdere maand, dan vraagt de browser eerst "Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Is bij `−` de gekozen registratie uit een andere maand dan de huidige, dan vraagt de browser eerst "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (met de naam van de maand). Iedere correctie geeft een melding en komt in het logboek. De correctie en de logboekregel worden in één keer opgeslagen.
 
 **UI-principes:**
 - *Progressieve onthulling:* de producten van een medewerker zijn pas zichtbaar na openklappen.
@@ -1615,6 +1620,24 @@ W35 tot en met W40 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 - *H3:* een verkeerde registratie is door de beheerder terug te draaien.
 - *H1:* het aantal per product is direct zichtbaar en verandert na iedere klik.
 - *H5:* een correctie in een oude maand vraagt eerst om bevestiging, omdat die loonmaand al verwerkt kan zijn.
+
+#### W41 – Beheer: registratie kiezen bij `−`
+
+![W41 – Beheer: registratie kiezen bij `−`](wireframes/w41-registratie-verwijderen.jpg)
+
+**Omschrijving.** Bij Lotte van Dijk is op `−` naast Blikje geklikt. Boven het beheer opent het venster `Correctie` / `Registratie verwijderen` met de uitleg "Blikje van Lotte van Dijk. Kies welke registratie weg moet. De nieuwste staat bovenaan." In één kader staat per registratie een rij met de datum en tijd (vetgedrukt), daaronder het product en het aantal ("Blikje · aantal 1") en rechts een lichtrode knop `Verwijderen`. Er zijn drie registraties: twee van vandaag (12 okt, 09:07) en een vergeten blikje dat de beheerder met `+` op 14 september heeft toegevoegd. Bij die laatste staat "toegevoegd door beheerder". Onderaan staat `Annuleren`. Bij het openen staat de focus op de eerste knop `Verwijderen`. Tab blijft binnen het venster, en `Annuleren`, het kruisje, een klik naast het venster of Escape sluiten het venster zonder iets te veranderen. Na `Verwijderen` sluit het venster, verschijnt "Blikje registratie verwijderd" en staat de focus weer op de `−`. Is de gekozen registratie uit een andere maand, dan vraagt de browser eerst "Deze registratie is van september 2026. Die loonmaand is mogelijk al verwerkt. Toch verwijderen?". Het venster verschijnt ook als er maar één registratie is, zodat `−` altijd op dezelfde manier werkt.
+
+**UI-principes:**
+- *Progressieve onthulling:* de losse registraties verschijnen pas als de beheerder er een wil verwijderen.
+- *Kleur met betekenis:* de knoppen `Verwijderen` hebben dezelfde lichtrode stijl als `Alle gegevens wissen` en de `−`-knop.
+- *Consistentie:* het venster heeft dezelfde opbouw als de andere vensters (kleine kop, titel, uitleg en knoppen rechtsonder) en de lijst dezelfde stijl als de correctielijst: één kader met een lijn tussen de rijen. De datum en tijd staan op dezelfde manier als in de tabel met registraties.
+- *Toegankelijkheid:* iedere knop `Verwijderen` heeft voor een schermlezer een eigen naam ("Blikje van 14 sep, 12:00 verwijderen") en het venster werkt helemaal met het toetsenbord.
+
+**Nielsen-heuristieken:**
+- *H6:* de beheerder ziet de datum en tijd van iedere registratie en hoeft niet te onthouden in welke volgorde ze zijn ingevoerd.
+- *H5:* er verdwijnt pas iets na een bewuste keuze voor één registratie. Een registratie uit een oude maand vraagt daarna nog om bevestiging.
+- *H3:* `Annuleren` en Escape sluiten het venster zonder gevolgen.
+- *H1:* na het verwijderen verschijnt een melding en wordt het aantal bij Blikje 1 lager.
 
 #### W37 – Beheer: correctiedatum met foutmelding
 
@@ -1898,17 +1921,29 @@ Onder de tabel staat in grijze tekst "Wist alle medewerkers, registraties, produ
 
 ![W39 – Beheer in het donkere thema](wireframes/w39-beheer-donker.jpg)
 
-**Omschrijving.** Het tabblad `Registraties` (zoals W18) terwijl het apparaat op donker staat. `Systeem` is gekozen, dus de slider staat naar de maan. Het beheervenster heeft een donkere achtergrond. De kop `Overzicht`, het actieve tabblad, de labels van de velden en de namen van de medewerkers zijn lichtgroen. Het zoekveld `Zoek een medewerker...` en het datumveld (06-10-2026) zijn donker met lichte tekst. De twee keuzelijsten `Alle medewerkers` en `Alle maanden` zijn op deze screenshot licht: wit met donkere tekst (zie de beperking hieronder). `Uitloggen` en `CSV exporteren` zijn donkerblauw met lichtblauwe tekst. Onder het datumveld staan de totalen per medewerker (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80) en onderaan de kolomkoppen van de tabel. De pagina achter het venster is donker en gedimd.
+**Omschrijving.** Het tabblad `Registraties` (zoals W18) terwijl het apparaat op donker staat. `Systeem` is gekozen, dus de slider staat naar de maan. Het beheervenster heeft een donkere achtergrond. De kop `Overzicht`, het actieve tabblad, de labels van de velden en de namen van de medewerkers zijn lichtgroen. Het zoekveld `Zoek een medewerker...` (de placeholdertekst in `--muted`), het datumveld (12-10-2026) en de twee keuzelijsten `Alle medewerkers` en `Alle maanden` zijn donker met lichte tekst. `Uitloggen` en `CSV exporteren` zijn donkerblauw met lichtblauwe tekst. Onder het datumveld staan de totalen per medewerker (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80) en onderaan de kolomkoppen van de tabel. De pagina achter het venster is donker en gedimd.
 
 **UI-principes:**
-- *Consistentie:* de indeling is precies gelijk aan het lichte thema (W18). De kleuren wisselen. Op de screenshot geldt dat niet voor de twee keuzelijsten, die licht zijn gebleven.
+- *Consistentie:* de indeling is precies gelijk aan het lichte thema (W18). Alleen de kleuren wisselen, ook die van de keuzelijsten.
 - *Toegankelijkheid:* lichte tekst op een donkere achtergrond, met de lichtere tint van het huisgroen voor goed contrast.
 - *Visuele hiërarchie:* het actieve tabblad en de namen vallen op door het groen. De details zijn grijs.
 
 **Nielsen-heuristieken:**
 - *H4:* knoppen, velden en tabbladen staan op dezelfde plek als in het lichte thema.
 - *H7:* de beheerder kan het thema kiezen dat bij het apparaat of de omgeving past.
-- *Beperking (open controle):* op deze screenshot zijn de keuzelijsten `Alle medewerkers` en `Alle maanden` licht, terwijl de andere velden donker zijn. In Edge zonder venster (headless) is de berekende stijl van deze keuzelijsten wel donker (achtergrond `--paper`), en een screenshot van alleen dat deel van het scherm toont ze ook donker. Of een gewoon browservenster de keuzelijsten in het donkere thema licht of donker toont, is nog niet vastgesteld. Dit staat als open punt in hoofdstuk 16.
+**Controle keuzelijsten (uitgevoerd in versie 3.8).** Op een eerdere versie van deze screenshot waren de keuzelijsten licht. Dat bleek een fout in de screenshot en niet in de website. In Edge zonder venster (headless, aangestuurd via het DevTools-protocol) is het beheer in drie situaties bekeken: direct donker geladen, gewisseld met de slider en gewisseld doordat het apparaat (nagebootst) naar donker ging. In alle drie zijn de keuzelijsten op een screenshot van het hele scherm donker, en de berekende stijlen zijn ook donker. Door `color-scheme: dark` op `:root[data-theme="dark"]` gebruikt de browser voor een `select` en de opties de donkere systeemkleuren: witte tekst op de achtergrond `--paper`. De uitgeklapte lijst tekent de browser zelf en die komt niet in een screenshot. Daarom zijn daarvan de berekende kleuren van de opties gemeten. De opties hebben geen eigen achtergrond en nemen de kleuren van de keuzelijst over. De contrastverhoudingen zijn berekend volgens WCAG 2.1 (minimaal 4,5:1 voor gewone tekst):
+
+| Onderdeel | Licht thema | Donker thema |
+|---|---|---|
+| Gesloten keuzelijst (`Alle medewerkers`, `Alle maanden`, consumptiepunt bij Voorraad, bedrijf en consumptiepunt in de formulieren) | `#000000` op `#ffffff`: 21:1 | `#ffffff` op `#142628`: 15,7:1 |
+| Opties en groepskoppen in de uitgeklapte lijst, ook keuzes als `Kies een bedrijf` en `Geen consumptiepunt bij dit bedrijf` | 21:1 | 15,7:1 |
+| Uitgeschakelde keuzelijst (komt in de app niet voor, ter controle gemeten) | `#6d6d6d`: 5,2:1 | `#aaaaaa`: 6,8:1 |
+| Bedrijfsfilter op de beginpagina: tekst en keuzes (`--ink` op `--paper`) | 13,0:1 | 6,7:1 |
+| Bedrijfsfilter: keuze onder de muis of met de focus (`--ink` op `--mint`) | 11,6:1 | 5,3:1 |
+| Placeholdertekst `Alle bedrijven` (en de zoekvelden), vóór versie 3.8 | `#757575`: 4,6:1 | `#757575`: 3,4:1 |
+| Placeholdertekst, vanaf versie 3.8 | `#757575`: 4,6:1 (ongewijzigd) | `--muted` (`#8fb3a8`): 6,9:1 |
+
+De keuzelijsten zelf voldoen in beide thema's en zijn niet aangepast. De placeholdertekst haalde in het donkere thema de norm niet, omdat de browser daar hetzelfde grijs gebruikt als in het lichte thema. De placeholder van het bedrijfsfilter is ook de tekst van de standaardkeuze (`Alle bedrijven`) en moet dus goed leesbaar zijn. Daarom krijgt placeholdertekst in het donkere thema de bestaande huiskleur `--muted` (regel `:root[data-theme="dark"] ::placeholder` in `styles.css`). In een nieuwe screenshot hebben de getekende pixels precies die kleur. De markering van de gekozen optie in de uitgeklapte lijst komt van het besturingssysteem en valt buiten de website. Of Chrome en Firefox de keuzelijsten hetzelfde tonen, valt onder de bekende beperking "Alleen in Edge getest" in hoofdstuk 16.
 
 #### W40 – Beheer op een telefoon
 
@@ -2213,21 +2248,24 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 **Hoofdscenario (verwijderen met `−`):**
 
 1. De beheerder klikt bij een product op `−` (`removeCorrection`).
-2. `lastRegistration` zoekt de **laatst ingevoerde** registratie van dat product bij die medewerker. Dat is de registratie die als laatste is opgeslagen (de volgorde van invoer), niet de registratie met de nieuwste datum. Is met `+` een registratie op een eerdere datum toegevoegd, dan is dat dus de registratie die met `−` verdwijnt.
-3. `removeLastRegistration` verwijdert die registratie. Het product gaat terug naar de voorraad van het punt uit de registratie, maar alleen als de registratie na de laatste telling is gemaakt.
-4. De verwijdering en de logboekregel "Registratie verwijderd" worden samen opgeslagen.
-5. Er verschijnt "… registratie verwijderd" en het overzicht en de voorraad worden vernieuwd.
+2. Het venster `Registratie verwijderen` opent (`renderRemoveRegistrationList`, met `registrationsFor`). Het toont alle registraties van dat product bij die medewerker, met de nieuwste datum bovenaan: per registratie de datum en tijd, het product, het aantal (altijd 1) en bij een correctie `+` "toegevoegd door beheerder". Het venster opent ook als er maar één registratie is. Zo werkt `−` altijd op dezelfde manier en ziet de beheerder vóór het verwijderen welke registratie verdwijnt. De focus staat op de eerste knop `Verwijderen`.
+3. De beheerder klikt bij de registratie die weg moet op `Verwijderen` (`removeChosenRegistration`).
+4. `removeRegistration` verwijdert precies die registratie. Het product gaat terug naar de voorraad van het punt uit de registratie, maar alleen als de registratie na de laatste telling is gemaakt.
+5. De verwijdering en de logboekregel "Registratie verwijderd" (bijvoorbeeld "Blikje van Lotte van Dijk, geregistreerd op 14 september 2026 om 12:00") worden samen opgeslagen.
+6. Het venster sluit en de focus gaat terug naar de knop `−`. Er verschijnt "… registratie verwijderd" en het overzicht en de voorraad worden vernieuwd.
 
 **Alternatieve en uitzonderingspaden:**
 
 - **A1 `+` in een eerdere maand:** eerst verschijnt "Deze registratie komt in september 2026. Die loonmaand is mogelijk al verwerkt. Toch toevoegen?" (`confirmOldMonthAddition`). Bij `Annuleren` verandert er niets.
-- **A2 `−` op een registratie uit een andere maand:** eerst verschijnt "Deze registratie is van september 2026. Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (`confirmOldMonthRemoval`). Bij `Annuleren` verandert er niets.
+- **A2 `−` op een registratie uit een andere maand:** kiest de beheerder in stap 3 een registratie uit een andere maand, dan verschijnt eerst "Deze registratie is van september 2026. Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (`confirmOldMonthRemoval`). Bij `Annuleren` verandert er niets en blijft het venster open.
 - **A3 Product niet aangeboden:** de correctielijst toont alle producten, ook producten die het punt van de medewerker niet (meer) aanbiedt. Voegt de beheerder zo'n product toe met `+`, dan krijgt de registratie geen consumptiepunt (`pointId` is `null`) en verandert de voorraad niet. (In UC-02 kan dit niet: het productvenster toont alleen aangeboden producten, en `removeUnavailableSelections` haalt een product dat intussen niet meer wordt aangeboden uit de keuze.)
+- **A4 Venster sluiten zonder verwijderen:** `Annuleren`, het kruisje, een klik naast het venster of Escape sluiten het venster `Registratie verwijderen` (`closeRemoveRegistration`). Er verandert niets en de focus gaat terug naar de knop `−`. Bij het sluiten van het beheer (uitloggen) gaat het venster ook dicht.
 - **E1 Ongeldige datum:** een datum in de toekomst, een niet-bestaande datum of een datum van vóór 2000 geeft bij het datumveld "Kies een geldige datum, niet later dan vandaag.". De focus gaat naar het veld en er wordt niets opgeslagen.
 - **E2 Geen registratie om te verwijderen:** heeft de medewerker geen registratie van dat product, dan verschijnt "Dit product heeft geen registratie voor deze medewerker".
 - **E3 Medewerker intussen verwijderd:** is de medewerker bij `+` in een ander tabblad verwijderd, dan verschijnt "Deze medewerker bestaat niet meer. Er is niets opgeslagen."
+- **E4 Registratie intussen verwijderd:** is de gekozen registratie in een ander tabblad al verwijderd, dan verschijnt "Deze registratie bestaat niet meer. Er is niets opgeslagen." en wordt de lijst in het venster bijgewerkt. Is er van dat product bij die medewerker niets meer over, dan sluit het venster (`refreshRemoveRegistration`).
 
-**Postconditie:** Er is precies één registratie bij of af voor de gekozen medewerker en het gekozen product, de voorraad is waar nodig aangepast en er staat een regel in het logboek.
+**Postconditie:** Er is precies één registratie bij of af voor de gekozen medewerker en het gekozen product (bij `−` de registratie die de beheerder koos), de voorraad is waar nodig aangepast en er staat een regel in het logboek.
 
 ### UC-10 Medewerker beheren
 
@@ -2628,7 +2666,7 @@ Deze stories horen bij FR-51. Die eis is alleen als demo gebouwd en wordt voor p
 |---|---|---|---|---|---|
 | US-28 | Als beheerder wil ik bij `Medewerker corrigeren` met `+` een vergeten registratie toevoegen, zodat de verrekening toch klopt als een medewerker vergat te registreren. | Must | FR-13 | UC-09 | AC-11 |
 | US-29 | Als beheerder wil ik bij `Datum bij toevoegen (+)` een eerdere datum kiezen (niet later dan vandaag) en een bevestigingsvraag krijgen als die in een eerdere maand valt, zodat een vergeten registratie in de juiste maand komt en ik niet per ongeluk een al verwerkte loonmaand wijzig. | Must | FR-56 | UC-09 | AC-52, AC-53 |
-| US-30 | Als beheerder wil ik met `−` de laatst ingevoerde registratie van een product bij een medewerker verwijderen, zodat ik een verkeerde registratie kan herstellen zonder andere registraties te raken. | Must | FR-14 | UC-09 | AC-12, AC-78 |
+| US-30 | Als beheerder wil ik met `−` zelf kiezen welke registratie van een product bij een medewerker ik verwijder (met de datum en tijd erbij), zodat ik precies de verkeerde registratie herstel zonder andere registraties te raken. | Must | FR-14 | UC-09 | AC-12, AC-78, AC-90 |
 | US-31 | Als beheerder wil ik een bevestigingsvraag krijgen als ik met `−` een registratie uit een andere maand verwijder, zodat ik niet ongemerkt een loonmaand wijzig die mogelijk al is verwerkt. | Must | FR-54 | UC-09 | AC-46 |
 | US-32 | Als beheerder wil ik dat een medewerker een opgeslagen registratie niet zelf kan verlagen of verwijderen, zodat alleen gecontroleerde correcties via het beheer de gegevens veranderen. | Must | FR-04 | UC-02 | AC-06 |
 | US-33 | Als beheerder wil ik dat registraties blijven bestaan als een medewerker, product of consumptiepunt wordt gedeactiveerd of verwijderd, en dat ze de prijs en het werkgevernummer van het moment van registreren houden, zodat een oude maand in de export nooit achteraf verandert. | Must | FR-17, FR-55 | UC-11, UC-12, UC-15 | AC-56, AC-51 |
@@ -3040,11 +3078,12 @@ Meldingen staan letterlijk zoals de gebruiker ze ziet. Een melding onderaan het 
 | Situatie | Wat doet het systeem? |
 |---|---|
 | Correctie `−` op een registratie uit een andere maand | Eerst de vraag "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?". Bij `Annuleren` verandert er niets. |
-| Correctie `−`: welke registratie verdwijnt | Altijd de laatst ingevoerde registratie van dat product bij die medewerker (volgorde van invoer, niet de datum). Is eerder met `+` een registratie op een eerdere datum toegevoegd, dan verdwijnt die, ook als er een registratie met een latere datum is. |
+| Correctie `−`: welke registratie verdwijnt | Precies de registratie die de beheerder in het venster `Registratie verwijderen` kiest (met de datum en tijd erbij). Andere registraties van dat product blijven staan, ook als ze later zijn ingevoerd. `Annuleren` of Escape sluit het venster zonder iets te verwijderen. |
 | Correctie `+` met een datum in een eerdere maand | Eerst de vraag "Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Bij `Annuleren` verandert er niets. |
 | Correctie `+` met een datum in de toekomst, een niet-bestaande datum of van vóór 2000 | Foutmelding bij het datumveld ("Kies een geldige datum, niet later dan vandaag."), de focus gaat naar het veld en er wordt niets opgeslagen. |
 | Correctie `+`: voorraad | De voorraad gaat alleen 1 omlaag als het punt van de medewerker het product aanbiedt en het tijdstip van de registratie niet vóór het tijdstip van de laatste telling (`countedAt`) ligt. Dat tijdstip is vandaag het huidige tijdstip en op een eerdere dag 12:00 uur. Een correctie op de dag van een telling na 12:00 uur verandert de voorraad dus niet. Biedt het punt het product niet aan, dan krijgt de registratie geen consumptiepunt en verandert de voorraad ook niet. |
 | Correctie `−`: voorraad | Het product gaat alleen terug naar het punt uit de registratie als het tijdstip van de registratie niet vóór het tijdstip van de laatste telling ligt. Anders blijft de telling staan. |
+| Correctie `−` op een registratie die intussen in een ander tabblad is verwijderd | Er wordt niets opgeslagen. Melding "Deze registratie bestaat niet meer. Er is niets opgeslagen." De lijst in het venster wordt bijgewerkt. Is er van dat product niets meer over, dan sluit het venster. |
 | Correctie `+` voor een medewerker die intussen is verwijderd | Er wordt niets opgeslagen. Melding "Deze medewerker bestaat niet meer. Er is niets opgeslagen." |
 | Geen registratie om te verwijderen | De gebruiker krijgt de foutmelding "Dit product heeft geen registratie voor deze medewerker". |
 
@@ -3114,11 +3153,14 @@ Het systeem wordt op drie niveaus getest:
 |---|---|---|---|
 | Unit tests | De regels van model, opslag, export, controller en view, ook de foutpaden en meldingen | Node.js test runner (`node:test`) met een nep-opslag en een nep-DOM uit `tests/helpers.js`. De strenge nep-view (`createStrictView`) geeft `null` terug voor een onbekende selector, zodat een verkeerde selector opvalt. Er is geen browser nodig. | Lokaal met `npm test`, en automatisch via GitHub Actions bij iedere push en pull request naar `main` en `development` |
 | Acceptatietests | De acceptatiecriteria (AC's) hieronder | Handmatig in Microsoft Edge, met de stappen en verwachte resultaten uit de tabel hieronder. De uitkomst wordt vastgelegd in het [testverslag](#testverslag-acceptatietests). | Vóór een oplevering aan de begeleider |
-| Browsercontroles | Of de schermen er in een echte browser goed uitzien | Een visuele controle, geen test met een vaste uitkomst. De screenshots in hoofdstuk 9 zijn gemaakt met Microsoft Edge zonder venster (headless), met hulpscripts die niet in de repository staan. Ze zijn daarom niet precies te herhalen. Wie een scherm opnieuw wil controleren, opent het in een gewoon browservenster. | Tijdens de ontwikkeling, bij een wijziging van de schermen |
+| Browsertests (end-to-end) | Of de echte pagina werkt in een browser: laden zonder fouten, zoeken, registreren, Escape en focus, inloggen als beheerder, thema, herkennen met de pas en de CSV-export | Node.js test runner met een kleine webserver (`node:http`) en een headless browser (Edge of Chrome), aangestuurd via het Chrome DevTools Protocol. Er zijn geen npm-pakketten nodig. Iedere test begint met lege opslag en faalt bij een fout in de console van de browser. | Lokaal met `npm run test:e2e`, en automatisch via GitHub Actions na geslaagde unit tests |
+| Browsercontroles | Of de schermen er in een echte browser goed uitzien | Een visuele controle, geen test met een vaste uitkomst. De werking van de schermen wordt wel automatisch getest door de browsertests. De screenshots in hoofdstuk 9 zijn gemaakt met Microsoft Edge zonder venster (headless), met hulpscripts die niet in de repository staan. Ze zijn daarom niet precies te herhalen. Wie een scherm opnieuw wil controleren, opent het in een gewoon browservenster. | Tijdens de ontwikkeling, bij een wijziging van de schermen |
 
 **Testomgeving:**
 
 - Node.js 22 of hoger (`"engines": { "node": ">=22" }` in `package.json`). De CI gebruikt `node-version: 24` (LTS).
+- Browsertests: lokaal Microsoft Edge (standaard op Windows), in de CI Google Chrome op `ubuntu-latest`. Een andere browser kies je met de omgevingsvariabele `BROWSER_PATH`.
+- Tijdzone bij de browsertests: de tests zetten de tijdzone van de browser altijd op Europe/Amsterdam. De CI-job geeft Node.js dezelfde tijdzone (`TZ`). De uitkomst hangt daardoor niet af van de tijdzone van de computer.
 - Tijdzone: de CI-workflow draait op `ubuntu-latest` en stelt geen tijdzone in, dus de tests draaien daar in UTC. Lokaal draaien ze in de tijdzone van de laptop (Europe/Amsterdam). Omdat registraties met lokale datums werken (dag, maand, loonmaand, middernacht), moeten de tests in beide tijdzones slagen.
 - Browser voor de acceptatietests: een recente versie van Microsoft Edge.
 
@@ -3130,8 +3172,8 @@ Niet-functionele eisen hebben geen MoSCoW-prioriteit. Voor een AC die alleen bij
 
 **Wat niet (automatisch) wordt getest:**
 
-- Er zijn geen end-to-end-tests in een echte browser in de CI. De browsercontroles en acceptatietests gebeuren met de hand.
-- Chrome, Firefox, Safari en de iPad zijn niet getest. Alleen Edge (en de unit tests in Node.js). Voor Chrome en Firefox wordt werking verwacht (NFR-03), maar dat is niet aangetoond.
+- De browsertests dekken een beperkte set scenario's. De acceptatietests en de visuele controle van de schermen gebeuren nog met de hand. De correcties (`+` en `−`) in het beheer en de demo gezichtsherkenning zitten niet in de browsertests.
+- Firefox, Safari en de iPad zijn niet getest. De browsertests draaien in Edge (lokaal) en Chrome (CI). Voor Firefox wordt werking verwacht (NFR-03), maar dat is niet aangetoond.
 - De demo gezichtsherkenning is alleen deels getest: de regels (afstand tussen gezichten, grootste gezicht, twee keer bevestigen, toestemming, camera uitzetten) met nep-gegevens. Het echte herkennen met een camera alleen met de hand, en hoe vaak de verkeerde persoon wordt herkend is nog niet gemeten (zie het testplan hieronder en AC-83).
 - Herkennen met de pas is alleen getest met nagebootste toetsaanslagen en een nep-klok (`tests/pas.test.js`). Een test met een echte pasjeslezer moet nog gebeuren (zie het [testplan pasjeslezer](#testplan-pasjeslezer-handmatig)).
 - De koppeling met AFAS (FR-67, AC-87 t/m AC-89) is alleen ontworpen en kan pas worden getest als er een backend is.
@@ -3227,7 +3269,7 @@ De kolom "FR/NFR" noemt alleen de eisen uit hoofdstuk 4 (FR) of 5 (NFR) die met 
 | AC-09 | FR-61, NFR-06 | Opslagfout testen | De wijziging wordt teruggedraaid en er verschijnt een melding. |
 | AC-10 | FR-09 | Admin-login gebruiken | Het admin-dashboard wordt geopend. |
 | AC-11 | FR-13 | Admin `+` gebruiken | De gekozen medewerker krijgt één registratie. |
-| AC-12 | FR-14 | Admin `−` gebruiken | De laatst ingevoerde registratie van dat product wordt verwijderd (de volgorde van invoer, niet de datum). Alleen de gekozen medewerker verandert. |
+| AC-12 | FR-14 | Admin `−` gebruiken en in het venster `Registratie verwijderen` bij een registratie op `Verwijderen` klikken | Het venster toont alle registraties van dat product bij die medewerker, met de nieuwste datum bovenaan. Alleen de gekozen registratie wordt verwijderd en alleen de gekozen medewerker verandert. Het logboek bevat "Registratie verwijderd" met de datum en tijd van de registratie. |
 | AC-13 | FR-11, FR-12 | Filter gebruiken | Alleen de gekozen gegevens worden getoond. |
 | AC-14 | FR-15 | Medewerker toevoegen | De nieuwe medewerker verschijnt in de lijst. |
 | AC-15 | FR-23 | Medewerker wijzigen | De gewijzigde medewerkergegevens worden bewaard. |
@@ -3293,7 +3335,7 @@ De kolom "FR/NFR" noemt alleen de eisen uit hoofdstuk 4 (FR) of 5 (NFR) die met 
 | AC-75 | FR-16 | Een actieve medewerker zonder registraties proberen te verwijderen | Er is geen knop `Verwijderen` bij een actieve medewerker. Via een verouderde knop of een directe aanroep wordt verwijderen geweigerd met "Zet deze medewerker eerst op inactief. Alleen een inactieve medewerker kan definitief worden verwijderd." |
 | AC-76 | FR-57 | Een product dat nog nooit is geregistreerd verwijderen | Eerst verschijnt "Product … verwijderen?". Alleen na `OK` verdwijnt het product. Bij `Annuleren` verandert er niets. |
 | AC-77 | FR-59 | Een bedrijf opslaan met een werkgevernummer dat een ander bedrijf al heeft | Bij het veld staat "Er bestaat al een bedrijf met dit werkgevernummer." en er wordt niets opgeslagen. |
-| AC-78 | FR-14 | Bij een medewerker met een Blikje van vandaag met `+` een Blikje op een eerdere datum toevoegen, daarna `−` bij Blikje | De registratie op de eerdere datum (de laatst ingevoerde) verdwijnt. De registratie van vandaag blijft staan. |
+| AC-78 | FR-14 | Bij een medewerker met een Blikje van vandaag met `+` een Blikje op een eerdere datum toevoegen, daarna `−` bij Blikje en in het venster de registratie van vandaag kiezen | Het venster toont beide registraties: die van vandaag bovenaan en die op de eerdere datum met "toegevoegd door beheerder". Alleen de registratie van vandaag verdwijnt. De registratie op de eerdere datum (de laatst ingevoerde) blijft staan. |
 | AC-79 | NFR-10 | Een medewerker met de voornaam `=SOM(1;1)` iets laten registreren en de maand exporteren | In het bestand begint de naam met een `'` (`'=SOM(1;1) …`), dus Excel voert de naam niet uit als formule. |
 | AC-80 | FR-32 | Op de medewerkerkaart van Lotte van Dijk tikken | Het productvenster van Lotte opent met de producten van het eigen consumptiepunt (zie W07). |
 | AC-81 | NFR-01 | Een nieuwe gebruiker die de website niet kent, krijgt zonder uitleg de opdracht "registreer één Blikje voor Lotte van Dijk". De beginpagina staat open en de naam staat op het scherm. Een tweede persoon meet met een stopwatch de tijd vanaf de eerste tik tot de melding verschijnt, en telt het aantal tikken. Herhaal met minstens drie gebruikers. | Iedere gebruiker registreert het product in hooguit 5 seconden en met hooguit 3 tikken (naam, `+`, `Registreren`). |
@@ -3305,10 +3347,11 @@ De kolom "FR/NFR" noemt alleen de eisen uit hoofdstuk 4 (FR) of 5 (NFR) die met 
 | AC-87 | FR-67 | Productie, in de testomgeving van AFAS: een nieuwe medewerker aanmaken in AFAS en op `Nu synchroniseren` klikken | De medewerker staat actief in de app, met het personeelsnummer, de naam, het bedrijf en de looncode uit AFAS. Het logboek bevat een regel van de synchronisatie. |
 | AC-88 | FR-67, FR-17 | Productie, in de testomgeving van AFAS: bij een medewerker met registraties een datum uit dienst in het verleden zetten en synchroniseren | De medewerker is inactief en niet verwijderd. Alle registraties bestaan nog en staan nog in de CSV-export van die maand. |
 | AC-89 | FR-67 | Productie, in de testomgeving van AFAS: synchroniseren met een verkeerd token of zonder verbinding met AFAS, en daarna met een GetConnector die een lege lijst geeft | Beide keren is geen enkele medewerker gewijzigd of inactief gezet en is er niets verloren. De fout staat in het log van de server en de beheerder ziet de tijd van de laatste geslaagde synchronisatie. |
+| AC-90 | FR-14 | Bij een medewerker met één registratie van Blikje op `−` bij Blikje klikken, het venster met Escape sluiten, opnieuw op `−` klikken en met Tab door het venster gaan | Ook bij één registratie opent het venster `Registratie verwijderen` en staat de focus op `Verwijderen`. Escape sluit het venster zonder iets te verwijderen en de focus staat weer op de `−`. Tab blijft binnen het venster (`Verwijderen`, `Annuleren` en het kruisje). |
 
 ### Testverslag acceptatietests
 
-Hieronder wordt per acceptatiecriterium vastgelegd of het is geslaagd, wanneer en door wie. De acceptatietests zijn voor deze versie (3.6) nog niet uitgevoerd. AC-84 t/m AC-86 vragen een echte pasjeslezer (zie het [testplan pasjeslezer](#testplan-pasjeslezer-handmatig)). AC-87 t/m AC-89 horen bij de productieversie en kunnen pas worden uitgevoerd als de koppeling met AFAS is gebouwd. Ze tellen voor de demo niet mee voor het uitstapcriterium. Daarom staat overal "nog uit te voeren". Er zijn hier bewust geen uitkomsten ingevuld die niet echt zijn gemeten.
+Hieronder wordt per acceptatiecriterium vastgelegd of het is geslaagd, wanneer en door wie. De acceptatietests zijn voor deze versie (3.8) nog niet uitgevoerd. AC-84 t/m AC-86 vragen een echte pasjeslezer (zie het [testplan pasjeslezer](#testplan-pasjeslezer-handmatig)). AC-87 t/m AC-89 horen bij de productieversie en kunnen pas worden uitgevoerd als de koppeling met AFAS is gebouwd. Ze tellen voor de demo niet mee voor het uitstapcriterium. Daarom staat overal "nog uit te voeren". Er zijn hier bewust geen uitkomsten ingevuld die niet echt zijn gemeten.
 
 Zo wordt het verslag ingevuld:
 
@@ -3408,6 +3451,7 @@ Zo wordt het verslag ingevuld:
 | **AC-87** | FR-67 | nog uit te voeren | – | – |
 | **AC-88** | FR-67, FR-17 | nog uit te voeren | – | – |
 | **AC-89** | FR-67 | nog uit te voeren | – | – |
+| **AC-90** | FR-14 | nog uit te voeren | – | – |
 
 ### Unit tests
 
@@ -3417,12 +3461,12 @@ Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `np
 |---|---|---|
 | `tests/basis.test.js` | 54 | Basisregels: registraties, medewerkers, producten, bedrijven, consumptiepunten, voorraad en export |
 | `tests/datastore.test.js` | 22 | Opslag: controle van opgeslagen gegevens, omzetten van oude gegevens en mislukte opslag |
-| `tests/model.test.js` | 38 | Randgevallen in het model: terugdraaien, verhuisde medewerkers, negatieve voorraad en de bijbestellijst |
+| `tests/model.test.js` | 42 | Randgevallen in het model: terugdraaien, verhuisde medewerkers, negatieve voorraad, de bijbestellijst en de correctie `−` met keuze (`registrationsFor` met de nieuwste datum bovenaan, `removeRegistration` van precies één registratie, een onbekend id en een registratie van vóór de telling) |
 | `tests/csv-export.test.js` | 21 | CSV-export: loonmaand, filters, sortering, afronding en veilige CSV-velden |
 | `tests/view-app.test.js` | 19 | HTML-escaping, opslaan en terugdraaien, registreren van gekozen producten en logboekteksten |
 | `tests/theme.test.js` | 13 | Thema: welke instelling bij welk thema hoort, dag en nacht bij "Auto", onthouden van de keuze |
 | `tests/welcome-face.test.js` | 19 | Welkom en "Zelfde als vorige keer" (welke keuze, alleen aangeboden producten, nog niet registreren), begroeting per tijdstip en de demo gezichtsherkenning (afstand tussen gezichten, herkennen, grootste gezicht, twee keer bevestigen, uitzetten, camera uitzetten) |
-| `tests/controller.test.js` | 40 | De controller: formulieren (producten, bedrijven, consumptiepunten, medewerkers) met hun foutmeldingen, verwijderen, correcties, leveringen en voorraad tellen, inloggen en uitloggen, het logboek, de toetsen Escape, Tab en Ctrl K, en de demo gezichtsherkenning |
+| `tests/controller.test.js` | 49 | De controller: formulieren (producten, bedrijven, consumptiepunten, medewerkers) met hun foutmeldingen, verwijderen, correcties, leveringen en voorraad tellen, inloggen en uitloggen, het logboek, de toetsen Escape, Tab en Ctrl K, en de demo gezichtsherkenning. Bij de correctie `−`: het venster `Registratie verwijderen` opent ook bij één registratie met de focus op `Verwijderen`, alleen de gekozen registratie verdwijnt (met de datum in het logboek), `Annuleren`, een registratie die niet meer bestaat, een wijziging in een ander tabblad, uitloggen, de knop in het venster, de inhoud van het venster en het venster in `index.html` |
 | `tests/regressie.test.js` | 50 | Regressietests: voor iedere opgeloste bug uit de eerste drie codecontroles een test die faalt als de bug terugkomt |
 | `tests/controle4-model.test.js` | 14 | Regressietests van de vierde codecontrole voor model, opslag en export: id's zonder https, prijs per registratie, lege productlijst, beschadigde bedrijvenlijst, verwijderen van medewerkers met registraties |
 | `tests/controle4-ui.test.js` | 22 | Regressietests van de vierde codecontrole voor controller en view: bijwerken van lijsten en voorraad, bedrijfsfilter, sluiten via de achtergrond, focus in de correctielijst, toestemming bij de camera, uitloggen bij sluiten, dubbel personeelsnummer |
@@ -3434,7 +3478,9 @@ Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `np
 | `tests/to-controle.test.js` | 43 | Regressietests voor de wijzigingen uit de TO-controle (versie 3.4). Ze controleren de teksten "1 medewerker" en "2 medewerkers" bij bedrijven en consumptiepunten, en "1 product" en "2 producten" in de correctielijst. Ze controleren de bevestiging bij het verwijderen van een product (ook `Annuleren`, en geen vraag bij een gebruikt product) en de melding "bestaat niet meer" bij een correctie `+` voor een verwijderde medewerker. Verder: alleen een inactieve medewerker zonder registraties verwijderen (model en controller) en een uniek werkgevernummer per bedrijf (model en formulier). Bij het laden: dubbele id's, registraties meer dan 24 uur in de toekomst en een telling in de toekomst. In de export: CSV-velden die met een tab, `\r` of `\n` beginnen. In het model: `lastRegistration` als laatst ingevoerde registratie en de voorraad bij een registratie vóór de telling. In het SQL-schema: `counted_at`, geen rol `manager` en geen mengsel van LF- en CRLF-regeleinden. In de schermen: de opslagknoppen (bij wijzigen is `Opslaan` primair) en de filters op een smal scherm. Tot slot de eisen die nog geen test hadden: alleen actieve medewerkers in de publieke lijst (FR-01), zoeken op voor- en achternaam, ook op een deel en zonder op hoofdletters te letten (FR-02), de `−` die alleen de keuze verlaagt en geen registratie verwijdert (FR-04), alle registraties nieuwste eerst voor de beheerder (FR-10), geen bedragen of persoonlijke aantallen in de publieke lijst (FR-29), een klik op de medewerkerkaart die het productvenster opent (FR-32) en de knop `Registreren (n)` met het totaal aantal gekozen producten (FR-47) |
 | `tests/pas.test.js` | 32 | Herkennen met de pas (FR-65, FR-66), met nagebootste toetsaanslagen en een nep-klok. `BadgeReader`: een snelle scan met Enter of Tab (die wordt tegengehouden), een scan zonder Enter na `endDelayMs` stilte, menselijk typen en een te korte code zijn geen scan, sneltoetsen en een uitgezette lezer, en `normalize`. Met de instellingen uit `config.js` is ook het kortste pasnummer (4 tekens) te scannen. De controller: een bekende pas opent het productvenster met "Je bent herkend met je pas.", een onbekende pas en de pas van een inactieve medewerker geven dezelfde melding, geen herkenning als er een venster open is (de Enter van de scan wordt dan wel tegengehouden, een Enter van een mens niet), en het zoekveld heeft na een scan dezelfde inhoud. Pas koppelen: gelijk gemaakt opgeslagen, niet in het logboek, een pas van een andere medewerker en ongeldige tekens of lengte worden geweigerd, leeg laten of weghalen, en het label "Pas gekoppeld". `DataStore`: oude gegevens zonder `badgeId`, een ongeldig of dubbel pasnummer wordt leeggemaakt. Verder: de demogegevens hebben geen pasnummer en het pasnummer staat niet in de CSV-export |
 | `tests/beveiligingsscan.test.js` | 22 | Regressietests voor de punten uit de beveiligingsscan (versie 3.7). Beheeracties zonder ingelogde beheerder doen niets en geven "Log eerst in als beheerder." (alle formulieren, verwijderen, correcties, voorraad, export en wissen), na het sluiten van het beheer werkt een correctie niet meer, het dashboard wordt verborgen, registreren door een medewerker zelf vraagt geen login en een correctie `+` voor een onbekend product wordt geweigerd. Product-id's als `__proto__`, `constructor` en `toString` in de voorraadlijst: bij het laden (ook vanuit JSON-tekst met een eigen sleutel `__proto__`), in `renameStockKeys` en `isValidPoint`, in het model en bij een levering. De camera gaat uit na de tijdslimiet bij herkennen en bij instellen, en een gesloten venster wordt daarna niet meer aangepast. Codes (tekst zonder stuurtekens, getallen worden tekst) en tijdstippen (ISO-vorm, vanaf 2000, niet ver in de toekomst) bij registraties, logboekregels en tellingen. Verder: de CI op Node.js 22 of 24, het logboek in het SQL-schema met triggers en zonder `ON DELETE SET NULL`, de licentie van TensorFlow.js en een controlegetal voor ieder bestand in `assets/vendor/face-api/` |
-| **Totaal** | **534** | |
+| **Totaal** | **547** | |
+
+Naast de unit tests zijn er 9 browsertests in `tests/e2e/app.e2e.test.js`: laden zonder fouten, zoeken en het productvenster, registreren met bevestiging en totalen, registreren zonder keuze, Escape en focus, inloggen als beheerder, het donkere thema, een pas koppelen en herkennen, en de CSV-export. De hulpcode (webserver, browser starten en besturen) staat in `tests/e2e/browser.js`. Ze draaien met `npm run test:e2e` en tellen niet mee in het totaal hierboven.
 
 `tests/helpers.js` bevat de gedeelde hulpfuncties, zoals nep-opslag, een testmodel, een nep-view met nep-elementen en een strenge nep-view (`createStrictView`) die `null` teruggeeft voor onbekende selectors, zodat ook de controller zonder browser te testen is. Met `asAdmin` maken de controllertests een controller met een ingelogde beheerder, omdat beheeracties zonder login niets doen.
 
@@ -3508,13 +3554,11 @@ Zolang er geen backend is, blijven de gegevens per browser in `localStorage`. Ee
 
 | Beperking | Uitleg | Voorstel |
 |---|---|---|
-| `RegistrationApp` is een grote klasse | `RegistrationApp.js` is 2352 regels lang en bevat alle acties: registreren, correcties, formulieren, voorraad, tabbladen, de demo gezichtsherkenning en het herkennen met de pas. Dat maakt het lastiger om een onderdeel snel te vinden en te testen. | Opsplitsen in kleinere controllers met een eigen taak, bijvoorbeeld een `RegistrationController`, `AdminFormsController`, `StockController` en `FaceDemoController`, die `persist` en de meldingen delen. |
+| `RegistrationApp` is een grote klasse | `RegistrationApp.js` is 2414 regels lang en bevat alle acties: registreren, correcties, formulieren, voorraad, tabbladen, de demo gezichtsherkenning en het herkennen met de pas. Dat maakt het lastiger om een onderdeel snel te vinden en te testen. | Opsplitsen in kleinere controllers met een eigen taak, bijvoorbeeld een `RegistrationController`, `AdminFormsController`, `StockController` en `FaceDemoController`, die `persist` en de meldingen delen. |
 | Logboek bewaart namen en geen actor | Logboekregels bevatten namen als tekst en blijven na het verwijderen van een medewerker staan. Wie de wijziging deed, staat er niet in (zie hoofdstuk 13). | In productie een auditlog op de server met beheerder-id en medewerker-id, en anonimiseren na de bewaartermijn. |
 | Geen grens aan de opslag | Registraties en logboekregels blijven groeien tot `localStorage` vol is (naar schatting na zo'n 20.000 registraties, zie NFR-17). Dan lukt opslaan niet meer. | Een backend met database. Tot die tijd oude jaren exporteren en de tablet wissen. |
-| Geen browser- of end-to-end-tests in CI | De unit tests draaien zonder browser. Schermen en echte klikken worden met de hand getest. | End-to-end-tests toevoegen (bijvoorbeeld met Playwright. Microsoft, z.d.) en die in GitHub Actions draaien. |
-| Correctie `−` werkt op de volgorde van invoer | `−` verwijdert de laatst ingevoerde registratie, niet die met de nieuwste datum. Na een `+` met een eerdere datum kan dat verrassen. | In productie per registratie een knop "verwijderen" in de registratietabel, zodat de beheerder precies kiest welke registratie weg moet. |
-| Keuzelijsten in het donkere thema (open controle) | Op screenshot W39 zijn de keuzelijsten `Alle medewerkers` en `Alle maanden` licht, terwijl de andere velden donker zijn. In Edge zonder venster is de berekende stijl wel donker (`--paper`) en een gedeeltelijke screenshot toont ze donker. Of een gewoon browservenster ze licht of donker toont, is niet vastgesteld. | In een gewoon venster van Edge (en daarna Chrome en Firefox) het beheer in het donkere thema openen en de keuzelijsten bekijken. W39 zo nodig opnieuw maken. |
-| Alleen in Edge getest | De website is getest in Edge (en de regels in Node.js). In Chrome en Firefox wordt werking verwacht, maar dat is niet getest (NFR-03). Of alles in Safari en op een iPad werkt (bijvoorbeeld de camera en de datumkiezer), is niet gecontroleerd. | De acceptatietests ook in Chrome en Firefox uitvoeren, en vóór gebruik op een iPad ook daar. |
+| Browsertests alleen in Chrome en Edge | De browsertests in `tests/e2e/` draaien in GitHub Actions in Google Chrome en lokaal in Microsoft Edge. Firefox en Safari worden niet automatisch getest. De demo gezichtsherkenning, de correcties in het beheer en een echte pasjeslezer vallen buiten deze tests. | Firefox toevoegen (via WebDriver BiDi) als dat nodig blijkt, en de correcties aan de browsertests toevoegen. |
+| Alleen in Edge en Chrome getest | De website is met de hand getest in Edge. De browsertests draaien ook in Chrome. In Firefox wordt werking verwacht, maar dat is niet getest (NFR-03). Of alles in Safari en op een iPad werkt (bijvoorbeeld de camera en de datumkiezer), is niet gecontroleerd. | De acceptatietests ook in Chrome en Firefox uitvoeren, en vóór gebruik op een iPad ook daar. |
 | Alleen lezers die zich als toetsenbord gedragen | De pasjeslezer werkt alleen met een USB-lezer die het pasnummer als toetsaanslagen typt ("keyboard wedge"). Web NFC (`NDEFReader`) wordt bewust niet gebruikt, omdat dat alleen in Chrome op Android werkt (MDN Web Docs, z.d.). Een lezer die een eigen driver of programma nodig heeft, werkt niet. | Bij de aanschaf een lezer kiezen die als toetsenbord werkt (in de productbeschrijving vaak "keyboard emulation" of "HID keyboard"). |
 | Pasjeslezer niet getest met echte hardware | Het herkennen met de pas is alleen getest met nagebootste toetsaanslagen. Of de standaardwaarden (`minLength` 4, `maxKeyIntervalMs` 40, `endDelayMs` 120) passen bij de lezer die TVB koopt, is nog niet gecontroleerd. | Het [testplan pasjeslezer](#testplan-pasjeslezer-handmatig) uitvoeren zodra de lezer er is, en de waarden in `config.js` zo nodig aanpassen. |
 | Registreren op naam van een ander | Iedereen bij de tablet kan op de naam van een collega tikken en registreren, of in diens productvenster een eigen gezicht instellen (demo). De demo controleert niet wie er voor de tablet staat (zie hoofdstuk 13). Een registratie is wel met datum en tijd terug te vinden en door de beheerder te corrigeren. | In productie identificeren met een pas, QR-code of persoonlijke pincode, en een overzicht waarin iedere medewerker zijn eigen registraties ziet en een fout kan melden. |
@@ -3555,7 +3599,7 @@ In de tekst staat bij een bron tussen haakjes de organisatie of auteur en het ja
 | AFAS Profit | AFAS Software (z.d.-a) | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 16 | https://www.afas.nl/ (hoofdpagina) |
 | Connector aanroepen via Profit Rest Service (header `Authorization: AfasToken`, token-XML, Base64) en REST API voor ontwikkelaars (skip en take met sortering) | AFAS Software (z.d.-b), AFAS Help Center | z.d., geraadpleegd op 9 oktober 2026 | Hoofdstuk 11 | https://help.afas.nl/help/NL/SE/App_Cnr_Rest_Call.htm en https://help.afas.nl/help/NL/SE/App_Cnr_Rest_Api.htm |
 | Web NFC API | MDN Web Docs (Mozilla) | z.d., geraadpleegd op 9 oktober 2026 | Hoofdstuk 6 en 16 | https://developer.mozilla.org/en-US/docs/Web/API/Web_NFC_API |
-| Playwright | Microsoft (Playwright-project) | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 16 | https://playwright.dev/ |
+| Chrome DevTools Protocol | Google | z.d., geraadpleegd op 12 oktober 2026 | Hoofdstuk 7 | https://chromedevtools.github.io/devtools-protocol/ |
 | @vladmandic/face-api, versie 1.7.15 | Mandic, V. (npm) | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 7 | https://www.npmjs.com/package/@vladmandic/face-api |
 | SIL Open Font License 1.1 | SIL International | 2007 | Hoofdstuk 7 | https://openfontlicense.org/ |
 | DM Sans | Google Fonts | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 7 | https://fonts.google.com/specimen/DM+Sans |
@@ -3614,7 +3658,7 @@ Deze matrix laat per functionele eis (hoofdstuk 4) zien in welke use case (hoofd
 | FR-30 | Must | UC-15 | AC-21, AC-73 | `basis.test.js`, `csv-export.test.js` |
 | FR-55 | Must | UC-12, UC-15 | AC-51, AC-74 | `werkgever-en-correctiedatum.test.js` |
 | FR-13 | Must | UC-09 | AC-11 | `view-app.test.js`, `controle4-ui.test.js`, `werkgever-en-correctiedatum.test.js`, `to-controle.test.js` |
-| FR-14 | Must | UC-09 | AC-12, AC-78 | `basis.test.js`, `model.test.js`, `controller.test.js`, `opslag-model-export.test.js`, `to-controle.test.js` |
+| FR-14 | Must | UC-09 | AC-12, AC-78, AC-90 | `basis.test.js`, `model.test.js`, `controller.test.js`, `controle4-ui.test.js`, `opslag-model-export.test.js`, `to-controle.test.js` |
 | FR-17 | Must | UC-11, UC-15 | AC-56, AC-88 | `model.test.js`, `csv-export.test.js`, `controle4-model.test.js`, `werkgever-en-correctiedatum.test.js` |
 | FR-27 | Must | UC-16 | AC-27, AC-60 | `basis.test.js`, `view-app.test.js`, `controller.test.js`, `controller-robuustheid.test.js` |
 | FR-54 | Must | UC-09 | AC-46 | `controller-robuustheid.test.js` |

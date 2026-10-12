@@ -39,3 +39,35 @@ jobs:
 
       - name: Unit tests uitvoeren
         run: npm test
+
+  # Browsertests (end-to-end): de echte pagina in headless Google Chrome, aangestuurd via het
+  # Chrome DevTools Protocol (zie tests/e2e/browser.js). Er worden geen npm-pakketten geïnstalleerd;
+  # Chrome staat al op de runner (ubuntu-latest). Deze job start pas als de unit tests geslaagd zijn.
+  e2e:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Vast pad naar de browser die op de runner staat.
+      BROWSER_PATH: /usr/bin/google-chrome
+      # De tests zetten de tijdzone van de browser zelf op Europe/Amsterdam. Node krijgt dezelfde
+      # tijdzone, zodat de uitkomst niet afhangt van de tijdzone van de runner (UTC).
+      TZ: Europe/Amsterdam
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Node.js instellen
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Controleer Node- en Chrome-versie
+        run: |
+          node -v
+          "$BROWSER_PATH" --version
+
+      - name: Browsertests uitvoeren
+        run: npm run test:e2e

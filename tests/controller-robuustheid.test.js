@@ -96,6 +96,7 @@ test("correctie '−' van een registratie uit een vorige maand vraagt eerst om b
   globalThis.window = { confirm: (question) => { questions.push(question); return false; } };
 
   app.removeCorrection("employee-1", "blikje");
+  app.removeChosenRegistration("oud");
 
   const monthName = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "numeric" }).format(oldDate);
   assert.deepEqual(questions, [`Deze registratie is van ${monthName}. Die loonmaand is mogelijk al verwerkt. Toch verwijderen?`]);
@@ -109,6 +110,7 @@ test("correctie '−' van een oude maand gaat door als de beheerder bevestigt", 
   globalThis.window = { confirm: () => true };
 
   app.removeCorrection("employee-1", "blikje");
+  app.removeChosenRegistration("oud");
 
   assert.equal(model.registrations.length, 0);
   assert.equal(model.auditLog.at(-1).action, "Registratie verwijderd");
@@ -121,6 +123,7 @@ test("correctie '−' in de huidige maand vraagt niet om bevestiging", () => {
   globalThis.window = { confirm: () => { asked = true; return false; } };
 
   app.removeCorrection("employee-1", "blikje");
+  app.removeChosenRegistration(model.registrations[0].id);
 
   assert.equal(asked, false);
   assert.equal(model.registrations.length, 0);
@@ -256,7 +259,7 @@ test("opslaan van een product dat intussen is verwijderd, maakt het niet opnieuw
 
   assert.equal(model.findProduct("bestaat-niet"), undefined);
   assert.equal(model.products.some(({ name }) => name === "Spook"), false);
-  assert.deepEqual(toastTexts(view), ["Dit product bestaat niet meer; er is niets opgeslagen."]);
+  assert.deepEqual(toastTexts(view), ["Dit product bestaat niet meer. Er is niets opgeslagen."]);
   assert.equal(view.$("#productFormModal").classList.contains("hidden"), true);
   assert.equal(form.dataset.editingId, undefined);
 });
@@ -274,9 +277,9 @@ test("opslaan van een bedrijf, medewerker of consumptiepunt dat intussen is verw
 
   assert.equal(JSON.stringify(model.state), before);
   assert.deepEqual(toastTexts(view), [
-    "Dit bedrijf bestaat niet meer; er is niets opgeslagen.",
-    "Deze medewerker bestaat niet meer; er is niets opgeslagen.",
-    "Dit consumptiepunt bestaat niet meer; er is niets opgeslagen."
+    "Dit bedrijf bestaat niet meer. Er is niets opgeslagen.",
+    "Deze medewerker bestaat niet meer. Er is niets opgeslagen.",
+    "Dit consumptiepunt bestaat niet meer. Er is niets opgeslagen."
   ]);
   for (const modal of ["#companyFormModal", "#employeeFormModal", "#pointFormModal"]) {
     assert.equal(view.$(modal).classList.contains("hidden"), true, modal);
@@ -351,13 +354,13 @@ test("knoppen van een gegeven dat niet meer bestaat geven een melding in plaats 
   app.removePoint("weg");
 
   assert.deepEqual(toastTexts(view), [
-    "Deze medewerker bestaat niet meer; er is niets opgeslagen.",
-    "Deze medewerker bestaat niet meer; er is niets opgeslagen.",
-    "Dit product bestaat niet meer; er is niets opgeslagen.",
-    "Dit bedrijf bestaat niet meer; er is niets opgeslagen.",
-    "Dit consumptiepunt bestaat niet meer; er is niets opgeslagen.",
-    "Dit bedrijf bestaat niet meer; er is niets opgeslagen.",
-    "Dit consumptiepunt bestaat niet meer; er is niets opgeslagen."
+    "Deze medewerker bestaat niet meer. Er is niets opgeslagen.",
+    "Deze medewerker bestaat niet meer. Er is niets opgeslagen.",
+    "Dit product bestaat niet meer. Er is niets opgeslagen.",
+    "Dit bedrijf bestaat niet meer. Er is niets opgeslagen.",
+    "Dit consumptiepunt bestaat niet meer. Er is niets opgeslagen.",
+    "Dit bedrijf bestaat niet meer. Er is niets opgeslagen.",
+    "Dit consumptiepunt bestaat niet meer. Er is niets opgeslagen."
   ]);
 });
 
@@ -633,7 +636,7 @@ test("medewerker verwijderen die niet meer bestaat: geen logboekregel en een mel
   app.removeEmployee("bestaat-niet");
 
   assert.equal(model.auditLog.length, 0);
-  assert.deepEqual(toastTexts(view), ["Deze medewerker bestaat niet meer; er is niets opgeslagen."]);
+  assert.deepEqual(toastTexts(view), ["Deze medewerker bestaat niet meer. Er is niets opgeslagen."]);
 });
 
 test("product verwijderen dat niet meer bestaat: geen logboekregel en een melding", () => {
@@ -643,7 +646,7 @@ test("product verwijderen dat niet meer bestaat: geen logboekregel en een meldin
 
   assert.equal(model.auditLog.length, 0);
   assert.equal(model.products.length, 8);
-  assert.deepEqual(toastTexts(view), ["Dit product bestaat niet meer; er is niets opgeslagen."]);
+  assert.deepEqual(toastTexts(view), ["Dit product bestaat niet meer. Er is niets opgeslagen."]);
 });
 
 test("levering voor een consumptiepunt dat niet meer bestaat: niets geboekt en een melding", () => {
@@ -654,7 +657,7 @@ test("levering voor een consumptiepunt dat niet meer bestaat: niets geboekt en e
   app.bookDelivery("blikje");
 
   assert.equal(model.auditLog.length, 0);
-  assert.deepEqual(toastTexts(view), ["Dit consumptiepunt of product bestaat niet meer; er is niets opgeslagen."]);
+  assert.deepEqual(toastTexts(view), ["Dit consumptiepunt of product bestaat niet meer. Er is niets opgeslagen."]);
 });
 
 test("alles wissen terwijl opslaan mislukt geeft een eerlijke foutmelding", () => {

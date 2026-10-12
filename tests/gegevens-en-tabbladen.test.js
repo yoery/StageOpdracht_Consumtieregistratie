@@ -125,7 +125,7 @@ test("voorraad tellen bij een verdwenen consumptiepunt slaat niets op en zet nie
   app.saveStockField(input);
 
   assert.equal(model.auditLog.length, 0);
-  assert.deepEqual(toastTexts(view), ["Dit consumptiepunt of product bestaat niet meer; er is niets opgeslagen."]);
+  assert.deepEqual(toastTexts(view), ["Dit consumptiepunt of product bestaat niet meer. Er is niets opgeslagen."]);
   assert.equal(view.toasts[0].tone, "error");
   assert.equal(input.value, "");
   assert.equal(calledNames(view).includes("updateStockStatus"), false);

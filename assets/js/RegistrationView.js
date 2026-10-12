@@ -310,7 +310,8 @@ export class RegistrationView {
                         data-correction-minus="${this.escapeHtml(employee.id)}"
                         data-correction-product="${this.escapeHtml(id)}"
                         title="${this.escapeHtml(name)} verminderen"
-                        aria-label="${this.escapeHtml(name)} verminderen">${icon("minus")}</button>
+                        aria-label="${this.escapeHtml(name)} verminderen"
+                        aria-haspopup="dialog">${icon("minus")}</button>
 
                 <strong class="correction-amount">${count}</strong>
 
@@ -338,6 +339,35 @@ export class RegistrationView {
           </details>`;
       }).join("") ||
       this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm." });
+  }
+
+  // Vult het venster "Registratie verwijderen" (correctie "−"). Per registratie van dit product
+  // bij deze medewerker staan de datum en tijd, het product en het aantal, met een eigen knop
+  // "Verwijderen". De nieuwste datum staat bovenaan, net als in de tabel. Een registratie die de
+  // beheerder zelf met "+" heeft toegevoegd, is te herkennen aan "toegevoegd door beheerder".
+  renderRemoveRegistrationList(employeeId, productId) {
+    const productName = this.model.productName(productId);
+    const employeeName = this.model.findEmployee(employeeId)?.name || "Verwijderd";
+
+    this.$("#removeRegistrationHelp").textContent =
+      `${productName} van ${employeeName}. Kies welke registratie weg moet. De nieuwste staat bovenaan.`;
+
+    this.$("#removeRegistrationList").innerHTML = this.model.registrationsFor(employeeId, productId)
+      .map((registration) => {
+        const when = this.formatDate(registration.createdAt);
+        const addedByAdmin = registration.correction ? " · toegevoegd door beheerder" : "";
+
+        return `
+          <li class="remove-registration-item">
+            <span class="remove-registration-info">
+              <strong>${this.escapeHtml(when)}</strong>
+              <span>${this.escapeHtml(productName)} · aantal 1${addedByAdmin}</span>
+            </span>
+            <button type="button" class="secondary-button danger-action"
+                    data-remove-registration="${this.escapeHtml(registration.id)}"
+                    aria-label="${this.escapeHtml(`${productName} van ${when} verwijderen`)}">Verwijderen</button>
+          </li>`;
+      }).join("");
   }
 
   // Telt de registraties per medewerker en product. Geeft een Map terug met als sleutel

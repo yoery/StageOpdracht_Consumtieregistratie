@@ -84,6 +84,7 @@ const adminActions = (app, view, point) => {
   return {
     addCorrection: () => app.addCorrection("employee-1", "blikje"),
     removeCorrection: () => app.removeCorrection("employee-1", "blikje"),
+    removeChosenRegistration: () => app.removeChosenRegistration(app.model.registrations[0]?.id),
     toggleEmployee: () => app.toggleEmployee("employee-1"),
     removeEmployee: () => app.removeEmployee("employee-2"),
     removeProduct: () => app.removeProduct("yoghurt"),
@@ -173,7 +174,7 @@ test("scan 1: een correctie '+' voor een product dat niet bestaat, slaat niets o
 
   assert.equal(model.registrations.length, 0);
   assert.equal(model.auditLog.length, 0);
-  assert.equal(lastToast(view), "Dit product bestaat niet meer; er is niets opgeslagen.");
+  assert.equal(lastToast(view), "Dit product bestaat niet meer. Er is niets opgeslagen.");
 });
 
 // ------------------------------------------------------------------
@@ -265,7 +266,7 @@ test("scan 2: een levering voor 'toString' wordt niet geboekt en niet gelogd", (
 
   assert.equal(model.auditLog.length, 0);
   assert.equal(Object.hasOwn(model.findPoint(point.id).products, "toString"), false);
-  assert.equal(lastToast(view), "Dit consumptiepunt of product bestaat niet meer; er is niets opgeslagen.");
+  assert.equal(lastToast(view), "Dit consumptiepunt of product bestaat niet meer. Er is niets opgeslagen.");
 });
 
 // ------------------------------------------------------------------
