@@ -8,7 +8,7 @@ Open de map in VS Code en start [index.html](./index.html) met de extensie **Liv
 
 Dubbelklikken op `index.html` werkt niet: de JavaScript bestaat uit modules en browsers blokkeren die via `file://`.
 
-Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
+Voor de app is geen Node.js nodig. De unit tests draaien automatisch op GitHub (GitHub Actions met Node.js 24 LTS) bij elke push naar `main` en `development`. Lokaal draaien is niet nodig, maar kan met `npm test` (Node.js 22+).
 
 ## Mappenstructuur
 
