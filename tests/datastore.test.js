@@ -203,11 +203,17 @@ test("save geeft false terug als de browseropslag vol is", () => {
   assert.equal(store.save({ employees: [] }), false);
 });
 
-test("een logboek dat geen lijst is, wordt een lege lijst", () => {
+// Aangepast bij de review van oktober 2026: een logboek dat er wel staat maar geen lijst is, werd
+// stil een lege lijst (en de volgende keer opslaan wiste het oude logboek). Nu telt dat als
+// onleesbaar, met een reservekopie, net als een beschadigde bedrijvenlijst.
+test("een logboek dat geen lijst is, maakt de gegevens onleesbaar (met reservekopie)", () => {
   const data = validData();
   data.auditLog = "kapot";
+  const store = createDataStore(data);
 
-  assert.deepEqual(createDataStore(data).load().auditLog, []);
+  assert.equal(store.load(), null);
+  assert.equal(store.loadProblem, "unreadable");
+  assert.equal(localStorage.getItem("test-backup"), JSON.stringify(data));
 });
 
 test("isValidAuditEntry vraagt een actie, details en een geldige datum", () => {

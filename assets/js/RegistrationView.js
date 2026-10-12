@@ -231,12 +231,14 @@ export class RegistrationView {
       filter.value = selectedValue === "all" ? "" : this.model.companyName(selectedValue === "unknown" ? null : selectedValue);
     }
 
+    // Iedere keuze is een optie in de keuzelijst (role="option"); de gekozen optie heeft
+    // aria-selected="true", zodat een schermlezer weet welk bedrijf er is gekozen.
+    const option = (value, label) =>
+      `<button type="button" role="option" aria-selected="${value === selectedValue}" data-company-value="${this.escapeHtml(value)}">${this.escapeHtml(label)}</button>`;
     this.$("#companyFilterOptions").innerHTML = [
-      `<button type="button" data-company-value="all">Alle bedrijven</button>`,
-      ...companies.map(({ id, name }) =>
-        `<button type="button" data-company-value="${this.escapeHtml(id)}">${this.escapeHtml(name)}</button>`
-      ),
-      hasUnknown ? `<button type="button" data-company-value="unknown">Onbekend bedrijf</button>` : ""
+      option("all", "Alle bedrijven"),
+      ...companies.map(({ id, name }) => option(id, name)),
+      hasUnknown ? option("unknown", "Onbekend bedrijf") : ""
     ].join("");
   }
 
@@ -579,7 +581,7 @@ export class RegistrationView {
               ${icon("minus")}
             </button>
 
-            <strong class="personal-product-amount" aria-live="polite">
+            <strong class="personal-product-amount">
               ${selectedAmount}
             </strong>
 
@@ -593,6 +595,15 @@ export class RegistrationView {
       }).join("");
 
     this.$("#employeeProductsModal").classList.remove("hidden");
+  }
+
+  // Zet een korte tekst in de vaste live region van het productvenster (#productLiveStatus),
+  // bijvoorbeeld "Blikje: 2" na een klik op "+". Een schermlezer leest die tekst voor. De live
+  // region staat vast in index.html en wordt niet opnieuw getekend: een live region die steeds
+  // via innerHTML opnieuw wordt gemaakt, leest een schermlezer vaak niet (of dubbel) voor.
+  announce(text) {
+    const status = this.$("#productLiveStatus");
+    if (status) status.textContent = text;
   }
 
   // Vult de keuzelijsten bedrijf en consumptiepunt in het medewerkersformulier.

@@ -727,6 +727,18 @@ main {
 .hidden {
   display:none!important
 }
+/* Alleen voor schermlezers: onzichtbaar, maar wel voorgelezen (bijvoorbeeld #productLiveStatus). */
+.visually-hidden {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0
+}
 footer {
   display:flex;
   justify-content:space-between;

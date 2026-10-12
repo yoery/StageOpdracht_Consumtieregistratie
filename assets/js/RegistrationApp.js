@@ -150,7 +150,13 @@ export class RegistrationApp {
     this.currentDay = today;
     this.renderTodayLabel(now);
     this.view.renderStats();
-    this.view.$("#correctionDate").max = RegistrationApp.dateValue(now); // morgen is nu vandaag
+    // Morgen is nu vandaag: de laatste mogelijke datum schuift een dag op. Stond het datumveld op
+    // de oude laatste datum (gisteren, de standaard), dan gaat het ook naar vandaag. Een datum die
+    // de beheerder zelf heeft gekozen, blijft staan.
+    const field = this.view.$("#correctionDate");
+    const todayValue = RegistrationApp.dateValue(now);
+    if (field.max && field.value === field.max) field.value = todayValue;
+    field.max = todayValue;
     return true;
   }
 
@@ -159,8 +165,8 @@ export class RegistrationApp {
   showLoadProblem() {
     const messages = {
       skipped: "Een deel van de opgeslagen gegevens was beschadigd en is overgeslagen. Er staat een reservekopie in de browser.",
-      unreadable: "De opgeslagen gegevens waren onleesbaar; de demo is opnieuw gestart. Er staat een reservekopie in de browser.",
-      unavailable: "De opslag van de browser kon niet worden gelezen; de demo start met voorbeeldgegevens. Wijzigingen worden mogelijk niet bewaard."
+      unreadable: "De opgeslagen gegevens waren onleesbaar. De demo is opnieuw gestart. Er staat een reservekopie in de browser.",
+      unavailable: "De opslag van de browser kon niet worden gelezen. De demo start met voorbeeldgegevens. Wijzigingen worden mogelijk niet bewaard."
     };
     const message = messages[this.model.loadProblem];
     if (message) this.view.showToast(message, { tone: "error", duration: 8000 });
@@ -192,16 +198,26 @@ export class RegistrationApp {
       return;
     }
 
-    this.view.renderAll();
-    this.view.populateFilters();
-    this.view.renderAdmin();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdminEmployees();
-    this.view.renderAdminProducts();
-    this.view.renderAdminCompanies();
-    if (this.isTypingInStockTable()) this.view.renderStockAlerts();
-    else this.view.renderStock();
-    this.renderAuditLog();
+    // Een ingesteld gezicht (demo) van een medewerker die in het andere tabblad is verwijderd,
+    // hoort bij niemand meer en wordt vergeten.
+    this.faceDemo.enrolledIds()
+      .filter((employeeId) => !this.model.findEmployee(employeeId))
+      .forEach((employeeId) => this.faceDemo.forget(employeeId));
+
+    // Alles opnieuw tekenen. Had een knop in een lijst de focus, dan krijgt de nieuwe knop met
+    // dezelfde id die focus terug (zie ModalManager.preserveFocus).
+    this.preserveFocus(() => {
+      this.view.renderAll();
+      this.view.populateFilters();
+      this.view.renderAdmin();
+      this.view.renderCorrectionEmployees();
+      this.view.renderAdminEmployees();
+      this.view.renderAdminProducts();
+      this.view.renderAdminCompanies();
+      if (this.isTypingInStockTable()) this.view.renderStockAlerts();
+      else this.view.renderStock();
+      this.renderAuditLog();
+    });
 
     this.closeStaleForms();
     this.refreshRemoveRegistration();
@@ -278,8 +294,20 @@ export class RegistrationApp {
     if (this.model.save()) return true;
 
     this.model.restore(previousState);
-    this.view.showToast("Opslaan mislukt. Probeer het opnieuw.", { tone: "error" });
+    // Bij een volle opslag blijft de melding langer staan: die vraagt om actie van de beheerder.
+    const options = this.model.saveProblem === "full" ? { tone: "error", duration: 8000 } : { tone: "error" };
+    this.view.showToast(this.saveFailedMessage(), options);
     return false;
+  }
+
+  // De melding als opslaan mislukt. Is de opslag van de browser vol (zie DataStore.save), dan
+  // helpt opnieuw proberen niet. De melding zegt dan wat er wel moet gebeuren. De app verwijdert
+  // zelf geen gegevens: hoe lang registraties bewaard blijven, beslist TVB.
+  saveFailedMessage() {
+    if (this.model.saveProblem === "full") {
+      return "De opslag van de browser is vol. Er is niets opgeslagen. Vraag de beheerder om de registraties te exporteren en oude gegevens te wissen.";
+    }
+    return "Opslaan mislukt. Probeer het opnieuw.";
   }
 
   // Leesbare naam voor het logboek, ook als de medewerker later wordt verwijderd.
@@ -306,7 +334,10 @@ export class RegistrationApp {
       ["[data-product-increment]", (button) => this.incrementProduct(button.dataset.productIncrement)],
       ["[data-product-decrement]", (button) => this.decrementProduct(button.dataset.productDecrement)],
       ["#registerSelectedProductsButton", () => this.registerSelectedProducts()],
-      ["[data-open-employee]", (button) => this.openEmployeeProducts(button.dataset.openEmployee)],
+      ["[data-open-employee]", (button) => {
+        // De tweede klik van een dubbelklik op "Registreren" valt na het sluiten op de rij eronder.
+        if (!this.isGhostRowClick(event)) this.openEmployeeProducts(button.dataset.openEmployee);
+      }],
       ["[data-correction-plus]", (button) => this.addCorrection(button.dataset.correctionPlus, button.dataset.correctionProduct)],
       ["[data-correction-minus]", (button) => this.removeCorrection(button.dataset.correctionMinus, button.dataset.correctionProduct)],
       ["[data-remove-registration]", (button) => this.removeChosenRegistration(button.dataset.removeRegistration)],
@@ -415,16 +446,14 @@ export class RegistrationApp {
         this.selectCompanyFilterOption(option);
         return;
       }
-      if (!event.target.closest(".company-combobox")) {
-        document.querySelectorAll(".company-options").forEach((options) => options.classList.add("hidden"));
-      }
+      if (!event.target.closest(".company-combobox")) this.setCompanyOptionsOpen(false);
     });
 
     // Klik op het bedrijfsfilter zelf opent of sluit de keuzelijst.
     const combobox = document.querySelector(".company-filter .company-combobox");
     combobox.addEventListener("click", (event) => {
       if (event.target.closest(".company-options")) return;
-      this.view.$("#companyFilterOptions").classList.toggle("hidden");
+      this.setCompanyOptionsOpen(this.view.$("#companyFilterOptions").classList.contains("hidden"));
     });
   }
 
@@ -481,6 +510,12 @@ export class RegistrationApp {
     document.addEventListener("keydown", (event) => {
       const modal = this.topModal();
 
+      // Escape sluit eerst een open keuzelijst van het bedrijfsfilter, zonder een venster te sluiten.
+      if (event.key === "Escape" && !modal && this.closeCompanyOptions()) {
+        event.preventDefault();
+        return;
+      }
+
       if (event.key === "Escape" && modal) {
         event.preventDefault();
         this.modalCloseActions.get(modal)?.();
@@ -500,14 +535,9 @@ export class RegistrationApp {
       this.view.$("#employeeSearch").focus();
     });
 
-    // Medewerkerrijen hebben role="button" en moeten dus ook met Enter en spatie werken.
-    this.view.$("#employeeList").addEventListener("keydown", (event) => {
-      const employeeRow = event.target.closest("[data-open-employee]");
-      if (!employeeRow || (event.key !== "Enter" && event.key !== " ")) return;
-
-      event.preventDefault();
-      this.openEmployeeProducts(employeeRow.dataset.openEmployee);
-    });
+    // Medewerkerrijen hebben role="button" en moeten dus ook met Enter en spatie werken
+    // (zie EmployeeController.handleEmployeeRowKey).
+    this.view.$("#employeeList").addEventListener("keydown", (event) => this.handleEmployeeRowKey(event));
   }
 }
 
@@ -524,21 +554,26 @@ export class RegistrationApp {
 // staat zo op één plek: er is geen kopie die uit de pas kan lopen.
 const DELEGATES = {
   modals: {
-    methods: ["show", "hide", "rememberOpener", "openModal", "closeModal", "registerModalClose", "topModal", "keepFocusInModal"],
+    methods: [
+      "show", "hide", "rememberOpener", "openModal", "closeModal", "registerModalClose", "topModal", "keepFocusInModal",
+      "focusSelector", "findFocusReplacement", "preserveFocus"
+    ],
     fields: ["modalCloseActions", "modalOpeners"]
   },
   employeePage: {
     methods: [
       "clearSearch", "onCompanyFilterInput", "filterCompanyOptions", "selectCompanyFilterOption",
+      "setCompanyOptionsOpen", "closeCompanyOptions",
       "openEmployeeProducts", "renderProductWindow", "removeUnavailableSelections", "repeatLastSelection",
       "incrementProduct", "decrementProduct", "selectionSummary", "closeEmployeeProducts",
-      "registerSelectedProducts", "focusEmployeeRow", "focusProductWindowAction"
+      "registerSelectedProducts", "focusEmployeeRow", "focusProductWindowAction",
+      "isGhostRowClick", "handleEmployeeRowKey"
     ],
-    fields: []
+    fields: ["productWindowClosedAt"]
   },
   badge: {
-    methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "recognizeBadge"],
-    fields: ["searchBeforeScan"]
+    methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge"],
+    fields: ["scanStart"]
   },
   face: {
     methods: [

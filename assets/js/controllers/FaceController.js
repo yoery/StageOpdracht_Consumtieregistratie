@@ -176,8 +176,10 @@ export class FaceController {
       const descriptor = await this.faceDemo.readFace(video);
       if (session !== this.faceSession) return;
 
+      // Alleen gezichten van actieve medewerkers die nog bestaan, doen mee (zie findMatch).
       // Pas als dezelfde actieve medewerker twee keer achter elkaar is gevonden, telt het.
-      const match = descriptor ? this.faceDemo.findMatch(descriptor) : null;
+      const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
+      const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
       const candidate = match && this.model.findEmployee(match)?.active ? match : null;
       const employeeId = this.faceDemo.confirm(candidate);
       if (employeeId) {

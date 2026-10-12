@@ -22,9 +22,14 @@ import { cssAttributeValue } from "../RegistrationView.js";
  *   - FaceRecognitionDemo: of de demo aan staat en of de medewerker een gezicht heeft ingesteld.
  */
 export class EmployeeController {
+  // Zo lang (in milliseconden) na het sluiten van het productvenster telt een klik op een
+  // medewerkerrij niet (zie isGhostRowClick).
+  static GHOST_CLICK_MS = 500;
+
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
     this.app = app;
+    this.productWindowClosedAt = 0; // tijdstip (ms) waarop het productvenster het laatst sloot
   }
 
   // Onderdelen van de app die deze class gebruikt (model, view, faceDemo). Die komen steeds
@@ -60,8 +65,27 @@ export class EmployeeController {
     const input = this.view.$("#employeeCompanyFilter");
     delete input.dataset.value;
     this.filterCompanyOptions("#companyFilterOptions", input.value);
-    this.app.show("#companyFilterOptions");
+    this.setCompanyOptionsOpen(true);
     this.view.renderEmployees();
+  }
+
+  // Opent of sluit de keuzelijst van het bedrijfsfilter. aria-expanded op het invoerveld en de
+  // pijlknop gaat mee, zodat een schermlezer weet of de lijst open is.
+  setCompanyOptionsOpen(open) {
+    if (open) this.app.show("#companyFilterOptions");
+    else this.app.hide("#companyFilterOptions");
+    for (const selector of ["#employeeCompanyFilter", "[data-toggle-company-filter]"]) {
+      this.view.$(selector)?.setAttribute("aria-expanded", String(open));
+    }
+  }
+
+  // Escape in het bedrijfsfilter: sluit de keuzelijst als die open is. Geeft true terug als de
+  // lijst open was (dan doet Escape verder niets, zie RegistrationApp.registerKeyboardEvents).
+  closeCompanyOptions() {
+    const options = this.view.$("#companyFilterOptions");
+    if (!options || options.classList.contains("hidden")) return false;
+    this.setCompanyOptionsOpen(false);
+    return true;
   }
 
   // Filtert de compacte bedrijfskeuzelijst terwijl de gebruiker typt.
@@ -85,7 +109,10 @@ export class EmployeeController {
     filter.dataset.value = value;
     filter.value = value === "all" ? "" : option.textContent;
     this.filterCompanyOptions("#companyFilterOptions", "");
-    this.app.hide("#companyFilterOptions");
+    this.view.$("#companyFilterOptions").querySelectorAll("[data-company-value]").forEach((item) => {
+      item.setAttribute("aria-selected", String(item.dataset.companyValue === value));
+    });
+    this.setCompanyOptionsOpen(false);
     this.view.renderEmployees();
   }
 
@@ -106,6 +133,7 @@ export class EmployeeController {
     this.app.selectedEmployeeId = employeeId;
     this.app.selectedProducts = {};
     this.app.recognizedBy = recognizedBy;
+    this.view.announce?.(""); // de live region begint leeg (zie incrementProduct)
     this.renderProductWindow();
 
     const firstPlus = this.view.$("#employeeProductList [data-product-increment]");
@@ -164,9 +192,12 @@ export class EmployeeController {
   }
 
   // Telt één stuk op bij een gekozen product (de "+"-knop in het productvenster).
+  // Een schermlezer leest daarna het nieuwe aantal voor, bijvoorbeeld "Blikje: 2" (de vaste live
+  // region #productLiveStatus, zie RegistrationView.announce).
   incrementProduct(productId) {
     this.app.selectedProducts[productId] = (this.app.selectedProducts[productId] || 0) + 1;
     this.renderProductWindow();
+    this.view.announce?.(`${this.model.productName(productId)}: ${this.app.selectedProducts[productId]}`);
   }
 
   // Haalt één stuk af van een gekozen product (de "−"-knop), maar nooit onder 0.
@@ -177,6 +208,7 @@ export class EmployeeController {
 
     this.app.selectedProducts[productId] = current - 1;
     this.renderProductWindow();
+    this.view.announce?.(`${this.model.productName(productId)}: ${this.app.selectedProducts[productId]}`);
   }
 
   // Maakt een korte samenvatting van de keuze, bijvoorbeeld "2× Blikje, 1× Ei".
@@ -191,12 +223,37 @@ export class EmployeeController {
   }
 
   // Sluit het persoonlijke productvenster en vergeet de keuze. De focus gaat terug naar de
-  // medewerkerrij (of knop) waarmee het venster werd geopend.
+  // medewerkerrij (of knop) waarmee het venster werd geopend. Het tijdstip wordt onthouden voor
+  // isGhostRowClick.
   closeEmployeeProducts() {
     this.app.closeModal("#employeeProductsModal");
     this.app.selectedProducts = {};
     this.app.selectedEmployeeId = null;
     this.app.recognizedBy = null;
+    this.productWindowClosedAt = Date.now();
+  }
+
+  // Is deze klik op een medewerkerrij een "spookklik"? Bij een dubbelklik of dubbeltik op
+  // "Registreren" sluit de eerste klik het venster. De tweede klik valt dan op de medewerkerrij die
+  // eronder ligt en zou het productvenster van een collega openen. Daarom telt een klik niet als:
+  //   - het de tweede (of volgende) klik van een dubbelklik is (event.detail > 1), of
+  //   - het productvenster minder dan GHOST_CLICK_MS (500 ms) geleden sloot.
+  // `now` is mee te geven, zodat dit te testen is.
+  isGhostRowClick(event, now = Date.now()) {
+    if (event?.detail > 1) return true;
+    return now - this.productWindowClosedAt < EmployeeController.GHOST_CLICK_MS;
+  }
+
+  // Enter of spatie op een medewerkerrij (role="button") opent het productvenster. Een ingedrukt
+  // gehouden toets (event.repeat) telt niet: anders opent het venster opnieuw zodra het na
+  // "Registreren" sluit en de focus terug op de rij staat.
+  handleEmployeeRowKey(event) {
+    const employeeRow = event.target.closest("[data-open-employee]");
+    if (!employeeRow || (event.key !== "Enter" && event.key !== " ")) return;
+
+    event.preventDefault();
+    if (event.repeat) return;
+    this.openEmployeeProducts(employeeRow.dataset.openEmployee);
   }
 
   // Na het opslaan gaat eerst het venster dicht en wordt daarna de lijst opnieuw getekend.

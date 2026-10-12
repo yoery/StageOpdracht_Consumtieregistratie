@@ -4,24 +4,29 @@
  *
  * Verantwoordelijkheid:
  *   - iedere toets doorgeven aan BadgeReader (handleBadgeKey);
- *   - de inhoud van het zoekveld onthouden als er een scan begint en die daarna terugzetten,
- *     zodat er geen pasnummer in het zoekveld blijft staan;
+ *   - de inhoud van het zoekveld en het bedrijfsfilter onthouden als er een scan begint en die
+ *     daarna terugzetten, zodat er geen pasnummer in blijft staan;
+ *   - een scan in het veld "Pasnummer" van het medewerkersformulier: het oude nummer vervangen
+ *     door het nieuwe (fillBadgeFieldAfterScan);
  *   - na een scan de medewerker opzoeken en zijn productvenster openen, of een melding geven.
  *
  * Verbonden met:
  *   - BadgeReader: herkent de scan. Deze class zet de callbacks onScan en onStart;
  *   - RegistrationApp: maakt deze class en koppelt handleBadgeKey aan de toetsen (keydown);
  *   - RegistrationModel: findEmployeeByBadge;
- *   - EmployeeController (via RegistrationApp): opent het productvenster;
- *   - ModalManager (via RegistrationApp): topModal, want met een open venster gebeurt er niets.
+ *   - EmployeeController (via RegistrationApp): opent het productvenster en sluit de keuzelijst
+ *     van het bedrijfsfilter;
+ *   - ModalManager (via RegistrationApp): topModal, want met een open venster wordt er niemand herkend.
  */
 export class BadgeController {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   // De pasjeslezer krijgt hier zijn callbacks: na een scan wordt de medewerker opgezocht
-  // (recognizeBadge), en bij het begin van een mogelijke scan wordt het zoekveld onthouden.
+  // (recognizeBadge), en bij het begin van een mogelijke scan wordt onthouden waar de focus stond
+  // en wat er in het zoekveld en het bedrijfsfilter stond.
   constructor(app) {
     this.app = app;
-    this.searchBeforeScan = null; // inhoud van het zoekveld vlak voordat de pasjeslezer begon te typen
+    // Toestand vlak voordat de pasjeslezer begon te typen (zie rememberSearchBeforeScan), of null.
+    this.scanStart = null;
     this.badgeReader.onScan = (code) => this.recognizeBadge(code);
     this.badgeReader.onStart = () => this.rememberSearchBeforeScan();
   }
@@ -51,35 +56,78 @@ export class BadgeController {
   }
 
   // Wordt door de pasjeslezer aangeroepen als er (misschien) een scan begint. De lezer typt
-  // zijn tekens in het veld met de focus; staat die in het zoekveld, dan komen ze daarin.
-  // Daarom wordt de inhoud van het zoekveld hier onthouden, zodat restoreSearchAfterScan die
-  // na de scan kan terugzetten.
+  // zijn tekens in het veld met de focus. Daarom wordt hier onthouden:
+  //   - welk veld de focus had (de id);
+  //   - de inhoud van het zoekveld;
+  //   - de tekst en de gekozen waarde (dataset.value) van het bedrijfsfilter: typen in het filter
+  //     wist de bedrijfskeuze en opent de keuzelijst (zie EmployeeController.onCompanyFilterInput).
+  // restoreSearchAfterScan en fillBadgeFieldAfterScan (focus in het veld "Pasnummer") zetten dat
+  // na de scan goed.
   rememberSearchBeforeScan() {
-    this.searchBeforeScan = this.view.$("#employeeSearch").value;
+    const filter = this.view.$("#employeeCompanyFilter");
+    this.scanStart = {
+      focusId: globalThis.document?.activeElement?.id || null,
+      search: this.view.$("#employeeSearch").value,
+      filterText: filter?.value ?? "",
+      filterValue: filter?.dataset.value
+    };
   }
 
-  // Zet het zoekveld terug zoals het was vóór de scan en tekent de medewerkerslijst opnieuw.
-  // Zo blijft er geen pasnummer in het zoekveld staan (en verdwijnt de lijst niet achter
-  // "Geen medewerker gevonden").
+  // Zet het zoekveld en het bedrijfsfilter terug zoals ze waren vóór de scan en tekent de
+  // medewerkerslijst opnieuw. Zo blijft er geen pasnummer in het zoekveld of het filter staan (en
+  // verdwijnt de lijst niet achter "Geen medewerker gevonden"). Begon de scan in het
+  // bedrijfsfilter, dan komt ook de bedrijfskeuze terug en gaat de keuzelijst weer dicht.
   restoreSearchAfterScan() {
-    const search = this.view.$("#employeeSearch");
-    const before = this.searchBeforeScan;
-    this.searchBeforeScan = null;
-    if (before === null || search.value === before) return;
+    const start = this.scanStart;
+    if (!start) return;
 
-    search.value = before;
-    this.view.renderEmployees();
+    const search = this.view.$("#employeeSearch");
+    let changed = false;
+    if (search.value !== start.search) {
+      search.value = start.search;
+      changed = true;
+    }
+
+    if (start.focusId === "employeeCompanyFilter") {
+      const filter = this.view.$("#employeeCompanyFilter");
+      filter.value = start.filterText;
+      if (start.filterValue === undefined) delete filter.dataset.value;
+      else filter.dataset.value = start.filterValue;
+      this.app.filterCompanyOptions("#companyFilterOptions", "");
+      this.app.setCompanyOptionsOpen(false);
+      changed = true;
+    }
+
+    if (changed) this.view.renderEmployees();
+  }
+
+  // Begon de scan in het veld "Pasnummer" van het medewerkersformulier, dan heeft de lezer zijn
+  // tekens achter het oude nummer getypt (bijvoorbeeld "04A1B2C30499AABB"). Dan komt in het veld
+  // alleen het nieuwe, gelijkgemaakte pasnummer te staan. Geeft true terug als dat zo was.
+  fillBadgeFieldAfterScan(code) {
+    if (this.scanStart?.focusId !== "newEmployeeBadgeId") return false;
+
+    const field = this.view.$("#newEmployeeBadgeId");
+    field.value = code;
+    if (field.getAttribute?.("aria-invalid") === "true") this.view.clearFieldError(field);
+    return true;
   }
 
   // Wordt door de pasjeslezer aangeroepen met het genormaliseerde pasnummer.
+  //   - begon de scan in het veld "Pasnummer", dan komt het nummer in dat veld (zie
+  //     fillBadgeFieldAfterScan) en wordt er niemand herkend;
   //   - hoort de pas bij een actieve medewerker, dan opent zijn productvenster met de tekst
   //     "Je bent herkend met je pas." (zie RegistrationView.renderEmployeeProducts);
   //   - anders volgt een melding. Een onbekende pas en de pas van een inactieve medewerker
   //     krijgen dezelfde melding, zodat er niets over een andere medewerker uitlekt.
-  // Staat er intussen toch een venster open, dan gebeurt er niets (de lezer luistert dan niet).
+  // Staat er een venster open (productvenster, beheer, een formulier), dan wordt er niemand
+  // herkend. De lezer krijgt de toetsen dan wel (en houdt de afsluitende Enter of Tab tegen, zie
+  // handleBadgeKey), maar hier gebeurt verder niets.
   recognizeBadge(code) {
+    const filledBadgeField = this.fillBadgeFieldAfterScan(code);
     this.restoreSearchAfterScan();
-    if (this.app.topModal()) return;
+    this.scanStart = null;
+    if (filledBadgeField || this.app.topModal()) return;
 
     const employee = this.model.findEmployeeByBadge(code);
     if (!employee?.active) {

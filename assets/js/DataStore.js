@@ -72,6 +72,10 @@ const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
  * van de applicatie hoeft dan niet te veranderen.
  */
 export class DataStore {
+  // De lijsten in de opgeslagen gegevens. Staat er bij een van deze namen iets anders dan een
+  // lijst, dan zijn de gegevens beschadigd (zie migrate).
+  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog"];
+
   // De sleutel waaronder de gegevens in localStorage staan.
   // `loadProblem` zegt na load() of er iets mis was met de opgeslagen gegevens:
   //   null         = alles goed;
@@ -80,9 +84,16 @@ export class DataStore {
   //   "unavailable" = de browseropslag kon niet worden gelezen (bijvoorbeeld geblokkeerd). Dan is
   //                   niet bekend of er gegevens zijn; er mag dus ook niets als "leeg" worden behandeld.
   // In beide gevallen staat er een reservekopie van de oorspronkelijke gegevens in localStorage.
+  // `saveProblem` zegt na save() waarom opslaan niet lukte:
+  //   null     = opslaan is gelukt;
+  //   "full"   = de opslag van de browser is vol (QuotaExceededError);
+  //   "failed" = opslaan lukte om een andere reden niet (bijvoorbeeld geblokkeerde opslag).
+  // `repairedBadges` telt bij het laden de ongeldige pasnummers die zijn leeggemaakt (zie migrateEmployee).
   constructor(key) {
     this.key = key;
     this.loadProblem = null;
+    this.saveProblem = null;
+    this.repairedBadges = 0;
   }
 
   // ------------------------------------------------------------------
@@ -114,7 +125,8 @@ export class DataStore {
 
       const migrated = this.migrate(parsed, now);
       const data = this.removeInvalidItems(migrated, now);
-      const skipped = this.countSkipped(parsed, data);
+      // Overgeslagen regels plus pasnummers die bij het omzetten zijn leeggemaakt (zie migrateEmployee).
+      const skipped = this.countSkipped(parsed, data) + this.repairedBadges;
 
       if (skipped > 0) {
         this.keepBackup(value);
@@ -185,15 +197,32 @@ export class DataStore {
   }
 
   // Schrijft de volledige applicatiestatus naar de browseropslag.
-  // Geeft false terug als dat niet lukt, bijvoorbeeld omdat de opslag vol is.
+  // Geeft false terug als dat niet lukt. `saveProblem` zegt dan waarom: "full" als de opslag van
+  // de browser vol is (zie isQuotaError), anders "failed". De controller toont bij een volle
+  // opslag een eigen melding (zie RegistrationApp.persist). Er wordt niets automatisch
+  // verwijderd: hoe lang registraties en het logboek bewaard blijven, is een besluit van TVB.
   save(data) {
+    this.saveProblem = null;
     try {
       localStorage.setItem(this.key, JSON.stringify(data));
       return true;
     } catch (error) {
+      this.saveProblem = this.isQuotaError(error) ? "full" : "failed";
       console.error("De gegevens konden niet worden opgeslagen.", error);
       return false;
     }
+  }
+
+  // Is dit de fout die de browser geeft als de opslag vol is? Chrome, Edge en Safari gebruiken de
+  // naam "QuotaExceededError" (code 22), oudere versies van Firefox "NS_ERROR_DOM_QUOTA_REACHED"
+  // (code 1014). Een andere fout, zoals geblokkeerde opslag, telt niet als "vol".
+  isQuotaError(error) {
+    return (
+      error?.name === "QuotaExceededError" ||
+      error?.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      error?.code === 22 ||
+      error?.code === 1014
+    );
   }
 
   // ------------------------------------------------------------------
@@ -250,12 +279,16 @@ export class DataStore {
   // regels met een id die al eerder in dezelfde lijst stond (zie withoutDuplicateIds).
   // Ook het logboek wordt zo opgeschoond. De afgevallen regels tellen in countSkipped mee, zodat
   // load() een reservekopie maakt en loadProblem op "skipped" zet (de controller toont dan een melding).
+  // Pas daarna wordt gekeken of een pasnummer twee keer voorkomt (withoutDuplicateBadges). Zo kan
+  // een medewerker die toch afvalt (ongeldig, of een tweede regel met dezelfde id) de pas niet
+  // "claimen" en verliest een geldige medewerker zijn pas niet.
   removeInvalidItems(data, now = new Date()) {
     const cleaned = { ...data };
 
     for (const [name, check] of Object.entries(this.validators(now))) {
       cleaned[name] = this.withoutDuplicateIds(data[name].filter(check));
     }
+    cleaned.employees = this.withoutDuplicateBadges(cleaned.employees);
     if (Array.isArray(data.auditLog)) cleaned.auditLog = this.withoutDuplicateIds(data.auditLog);
 
     return cleaned;
@@ -312,11 +345,32 @@ export class DataStore {
   // Is dit een geldig tijdstip? Het moet tekst in ISO-vorm zijn (zie ISO_DATE_TIME), een bestaande
   // datum opleveren, en tussen 1 januari 2000 (MIN_DATE_MS) en `latest` (een tijdstip in
   // milliseconden) liggen. Wordt gebruikt voor registraties, logboekregels en tellingen.
+  // Date.parse schuift een datum die niet bestaat door, zoals "2026-02-31" (wordt 3 maart) of
+  // "T24:00" (wordt middernacht van de volgende dag). Daarom moeten de datum- en tijddelen na het
+  // omrekenen hetzelfde blijven (zie existsAsWritten), net als bij de correctiedatum
+  // (CorrectionController.readCorrectionDate).
   isValidDateTime(value, latest) {
-    if (typeof value !== "string" || !ISO_DATE_TIME.test(value)) return false;
+    if (typeof value !== "string" || !ISO_DATE_TIME.test(value) || !this.existsAsWritten(value)) return false;
 
     const time = Date.parse(value);
     return !Number.isNaN(time) && time >= MIN_DATE_MS && time <= latest;
+  }
+
+  // Bestaan de datum en de tijd zoals ze er staan? De delen (jaar, maand, dag, uur, minuut,
+  // seconde) worden in UTC omgerekend en weer uitgelezen. Een niet-bestaande datum of tijd
+  // (31 februari, uur 24, minuut 60) komt dan anders terug. UTC zorgt dat zomertijd geen rol speelt.
+  existsAsWritten(value) {
+    const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(value);
+    const [year, month, day, hour, minute, second] = parts.slice(1).map((part) => Number(part ?? 0));
+    const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+    return (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day &&
+      date.getUTCHours() === hour &&
+      date.getUTCMinutes() === minute &&
+      date.getUTCSeconds() === second
+    );
   }
 
   // Een verwijzing die ook leeg (null) mag zijn, bijvoorbeeld een medewerker zonder bedrijf.
@@ -431,9 +485,13 @@ export class DataStore {
   // Zet opgeslagen gegevens om naar de huidige opbouw. Ontbrekende velden krijgen een
   // standaardwaarde, zodat ook gegevens uit een oudere versie blijven werken.
   // Waarden in een lijst die geen object zijn (bijvoorbeeld null), worden overgeslagen.
-  // Staat er bij `companies` iets anders dan een lijst, dan zijn de gegevens beschadigd. Dan
-  // gooit deze methode een fout, zodat load() de gegevens als onleesbaar behandelt en er een
-  // reservekopie komt. Anders zouden alle consumptiepunten (en hun voorraad) worden vervangen.
+  // Staat er bij een van de lijsten (medewerkers, registraties, producten, bedrijven,
+  // consumptiepunten of logboek) wel iets, maar geen lijst (bijvoorbeeld een object of null), dan
+  // zijn de gegevens beschadigd. Dan gooit deze methode een fout, zodat load() de gegevens als
+  // onleesbaar behandelt, er een reservekopie komt en de gebruiker een melding krijgt. Anders zou
+  // die lijst stil leeg worden (of de standaardproducten krijgen) en zou de volgende keer opslaan
+  // alle oorspronkelijke gegevens overschrijven. Alleen een lijst die helemaal ontbreekt (gegevens
+  // uit een oudere versie) krijgt een standaardwaarde.
   // `now` is het moment van laden; completePointStock gebruikt het om een telling in de
   // toekomst weg te laten, en isValidAuditEntry om een logboekregel in de toekomst over te slaan.
   // De voorraadlijsten van de consumptiepunten worden alleen opgebouwd voor producten die de
@@ -442,15 +500,17 @@ export class DataStore {
   migrate(data, now = new Date()) {
     const objects = (list) => (Array.isArray(list) ? list.filter((item) => this.isObject(item)) : []);
 
-    if (data.companies !== undefined && !Array.isArray(data.companies)) {
-      throw new Error("De bedrijvenlijst is beschadigd");
+    for (const name of DataStore.LISTS) {
+      if (data[name] !== undefined && !Array.isArray(data[name])) {
+        throw new Error(`De lijst "${name}" is beschadigd`);
+      }
     }
 
+    this.repairedBadges = 0;
     const products = this.migrateProducts(data.products);
     const validProducts = products.filter((product) => this.isValidProduct(product));
-    let employees = this.withoutDuplicateBadges(
-      objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index))
-    );
+    // Dubbele pasnummers worden pas na het opschonen weggehaald (zie removeInvalidItems).
+    let employees = objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index));
     let companies = objects(data.companies).map((company) => this.migrateCompany(company));
     let points = objects(data.points);
 
@@ -478,7 +538,8 @@ export class DataStore {
   }
 
   // Opgeslagen producten gaan voor, zodat gewijzigde prijzen en verwijderde producten bewaard
-  // blijven. Alleen oude gegevens zonder productlijst krijgen de standaardproducten.
+  // blijven. Alleen oude gegevens zonder productlijst krijgen de standaardproducten. (Staat er
+  // wel iets, maar geen lijst, dan heeft migrate de gegevens al als onleesbaar afgekeurd.)
   // Een lege lijst blijft leeg: dan heeft de beheerder alle producten zelf verwijderd.
   // De prijs wordt omgezet met toNumber: een lege of ontbrekende prijs wordt dan NaN, zodat
   // isValidProduct het product overslaat (met Number(null) = 0 zou het gratis worden).
@@ -535,8 +596,8 @@ export class DataStore {
   // ("Anna") wordt alleen de voornaam; de achternaam blijft dan leeg.
   // Een ontbrekende of ongeldige kleur (geen #rrggbb) wordt vervangen door een kleur uit COLORS.
   // De medewerker zelf blijft dus bewaard; alleen de kleur verandert.
-  // Hetzelfde geldt voor het pasnummer: oude gegevens zonder pasnummer en een ongeldig pasnummer
-  // (geen tekst, andere tekens dan A-Z en 0-9, of langer dan 64 tekens) worden "" (geen pas).
+  // Het pasnummer wordt eerst gelijk gemaakt zoals de pasjeslezer en het formulier dat doen (zie
+  // migrateBadgeId), zodat "04a1b2c3" of "04:A1:B2:C3" gewoon "04A1B2C3" wordt.
   migrateEmployee(employee, index) {
     const nameParts = String(employee.name || "").trim().split(/\s+/);
     const hasLastName = nameParts.length > 1;
@@ -554,8 +615,25 @@ export class DataStore {
       pointId: employee.pointId || null,
       active: employee.active !== false,
       color: this.isSafeColor(employee.color) ? employee.color : COLORS[index % COLORS.length],
-      badgeId: this.isSafeBadgeId(employee.badgeId) ? employee.badgeId : ""
+      badgeId: this.migrateBadgeId(employee.badgeId)
     };
+  }
+
+  // Zet een opgeslagen pasnummer om:
+  //   - geen pasnummer (ontbreekt, null of leeg, zoals in oude gegevens): "" (geen pas);
+  //   - tekst: spaties, ":" en "-" weg en alles in hoofdletters, net als BadgeReader.normalize;
+  //   - is het daarna nog steeds geen geldig pasnummer (geen tekst, andere tekens dan A-Z en 0-9,
+  //     of langer dan 64 tekens), dan wordt het "" en telt het mee in `repairedBadges`. De
+  //     medewerker blijft bestaan, maar load() maakt een reservekopie en de gebruiker krijgt de
+  //     melding dat een deel van de gegevens is overgeslagen.
+  migrateBadgeId(badgeId) {
+    if (badgeId === undefined || badgeId === null || badgeId === "") return "";
+
+    const normalized = typeof badgeId === "string" ? badgeId.replace(/[\s:-]/g, "").toUpperCase() : null;
+    if (normalized !== null && this.isSafeBadgeId(normalized)) return normalized;
+
+    this.repairedBadges += 1;
+    return "";
   }
 
   // Een pas mag maar bij één medewerker horen; anders weet de pasjeslezer niet wie er staat.
@@ -573,9 +651,13 @@ export class DataStore {
   }
 
   // Zet oude product-id's om; een registratie zonder product wordt een blikje.
+  // Een werkgevernummer dat als getal is opgeslagen, wordt tekst (zie codeText), net als bij een
+  // medewerker en een bedrijf. Een registratie zonder werkgevernummer blijft zonder.
   migrateRegistration(registration) {
     const productId = this.renameProductId(registration.productId) || "blikje";
-    return { ...registration, productId };
+    const migrated = { ...registration, productId };
+    if (registration.employerNumber !== undefined) migrated.employerNumber = this.codeText(registration.employerNumber);
+    return migrated;
   }
 
   // Ieder consumptiepunt krijgt een voorraadregel voor ieder product; nieuwe producten staan uit.

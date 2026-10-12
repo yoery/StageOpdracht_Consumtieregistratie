@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { launch } from "./browser.js";
+import { launch, sleep } from "./browser.js";
 
 // Maximale duur van één test, in milliseconden (een vastgelopen test stopt dan vanzelf).
 const TEST_TIMEOUT = 30000;
@@ -21,7 +21,7 @@ const TEST_TIMEOUT = 30000;
 // Selector voor de rij van een medewerker op de beginpagina.
 const row = (name) => `[data-open-employee][aria-label="Product kiezen voor ${name}"]`;
 
-describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
+describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
   let browser;
 
   before(async () => {
@@ -59,7 +59,31 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
     await browser.waitFor(`document.querySelector("#registerSelectedProductsButton").textContent.trim() === "Registreren (${amount})"`);
     await browser.click("#registerSelectedProductsButton");
     await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    // Een klik op een medewerkerrij binnen 500 ms na het sluiten telt niet (bescherming tegen een
+    // dubbelklik op "Registreren", zie EmployeeController.isGhostRowClick). Een echte gebruiker is
+    // nooit zo snel; de test wacht daarom even voordat hij verdergaat.
+    await sleep(550);
   };
+
+  // Dubbelklik met de muis in het midden van een element: twee keer indrukken en loslaten, de
+  // tweede keer met clickCount 2 (zoals de browser een echte dubbelklik doorgeeft).
+  const doubleClick = async (selector) => {
+    const point = await browser.evaluate(`(() => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      element.scrollIntoView({ block: "center" });
+      const box = element.getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    })()`);
+    await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
+    for (const clickCount of [1, 2]) {
+      const mouse = { x: point.x, y: point.y, button: "left", clickCount };
+      await browser.send("Input.dispatchMouseEvent", { type: "mousePressed", ...mouse });
+      await browser.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...mouse });
+    }
+  };
+
+  // Het actieve element: id of de waarde van een data-attribuut, zodat een test kan zien waar de focus staat.
+  const activeData = (name) => browser.evaluate(`document.activeElement?.dataset?.${name} ?? document.activeElement?.tagName`);
 
   // Logt in als beheerder met de demo-inloggegevens (ieder ingevuld wachtwoord werkt).
   const loginAsAdmin = async () => {
@@ -232,10 +256,18 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
     await browser.insertText("5001");
 
     // De lezer "typt" het pasnummer met een Enter erachter; die Enter mag het formulier niet versturen.
+    // In het veld komt het gelijkgemaakte pasnummer te staan.
     await browser.click("#newEmployeeBadgeId");
     await browser.scanBadge("04:a1:b2:c3");
-    await browser.waitFor(`document.querySelector("#newEmployeeBadgeId").value === "04:a1:b2:c3"`);
+    await browser.waitFor(`document.querySelector("#newEmployeeBadgeId").value === "04A1B2C3"`);
     assert.equal(await isHidden("#employeeFormModal"), false);
+
+    // Een tweede scan in hetzelfde veld vervangt het nummer, in plaats van het erachter te plakken
+    // (review oktober 2026, U1: eerst stond er "04A1B2C30499AABB").
+    await browser.scanBadge("04:99:aa:bb");
+    await browser.waitFor(`document.querySelector("#newEmployeeBadgeId").value === "0499AABB"`);
+    await browser.scanBadge("04:a1:b2:c3");
+    await browser.waitFor(`document.querySelector("#newEmployeeBadgeId").value === "04A1B2C3"`);
 
     await browser.click(`#employeeForm [data-save-mode="close"]`);
     await browser.waitFor(`document.querySelector("#employeeFormModal").classList.contains("hidden")`);
@@ -292,5 +324,109 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
     assert.match(lines[1], /0,65/);
     // Er verscheen geen foutmelding.
     assert.equal(await browser.evaluate(`document.querySelector("#toast").classList.contains("toast-error") && !document.querySelector("#toast").classList.contains("hidden")`), false);
+  });
+
+  // ------------------------------------------------------------------
+  // Review oktober 2026 (TO versie 3.11)
+  // ------------------------------------------------------------------
+
+  test("U2: een dubbelklik op Registreren opent niet het productvenster van de medewerker eronder", { timeout: TEST_TIMEOUT }, async () => {
+    await browser.click(row("Lotte van Dijk"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.click(`[data-product-increment="blikje"]`);
+
+    await doubleClick("#registerSelectedProductsButton");
+    await waitForToast("Lotte van Dijk: 1× Blikje geregistreerd");
+    await sleep(300);
+
+    // De tweede klik viel op de medewerkerrij onder de knop, maar opende geen venster.
+    assert.equal(await isHidden("#employeeProductsModal"), true);
+    assert.equal((await browser.storedData()).registrations.length, 1);
+  });
+
+  test("U4 en U7c: een scan in het bedrijfsfilter laat geen pasnummer achter en Escape sluit de keuzelijst", { timeout: TEST_TIMEOUT }, async () => {
+    // Een bedrijf kiezen in het filter.
+    await browser.click("#employeeCompanyFilter");
+    await browser.waitFor(`!document.querySelector("#companyFilterOptions").classList.contains("hidden")`);
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").getAttribute("aria-expanded")`), "true");
+    const companyId = await browser.evaluate(`document.querySelector('#companyFilterOptions [data-company-value]:not([data-company-value="all"])').dataset.companyValue`);
+    await browser.click(`#companyFilterOptions [data-company-value="${companyId}"]`);
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").getAttribute("aria-expanded")`), "false");
+    assert.equal(await browser.evaluate(`document.querySelector('[data-company-value="${companyId}"]').getAttribute("aria-selected")`), "true");
+    const chosenText = await browser.evaluate(`document.querySelector("#employeeCompanyFilter").value`);
+
+    // Met de focus in het filter een (onbekende) pas aanbieden.
+    await browser.click("#employeeCompanyFilter");
+    await browser.scanBadge("DEADBEEF");
+    await waitForToast("Deze pas is niet gekoppeld aan een medewerker.");
+
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").value`), chosenText);
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").dataset.value`), companyId);
+    assert.equal(await isHidden("#companyFilterOptions"), true);
+    assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
+
+    // Escape sluit een open keuzelijst; er gaat geen venster open of dicht.
+    await browser.click("#employeeCompanyFilter");
+    await browser.waitFor(`!document.querySelector("#companyFilterOptions").classList.contains("hidden")`);
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#companyFilterOptions").classList.contains("hidden")`);
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").getAttribute("aria-expanded")`), "false");
+    assert.equal(await browser.evaluate(`document.querySelectorAll(".modal-backdrop:not(.hidden)").length`), 0);
+  });
+
+  test("U5: na opslaan van een wijzigformulier en na (de)activeren staat de focus weer op de knop", { timeout: TEST_TIMEOUT }, async () => {
+    await loginAsAdmin();
+
+    // Product: eerst opnieuw tekenen, dan het formulier sluiten.
+    await browser.click(`.tab[data-tab="products"]`);
+    assert.equal(await browser.evaluate(`document.querySelector('.tab[data-tab="products"]').getAttribute("aria-selected")`), "true");
+    await browser.click(`[data-edit-product="blikje"]`);
+    await browser.waitFor(`!document.querySelector("#productFormModal").classList.contains("hidden")`);
+    await browser.click(`#productForm [data-save-mode="close"]`);
+    await browser.waitFor(`document.querySelector("#productFormModal").classList.contains("hidden")`);
+    assert.equal(await activeData("editProduct"), "blikje");
+
+    // Bedrijf: eerst het formulier sluiten, dan opnieuw tekenen.
+    await browser.click(`.tab[data-tab="companies"]`);
+    const companyId = await browser.evaluate(`document.querySelector("[data-edit-company]").dataset.editCompany`);
+    await browser.click(`[data-edit-company="${companyId}"]`);
+    await browser.waitFor(`!document.querySelector("#companyFormModal").classList.contains("hidden")`);
+    await browser.click(`#companyForm button[type="submit"]`);
+    await browser.waitFor(`document.querySelector("#companyFormModal").classList.contains("hidden")`);
+    assert.equal(await activeData("editCompany"), companyId);
+
+    // Medewerker (de)activeren: de knop wisselt van tekst, maar houdt de focus.
+    await browser.click(`.tab[data-tab="employees"]`);
+    const employeeId = await browser.evaluate(`document.querySelector("[data-toggle-employee]").dataset.toggleEmployee`);
+    await browser.click(`[data-toggle-employee="${employeeId}"]`);
+    await waitForToast("Medewerkerstatus gewijzigd");
+    assert.equal(await activeData("toggleEmployee"), employeeId);
+  });
+
+  test("R1: letters in een cijferveld geven 'Gebruik alleen cijfers.' en er wordt niets opgeslagen", { timeout: TEST_TIMEOUT }, async () => {
+    await loginAsAdmin();
+    await browser.click(`.tab[data-tab="employees"]`);
+    await browser.click("#addEmployeeButton");
+    await browser.waitFor(`!document.querySelector("#employeeFormModal").classList.contains("hidden")`);
+
+    await browser.click("#newEmployeeFirstName");
+    await browser.insertText("Test");
+    await browser.click("#newEmployeeLastName");
+    await browser.insertText("Persoon");
+    await browser.click("#newEmployeePayrollCode");
+    await browser.insertText("12a");
+    await browser.click("#newEmployeePersonnelNumber");
+    await browser.insertText("999");
+    await browser.evaluate(`(() => { const select = document.querySelector("#newEmployeeCompany"); select.value = select.options[1].value; select.dispatchEvent(new Event("change")); })()`);
+    await browser.evaluate(`(() => { const select = document.querySelector("#newEmployeePoint"); if (select.options.length > 1) select.value = select.options[1].value; })()`);
+    // Het veld houdt "12a" vast (bij type="number" bleef er stil "12" over).
+    assert.equal(await browser.evaluate(`document.querySelector("#newEmployeePayrollCode").value`), "12a");
+
+    await browser.click(`#employeeForm [data-save-mode="close"]`);
+    await browser.waitFor(`Boolean(document.querySelector("#newEmployeePayrollCode-error"))`);
+    assert.equal(await text("#newEmployeePayrollCode-error"), "Gebruik alleen cijfers.");
+    assert.equal(await isHidden("#employeeFormModal"), false);
+    const stored = await browser.storedData();
+    assert.equal(stored?.employees.some((employee) => employee.firstName === "Test") ?? false, false);
   });
 });

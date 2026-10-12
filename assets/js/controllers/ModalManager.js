@@ -1,3 +1,5 @@
+import { cssAttributeValue } from "../RegistrationView.js";
+
 /**
  * ModalManager — opent en sluit de vensters (modals) en regelt de focus daarbij.
  *
@@ -7,14 +9,40 @@
  *     werd geopend (toegankelijkheid);
  *   - de sluitknoppen en de donkere achtergrond van ieder venster koppelen, en per venster de
  *     sluitactie onthouden voor de Escape-toets;
- *   - het bovenste open venster bepalen en de Tab-toets binnen dat venster houden.
+ *   - het bovenste open venster bepalen en de Tab-toets binnen dat venster houden;
+ *   - de focus bewaren als een lijst opnieuw wordt getekend (preserveFocus): de nieuwe knop met
+ *     dezelfde id krijgt de focus terug, of een logisch alternatief als het item weg is.
  *
  * Verbonden met:
  *   - RegistrationApp: maakt deze class, geeft de methodes en velden door aan de rest van de
  *     app en gebruikt topModal, modalCloseActions en keepFocusInModal bij Escape en Tab;
- *   - RegistrationView: zoekt de elementen op met $();
+ *   - RegistrationView: zoekt de elementen op met $() en levert cssAttributeValue voor de selectors;
  *   - index.html: de vensters (.modal-backdrop) en hun sluitknoppen.
  */
+
+// De knoppen in de lijsten die opnieuw worden getekend, met hun data-attribuut (in de schrijfwijze
+// van dataset) en het element dat de focus krijgt als het item na het tekenen niet meer bestaat
+// (null = geen alternatief). data-correction-product hoort bij de knoppen "+" en "−" van de
+// correctielijst en maakt die samen met de medewerker uniek.
+const FOCUS_TARGETS = {
+  openEmployee: "#employeeSearch",
+  editEmployee: "#addEmployeeButton",
+  toggleEmployee: "#addEmployeeButton",
+  removeEmployee: "#addEmployeeButton",
+  editProduct: "#addProductButton",
+  removeProduct: "#addProductButton",
+  addPoint: "#addCompanyButton",
+  editCompany: "#addCompanyButton",
+  removeCompany: "#addCompanyButton",
+  editPoint: "#addCompanyButton",
+  removePoint: "#addCompanyButton",
+  correctionPlus: "#adminEmployeeSearch",
+  correctionMinus: "#adminEmployeeSearch",
+  correctionProduct: null,
+  showStockPoint: "#stockPointSelect",
+  stockDelivery: "#stockPointSelect"
+};
+
 export class ModalManager {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
@@ -54,14 +82,64 @@ export class ModalManager {
   // Zonder deze stap valt de focus na het sluiten terug naar het begin van de pagina, en moet
   // iemand met een toetsenbord of schermlezer opnieuw zoeken waar hij was (toegankelijkheid).
   // Alle manieren van sluiten komen hier langs: de sluitknop, de achtergrond, Escape en na opslaan.
-  // De focus gaat alleen terug als dat element nog op de pagina staat en zichtbaar is.
+  // De focus gaat alleen terug als dat element nog op de pagina staat en zichtbaar is. Is de
+  // lijst met die knop intussen opnieuw getekend (bijvoorbeeld na opslaan in een wijzigformulier),
+  // dan krijgt de nieuwe knop met dezelfde id de focus (zie findFocusReplacement).
   closeModal(modalSelector) {
     const modal = this.view.$(modalSelector);
     modal.classList.add("hidden");
 
     const opener = this.modalOpeners.get(modal);
     this.modalOpeners.delete(modal);
-    if (opener?.isConnected && opener.getClientRects().length > 0) opener.focus();
+    this.findFocusReplacement(opener)?.focus();
+  }
+
+  // Zoekselector voor een knop in een lijst, gemaakt van zijn data-attributen uit FOCUS_TARGETS,
+  // bijvoorbeeld [data-edit-product="blikje"]. Zo is dezelfde knop terug te vinden nadat de lijst
+  // opnieuw is getekend. Geeft null terug voor een element zonder zo'n attribuut. De waarde wordt
+  // met cssAttributeValue veilig gemaakt voor de selector.
+  focusSelector(element) {
+    const dataset = element?.dataset;
+    if (!dataset) return null;
+
+    const parts = Object.keys(FOCUS_TARGETS)
+      .filter((name) => typeof dataset[name] === "string")
+      .map((name) => `[data-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}="${cssAttributeValue(dataset[name])}"]`);
+    return parts.length ? parts.join("") : null;
+  }
+
+  // Het element dat de focus moet krijgen in plaats van `element`:
+  //   - het element zelf, als het nog op de pagina staat en zichtbaar is;
+  //   - anders de nieuwe knop met dezelfde data-attributen (de lijst is opnieuw getekend);
+  //   - bestaat die niet meer (het item is verwijderd), dan een logisch alternatief uit
+  //     FOCUS_TARGETS, zoals de knop "Medewerker toevoegen" of het zoekveld;
+  //   - anders null (dan blijft de focus waar die is).
+  findFocusReplacement(element) {
+    if (!element) return null;
+    const isVisible = (candidate) => candidate?.isConnected && candidate.getClientRects().length > 0;
+    if (isVisible(element)) return element;
+
+    const selector = this.focusSelector(element);
+    if (!selector) return null;
+
+    const sameButton = this.view.$(selector);
+    if (isVisible(sameButton)) return sameButton;
+
+    const name = Object.keys(FOCUS_TARGETS).find((key) => typeof element.dataset[key] === "string" && FOCUS_TARGETS[key]);
+    const fallback = name ? this.view.$(FOCUS_TARGETS[name]) : null;
+    return isVisible(fallback) ? fallback : null;
+  }
+
+  // Voert `render` uit (lijsten opnieuw tekenen) zonder dat de focus verloren gaat. Had een knop
+  // in een lijst de focus, dan verdwijnt die door het tekenen en zou de focus naar het begin van
+  // de pagina springen. Daarna krijgt de nieuwe knop met dezelfde id de focus, of een logisch
+  // alternatief als het item weg is (zie findFocusReplacement). Gebruikt na opslaan, (de)activeren
+  // en verwijderen in het beheer, en na wijzigingen uit een ander tabblad.
+  preserveFocus(render) {
+    const focused = globalThis.document?.activeElement || null;
+    render();
+    if (!focused || focused.isConnected) return;
+    this.findFocusReplacement(focused)?.focus();
   }
 
   // Hulpfunctie: sluit een venster bij een klik op de sluitknoppen of op de donkere achtergrond.

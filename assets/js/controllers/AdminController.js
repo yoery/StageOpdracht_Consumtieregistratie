@@ -105,16 +105,21 @@ export class AdminController {
   // bedrijven, consumptiepunten en voorraad. Ook de registratietabel wordt opnieuw getekend,
   // zodat daar bijvoorbeeld de nieuwe naam van een product staat.
   // Met redrawStockTable: false blijft de voorraadtabel staan (zie saveStockField).
+  // Had een knop in een lijst de focus (bijvoorbeeld "Wijzigen" bij een bedrijf, waar de focus na
+  // het sluiten van het formulier naar terugging), dan krijgt de nieuwe knop met dezelfde id die
+  // focus terug (zie ModalManager.preserveFocus). Anders zou de focus naar het begin van de pagina gaan.
   finishAdminChange(message, { redrawStockTable = true } = {}) {
-    this.view.renderAll();
-    this.view.populateFilters();
-    this.view.renderAdmin();
-    this.view.renderAdminEmployees();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdminProducts();
-    this.view.renderAdminCompanies();
-    if (redrawStockTable) this.view.renderStock();
-    this.renderAuditLog();
+    this.app.preserveFocus(() => {
+      this.view.renderAll();
+      this.view.populateFilters();
+      this.view.renderAdmin();
+      this.view.renderAdminEmployees();
+      this.view.renderCorrectionEmployees();
+      this.view.renderAdminProducts();
+      this.view.renderAdminCompanies();
+      if (redrawStockTable) this.view.renderStock();
+      this.renderAuditLog();
+    });
     this.view.showToast(message, { tone: "success" });
   }
 
@@ -275,8 +280,13 @@ export class AdminController {
     const tabNames = ["registrations", "employees", "products", "companies", "stock", "audit"];
     if (!activeTab) return; // geen bestaand tabblad gevonden (bijvoorbeeld een onbekende naam)
 
-    document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+    // aria-selected zegt een schermlezer welk tabblad (role="tab") gekozen is.
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.classList.remove("active");
+      tab.setAttribute("aria-selected", "false");
+    });
     activeTab.classList.add("active");
+    activeTab.setAttribute("aria-selected", "true");
 
     for (const name of tabNames) {
       this.view.$(`#${name}Tab`).classList.toggle("hidden", activeTab.dataset.tab !== name);
@@ -315,7 +325,12 @@ export class AdminController {
     if (!window.confirm(firstQuestion)) return;
     if (!window.confirm("Weet je het zeker? Dit kan niet ongedaan worden gemaakt.")) return;
 
-    this.model.wipeAll();
+    // Lukt het wissen van de opslag niet, dan staan de gegevens er nog. Dan geen melding dat alles
+    // is gewist, maar een foutmelding. Het beheer blijft open, zodat de beheerder het opnieuw kan proberen.
+    if (!this.model.wipeAll()) {
+      this.view.showToast("De gegevens konden niet worden gewist. Probeer het opnieuw.", { tone: "error", duration: 6000 });
+      return;
+    }
     // De nieuwe demogegevens direct opslaan. Andere open tabbladen krijgen zo een melding van de
     // browser en laden de lege demo in; anders zouden zij bij hun volgende wijziging de oude
     // gegevens terugschrijven. Lukt opslaan niet, dan is wel alles gewist, maar staan de
@@ -364,12 +379,15 @@ export class AdminController {
     );
     if (!saved) return;
 
-    this.renderAuditLog();
-    this.view.populateFilters();
-    this.view.renderAdminEmployees();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdmin();
-    this.view.renderAll();
+    // De knop krijgt na het tekenen de focus terug (de tekst wisselt tussen Deactiveren en Activeren).
+    this.app.preserveFocus(() => {
+      this.renderAuditLog();
+      this.view.populateFilters();
+      this.view.renderAdminEmployees();
+      this.view.renderCorrectionEmployees();
+      this.view.renderAdmin();
+      this.view.renderAll();
+    });
     this.view.showToast("Medewerkerstatus gewijzigd", { tone: "success" });
   }
 
@@ -416,12 +434,15 @@ export class AdminController {
 
     // Een ingesteld gezicht (demo) hoort bij deze medewerker en moet dus ook weg.
     this.faceDemo.forget(employeeId);
-    this.renderAuditLog();
-    this.view.populateFilters();
-    this.view.renderAdminEmployees();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdmin();
-    this.view.renderAll();
+    // De knop "Verwijderen" bestaat daarna niet meer; de focus gaat naar "Medewerker toevoegen".
+    this.app.preserveFocus(() => {
+      this.renderAuditLog();
+      this.view.populateFilters();
+      this.view.renderAdminEmployees();
+      this.view.renderCorrectionEmployees();
+      this.view.renderAdmin();
+      this.view.renderAll();
+    });
     this.view.showToast("Inactieve medewerker definitief verwijderd", { tone: "success" });
   }
 

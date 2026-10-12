@@ -485,12 +485,23 @@ test("DataStore: een geldig pasnummer blijft staan", () => {
   assert.equal(employee.badgeId, "04A1B2C3");
 });
 
-test("DataStore: een ongeldig pasnummer wordt leeggemaakt, de medewerker blijft bestaan", () => {
-  const invalid = [123, "04a1b2c3", "04:A1", "<img>", "A".repeat(65), null, { code: "x" }];
-  const employees = loadEmployees(invalid.map((badgeId, index) => storedEmployee(`e${index}`, { badgeId })));
+// Aangepast bij de review van oktober 2026: een pasnummer in kleine letters of met ":" werd stil
+// leeggemaakt. Nu wordt het eerst gelijk gemaakt (zoals BadgeReader.normalize). Alleen wat daarna
+// nog ongeldig is, wordt leeggemaakt en telt als overgeslagen (melding en reservekopie).
+test("DataStore: een pasnummer wordt eerst gelijk gemaakt, een ongeldig pasnummer wordt leeggemaakt", () => {
+  const stored = [123, "04a1b2c3", "04:A1", "<img>", "A".repeat(65), null, { code: "x" }];
+  const store = createDataStore({
+    employees: stored.map((badgeId, index) => storedEmployee(`e${index}`, { badgeId })),
+    registrations: [], products: [], companies: [], points: [], auditLog: []
+  });
+  const employees = store.load();
 
-  assert.equal(employees.length, invalid.length);
-  assert.ok(employees.every((employee) => employee.badgeId === ""));
+  assert.equal(employees.employees.length, stored.length, "iedere medewerker blijft bestaan");
+  assert.deepEqual(employees.employees.map(({ badgeId }) => badgeId), ["", "04A1B2C3", "04A1", "", "", "", ""]);
+  // 123, "<img>", 65 tekens en het object waren ongeldig; null betekent gewoon: geen pas.
+  assert.equal(store.repairedBadges, 4);
+  assert.equal(store.loadProblem, "skipped");
+  assert.notEqual(localStorage.getItem("test-backup"), null);
 });
 
 test("DataStore: een pasnummer dat twee keer voorkomt, blijft alleen bij de eerste medewerker", () => {

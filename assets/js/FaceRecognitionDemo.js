@@ -166,11 +166,17 @@ export class FaceRecognitionDemo {
 
   // Zoekt de bekende medewerker die het meest lijkt op dit gezicht.
   // Geeft de employeeId terug, of null als niemand dichtbij genoeg is (onder de drempel).
-  findMatch(descriptor) {
+  // `allowedIds` (optioneel) zijn de medewerkers die mogen worden herkend, bijvoorbeeld alleen de
+  // actieve medewerkers die nog bestaan. Gezichten van andere medewerkers tellen dan niet mee.
+  // Zonder deze lijst zou het gezicht van een inactieve of verwijderde collega dat toevallig iets
+  // dichterbij ligt, winnen, en zou de actieve medewerker niet meer worden herkend.
+  findMatch(descriptor, allowedIds = null) {
+    const allowed = allowedIds ? new Set(allowedIds) : null;
     let bestId = null;
     let bestDistance = Infinity;
 
     for (const [employeeId, known] of this.knownFaces) {
+      if (allowed && !allowed.has(employeeId)) continue;
       const distance = this.distance(descriptor, known);
       if (distance < bestDistance) {
         bestDistance = distance;

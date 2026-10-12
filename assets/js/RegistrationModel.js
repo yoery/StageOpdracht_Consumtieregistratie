@@ -143,11 +143,17 @@ export class RegistrationModel {
   // Met `clearStore: false` wordt alleen het geheugen leeggemaakt en blijft de opslag met rust.
   // Dat gebruikt RegistrationApp.handleStorageCleared als een ander tabblad al heeft gewist en
   // daarna zelf de nieuwe demogegevens opslaat: die mogen hier niet opnieuw worden gewist.
+  // Geeft true terug als het wissen is gelukt. Lukt het wissen van de opslag niet (clearAll geeft
+  // false), dan blijven de gegevens in het geheugen staan en geeft deze methode false terug, zodat
+  // de controller niet meldt dat alles is gewist.
   wipeAll({ clearStore = true } = {}) {
-    if (clearStore && typeof this.store.clearAll === "function") this.store.clearAll();
+    if (clearStore && typeof this.store.clearAll === "function" && this.store.clearAll() === false) {
+      return false;
+    }
 
     this.state = this.createSeedState();
     this.loadProblem = null;
+    return true;
   }
 
   // Herstelt de vorige status wanneer opslaan niet lukt.
@@ -158,6 +164,12 @@ export class RegistrationModel {
   // Geeft de volledige status aan de opslaglaag. Geeft true terug als dat lukte.
   save() {
     return this.store.save(this.state);
+  }
+
+  // Waarom lukte de laatste keer opslaan niet? "full" als de opslag van de browser vol is,
+  // "failed" bij een andere fout, of null (gelukt, of de opslag zegt het niet). Zie DataStore.save.
+  get saveProblem() {
+    return this.store.saveProblem ?? null;
   }
 
   // Getters: andere classes lezen de gegevens via deze namen, niet via this.state.

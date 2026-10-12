@@ -631,7 +631,9 @@ test("Escape sluit het bovenste open venster", () => {
 });
 
 test("Escape zonder open venster doet niets", () => {
-  const { press } = createKeyboardApp();
+  const { view, press } = createKeyboardApp();
+  // Ook de keuzelijst van het bedrijfsfilter is dicht (zoals bij het starten van de pagina).
+  view.$("#companyFilterOptions").classList.add("hidden");
 
   assert.equal(press("Escape").prevented, false);
 });
