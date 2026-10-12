@@ -4,6 +4,15 @@
 -- De backend/API hoort de enige laag te zijn die rechtstreeks met deze
 -- database communiceert. Gebruik nooit databasegegevens in de browser.
 
+-- pgcrypto levert gen_random_uuid() voor de primaire sleutels (sinds PostgreSQL 13 zit die
+-- functie ook in PostgreSQL zelf; de extensie staat er voor oudere versies). pgcrypto wordt in
+-- dit schema NIET gebruikt om kolommen te versleutelen. Personeelsnummer, looncode en de andere
+-- persoonsgegevens staan als gewone tekst in de tabellen; ze worden beschermd door versleuteling
+-- van de schijf of de database (encryption at rest, bijvoorbeeld TDE of versleutelde opslag bij
+-- de hostingpartij), versleutelde back-ups, TLS en databaserollen met zo weinig rechten als nodig.
+-- Kolomversleuteling van personnel_number zou de UNIQUE-regel en het zoeken op nummer breken;
+-- daarvoor is dan een extra kolom met een blind index (een HMAC van het nummer) nodig.
+-- Zie TO hoofdstuk 13, Verplicht vóór productie.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE companies (

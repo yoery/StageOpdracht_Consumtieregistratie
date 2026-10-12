@@ -10,7 +10,8 @@
  *   - RegistrationModel: de producten, bedrijven, kleuren en voorbeeldmedewerkers;
  *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto";
  *   - FaceRecognitionDemo en FaceController: FACE_DEMO, de instellingen van de demo;
- *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer).
+ *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer);
+ *   - AdminController: ADMIN_IDLE_LOGOUT_MS, na hoeveel tijd zonder invoer de beheerder wordt uitgelogd.
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -107,6 +108,12 @@ export const BADGE_READER = {
   maxKeyIntervalMs: 40,
   endDelayMs: 120
 };
+
+// Automatisch uitloggen van de beheerder (zie AdminController.logoutIfIdle). Wordt het beheer zo
+// lang niet gebruikt (geen muis, toets, aanraking of scroll), dan logt de app de beheerder uit en
+// sluit het beheervenster. Op een gedeelde tablet blijft het beheer zo niet open staan als de
+// beheerder wegloopt zonder uit te loggen. In milliseconden: 5 minuten.
+export const ADMIN_IDLE_LOGOUT_MS = 5 * 60 * 1000;
 
 // Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.
 export const DEFAULT_PRODUCTS = [

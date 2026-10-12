@@ -53,7 +53,7 @@ docs/
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
   e2e/                      # 9 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 547 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan)
+  *.test.js                 # 565 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
@@ -82,7 +82,9 @@ archief/
 - Beveiliging in de demo: alle waarden in HTML worden ge-escapet, opgeslagen id's, kleuren, prijzen, codes en tijdstippen worden bij het laden gecontroleerd (ook dubbele id's, registraties van meer dan een dag in de toekomst, tellingen in de toekomst en speciale sleutels als `__proto__` in de voorraad), iedere beheeractie controleert zelf of er een beheerder is ingelogd, de camera gaat uit als de tijd om is, een Content-Security-Policy en `no-referrer` in `index.html`, lettertypes en face-api zelf gehost (geen Google Fonts of CDN) en CSV-velden zijn beschermd tegen formules. Zie het TO, hoofdstuk 13, voor wat er vóór productie nog moet gebeuren.
 - CSV-export (te openen in Excel) met vaste kolommen: Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. Jaar en Maand zijn de loonmaand: consumpties worden verwerkt in de maand erna (september → oktober, december → januari).
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
-- Persoonlijk welkom in het productvenster en een knop "Zelfde als vorige keer" met de keuze van de vorige keer.
+- Persoonlijk welkom in het productvenster. Na herkenning met de pas of de camera ook "welkom terug" en een knop "Zelfde als vorige keer" met de keuze van de vorige keer. Wie op een naam tikt, ziet die niet, zodat collega's niet kunnen zien wat iemand eerder koos.
+- Onder in het productvenster een korte uitleg dat registraties maandelijks op het loon worden ingehouden, met een verwijzing naar de privacyverklaring voor medewerkers.
+- De beheerder wordt automatisch uitgelogd als het beheer 5 minuten niet is gebruikt (`ADMIN_IDLE_LOGOUT_MS` in `config.js`).
 - Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`), niets opgeslagen; uit te zetten in `config.js`. Zie het TO voor de privacy-afweging en toekomstige uitbreidingen (QR-pas, AFAS, barcode, spraak, slim slot).
 - Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer; de beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig; uit te zetten in `config.js`.
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.

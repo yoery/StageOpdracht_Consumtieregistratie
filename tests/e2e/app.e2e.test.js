@@ -94,6 +94,8 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
     assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
     // De focus staat op de eerste "+"-knop, zodat je met het toetsenbord meteen verder kunt.
     assert.equal(await browser.evaluate(`document.activeElement.dataset.productIncrement`), "blikje");
+    // Onderaan staat de korte uitleg over de inhouding op het loon.
+    assert.equal(await text("#employeePrivacyNote"), "Wat je registreert, wordt maandelijks ingehouden op je loon. Meer informatie staat in de privacyverklaring voor medewerkers.");
 
     // Een zoekterm zonder resultaat toont de lege melding.
     await browser.press("Escape");
@@ -115,12 +117,14 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
     assert.equal(data.registrations.length, 2);
     assert.ok(data.registrations.every((registration) => registration.productId === "blikje" && registration.price === 0.65));
 
-    // Bij de volgende keer wordt de medewerker herkend als terugkerend en staat de vorige keuze klaar.
+    // Wie opnieuw op de naam tikt, krijgt een gewone begroeting zonder "welkom terug" en zonder
+    // de keuze van de vorige keer: iedereen kan op de naam van een collega tikken (privacy).
+    // Na herkenning met de pas verschijnen ze wel (zie de test met de pas hieronder).
     await browser.click(row("Lotte van Dijk"));
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-    assert.match(await text("#employeeWelcome"), /Lotte, welkom terug\./);
-    assert.equal(await isHidden("#employeeSuggestion"), false);
-    assert.match(await text("#employeeSuggestion"), /Blikje/);
+    assert.match(await text("#employeeWelcome"), /^Goede(morgen|middag|navond) Lotte\.$/);
+    assert.equal(await isHidden("#employeeSuggestion"), true);
+    assert.equal(await text("#employeeSuggestion"), "");
   });
 
   test("registreren zonder keuze geeft een melding en slaat niets op", { timeout: TEST_TIMEOUT }, async () => {
@@ -203,6 +207,10 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
   });
 
   test("een pas koppelen en daarna herkennen met de pas (nagebootste lezer)", { timeout: TEST_TIMEOUT }, async () => {
+    // Lotte heeft al eens zelf iets geregistreerd (voor "welkom terug" na de scan).
+    await registerProduct("Lotte van Dijk", "blikje", 1);
+    await waitForToast("Lotte van Dijk: 1× Blikje geregistreerd");
+
     // Een onbekende pas geeft een melding en opent geen venster.
     await browser.scanBadge("DEADBEEF");
     await waitForToast("Deze pas is niet gekoppeld aan een medewerker.");
@@ -243,7 +251,10 @@ describe("Browsertests (end-to-end)", { timeout: 120000 }, () => {
 
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
     assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
-    assert.match(await text("#employeeWelcome"), /Je bent herkend met je pas\./);
+    assert.match(await text("#employeeWelcome"), /Lotte, welkom terug\. Je bent herkend met je pas\./);
+    // Na herkenning met de pas staat de keuze van de vorige keer klaar om over te nemen.
+    assert.equal(await isHidden("#employeeSuggestion"), false);
+    assert.match(await text("#employeeSuggestion"), /Vorige keer koos je 1× Blikje\./);
     // Het pasnummer blijft niet in het zoekveld staan en de lijst is weer compleet.
     assert.equal(await browser.evaluate(`document.querySelector("#employeeSearch").value`), "");
     assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);

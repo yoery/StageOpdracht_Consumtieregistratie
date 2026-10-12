@@ -1032,6 +1032,12 @@ footer {
 .employee-products-actions .primary-button {
   margin-left:auto
 }
+/* Korte uitleg onder in het productvenster: wat er met een registratie gebeurt (AVG). */
+.privacy-note {
+  margin:16px 0 0;
+  padding-top:12px;
+  border-top:1px solid var(--line)
+}
 .employee-row-clickable {
   cursor:pointer
 }

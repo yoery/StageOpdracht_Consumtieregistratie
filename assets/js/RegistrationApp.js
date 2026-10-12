@@ -34,8 +34,8 @@ import { FormController } from "./controllers/FormController.js";
  *   - EmployeeController: de beginpagina (zoeken, bedrijfsfilter), het productvenster en registreren;
  *   - BadgeController: herkennen met de pas (verbindt BadgeReader met de app);
  *   - FaceController: het cameravenster van de demo gezichtsherkenning;
- *   - AdminController: inloggen, dashboard, tabbladen, logboek, export, wissen, (de)activeren en
- *     verwijderen, en requireAdmin voor iedere beheeractie;
+ *   - AdminController: inloggen, automatisch uitloggen, dashboard, tabbladen, logboek, export,
+ *     wissen, (de)activeren en verwijderen, en requireAdmin voor iedere beheeractie;
  *   - CorrectionController: correcties "+" en "−" en het venster "Registratie verwijderen";
  *   - StockController: het tabblad Voorraad (leveringen, tellingen en minimum);
  *   - FormController: de formulieren voor medewerker, product, bedrijf en consumptiepunt.
@@ -63,7 +63,9 @@ export class RegistrationApp {
   // De controller krijgt het model, de view, de export, de demo gezichtsherkenning en de
   // pasjeslezer mee (compositie). Wat niet wordt meegegeven, maakt de controller zelf.
   // Daarna maakt hij zijn onderdelen; BadgeController geeft de pasjeslezer daarbij zijn callbacks.
-  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader()) {
+  // `adminClock` is de klok voor het automatisch uitloggen van de beheerder (AdminController);
+  // de unit tests geven een nep-klok mee.
+  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader(), adminClock = AdminController.realClock()) {
     this.model = model;
     this.view = view;
     this.csvExport = csvExport;
@@ -84,7 +86,7 @@ export class RegistrationApp {
     this.employeePage = new EmployeeController(this);
     this.badge = new BadgeController(this);
     this.face = new FaceController(this);
-    this.admin = new AdminController(this);
+    this.admin = new AdminController(this, adminClock);
     this.corrections = new CorrectionController(this);
     this.stock = new StockController(this);
     this.forms = new FormController(this);
@@ -117,7 +119,8 @@ export class RegistrationApp {
   // Start de app: datum tonen, event listeners koppelen en de pagina voor het eerst tekenen.
   // De tablet staat dag en nacht aan (kiosk). Daarom kijkt een timer iedere minuut of het een
   // nieuwe dag is; zo niet, dan zouden de datum en de tegels "Vandaag" en "Deze maand" de
-  // volgende ochtend nog de cijfers van gisteren tonen.
+  // volgende ochtend nog de cijfers van gisteren tonen. Een tweede timer logt de beheerder uit
+  // als het beheer 5 minuten niet is gebruikt (AdminController.startIdleWatch).
   initialize() {
     this.renderTodayLabel(new Date());
 
@@ -128,6 +131,7 @@ export class RegistrationApp {
     this.showLoadProblem();
 
     this.dayTimer = setInterval(() => this.refreshIfNewDay(), 60 * 1000);
+    this.startIdleWatch();
   }
 
   // Zet de datum van vandaag bovenaan de pagina, bijvoorbeeld "2 oktober 2026".
@@ -383,6 +387,14 @@ export class RegistrationApp {
     this.onClick("#loadMoreAuditButton", () => this.loadMoreAudit());
     this.onClick("#exportButton", () => this.exportCsv());
     this.onClick("#wipeDataButton", () => this.wipeAllData());
+
+    // Iedere muisbeweging, klik, toets, aanraking of scroll telt als gebruik van het beheer
+    // (noteAdminActivity doet alleen iets als de beheerder is ingelogd). In de capture-fase,
+    // zodat ook invoer meetelt die een andere listener tegenhoudt. "scroll" komt niet omhoog
+    // naar document (bubbelt niet), maar wordt in de capture-fase wel gezien.
+    for (const type of ["pointerdown", "pointermove", "keydown", "touchstart", "wheel", "scroll"]) {
+      document.addEventListener(type, () => this.noteAdminActivity(), { capture: true, passive: true });
+    }
   }
 
   // Zoekvelden en filters op de openbare pagina en in het dashboard.
@@ -540,10 +552,11 @@ const DELEGATES = {
     methods: [
       "requireAdmin", "showMissing", "finishAdminChange", "renderAuditLog",
       "openAdmin", "showLogin", "login", "logout", "closeAdmin", "showDashboard", "switchTab",
+      "startIdleWatch", "stopIdleWatch", "noteAdminActivity", "logoutIfIdle", "idleLogoutMessage",
       "loadMoreAudit", "exportCsv", "wipeAllData",
       "toggleEmployee", "removeEmployee", "removeProduct", "removeCompany", "removePoint"
     ],
-    fields: ["auditLogLimit"]
+    fields: ["auditLogLimit", "lastAdminActivity", "idleTimer", "idleLogoutMs"]
   },
   corrections: {
     methods: [

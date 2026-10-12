@@ -13,7 +13,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
 | `assets/css/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
 | `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
-| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang, de instellingen van de demo gezichtsherkenning (`FACE_DEMO`) en van de pasjeslezer (`BADGE_READER`) |
+| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang, de instellingen van de demo gezichtsherkenning (`FACE_DEMO`), van de pasjeslezer (`BADGE_READER`) en na hoeveel tijd zonder invoer de beheerder wordt uitgelogd (`ADMIN_IDLE_LOGOUT_MS`, 5 minuten) |
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
@@ -40,7 +40,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-BLIKJESREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het sjabloon `docs/tvbsjabloon.docx`: voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
 | `docs/` | Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie |
 | `docs/wireframes/` | Low-fidelity (`lofi-…`), mid-fidelity (`midfi-…`) en high-fidelity (`w…`) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9) |
-| `tests/` | Unit tests (547) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/` | Unit tests (565) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
 | `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
@@ -49,8 +49,9 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tests/to-controle.test.js` | Regressietests voor de TO-controle: "1 medewerker"/"2 medewerkers", bevestiging bij product verwijderen, de melding bij een verwijderde medewerker (correctie `+`), alleen een inactieve medewerker zonder registraties verwijderen, uniek werkgevernummer, dubbele id's en datums in de toekomst bij het laden, de apostrof in de CSV, `lastRegistration` en `pointId`, het SQL-schema (`counted_at`, geen rol `manager`), de opslagknoppen bij wijzigen, de filters op een smal scherm en tests voor FR-01, FR-02, FR-04, FR-10 en FR-29 (actieve medewerkers, zoeken op naam, de `−` in het productvenster, alle registraties voor de beheerder, geen bedragen of aantallen op de publieke pagina). Verder: "1 product" in de correctielijst, een klik op de medewerkerkaart (FR-32) en het totaal op de knop `Registreren` (FR-47) |
 | `tests/pasjeslezer.test.js` | Tests voor herkennen met de pas: wat de `BadgeReader` als scan ziet (Enter, Tab of stilte na de laatste toets; niet bij gewoon typen of een te korte code), het normaliseren van het pasnummer, het productvenster of de melding na een scan, geen herkenning als er een venster open is (wel wordt de Enter van de scan tegengehouden), het zoekveld na een scan, de pas koppelen in het medewerkersformulier (uniek, alleen letters en cijfers, leeg = geen pas), de controle en migratie van `badgeId` in `DataStore`, en dat het pasnummer niet in de CSV-export of het logboek komt |
 | `tests/beveiligingsscan.test.js` | Regressietests voor de beveiligingsscan: beheeracties doen niets zonder ingelogde beheerder, product-id's als `__proto__`, `constructor` en `toString` in de voorraadlijst, de camera die uitgaat na de tijdslimiet, de strengere controle van codes en tijdstippen bij het laden, de Node.js-versie van de CI, het alleen-toevoegen-logboek in het SQL-schema en de licentie van TensorFlow.js |
+| `tests/avg-toets.test.js` | Tests voor de aanpassingen uit de AVG-toets: automatisch uitloggen van de beheerder na 5 minuten zonder invoer (met een nep-klok: net onder en precies op 5 minuten, iedere invoer begint opnieuw, open beheerformulieren gaan dicht, de melding en de timer van 10 seconden) en de uitleg over de inhouding op het loon in het productvenster |
 | `.gitattributes` | Zorgt dat Git de bestanden in `assets/vendor/` en `assets/fonts/` niet aanpast (geen omzetting van regeleinden), zodat de controlegetallen blijven kloppen |
-| `tests/e2e/` | Browsertests (end-to-end): `app.e2e.test.js` test de echte pagina in headless Edge of Chrome (laden zonder fouten, zoeken, registreren, Escape en focus, inloggen, thema, pas koppelen en herkennen, CSV-export), `browser.js` bevat de webserver en de besturing van de browser via het Chrome DevTools Protocol. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
+| `tests/e2e/` | Browsertests (end-to-end): `app.e2e.test.js` test de echte pagina in headless Edge of Chrome (laden zonder fouten, zoeken, registreren (daarna bij kiezen op naam geen "welkom terug"), Escape en focus, inloggen, thema, pas koppelen en herkennen, CSV-export), `browser.js` bevat de webserver en de besturing van de browser via het Chrome DevTools Protocol. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
 | `.github/workflows/ci.yml` | Voert de unit tests en daarna de browsertests (in Google Chrome) automatisch uit op GitHub met Node.js 24 (LTS), met alleen leesrechten en actions die op een commit-SHA zijn vastgezet |
 
 Bij het toevoegen of wijzigen van een medewerker kiest de beheerder een bedrijf uit de keuzelijst en daarna een consumptiepunt van dat bedrijf. Met het bedrijf worden medewerkers op de beginpagina gegroepeerd en gefilterd. Het bedrijfsfilter op de beginpagina is een keuzelijst waarin je ook kunt typen; de lijst filtert direct tijdens het typen en toont alleen bedrijven met actieve medewerkers. Wat je typt, wordt niet overschreven als de lijst intussen opnieuw wordt getekend. Hebben actieve medewerkers geen bedrijf, of bestaat hun bedrijf niet meer, dan staat er ook de keuze `Onbekend bedrijf`; die toont al deze medewerkers.
@@ -186,6 +187,8 @@ Daarna zijn alle gegevens, beide reservekopieën en de ingestelde gezichten van 
 
 Het kruisje rechtsboven, een klik naast het venster of de Escape-toets sluit het admin-overzicht én logt de beheerder uit. Op een gedeelde tablet kan de volgende persoon zo niet zonder wachtwoord in het beheer komen. Bij het volgende openen verschijnt het loginformulier. Met de knop `Uitloggen` kan de beheerder ook uitloggen zonder het venster te sluiten.
 
+**Automatisch uitloggen.** Gebruikt de beheerder het beheer 5 minuten niet (geen muisbeweging, klik, toets, aanraking of scroll), dan logt de website de beheerder vanzelf uit. Open formulieren en het venster `Registratie verwijderen` gaan dicht zonder op te slaan, het beheervenster sluit en onderaan verschijnt "Je bent automatisch uitgelogd omdat het beheer 5 minuten niet is gebruikt." Zo blijft het beheer niet open staan als de beheerder wegloopt. De tijd staat in `config.js` (`ADMIN_IDLE_LOGOUT_MS`). Een timer kijkt iedere 10 seconden of de tijd voorbij is.
+
 ### 4.12 CSV exporteren
 
 1. Open het admin-dashboard.
@@ -211,7 +214,7 @@ De keuze wordt per browser onthouden. In het donkere thema blijven de huiskleure
 
 ### 4.14 Welkom en "zelfde als vorige keer"
 
-Als een medewerker het productvenster opent, verschijnt een persoonlijke begroeting die past bij het tijdstip, bijvoorbeeld "Goedemorgen Lotte, welkom terug." Heeft de medewerker eerder iets geregistreerd, dan staat erboven wat er de vorige keer is gekozen ("Vorige keer koos je 1× Blikje en 1× Ei."). Met de knop `Zelfde als vorige keer` staan die aantallen direct klaar; de medewerker kan ze nog aanpassen en bevestigt met `Registreren`. Correcties van de beheerder tellen hierbij niet mee, ook niet voor "welkom terug". Bij het openen staat de focus op de eerste `+`-knop; na een druk op `+` of `−` houdt dezelfde knop de focus, zodat je met het toetsenbord meerdere keren kunt drukken.
+Als een medewerker het productvenster opent, verschijnt een persoonlijke begroeting die past bij het tijdstip, bijvoorbeeld "Goedemorgen Lotte." Is de medewerker herkend met de pas of de camera en heeft hij eerder zelf iets geregistreerd, dan wordt dat "Goedemorgen Lotte, welkom terug." en staat eronder wat er de vorige keer is gekozen ("Vorige keer koos je 1× Blikje en 1× Ei."). Wie op een naam in de lijst tikt, ziet die twee dingen niet. Iedereen kan op de naam van een collega tikken, en dan zou te zien zijn of die collega al eens iets registreerde en wat (privacy, zie het TO hoofdstuk 13). Met de knop `Zelfde als vorige keer` staan die aantallen direct klaar; de medewerker kan ze nog aanpassen en bevestigt met `Registreren`. Correcties van de beheerder tellen hierbij niet mee, ook niet voor "welkom terug". Onder in het productvenster staat in kleine grijze tekst "Wat je registreert, wordt maandelijks ingehouden op je loon. Meer informatie staat in de privacyverklaring voor medewerkers." Er staat geen link bij, omdat TVB de privacyverklaring nog moet vaststellen. Bij het openen staat de focus op de eerste `+`-knop; na een druk op `+` of `−` houdt dezelfde knop de focus, zodat je met het toetsenbord meerdere keren kunt drukken.
 
 ### 4.15 Demo gezichtsherkenning
 
@@ -301,7 +304,7 @@ Ieder venster is een `.modal-backdrop` over de website heen. Een venster sluit m
 | Id | Venster |
 |---|---|
 | `adminModal` | Loginformulier (`loginView`) en beheerdashboard (`adminView`) met zes tabbladen |
-| `employeeProductsModal` | Productvenster van een medewerker, met begroeting, voorstel `Zelfde als vorige keer` en de link voor de demo gezichtsherkenning |
+| `employeeProductsModal` | Productvenster van een medewerker, met begroeting, voorstel `Zelfde als vorige keer` (alleen na herkenning met pas of camera), de link voor de demo gezichtsherkenning en de uitleg over de inhouding op het loon (`employeePrivacyNote`) |
 | `employeeFormModal` | Medewerker toevoegen of wijzigen |
 | `productFormModal` | Product toevoegen of wijzigen |
 | `companyFormModal` | Bedrijf toevoegen of wijzigen |
@@ -379,7 +382,7 @@ De CSS bevat opmaak voor:
 - De hero-banner.
 - Kaarten, statistieken en de tipkaart.
 - Medewerkerregels, het zoekveld en het bedrijfsfilter.
-- Het productvenster met `−`- en `+`-knoppen, de begroeting en het voorstel `Zelfde als vorige keer`.
+- Het productvenster met `−`- en `+`-knoppen, de begroeting, het voorstel `Zelfde als vorige keer` (na herkenning met pas of camera) en de uitleg over de inhouding op het loon.
 - Het venster van de demo gezichtsherkenning met het ovale kader.
 - Admin-modal, tabbladen, tabellen, filters en de voorraadlabels.
 - Formulieren met foutmeldingen onder het veld.
@@ -476,7 +479,7 @@ Toegepaste OOP-principes:
 
 - **Encapsulatie:** iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (`model.employees`, `model.products`) en wijzigen ze alleen via methodes (`model.addRegistration`, `model.saveCompany`).
 - **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class. Ook de besturing zelf is verdeeld: ieder onderdeel van de controller heeft één taak (vensters, beginpagina, pas, camera, beheer, correcties, voorraad, formulieren).
-- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning en de pasjeslezer mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven. De controller maakt wel zelf zijn acht onderdelen en geeft zichzelf daarbij mee.
+- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning, de pasjeslezer en de klok voor het automatisch uitloggen mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven. De controller maakt wel zelf zijn acht onderdelen en geeft zichzelf daarbij mee.
 - **Losse koppeling:** de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes `load()` en `save()`.
 
 #### `DataStore`
@@ -544,6 +547,7 @@ Ieder onderdeel krijgt `RegistrationApp` mee in de constructor (`this.app`). Het
 
 - `requireAdmin`: iedere beheeractie begint hiermee, ook in `CorrectionController`, `StockController` en `FormController` (formulieren openen en opslaan, verwijderen, (de)activeren, correcties, leveringen en tellingen, export en `Alle gegevens wissen`). Is er geen beheerder ingelogd, dan gebeurt er niets en verschijnt "Log eerst in als beheerder.". Zo werkt een beheeractie ook niet als een verborgen knop toch wordt ingedrukt of de methode op een andere manier wordt aangeroepen. Registreren door een medewerker zelf vraagt geen login.
 - `openAdmin`, `login`, `logout`, `closeAdmin`, `showDashboard`, `switchTab` en `loadMoreAudit`: inloggen, uitloggen, het dashboard, de tabbladen en het logboek (zie Adminfuncties hieronder).
+- `startIdleWatch`, `noteAdminActivity` en `logoutIfIdle`: automatisch uitloggen. `startIdleWatch` start bij het opstarten een timer die iedere 10 seconden `logoutIfIdle` aanroept. `noteAdminActivity` onthoudt bij iedere muisbeweging, klik, toets, aanraking of scroll het tijdstip, maar alleen als de beheerder is ingelogd. `logoutIfIdle` sluit na 5 minuten zonder invoer de open beheerformulieren en het beheervenster en toont de melding. De klok (tijd en timer) wordt aan de constructor meegegeven, net als bij `BadgeReader`, zodat de tests met een nep-klok werken.
 - `finishAdminChange`: tekent na een beheerwijziging alle beheeronderdelen opnieuw, ook de registratietabel (zodat bijvoorbeeld een nieuwe productnaam daar meteen staat), zonder nog eens apart op te slaan.
 - `showMissing`: knoppen en formulieren van iets dat niet meer bestaat, geven hiermee een melding in plaats van het gegeven opnieuw aan te maken.
 - `exportCsv`: laat `CsvExport` het bestand maken (zie CSV-export hieronder).
@@ -618,7 +622,7 @@ De methode `RegistrationView.renderAll` voert `populateCompanyFilter`, `renderEm
 
 ### `renderEmployeeProducts`
 
-De methode `RegistrationView.renderEmployeeProducts` tekent het productvenster: de begroeting (`greeting` kiest Goedemorgen, Goedemiddag of Goedenavond), het voorstel `Zelfde als vorige keer` (uit `RegistrationModel.lastSelection`, beschreven met `describeSelection`), de producten van het consumptiepunt met `−`- en `+`-knoppen en onderaan de link of status van de demo gezichtsherkenning.
+De methode `RegistrationView.renderEmployeeProducts` tekent het productvenster: de begroeting (`greeting` kiest Goedemorgen, Goedemiddag of Goedenavond), het voorstel `Zelfde als vorige keer` (uit `RegistrationModel.lastSelection`, beschreven met `describeSelection`, en net als "welkom terug" alleen als `face.recognized` of `face.recognizedByBadge` waar is), de producten van het consumptiepunt met `−`- en `+`-knoppen en onderaan de link of status van de demo gezichtsherkenning.
 
 ### `showToast`
 
@@ -666,7 +670,7 @@ De listeners worden in `RegistrationApp` per onderwerp gekoppeld:
 | Methode | Wat er wordt gekoppeld |
 |---|---|
 | `registerPageEvents` | De algemene kliklistener (`handleClick`), het sluiten van het productvenster en het cameravenster, de knoppen `Herken mij met de camera (demo)` en `Gezicht vastleggen`, en het toestemmingsvinkje |
-| `registerAdminEvents` | `Admin login`, het sluiten van het admin-venster (dat ook uitlogt), inloggen, uitloggen, de tabbladen, `Meer laden`, `CSV exporteren` en `Alle gegevens wissen` |
+| `registerAdminEvents` | `Admin login`, het sluiten van het admin-venster (dat ook uitlogt), inloggen, uitloggen, de tabbladen, `Meer laden`, `CSV exporteren` en `Alle gegevens wissen`, en de listeners voor muis, toets, aanraking en scroll die het automatisch uitloggen uitstellen |
 | `registerFilterEvents` | De zoekbalk, het bedrijfsfilter, de filters `Medewerker` en `Maand` en de zoekvelden in het beheer |
 | `registerFormEvents` | Openen, opslaan en sluiten van de formulieren voor medewerker, product, bedrijf en consumptiepunt, en het weghalen van een foutmelding zodra een veld wordt aangepast |
 | `registerStockEvents` | De keuze van het consumptiepunt en het aanpassen van voorraad of minimum |
@@ -742,7 +746,11 @@ Deze versie is bedoeld als prototype:
 - Alle gegevens staan als gewone tekst in `localStorage` van de tablet. Wie het apparaat en de ontwikkelaarstools van de browser gebruikt, kan ze lezen en aanpassen, en kan via de console ook de code van de pagina uitvoeren.
 - Er zijn geen gebruikersrollen of wachtwoordbeheer.
 - Verwijderde medewerkers krijgen geen herstelmogelijkheid, en `Alle gegevens wissen` kan niet ongedaan worden gemaakt.
-- Er is geen server-side auditlog; het logboek staat alleen in de browser.
+- Er is geen server-side auditlog. Het logboek staat alleen in de browser.
+- De namen van alle actieve medewerkers staan op de beginpagina, omdat je je eigen naam moet kunnen kiezen. Aantallen, bedragen en eerdere keuzes staan er niet.
+- Een CSV-bestand komt in de downloadmap van de computer van de beheerder en valt daarmee buiten de app. Stuur het beveiligd naar de loonadministratie en verwijder het na het inlezen.
+- De demo vertrouwt op een beveiligde tablet: kioskmodus, schermvergrendeling en versleuteling van het apparaat zijn nodig.
+- Voor productie zijn ook AVG-maatregelen nodig, zoals een grondslag per verwerking, bewaartermijnen, een privacyverklaring, een DPIA en instemming van de ondernemingsraad. Zie het TO, hoofdstuk 13, paragraaf AVG-verantwoording (productie).
 - Bescherming tegen inbedden in een frame (`frame-ancestors` of `X-Frame-Options`) kan alleen met een HTTP-header van de webserver en zit dus niet in de demo.
 - De gezichtsherkenning is alleen een demo. Ingestelde gezichten zijn na het herladen van de pagina weg. Er is geen controle of er een echt, levend gezicht voor de camera staat, en hoe vaak de verkeerde persoon wordt herkend, is niet gemeten. Bij het laden toont de console één onschadelijke CSP-melding over `wasm-eval`, omdat de bibliotheek test of WebAssembly werkt. De bibliotheek face-api wordt niet meer onderhouden (de repository is gearchiveerd) en krijgt dus geen beveiligingsupdates. Ze staat met een vaste versie en controlegetallen in het project en is alleen voor de demo bedoeld. Zie het TO (hoofdstuk 13) voor de privacyregels en de beveiliging.
 - Herkennen met de pas is gemak, geen bewijs van identiteit: het nummer van een pas is niet geheim en kan worden gekopieerd. In productie komt het pasnummer uit AFAS of het toegangssysteem van TVB, gekoppeld aan het personeelsnummer.

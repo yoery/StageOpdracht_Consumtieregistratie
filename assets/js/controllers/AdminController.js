@@ -1,10 +1,13 @@
+import { ADMIN_IDLE_LOGOUT_MS } from "../config.js";
+
 /**
  * AdminController — het beheerscherm: inloggen en uitloggen, het dashboard met de tabbladen,
  * het logboek, de export, "Alle gegevens wissen" en de knoppen in de beheerlijsten
  * (activeren, deactiveren en verwijderen).
  *
  * Verantwoordelijkheid:
- *   - inloggen (demo), uitloggen, en uitloggen bij het sluiten van het beheervenster;
+ *   - inloggen (demo), uitloggen, uitloggen bij het sluiten van het beheervenster en automatisch
+ *     uitloggen als het beheer 5 minuten niet is gebruikt (ADMIN_IDLE_LOGOUT_MS in config.js);
  *   - controleren of er een beheerder is ingelogd (requireAdmin), aan het begin van iedere
  *     beheeractie, ook in de andere controllers;
  *   - het dashboard en de tabbladen tonen, en alles opnieuw tekenen na een beheerwijziging;
@@ -18,6 +21,8 @@
  * Verbonden met:
  *   - RegistrationApp: maakt deze class, bewaart adminLoggedIn en levert persist en de labels
  *     voor het logboek;
+ *   - config.js: ADMIN_IDLE_LOGOUT_MS (na hoeveel tijd zonder invoer de beheerder wordt uitgelogd);
+ *   - FormController (via RegistrationApp): sluit open beheerformulieren bij automatisch uitloggen;
  *   - RegistrationModel en RegistrationView: de gegevens en het tekenen;
  *   - CsvExport: maakt het CSV-bestand;
  *   - FaceRecognitionDemo: vergeet de gezichten bij wissen en bij het verwijderen van een medewerker;
@@ -26,10 +31,29 @@
  *   - ModalManager (via RegistrationApp): opent en sluit het beheervenster.
  */
 export class AdminController {
+  // Zo vaak kijkt de app of de beheerder te lang niets heeft gedaan (zie startIdleWatch).
+  static IDLE_CHECK_MS = 10 * 1000;
+
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
-  constructor(app) {
+  // `clock` levert de tijd en de timer voor het automatisch uitloggen. Die kan worden meegegeven,
+  // zodat de unit tests met een nep-klok kunnen werken in plaats van vijf minuten te wachten
+  // (net als bij BadgeReader). `idleLogoutMs` is de tijd zonder invoer tot het uitloggen.
+  constructor(app, clock = AdminController.realClock(), idleLogoutMs = ADMIN_IDLE_LOGOUT_MS) {
     this.app = app;
-    this.auditLogLimit = 20; // aantal regels dat het logboek nu toont (zie loadMoreAudit)
+    this.clock = clock;
+    this.idleLogoutMs = idleLogoutMs;
+    this.auditLogLimit = 20;       // aantal regels dat het logboek nu toont (zie loadMoreAudit)
+    this.lastAdminActivity = null; // tijdstip (ms) van de laatste invoer van de ingelogde beheerder
+    this.idleTimer = null;         // timer die regelmatig logoutIfIdle aanroept
+  }
+
+  // De echte klok van de browser: Date.now() en setInterval/clearInterval.
+  static realClock() {
+    return {
+      now: () => Date.now(),
+      setInterval: (action, delay) => setInterval(action, delay),
+      clearInterval: (timer) => clearInterval(timer)
+    };
   }
 
   // Onderdelen van de app die deze class gebruikt (model, view, faceDemo, csvExport). Die komen steeds
@@ -138,6 +162,8 @@ export class AdminController {
     if (email && password) {
       this.app.hide("#loginError");
       this.app.adminLoggedIn = true;
+      // Inloggen telt als invoer: de vijf minuten tot het automatisch uitloggen beginnen nu.
+      this.lastAdminActivity = this.clock.now();
       this.showDashboard();
     } else {
       this.app.show("#loginError");
@@ -147,6 +173,7 @@ export class AdminController {
   // Knop "Uitloggen": de beheerder is uitgelogd en ziet het loginformulier weer.
   logout() {
     this.app.adminLoggedIn = false;
+    this.lastAdminActivity = null;
     this.view.$("#loginPassword").value = "";
     this.showLogin();
   }
@@ -160,9 +187,69 @@ export class AdminController {
     // Een open venster "Registratie verwijderen" hoort bij het beheer en gaat dus ook dicht.
     if (this.app.removalTarget) this.app.closeRemoveRegistration();
     this.app.adminLoggedIn = false;
+    this.lastAdminActivity = null;
     this.view.$("#loginPassword").value = "";
     this.app.hide("#adminView");
     this.app.closeModal("#adminModal");
+  }
+
+  // ------------------------------------------------------------------
+  // Automatisch uitloggen na een tijd zonder invoer
+  // ------------------------------------------------------------------
+
+  // Start de timer die iedere 10 seconden kijkt of de beheerder te lang niets heeft gedaan
+  // (logoutIfIdle). Wordt één keer aangeroepen bij het starten van de app (RegistrationApp.initialize).
+  // De timer loopt altijd, net als de timer voor de dagwissel: zonder ingelogde beheerder doet
+  // de controle niets. Zo hoeven inloggen, uitloggen en sluiten geen timer te starten of te stoppen.
+  startIdleWatch() {
+    if (this.idleTimer !== null) return;
+    this.idleTimer = this.clock.setInterval(() => this.logoutIfIdle(), AdminController.IDLE_CHECK_MS);
+  }
+
+  // Stopt de timer van startIdleWatch (bijvoorbeeld in een test).
+  stopIdleWatch() {
+    if (this.idleTimer === null) return;
+    this.clock.clearInterval(this.idleTimer);
+    this.idleTimer = null;
+  }
+
+  // Wordt aangeroepen bij iedere muisbeweging, klik, toets, aanraking of scroll (zie
+  // RegistrationApp.registerAdminEvents). Alleen als de beheerder is ingelogd telt dit als
+  // gebruik van het beheer. Het beheervenster bedekt dan de hele pagina, dus alle invoer
+  // gebeurt in het beheervenster of in een beheerformulier erboven.
+  noteAdminActivity() {
+    if (!this.app.adminLoggedIn) return;
+    this.lastAdminActivity = this.clock.now();
+  }
+
+  // Logt de beheerder uit als het beheer langer dan `idleLogoutMs` (5 minuten) niet is gebruikt.
+  // Open formulieren van het beheer (medewerker, product, bedrijf, consumptiepunt) gaan dicht
+  // zonder op te slaan, net als het venster "Registratie verwijderen" en het beheervenster zelf
+  // (closeAdmin). Daarna verschijnt een melding, zodat de beheerder weet waarom het beheer
+  // dicht is. Geeft true terug als de beheerder is uitgelogd.
+  // Is er nog geen tijdstip van invoer bekend (de beheerder is niet via het loginformulier ingelogd,
+  // zoals in de unit tests), dan begint de tijd vanaf deze controle.
+  logoutIfIdle(now = this.clock.now()) {
+    if (!this.app.adminLoggedIn) return false;
+    if (this.lastAdminActivity === null) {
+      this.lastAdminActivity = now;
+      return false;
+    }
+    if (now - this.lastAdminActivity < this.idleLogoutMs) return false;
+
+    for (const [, modalSelector, , close] of this.app.editForms()) {
+      if (!this.view.$(modalSelector).classList.contains("hidden")) close();
+    }
+    this.closeAdmin();
+    this.view.showToast(this.idleLogoutMessage(), { duration: 8000 });
+    return true;
+  }
+
+  // De melding bij automatisch uitloggen, met het aantal minuten uit config.js.
+  idleLogoutMessage() {
+    const minutes = Math.round(this.idleLogoutMs / 60000);
+    const duration = minutes === 1 ? "1 minuut" : `${minutes} minuten`;
+    return `Je bent automatisch uitgelogd omdat het beheer ${duration} niet is gebruikt.`;
   }
 
   // Toont het dashboard met alle actuele gegevens. De focus gaat naar het actieve tabblad.

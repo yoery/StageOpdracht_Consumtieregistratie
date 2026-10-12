@@ -413,7 +413,7 @@ test("P: 'Verwijderen' staat alleen bij inactieve medewerkers zonder registratie
 
 test("Q: sluiten van het admin-venster (ook met Escape of de achtergrond) logt de beheerder uit", () => {
   const { app, view } = createApp();
-  globalThis.document = { querySelectorAll: () => [] };
+  globalThis.document = { querySelectorAll: () => [], addEventListener() {} };
   app.registerAdminEvents();
   view.$("#loginEmail").value = "admin@tvb.nl";
   view.$("#loginPassword").value = "geheim";

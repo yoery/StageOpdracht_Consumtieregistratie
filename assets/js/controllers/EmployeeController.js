@@ -6,8 +6,8 @@ import { cssAttributeValue } from "../RegistrationView.js";
  *
  * Verantwoordelijkheid:
  *   - het zoekveld en het bedrijfsfilter op de beginpagina;
- *   - het productvenster openen, tekenen en sluiten, met de keuze ("+", "−" en "Zelfde als
- *     vorige keer");
+ *   - het productvenster openen, tekenen en sluiten, met de keuze ("+", "−" en, na herkenning
+ *     met de pas of de camera, "Zelfde als vorige keer");
  *   - de gekozen producten in één keer registreren (via persist) en daarna de focus goed zetten.
  *
  * De keuze zelf (selectedEmployeeId, selectedProducts en recognizedBy) staat in RegistrationApp,
@@ -153,7 +153,11 @@ export class EmployeeController {
 
   // "Zelfde als vorige keer": neemt de keuze van de vorige keer over. De medewerker
   // ziet de aantallen en bevestigt zelf met Registreren.
+  // De knop staat er alleen als de medewerker is herkend met de pas of de camera (zie
+  // RegistrationView.renderEmployeeProducts). Wordt deze methode toch aangeroepen na kiezen op
+  // naam, dan gebeurt er niets, zodat de vorige keuze van een collega niet zichtbaar wordt.
   repeatLastSelection() {
+    if (!this.app.recognizedBy) return;
     this.app.selectedProducts = { ...this.model.lastSelection(this.app.selectedEmployeeId) };
     this.renderProductWindow();
     this.focusProductWindowAction();

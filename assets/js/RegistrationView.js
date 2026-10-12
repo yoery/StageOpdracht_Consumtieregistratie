@@ -505,6 +505,8 @@ export class RegistrationView {
   // `face` beschrijft de demo gezichtsherkenning: { available, enrolled, recognized }.
   // `face.recognizedByBadge` is true als de medewerker net met de pas is herkend (BadgeReader);
   // de begroeting krijgt dan "Je bent herkend met je pas." op dezelfde plek als bij de camera.
+  // Zonder herkenning (naam aangeklikt) zijn beide false: dan geen "welkom terug" en geen
+  // keuze van de vorige keer.
   renderEmployeeProducts(employeeId, selectedProducts = {}, face = {}) {
     const employee = this.model.findEmployee(employeeId);
     if (!employee) return;
@@ -513,14 +515,21 @@ export class RegistrationView {
       `Product kiezen voor ${employee.name}`;
 
     // Persoonlijke begroeting, bijvoorbeeld "Goedemiddag Lotte, welkom terug."
-    const lastSelection = this.model.lastSelection(employeeId);
-    const returning = this.model.hasOwnRegistration(employeeId);
+    // "Welkom terug" en de keuze van de vorige keer verschijnen alleen als de medewerker is
+    // herkend met de pas of de camera. Iedereen kan op de tablet op de naam van een collega
+    // tikken; zonder deze regel zou je dan zien of die collega al eens iets heeft geregistreerd
+    // en wat hij de vorige keer nam (privacy, zie TO hoofdstuk 13). Bij kiezen op naam staat er
+    // daarom alleen een gewone begroeting.
+    const recognized = Boolean(face.recognized || face.recognizedByBadge);
+    const lastSelection = recognized ? this.model.lastSelection(employeeId) : {};
+    const returning = recognized && this.model.hasOwnRegistration(employeeId);
     let welcome = `${this.greeting(new Date())} ${employee.firstName || employee.name}${returning ? ", welkom terug." : "."}`;
     if (face.recognized) welcome += " Je bent herkend met de camera.";
     else if (face.recognizedByBadge) welcome += " Je bent herkend met je pas.";
     this.$("#employeeWelcome").textContent = welcome;
 
-    // Aanbeveling op basis van de vorige keer, met één knop om dezelfde keuze te maken.
+    // Aanbeveling op basis van de vorige keer, met één knop om dezelfde keuze te maken
+    // (alleen na herkenning met de pas of de camera, zie hierboven).
     const suggestion = this.$("#employeeSuggestion");
     const hasSuggestion = Object.keys(lastSelection).length > 0;
     suggestion.classList.toggle("hidden", !hasSuggestion);

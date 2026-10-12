@@ -435,14 +435,15 @@ test("controle 2, punt 2: na alleen een correctie van de beheerder staat er geen
   assert.equal(model.hasOwnRegistration("employee-1"), false);
 });
 
-test("controle 2, punt 2: na een eigen registratie staat er wel 'welkom terug'", () => {
+test("controle 2, punt 2: na een eigen registratie staat er wel 'welkom terug' (herkend met de pas)", () => {
   const { model } = createModel();
   model.addRegistration("employee-1", "blikje");
   const view = createProductWindowView(model);
 
-  view.renderEmployeeProducts("employee-1");
+  // Sinds versie 3.10 alleen na herkenning met de pas of de camera (zie welkom-en-gezichtsherkenning.test.js).
+  view.renderEmployeeProducts("employee-1", {}, { recognizedByBadge: true });
 
-  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test, welkom terug."));
+  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test, welkom terug. Je bent herkend met je pas."));
   assert.equal(model.hasOwnRegistration("employee-1"), true);
 });
 
@@ -655,7 +656,8 @@ test("kan de browseropslag niet worden gelezen, dan krijgt de gebruiker een waar
 test("controle 3, punt 3: na 'Zelfde als vorige keer' gaat de focus naar 'Registreren'", () => {
   const { app, model, view } = createApp();
   model.state.registrations = [registration("1", "employee-1", "blikje", "2026-09-02T12:00:00")];
-  app.openEmployeeProducts("employee-1");
+  // De knop staat er alleen na herkenning met de pas of de camera.
+  app.openEmployeeProducts("employee-1", { recognizedBy: "badge" });
 
   app.repeatLastSelection();
 
