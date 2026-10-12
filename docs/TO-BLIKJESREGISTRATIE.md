@@ -1,7 +1,7 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.8
+**Versie:** 3.9
 **Datum:** 12 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
@@ -23,6 +23,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.6 | 9 oktober 2026 | AFAS-koppeling (ontwerp) en herkennen met de pas. Ontwerp van de koppeling met AFAS Profit voor de medewerkergegevens (hoofdstuk 11) met FR-67 en AC-87 t/m AC-89. Herkennen met een USB-NFC-pasjeslezer in de demo (class `BadgeReader`) en een pas koppelen in het beheer, met FR-65, FR-66, UC-20 en AC-84 t/m AC-86. |
 | 3.7 | 9 oktober 2026 | Open punten uit de beveiligingsscan opgelost (hoofdstuk 13). Iedere beheeractie controleert in de controller zelf of er een beheerder is ingelogd (`requireAdmin`). Product-id's als `__proto__`, `constructor` of `toString` kunnen de voorraadlijst van een consumptiepunt niet meer verstoren. De camera gaat uit als de tijd voor herkennen of instellen om is. Codes en tijdstippen worden bij het laden strenger gecontroleerd. Het logboek in het databaseschema is echt alleen-toevoegen (triggers). De CI draait op Node.js 24 en de licentie van TensorFlow.js is toegevoegd. Twee bekende beperkingen erbij: registreren op naam van een ander en face-api dat niet meer wordt onderhouden. Nieuw testbestand `tests/beveiligingsscan.test.js` (534 tests in totaal). User stories US-01 t/m US-64 toegevoegd aan het eind van hoofdstuk 10. De diagrammen tonen nu ook de pasjeslezer, `BadgeReader`, UC-20 en de koppeling met AFAS. `BADGE_READER.minLength` is 4, zodat ook het kortste pasnummer dat de beheerder kan koppelen te scannen is. |
 | 3.8 | 12 oktober 2026 | Correctie `−` verbeterd: de beheerder kiest in het nieuwe venster `Registratie verwijderen` welke registratie (datum en tijd, product en aantal) weg moet, in plaats van dat altijd de laatst ingevoerde registratie verdwijnt. FR-14, UC-09, W19, US-30, AC-12 en AC-78 aangepast, AC-90 en screenshot W41 toegevoegd. In het logboek staat nu ook wanneer de verwijderde registratie was geregistreerd. De open controle van de keuzelijsten in het donkere thema is uitgevoerd (zie W39): de keuzelijsten en hun opties zijn in beide thema's goed leesbaar (licht 21:1, donker 15,7:1). Daarbij bleek de placeholdertekst in het donkere thema te weinig contrast te hebben (3,4:1). Die gebruikt nu `--muted` (6,9:1). Ook de grijze uitleg- en bijschrifttekst (`--muted`) haalde in het lichte thema de norm niet (3,9:1) en is iets donkerder gemaakt in dezelfde tint (`#5a6c71`, 5,5:1). W39 is opnieuw gemaakt en de twee bekende beperkingen over deze punten zijn vervallen. 547 tests in totaal. Nieuw zijn 9 browsertests (`tests/e2e/`) die de echte pagina in headless Edge of Chrome testen, zonder npm-pakketten, en die in GitHub Actions na de unit tests draaien. De melding "… bestaat niet meer. Er is niets opgeslagen." staat in de app nu precies zoals in dit document. De controller is opgesplitst zonder gedragsverandering: `RegistrationApp` (eerst 2414 regels, nu 593) maakt en koppelt acht kleinere classes met elk één taak (`ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController` en `FormController`), en alle methodes blijven via `RegistrationApp` bereikbaar. Hoofdstuk 6 (met het klassendiagram en het architectuurdiagram), de use cases, hoofdstuk 13 en hoofdstuk 16 zijn daarop aangepast, en de bekende beperking "`RegistrationApp` is een grote klasse" is vervallen. De acht onderdelen staan in de map `assets/js/controllers/`. Bestandsnamen consequenter gemaakt: `csvExport.js` heet nu `CsvExport.js` (zoals de andere classes) en de testbestanden hebben Nederlandse namen die zeggen wat ze testen (`thema`, `welkom-en-gezichtsherkenning`, `pasjeslezer`, `codecontrole4-model`, `codecontrole4-ui` en `view-en-controller`). |
+| 3.9 | 12 oktober 2026 | Hoofdstuk 9: de vijftien low-fidelity wireframes (L01 t/m L15) opnieuw gemaakt in een echte schetsstijl, met dunne zwarte lijnen op wit, een rechthoek met een kruis voor afbeeldingen, iconen en het logo, een cirkel met een kruis voor avatars en krabbellijnen in plaats van tekst. De eerdere versie leek te veel op een mid-fidelity wireframe. De uitleg over hoe ze zijn gemaakt en de legenda zijn aangepast. Twee iteraties (ontwerpvarianten) toegevoegd bij de mid-fidelity wireframes (beginpagina met een alfabetische lijst en de zoekbalk onderaan, productvenster met een aantalveld) en twee bij de high-fidelity wireframe (productvenster met tegels en registreren per tegel, beginpagina met de totalen bovenaan en een raster met avatars), elk met wat er anders is, de afweging en het besluit. De website zelf, de mid-fidelity wireframes M01 t/m M15 en de screenshots W01 t/m W41 zijn niet veranderd. |
 
 ## Inhoudsopgave
 
@@ -912,30 +913,34 @@ Een wireframe kan op drie niveaus worden uitgewerkt:
 
 | Niveau | Wat het laat zien | Waar in dit document |
 |---|---|---|
-| Low-fidelity | Alleen de indeling: vlakken, kaders, knoppen en waar tekst komt. Geen kleuren en (bijna) geen tekst. | [Low-fidelity wireframes](#low-fidelity-wireframes) |
-| Mid-fidelity | De indeling met de echte teksten, labels en volgorde, in grijstinten en met één lettertype. Nog zonder huisstijl. | [Mid-fidelity wireframes](#mid-fidelity-wireframes) |
-| High-fidelity | Het eindontwerp met de kleuren, lettertypes, iconen en afbeeldingen van TVB. | [Wireframes](#wireframes) (de screenshots van de website) |
+| Low-fidelity | Alleen de indeling, als schets: dunne zwarte lijnen op wit, kaders voor vlakken, knoppen en velden, een kader met een kruis voor afbeeldingen en iconen en krabbellijnen waar tekst komt. Geen kleuren en bijna geen echte tekst. | [Low-fidelity wireframes](#low-fidelity-wireframes) |
+| Mid-fidelity | De indeling met de echte teksten, labels en volgorde, in grijstinten en met één lettertype. Nog zonder huisstijl. Met twee iteraties (ontwerpvarianten). | [Mid-fidelity wireframes](#mid-fidelity-wireframes) |
+| High-fidelity | Het eindontwerp met de kleuren, lettertypes, iconen en afbeeldingen van TVB. Met twee iteraties (ontwerpvarianten). | [High-fidelity wireframe](#high-fidelity-wireframe) en [Wireframes](#wireframes) (de screenshots van de website) |
 
-**Hoe de low- en mid-fidelity wireframes zijn gemaakt.** Aan het begin van het project zijn de twee schetsen hieronder gemaakt ("Eerste schets" en "Eerste uitwerking"). De website is daarna flink veranderd, dus die schetsen laten niet meer zien hoe de website nu is. Daarom zijn de low- en mid-fidelity wireframes in dit hoofdstuk opnieuw gemaakt **vanuit de huidige website**, zodat ze precies overeenkomen met de echte schermen. Dat is gedaan met Microsoft Edge zonder venster (headless), met dezelfde demogegevens als de high-fidelity screenshots (ingevoerd via de website zelf). De meeste zijn gemaakt op 1 oktober 2026. Een paar zijn later op dezelfde manier en met dezelfde stappen opnieuw gemaakt, omdat de website op die plek was veranderd:
+**Hoe de low- en mid-fidelity wireframes zijn gemaakt.** Aan het begin van het project zijn de twee schetsen hieronder gemaakt ("Eerste schets" en "Eerste uitwerking"). De website is daarna flink veranderd, dus die schetsen laten niet meer zien hoe de website nu is. Daarom zijn de low- en mid-fidelity wireframes in dit hoofdstuk opnieuw gemaakt **vanuit de huidige website**, zodat ze precies overeenkomen met de echte schermen. Dat is gedaan met Microsoft Edge zonder venster (headless), met dezelfde demogegevens als de high-fidelity screenshots (ingevoerd via de website zelf).
 
-- L07 en M07 (Registraties) op 2 oktober 2026, omdat het datumveld `Datum bij toevoegen (+)` is bijgekomen.
-- L15 en M15 (Logboek) op 2 oktober 2026, omdat onder het logboek de knop `Alle gegevens wissen` is bijgekomen.
-- L12 en M12 (Bedrijven) op 6 oktober 2026, omdat er nu "1 medewerker" staat in plaats van "1 medewerkers".
+- **Mid-fidelity:** de meeste zijn gemaakt op 1 oktober 2026. Een paar zijn later op dezelfde manier en met dezelfde stappen opnieuw gemaakt, omdat de website op die plek was veranderd: M07 (Registraties) en M15 (Logboek) op 2 oktober 2026, omdat het datumveld `Datum bij toevoegen (+)` en de knop `Alle gegevens wissen` zijn bijgekomen, en M12 (Bedrijven) op 6 oktober 2026, omdat er nu "1 medewerker" staat in plaats van "1 medewerkers".
+- **Low-fidelity:** alle vijftien zijn op 12 oktober 2026 opnieuw gemaakt in een echte schetsstijl. De eerdere versie (van 1, 2 en 6 oktober) had zwarte kaders met grijze balken en de meeste echte teksten, en leek daardoor te veel op een mid-fidelity wireframe. De schermen, de indeling en de afmetingen zijn gelijk gebleven.
 
-Een klein script verandert alleen de weergave van de pagina. De indeling, de plaats en de grootte van alles blijven gelijk. Dit script en de hulpscripts voor de screenshots staan niet in de repository. De afbeeldingen zijn dus niet met één opdracht opnieuw te maken. Het script verandert per niveau het volgende:
+Een klein script verandert alleen de weergave van de pagina. De indeling, de plaats en de grootte van alles blijven gelijk. Dit script en de hulpscripts voor de screenshots staan niet in de repository. De afbeeldingen zijn dus niet met één opdracht opnieuw te maken. Het script werkt per niveau zo:
 
-- **Low-fidelity:** alle kleuren en schaduwen zijn weg, ieder vlak, kaart, knop en invoerveld is een zwart kader op wit. Koppen, knoppen, tabbladen, labels van velden, kolomkoppen, links en de tekst naast een vinkje houden hun tekst. De meeste andere tekst (zoals namen, uitleg en details) is een grijze balk. Iconen zijn kleine grijze blokjes en afbeeldingen en het camerabeeld zijn een kader met een kruis.
+- **Low-fidelity:** het script meet in de echte pagina de plaats en grootte van ieder vlak, iedere knop, ieder veld, ieder icoon en ieder woord. Daarna tekent het de hele pagina opnieuw als schets (in SVG) over de pagina heen, met dunne zwarte lijnen op wit en zonder kleuren of schaduwen. De lijnen zijn met opzet een klein beetje ongelijk, zodat het eruitziet als een schets en niet als een af scherm. Lopende tekst, namen, labels en details zijn krabbellijnen: golvende lijnen met de lengte van het woord (een dikkere lijn is een grotere of vette tekst, zoals een kop). Alleen korte koppen, tabbladen, knopteksten en getallen staan er als echte tekst in, in een handschriftachtig lettertype (Segoe Print), omdat het scherm zonder die woorden niet te begrijpen is. Ieder plaatje, icoon en logo (ook het TVB-logo) is een rechthoek met een kruis van hoek tot hoek, een avatar is een cirkel met een kruis. Alleen de tekens `+`, `−` en `×` op de ronde knoppen en de sluitknop en de pijl van een keuzelijst zijn getekend, omdat die knoppen zonder hun teken geen betekenis hebben.
 - **Mid-fidelity:** de pagina staat in grijstinten, alles gebruikt één lettertype (Arial) en schaduwen en kleurverlopen zijn weg. De banner is een grijs vlak. De lichte cirkels die als versiering in de banner staan, blijven zichtbaar. Alle echte teksten staan erin. Het camerabeeld is een grijs vlak met de tekst "Camerabeeld" en het ovale kader.
 
-Bij schermen met een venster (zoals het productvenster of het beheer) is de pagina erachter ook te zien, net als op de website: gedimd achter het venster.
+Bij schermen met een venster (zoals het productvenster of het beheer) is de pagina erachter ook te zien, net als op de website. In de low-fidelity wireframes is die pagina met lichtgrijze lijnen getekend, in de mid-fidelity wireframes is hij gedimd.
 
 | Teken in de low-fidelity wireframe | Betekenis |
 |---|---|
-| Zwart kader | Vlak, kaart, knop, invoerveld of keuzelijst |
-| Grijze balk | Tekst zoals namen, uitleg en details (de lengte van de balk is de lengte van de tekst) |
-| Kader met een kruis | Afbeelding of camerabeeld |
-| Klein grijs blok | Icoon |
-| Ingebouwd element van de browser | De datumkiezer, vinkjes en de slider van het thema worden door de browser zelf getekend. Ze zijn niet omgezet naar een kader en blijven zichtbaar zoals in de echte website. |
+| Dun zwart kader | Vlak, kaart, knop, invoerveld of keuzelijst (een keuzelijst heeft rechts een pijltje) |
+| Dikker kader | De hoofdknop van het scherm, zoals `Registreren (3)` |
+| Gestippelde cirkel met een licht teken | Uitgeschakelde knop, zoals de `−` bij een product dat nog op 0 staat |
+| Krabbellijn (golvende lijn) | Tekst zoals namen, uitleg, labels en details. De lengte van de lijn is de lengte van het woord, een dikkere lijn is een grotere of vette tekst |
+| Woord in handschrift | Korte kop, tabblad, knoptekst of getal die nodig is om het scherm te begrijpen |
+| Rechthoek met een kruis | Afbeelding, icoon, logo of camerabeeld |
+| Cirkel met een kruis | Avatar van een medewerker of van de beheerder |
+| Vierkantje, met of zonder vinkje | Vinkje (aan of uit) |
+| Gestippeld ovaal | Kader voor het gezicht bij de gezichtsherkenning |
+| Lichtgrijze lijnen | De pagina achter een open venster |
 
 ### Low-fidelity wireframes
 
@@ -960,7 +965,7 @@ Bij deze eerste schets ging het vooral om de grote indeling van het scherm: een 
 
 ![L01 – Beginpagina op een tablet (low-fidelity)](wireframes/lofi-01-beginpagina-tablet.jpg)
 
-Bovenaan de bovenbalk met links het logo en de naam, en rechts de themakeuze (slider en twee knoppen), de status en de admin-knop. Daaronder de banner met de vraag als grote kop en rechts een afbeelding. Daaronder één grote kaart met een kop, een teller, een brede knop voor de camera, het zoekveld, het bedrijfsfilter en de lijst met medewerkers onder een bedrijfsnaam: per medewerker een avatar met twee regels tekst. Uitgewerkt in [W01](#w01--beginpagina-op-een-tablet).
+Bovenaan de bovenbalk met links het logo (rechthoek met kruis) en de naam, en rechts de themakeuze (slider en twee knoppen), de status en de admin-knop. Daaronder de banner met de vraag als grote kop (dikke krabbellijnen) en rechts een afbeelding. Daaronder één grote kaart met een kop, een teller, een brede knop voor de camera, het zoekveld, het bedrijfsfilter en de lijst met medewerkers onder een bedrijfsnaam: per medewerker een avatar (cirkel met kruis) met twee regels tekst. Uitgewerkt in [W01](#w01--beginpagina-op-een-tablet).
 
 #### L02 – Beginpagina op een groot scherm
 
@@ -978,7 +983,7 @@ Alles staat in één kolom. In de bovenbalk blijven alleen het logo, de themakeu
 
 ![L04 – Productvenster (low-fidelity)](wireframes/lofi-04-productvenster.jpg)
 
-Een venster boven de beginpagina met bovenaan de kop met de naam van de medewerker en een sluitknop. Daaronder een vak met het voorstel en de knop `Zelfde als vorige keer`, een korte uitleg en een lijst met even grote productrijen: links naam en prijs, rechts een ronde `−`-knop, het aantal en een ronde `+`-knop. Onderaan links de link voor de gezichtsherkenning en rechts de knop `Registreren (3)`. Uitgewerkt in [W07](#w07--productvenster-eerste-keer) tot en met [W10](#w10--productvenster-met-zelfde-als-vorige-keer).
+Een venster boven de beginpagina met bovenaan de kop met de naam van de medewerker en een sluitknop. Daaronder een vak met het voorstel en de knop `Zelfde als vorige keer`, een korte uitleg en een lijst met even grote productrijen: links naam en prijs, rechts een ronde `−`-knop, het aantal en een ronde `+`-knop. Bij een product dat op 0 staat, is de `−`-knop gestippeld (uitgeschakeld). Onderaan links de link voor de gezichtsherkenning en rechts de knop `Registreren (3)`, met een dikker kader omdat het de hoofdknop is. Uitgewerkt in [W07](#w07--productvenster-eerste-keer) tot en met [W10](#w10--productvenster-met-zelfde-als-vorige-keer).
 
 #### L05 – Gezichtsherkenning instellen (demo)
 
@@ -1044,7 +1049,7 @@ Bovenaan een blok `Bijbestellen (3)` met per regel een label, een link naar het 
 
 ![L15 – Beheer: Logboek (low-fidelity)](wireframes/lofi-15-logboek.jpg)
 
-Een tabel met drie kolommen: actie, details en datum en tijd. Daaronder twee regels tekst (grijze balken) en één knop `Alle gegevens wissen`, los van de tabel. Uitgewerkt in [W33](#w33--beheer-logboek).
+Een tabel met drie kolommen: actie, details en datum en tijd. Daaronder twee regels tekst (krabbellijnen) en één knop `Alle gegevens wissen`, los van de tabel. Uitgewerkt in [W33](#w33--beheer-logboek).
 
 ### Mid-fidelity wireframes
 
@@ -1158,6 +1163,41 @@ De bijbestellijst met de labels `Bijbestellen` en `Op` en de teksten (bijvoorbee
 
 Het logboek met de echte regels, zoals "Consumptiepunt toegevoegd" en "Voorraad geteld", met de details en de datum en tijd (hier "02 okt, 14:35"). Onder de tabel staat de uitleg "Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug." en de knop `Alle gegevens wissen`. Zonder kleur lijkt die knop op een gewone knop. In het eindontwerp is hij rood. Uitgewerkt in [W33](#w33--beheer-logboek).
 
+#### Iteraties
+
+Een ontwerp ontstaat niet in één keer. Voor de twee schermen die een medewerker het vaakst gebruikt, de beginpagina en het productvenster, zijn naast het definitieve ontwerp (M01 en M04) andere indelingen uitgewerkt en afgewogen. Hieronder staan twee van die ontwerpvarianten als mid-fidelity wireframe. Per iteratie staat wat er anders is dan het definitieve ontwerp, wat het voordeel en het nadeel is en waarom het definitieve ontwerp is gekozen. De codes H1 tot en met H10 zijn de heuristieken van Nielsen (zie [De tien heuristieken van Nielsen](#de-tien-heuristieken-van-nielsen)).
+
+**Hoe de iteraties zijn gemaakt.** De afbeeldingen zijn op 12 oktober 2026 gemaakt, op dezelfde manier als de andere mid-fidelity wireframes: de echte website is geladen in Microsoft Edge zonder venster, met dezelfde demogegevens. Daarna is de variant alleen in de geladen pagina nagebouwd door tijdelijk extra CSS en HTML toe te voegen. De bestanden van de website zelf zijn niet veranderd. Tot slot heeft hetzelfde script als bij M01 tot en met M15 de pagina in grijstinten en met één lettertype gezet. Omdat de afbeeldingen 's ochtends zijn gemaakt, staat in iteratie 2 "Goedemorgen" in plaats van "Goedemiddag".
+
+#### Mid-fidelity iteratie 1 – Beginpagina met een alfabetische lijst en de zoekbalk onderaan
+
+![Mid-fidelity iteratie 1 – Beginpagina met een alfabetische lijst en de zoekbalk onderaan](wireframes/midfi-iteratie-1-beginpagina-tablet.jpg)
+
+**Wat is anders.** De medewerkers staan niet per bedrijf, maar in één lijst op alfabet, met een letter boven iedere groep (B, D, E, L, M, enzovoort). Rechts naast de lijst staat een index van A tot en met Z, waarin de letters met medewerkers vet zijn. Het bedrijfsfilter is weg. Het zoekveld staat niet boven de lijst, maar vast onderaan het scherm, zodat het altijd in beeld is. De banner, de kop en de knop voor de camera zijn gelijk aan M01.
+
+**Afweging.** Een alfabet is een ordening die iedereen kent (H2), en met de index kan een medewerker in een lange lijst direct naar de eigen beginletter springen. Een zoekveld onderaan zit op een staande tablet dicht bij de hand en blijft zichtbaar, ook als de lijst scrollt. Daar staan een paar nadelen tegenover:
+
+- De lijst is gesorteerd op voornaam. Wie op achternaam zoekt (bijvoorbeeld "van Dijk"), vindt zichzelf niet onder de verwachte letter. Dat vraagt herinneren in plaats van herkennen (H6).
+- De letters in de index zijn ongeveer 15 pixels hoog. Dat is veel kleiner dan de 44 × 44 pixels die de website voor aanraakvlakken aanhoudt (UI-principe toegankelijkheid, zie W01).
+- Zonder groepering per bedrijf en zonder bedrijfsfilter voldoet het ontwerp niet aan FR-31. Bij meerdere bedrijven op één tablet staan collega's van verschillende bedrijven door elkaar.
+- Het zoekveld staat los van de lijst die het filtert, aan de andere kant van het scherm (UI-principe groeperen). Op de meeste websites en apps staat het zoekveld boven de lijst (H4). Bovendien schuift het schermtoetsenbord van een tablet onderaan omhoog, precies waar het zoekveld staat.
+
+**Besluit.** Gekozen is voor M01: de medewerkers per bedrijf (FR-31) met het bedrijfsfilter, en het zoekveld direct boven de lijst (FR-02). Met zoeken op voor- of achternaam is een naam ook in een lange lijst na een paar letters te vinden, en zoeken werkt ook met het toetsenbord (Ctrl K, H7). Daarmee is een index niet nodig.
+
+#### Mid-fidelity iteratie 2 – Productvenster met een aantalveld per product
+
+![Mid-fidelity iteratie 2 – Productvenster met een aantalveld per product](wireframes/midfi-iteratie-2-productvenster.jpg)
+
+**Wat is anders.** In plaats van de knoppen `−` en `+` met het aantal ertussen heeft ieder product een invoerveld `Aantal`, waarin de medewerker het aantal typt. De rest is gelijk aan M04: het voorstel `Zelfde als vorige keer`, de uitleg (aangepast aan het invoerveld) en één knop `Registreren (3)` om alles tegelijk op te slaan.
+
+**Afweging.** Een invoerveld is compact en een groter aantal (bijvoorbeeld 6) is in één keer te typen. Maar op een tablet zonder toetsenbord heeft dit ontwerp duidelijke nadelen:
+
+- Voor één product moet de medewerker in het veld tikken, de 0 weghalen, een cijfer typen en het schermtoetsenbord sluiten. Met de `+`-knop is dat één tik. Het meest voorkomende geval (één blikje) kost met het invoerveld dus meer handelingen dan de 3 tikken van NFR-01 (naam, `+`, `Registreren`).
+- Het schermtoetsenbord bedekt een groot deel van het venster, ook de knop `Registreren`.
+- In een vrij veld kan alles worden ingevuld: een negatief getal, een kommagetal, niets of per ongeluk 100. Dat vraagt extra controles en foutmeldingen achteraf, terwijl de knoppen zulke fouten vooraf onmogelijk maken (H5).
+
+**Besluit.** Gekozen is voor M04 met de ronde knoppen `−` en `+` van 44 × 44 pixels (FR-03 en FR-47). Het aantal staat groot tussen de knoppen (H1), de `−`-knop gaat niet onder 0 (H5) en een verkeerde tik is met `−` direct te herstellen (H3). Het gaat om losse consumpties (een blikje, een ei, een sneetje brood), waarbij grote aantallen per keer niet voor de hand liggen. Het snel typen van grote aantallen weegt daarom niet op tegen de nadelen.
+
 ### High-fidelity wireframe
 
 De high-fidelity versie is de uiteindelijke website. Deze heeft:
@@ -1172,6 +1212,43 @@ De high-fidelity versie is de uiteindelijke website. Deze heeft:
 - een aparte admin-modal.
 
 Van ieder scherm van de high-fidelity versie staat een screenshot in de paragraaf [Wireframes](#wireframes) hieronder.
+
+#### Iteraties
+
+Ook in de huisstijl zijn voor de beginpagina en het productvenster andere indelingen uitgewerkt en afgewogen tegen het definitieve ontwerp (W01 en W10). Hieronder staan twee van die ontwerpvarianten. Ze gebruiken dezelfde kleuren, lettertypes (DM Sans en Space Grotesk), iconen en onderdelen als de website, zodat alleen de ontwerpkeuze verschilt. Per iteratie staat wat er anders is, wat het voordeel en het nadeel is en waarom het definitieve ontwerp is gekozen. De codes H1 tot en met H10 zijn de heuristieken van Nielsen (zie [De tien heuristieken van Nielsen](#de-tien-heuristieken-van-nielsen)), de UI-principes staan in [Gebruikte UI-principes](#gebruikte-ui-principes).
+
+**Hoe de iteraties zijn gemaakt.** De afbeeldingen zijn op 12 oktober 2026 gemaakt met de echte website in Microsoft Edge zonder venster, op een staande tablet (810 × 1080 pixels) en met dezelfde demogegevens als de screenshots W01 tot en met W41. De variant is alleen in de geladen pagina nagebouwd door tijdelijk extra CSS en HTML toe te voegen, met de bestaande stylesheet en onderdelen (kaarten, knoppen, avatars, iconen en statistiektegels). De bestanden van de website zelf zijn niet veranderd. Het zijn dus geen screenshots van een scherm dat in de website zit. Omdat ze 's ochtends zijn gemaakt, staat in iteratie 1 "Goedemorgen".
+
+#### High-fidelity iteratie 1 – Productvenster met tegels en registreren per tegel
+
+![High-fidelity iteratie 1 – Productvenster met tegels en registreren per tegel](wireframes/hifi-iteratie-1-productvenster.jpg)
+
+**Wat is anders.** Het venster is breder en de producten staan als tegels in drie kolommen. Iedere tegel heeft bovenaan een plek voor een productfoto (hier een icoon in een lichtgroen vlak, omdat er geen productfoto's zijn), daaronder de naam en de prijs en onderaan een eigen groene knop `Registreer`. Een tik op die knop slaat het product meteen op. De tellers met `−` en `+` en de knop `Registreren` onderaan zijn weg, en de uitleg zegt "Tik op Registreer bij een product. Het product wordt meteen opgeslagen."
+
+**Afweging.** Een foto maakt een product sneller herkenbaar dan alleen een naam (H6) en sluit aan bij hoe het product er in de kantine uitziet (H2). Voor één product zijn maar twee tikken nodig (naam en `Registreer`), één minder dan in NFR-01. Daar staan deze nadelen tegenover:
+
+- Er zijn geen productfoto's. Het datamodel heeft per product alleen een naam en een prijs en geen afbeelding (zie [Tabel Producten](#tabel-producten)). Foto's vragen een extra veld, uploaden en opslaan in het beheer, en de beheerder moet ze bij ieder nieuw product bijhouden. Dat valt buiten de scope van de demo.
+- Er staan acht groene knoppen in één venster. Groen betekent in de website "de hoofdactie" (UI-principe kleur met betekenis). Met acht hoofdacties valt geen enkele knop meer op en is de visuele hiërarchie weg (H8).
+- Wie meerdere producten pakt, zoals 2× Blikje en 1× Ei, tikt drie keer op `Registreer` en krijgt drie aparte registraties en meldingen in plaats van één.
+- Iedere tik is meteen opgeslagen. Een verkeerde tik kan de medewerker niet zelf herstellen, omdat een medewerker geen registratie mag verlagen (FR-04). Daarvoor is een correctie door de beheerder nodig (H3 en H5).
+- `Zelfde als vorige keer` kan de keuze niet meer klaarzetten om eerst te controleren, zoals FR-50 vraagt, want er is geen keuze meer die nog niet is opgeslagen.
+
+**Besluit.** Gekozen is voor het productvenster van W07 tot en met W10: een lijst met even grote rijen, per product `−` en `+`, en één groene knop `Registreren (aantal)` die alles in één keer opslaat (FR-03, FR-47 en FR-48). De medewerker kiest eerst en bevestigt daarna één keer, en kan tot dat moment alles nog herstellen met `−` (H3 en H5). Zo blijft er één duidelijke hoofdactie in het venster. Een kleine productfoto in de rij kan later worden toegevoegd zonder deze werkwijze te veranderen.
+
+#### High-fidelity iteratie 2 – Beginpagina met de totalen bovenaan en een raster met avatars
+
+![High-fidelity iteratie 2 – Beginpagina met de totalen bovenaan en een raster met avatars](wireframes/hifi-iteratie-2-beginpagina-tablet.jpg)
+
+**Wat is anders.** De twee tegels met de totalen (`Vandaag geregistreerd` en `Deze maand`) staan direct onder de banner, boven de kaart met medewerkers. De tipkaart `Goed bezig!` is weg. De medewerkers staan niet in een lijst, maar in een raster van vier kolommen met per medewerker een grote avatar met initialen en de naam eronder. De tekst "Klik om een product te kiezen" is weggelaten.
+
+**Afweging.** De totalen zijn meteen te zien (H1) en het raster ziet er beeldend uit, met grote aanraakvlakken en vier namen naast elkaar. Daar staan deze nadelen tegenover:
+
+- De totalen zijn voor de taak van de medewerker (registreren) niet nodig en zijn een Could-eis (FR-62). Bovenaan duwen ze de lijst met namen ongeveer 130 pixels omlaag, terwijl de staande tablet in W01 juist een compactere banner heeft zodat de lijst zo hoog mogelijk begint (H8).
+- Namen in smalle, gecentreerde kolommen zijn lastiger achter elkaar te lezen dan een lijst die links is uitgelijnd (UI-principe uitlijning). Een lange naam, bijvoorbeeld met een tussenvoegsel, past niet altijd in een kolom van ongeveer 170 pixels en loopt dan over twee regels. Op een telefoon past het raster van vier kolommen helemaal niet, dus daar is toch een andere indeling nodig (UI-principe responsief ontwerp).
+- De avatar helpt nauwelijks bij het vinden van de eigen naam: het zijn initialen en een kleur, geen foto, en twee medewerkers kunnen dezelfde initialen hebben. De naam blijft dus het belangrijkste kenmerk.
+- Zonder "Klik om een product te kiezen" is minder goed te zien dat een tegel aan te tikken is (UI-principe affordance).
+
+**Besluit.** Gekozen is voor W01: een lijst met per medewerker een avatar, de naam en "Klik om een product te kiezen", gegroepeerd per bedrijf. Op een staande tablet staan de totalen onder de lijst (W06), op een groot scherm in een eigen kolom rechts (W02). De medewerker ziet zo eerst wat nodig is om te registreren, en de totalen blijven beschikbaar.
 
 ### Ontwerpkeuzes en Nielsen-heuristieken
 
