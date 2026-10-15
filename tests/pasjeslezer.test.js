@@ -284,7 +284,7 @@ test("de pas van een inactieve medewerker geeft dezelfde melding als een onbeken
   assert.deepEqual(toastTexts(view), [UNKNOWN_BADGE]);
 });
 
-test("staat er een venster open, dan herkent de lezer niemand maar houdt hij de Enter van de scan tegen", () => {
+test("staat er een ander venster open, dan herkent de lezer niemand, volgt een melding en houdt hij de Enter van de scan tegen", () => {
   const { app, view, clock, reader, openModals } = createApp();
   openModals.push(view.$("#adminModal"));
 
@@ -292,7 +292,8 @@ test("staat er een venster open, dan herkent de lezer niemand maar houdt hij de 
   clock.advance(1000);
 
   assert.equal(app.selectedEmployeeId, null);
-  assert.deepEqual(view.toasts, []);
+  // UX-review oktober 2026, punt 2: eerst gebeurde er niets en wist de medewerker niet waarom.
+  assert.deepEqual(toastTexts(view), ["Sluit eerst het open venster om je pas te gebruiken."]);
   assert.equal(enter.prevented, true, "de Enter van de lezer drukt geen knop in het venster in");
   assert.equal(reader.buffer, "");
 });

@@ -52,6 +52,9 @@ const otherTabStore = (state, loadProblem = null) => ({
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
 const calledNames = (view) => view.calls.map(([name]) => name);
 
+// Het zoekveld en het bedrijfsfilter, die na registreren worden leeggemaakt (resetEmployeeSearch).
+const SEARCH_SELECTORS = ["#employeeSearch", "#employeeCompanyFilter", "#companyFilterOptions", "[data-toggle-company-filter]"];
+
 // ------------------------------------------------------------------
 // Bug 1: prijs boven 1000 euro
 // ------------------------------------------------------------------
@@ -150,7 +153,7 @@ test("na registreren gaat het venster eerst dicht en krijgt de nieuwe rij van de
   const { model, point } = createModel();
   const employee = addEmployee(model, { id: 'mede"werker', companyId: point.companyId, pointId: point.id });
   const rowSelector = '[data-open-employee="mede\\"werker"]';
-  const { app, view } = createApp(["#employeeProductsModal", rowSelector], { model });
+  const { app, view } = createApp(["#employeeProductsModal", rowSelector, ...SEARCH_SELECTORS], { model });
 
   const oldRow = createFakeElement({ isConnected: true });
   globalThis.document = { activeElement: oldRow };
@@ -173,7 +176,7 @@ test("na registreren gaat het venster eerst dicht en krijgt de nieuwe rij van de
 
 test("staat de knop waarmee het venster werd geopend er nog, dan houdt die de focus na registreren", () => {
   const rowSelector = '[data-open-employee="employee-1"]';
-  const { app, view } = createApp(["#employeeProductsModal", rowSelector]);
+  const { app, view } = createApp(["#employeeProductsModal", rowSelector, ...SEARCH_SELECTORS]);
   const faceButton = createFakeElement({ isConnected: true });
   globalThis.document = { activeElement: faceButton };
   app.openEmployeeProducts("employee-1");

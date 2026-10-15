@@ -7,8 +7,9 @@ import {
 import { createId } from "./ids.js";
 
 // Voorraadstatus van één product op een consumptiepunt, met de tekst die op het scherm staat.
+// "Leeg" (eerder "Op"): "Op" leek te veel op "Op voorraad" en werd daardoor verkeerd gelezen.
 export const STOCK_STATUS = {
-  out: "Op",
+  out: "Leeg",
   low: "Bijbestellen",
   ok: "Op voorraad"
 };

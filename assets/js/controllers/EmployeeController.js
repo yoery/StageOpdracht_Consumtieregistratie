@@ -1,13 +1,17 @@
 import { cssAttributeValue } from "../RegistrationView.js";
+import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS } from "../config.js";
 
 /**
  * EmployeeController — wat een medewerker op de beginpagina doet: zoeken, filteren op bedrijf,
  * producten kiezen in het persoonlijke productvenster en registreren.
  *
  * Verantwoordelijkheid:
- *   - het zoekveld en het bedrijfsfilter op de beginpagina;
+ *   - het zoekveld en het bedrijfsfilter op de beginpagina, en die weer leegmaken na registreren
+ *     of na automatisch sluiten (resetEmployeeSearch);
  *   - het productvenster openen, tekenen en sluiten, met de keuze ("+", "−" en, na herkenning
  *     met de pas of de camera, "Zelfde als vorige keer");
+ *   - het productvenster vanzelf sluiten als het 75 seconden niet is gebruikt
+ *     (EMPLOYEE_IDLE_CLOSE_MS in config.js), met in de laatste 10 seconden een waarschuwing;
  *   - de gekozen producten in één keer registreren (via persist) en daarna de focus goed zetten.
  *
  * De keuze zelf (selectedEmployeeId, selectedProducts en recognizedBy) staat in RegistrationApp,
@@ -16,6 +20,7 @@ import { cssAttributeValue } from "../RegistrationView.js";
  *
  * Verbonden met:
  *   - RegistrationApp: maakt deze class, bewaart de keuze en levert persist en employeeLabel;
+ *   - config.js: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS (automatisch sluiten);
  *   - RegistrationModel: de producten van een medewerker, de vorige keuze en addRegistration;
  *   - RegistrationView: tekent het productvenster en de lijst met medewerkers;
  *   - ModalManager (via RegistrationApp): onthoudt en herstelt de focus bij het productvenster;
@@ -26,10 +31,32 @@ export class EmployeeController {
   // medewerkerrij niet (zie isGhostRowClick).
   static GHOST_CLICK_MS = 500;
 
+  // Zo vaak kijkt de app of het productvenster te lang niet is gebruikt (zie startProductIdleWatch).
+  // Iedere seconde, zodat de waarschuwing op tijd verschijnt.
+  static PRODUCT_IDLE_CHECK_MS = 1000;
+
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
-  constructor(app) {
+  // `clock` levert de tijd en de timer voor het automatisch sluiten van het productvenster (dezelfde
+  // klok als AdminController). De unit tests geven een nep-klok mee, zodat ze niet 75 seconden
+  // hoeven te wachten. `idleCloseMs` en `idleWarningMs` komen uit config.js.
+  constructor(app, clock = EmployeeController.realClock(), idleCloseMs = EMPLOYEE_IDLE_CLOSE_MS, idleWarningMs = EMPLOYEE_IDLE_WARNING_MS) {
     this.app = app;
-    this.productWindowClosedAt = 0; // tijdstip (ms) waarop het productvenster het laatst sloot
+    this.clock = clock;
+    this.idleCloseMs = idleCloseMs;
+    this.idleWarningMs = idleWarningMs;
+    this.productWindowClosedAt = 0;   // tijdstip (ms) waarop het productvenster het laatst sloot
+    this.lastProductActivity = null;  // tijdstip (ms) van de laatste invoer in het open productvenster
+    this.productIdleTimer = null;     // timer die regelmatig closeProductWindowIfIdle aanroept
+    this.idleWarningShown = false;    // staat de regel "Venster sluit zo." nu in het venster?
+  }
+
+  // De echte klok van de browser: Date.now() en setInterval/clearInterval (zoals AdminController).
+  static realClock() {
+    return {
+      now: () => Date.now(),
+      setInterval: (action, delay) => setInterval(action, delay),
+      clearInterval: (timer) => clearInterval(timer)
+    };
   }
 
   // Onderdelen van de app die deze class gebruikt (model, view, faceDemo). Die komen steeds
@@ -58,6 +85,26 @@ export class EmployeeController {
     delete this.view.$("#employeeCompanyFilter").dataset.value;
     this.view.renderAll();
     search.focus();
+  }
+
+  // Maakt het zoekveld en het bedrijfsfilter leeg en zet de lijst weer bovenaan in beeld. Wordt
+  // gebruikt als een medewerker klaar is: na een geslaagde registratie, als het productvenster
+  // vanzelf sluit en als een pas het open venster van een collega vervangt. Zo begint de volgende
+  // gebruiker op de gedeelde tablet met de volledige lijst, en blijft de zoekterm van de vorige
+  // gebruiker (een deel van zijn naam) niet staan.
+  // Het filter krijgt weer "Alle bedrijven": de tekst, de gekozen waarde (dataset.value) en
+  // aria-selected op de opties (populateCompanyFilter tekent die opnieuw via renderAll), en de
+  // keuzelijst gaat dicht (aria-expanded="false"). De focus wordt hier niet verplaatst: dat doet
+  // de methode die resetEmployeeSearch aanroept.
+  resetEmployeeSearch() {
+    this.view.$("#employeeSearch").value = "";
+    const filter = this.view.$("#employeeCompanyFilter");
+    filter.value = "";
+    filter.dataset.value = "all";
+    this.filterCompanyOptions("#companyFilterOptions", "");
+    this.setCompanyOptionsOpen(false);
+    this.view.renderAll();
+    this.view.scrollEmployeeListToTop?.();
   }
 
   // Wordt aangeroepen als de gebruiker typt in het bedrijfsfilter op de openbare pagina.
@@ -134,6 +181,10 @@ export class EmployeeController {
     this.app.selectedProducts = {};
     this.app.recognizedBy = recognizedBy;
     this.view.announce?.(""); // de live region begint leeg (zie incrementProduct)
+    this.view.hideToast?.();  // een oude melding staat niet over de knop Registreren
+    // Openen telt als invoer: de 75 seconden tot het automatisch sluiten beginnen nu.
+    this.lastProductActivity = this.clock.now();
+    this.setIdleWarning(false);
     this.renderProductWindow();
 
     const firstPlus = this.view.$("#employeeProductList [data-product-increment]");
@@ -231,6 +282,76 @@ export class EmployeeController {
     this.app.selectedEmployeeId = null;
     this.app.recognizedBy = null;
     this.productWindowClosedAt = Date.now();
+    this.lastProductActivity = null;
+    this.setIdleWarning(false);
+  }
+
+  // ------------------------------------------------------------------
+  // Productvenster automatisch sluiten na een tijd zonder invoer
+  // ------------------------------------------------------------------
+
+  // Start de timer die iedere seconde kijkt of het productvenster te lang niet is gebruikt
+  // (closeProductWindowIfIdle). Wordt één keer aangeroepen bij het starten van de app
+  // (RegistrationApp.initialize). De timer loopt altijd, net als die voor het automatisch uitloggen
+  // van de beheerder: zonder open productvenster doet de controle niets.
+  startProductIdleWatch() {
+    if (this.productIdleTimer !== null) return;
+    this.productIdleTimer = this.clock.setInterval(() => this.closeProductWindowIfIdle(), EmployeeController.PRODUCT_IDLE_CHECK_MS);
+  }
+
+  // Stopt de timer van startProductIdleWatch (bijvoorbeeld in een test).
+  stopProductIdleWatch() {
+    if (this.productIdleTimer === null) return;
+    this.clock.clearInterval(this.productIdleTimer);
+    this.productIdleTimer = null;
+  }
+
+  // Wordt aangeroepen bij iedere tik, klik, toets, aanraking of scroll in het productvenster (zie
+  // RegistrationApp.registerPageEvents). De tijd tot het automatisch sluiten begint dan opnieuw en
+  // de waarschuwing verdwijnt. Zonder open productvenster gebeurt er niets.
+  noteProductActivity() {
+    if (!this.app.selectedEmployeeId) return;
+    this.lastProductActivity = this.clock.now();
+    this.setIdleWarning(false);
+  }
+
+  // Sluit het productvenster als het langer dan `idleCloseMs` (75 seconden) niet is gebruikt. De keuze
+  // wordt niet opgeslagen (er is niet op Registreren getikt). Daarna zijn het zoekveld en het
+  // bedrijfsfilter weer leeg (resetEmployeeSearch). In de laatste `idleWarningMs` (10 seconden)
+  // staat in het venster "Venster sluit zo. Tik om door te gaan."
+  // Staat het cameravenster boven het productvenster (gezicht instellen, demo), dan is de medewerker
+  // daar bezig: de tijd begint dan steeds opnieuw. Geeft true terug als het venster is gesloten.
+  closeProductWindowIfIdle(now = this.clock.now()) {
+    if (!this.app.selectedEmployeeId) return false;
+
+    const cameraOpen = this.view.$("#faceModal")?.classList.contains("hidden") === false;
+    if (this.lastProductActivity === null || cameraOpen) {
+      this.lastProductActivity = now;
+      this.setIdleWarning(false);
+      return false;
+    }
+
+    const idle = now - this.lastProductActivity;
+    if (idle >= this.idleCloseMs) {
+      // Net als na registreren: de focus gaat terug naar de rij of knop waarmee het venster opende.
+      const employeeId = this.app.selectedEmployeeId;
+      const opener = this.app.modalOpeners.get(this.view.$("#employeeProductsModal"));
+      this.closeEmployeeProducts();
+      this.resetEmployeeSearch();
+      this.focusEmployeeRow(employeeId, opener);
+      return true;
+    }
+
+    this.setIdleWarning(idle >= this.idleCloseMs - this.idleWarningMs);
+    return false;
+  }
+
+  // Toont of verbergt de waarschuwing in het productvenster. De view wordt alleen aangeroepen als
+  // er iets verandert, zodat een schermlezer de regel één keer voorleest en niet iedere seconde.
+  setIdleWarning(shown) {
+    if (this.idleWarningShown === shown) return;
+    this.idleWarningShown = shown;
+    this.view.showIdleWarning?.(shown);
   }
 
   // Is deze klik op een medewerkerrij een "spookklik"? Bij een dubbelklik of dubbeltik op
@@ -256,19 +377,27 @@ export class EmployeeController {
     this.openEmployeeProducts(employeeRow.dataset.openEmployee);
   }
 
-  // Na het opslaan gaat eerst het venster dicht en wordt daarna de lijst opnieuw getekend.
+  // Na het opslaan gaat eerst het venster dicht. Daarna worden het zoekveld en het bedrijfsfilter
+  // leeggemaakt en wordt de lijst opnieuw getekend en bovenaan in beeld gezet (resetEmployeeSearch):
+  // de volgende gebruiker begint met de volledige lijst.
   // Door het tekenen verdwijnt de oude medewerkerrij waarmee het venster werd geopend; dan krijgt
-  // de nieuwe rij van dezelfde medewerker de focus (zie focusEmployeeRow). Zo hoeft iemand met
-  // een toetsenbord of schermlezer niet opnieuw te zoeken waar hij was.
+  // de nieuwe rij van dezelfde medewerker de focus, zonder dat de pagina daarvoor scrolt (zie
+  // focusEmployeeRow). Zo hoeft iemand met een toetsenbord of schermlezer niet opnieuw te zoeken
+  // waar hij was, en gaat er op een tablet geen schermtoetsenbord open (dat zou bij focus in het
+  // zoekveld wel gebeuren).
+  // Zonder gekozen product is de knop uitgeschakeld (aria-disabled="true"). Een tik daarop doet dan
+  // niets, behalve de regel "Kies eerst een product met +" bij de knop benadrukken. Er komt geen
+  // foutmelding: er is niets misgegaan, er moet alleen eerst iets worden gekozen.
   registerSelectedProducts() {
     this.removeUnavailableSelections();
     const amounts = Object.values(this.app.selectedProducts);
     const total = amounts.reduce((sum, amount) => sum + amount, 0);
 
-    if (!this.app.selectedEmployeeId || total === 0) {
+    if (!this.app.selectedEmployeeId) return;
+    if (total === 0) {
       // Het venster opnieuw tekenen, zodat de teller op "Registreren" weer klopt.
-      if (this.app.selectedEmployeeId) this.renderProductWindow();
-      this.view.showToast("Kies eerst minimaal één product", { tone: "error" });
+      this.renderProductWindow();
+      this.view.emphasizeRegisterHint?.();
       return;
     }
 
@@ -288,7 +417,7 @@ export class EmployeeController {
     const employeeId = this.app.selectedEmployeeId;
     const opener = this.app.modalOpeners.get(this.view.$("#employeeProductsModal"));
     this.closeEmployeeProducts();
-    this.view.renderAll();
+    this.resetEmployeeSearch();
     this.focusEmployeeRow(employeeId, opener);
 
     // Op een gedeelde tablet moet de medewerker kunnen lezen voor wie en wat er is opgeslagen,
@@ -300,9 +429,10 @@ export class EmployeeController {
   // waarmee het productvenster werd geopend niet meer op de pagina staat (de lijst is opnieuw
   // getekend). Staat de opener er nog, zoals de knop "Herken mij", dan heeft closeModal de
   // focus daar al teruggezet. De id wordt met cssAttributeValue veilig gemaakt voor de selector.
+  // preventScroll: de lijst is net bovenaan in beeld gezet (resetEmployeeSearch) en blijft daar.
   focusEmployeeRow(employeeId, opener) {
     if (opener?.isConnected) return;
-    this.view.$(`[data-open-employee="${cssAttributeValue(employeeId)}"]`)?.focus();
+    this.view.$(`[data-open-employee="${cssAttributeValue(employeeId)}"]`)?.focus({ preventScroll: true });
   }
 
   // Na een knop die het productvenster opnieuw tekent (zoals "Zelfde als vorige keer") bestaat

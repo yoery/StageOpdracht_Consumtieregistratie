@@ -31,7 +31,8 @@ import { FormController } from "./controllers/FormController.js";
  *
  * De onderdelen:
  *   - ModalManager: vensters openen en sluiten, en de focus daarbij;
- *   - EmployeeController: de beginpagina (zoeken, bedrijfsfilter), het productvenster en registreren;
+ *   - EmployeeController: de beginpagina (zoeken, bedrijfsfilter), het productvenster en registreren,
+ *     en het productvenster automatisch sluiten als het niet wordt gebruikt;
  *   - BadgeController: herkennen met de pas (verbindt BadgeReader met de app);
  *   - FaceController: het cameravenster van de demo gezichtsherkenning;
  *   - AdminController: inloggen, automatisch uitloggen, dashboard, tabbladen, logboek, export,
@@ -63,9 +64,9 @@ export class RegistrationApp {
   // De controller krijgt het model, de view, de export, de demo gezichtsherkenning en de
   // pasjeslezer mee (compositie). Wat niet wordt meegegeven, maakt de controller zelf.
   // Daarna maakt hij zijn onderdelen; BadgeController geeft de pasjeslezer daarbij zijn callbacks.
-  // `adminClock` is de klok voor het automatisch uitloggen van de beheerder (AdminController);
-  // de unit tests geven een nep-klok mee.
-  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader(), adminClock = AdminController.realClock()) {
+  // `clock` is de klok voor het automatisch uitloggen van de beheerder (AdminController) en voor het
+  // automatisch sluiten van het productvenster (EmployeeController); de unit tests geven een nep-klok mee.
+  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader(), clock = AdminController.realClock()) {
     this.model = model;
     this.view = view;
     this.csvExport = csvExport;
@@ -83,10 +84,10 @@ export class RegistrationApp {
 
     // De onderdelen van de controller, elk met één taak (zie het commentaar bovenaan).
     this.modals = new ModalManager(this);
-    this.employeePage = new EmployeeController(this);
+    this.employeePage = new EmployeeController(this, clock);
     this.badge = new BadgeController(this);
     this.face = new FaceController(this);
-    this.admin = new AdminController(this, adminClock);
+    this.admin = new AdminController(this, clock);
     this.corrections = new CorrectionController(this);
     this.stock = new StockController(this);
     this.forms = new FormController(this);
@@ -120,18 +121,29 @@ export class RegistrationApp {
   // De tablet staat dag en nacht aan (kiosk). Daarom kijkt een timer iedere minuut of het een
   // nieuwe dag is; zo niet, dan zouden de datum en de tegels "Vandaag" en "Deze maand" de
   // volgende ochtend nog de cijfers van gisteren tonen. Een tweede timer logt de beheerder uit
-  // als het beheer 5 minuten niet is gebruikt (AdminController.startIdleWatch).
+  // als het beheer 5 minuten niet is gebruikt (AdminController.startIdleWatch). Een derde timer
+  // sluit het productvenster als dat 75 seconden niet is gebruikt
+  // (EmployeeController.startProductIdleWatch).
   initialize() {
     this.renderTodayLabel(new Date());
 
     this.view.renderIcons();
     this.registerEventListeners();
-    this.view.$("#faceRecognizeButton").classList.toggle("hidden", !this.faceDemo.isAvailable());
+    this.showRecognitionOptions();
     this.view.renderAll();
     this.showLoadProblem();
 
     this.dayTimer = setInterval(() => this.refreshIfNewDay(), 60 * 1000);
     this.startIdleWatch();
+    this.startProductIdleWatch();
+  }
+
+  // Toont op de beginpagina alleen de manieren van herkennen die aan staan in config.js:
+  //   - de knop "Herken mij met de camera (demo)" als de demo gezichtsherkenning beschikbaar is;
+  //   - de hint "Houd je pas tegen de lezer, of zoek je naam" als de pasjeslezer aan staat (BADGE_READER).
+  showRecognitionOptions() {
+    this.view.$("#faceRecognizeButton").classList.toggle("hidden", !this.faceDemo.isAvailable());
+    this.view.$("#badgeHint")?.classList.toggle("hidden", !this.badgeReader.isEnabled());
   }
 
   // Zet de datum van vandaag bovenaan de pagina, bijvoorbeeld "2 oktober 2026".
@@ -396,6 +408,14 @@ export class RegistrationApp {
     document.addEventListener("click", (event) => this.handleClick(event));
     this.registerModalClose("#employeeProductsModal", "[data-close-employee-products]", () => this.closeEmployeeProducts());
 
+    // Iedere tik, klik, toets, aanraking of scroll in het productvenster begint de tijd tot het
+    // automatisch sluiten opnieuw (EmployeeController.noteProductActivity). In de capture-fase,
+    // zodat ook "scroll" (bubbelt niet) en invoer die een andere listener tegenhoudt meetellen.
+    const productModal = this.view.$("#employeeProductsModal");
+    for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
+      productModal.addEventListener(type, () => this.noteProductActivity(), { capture: true, passive: true });
+    }
+
     // Demo gezichtsherkenning
     this.onClick("#faceRecognizeButton", () => this.startFaceRecognition());
     this.onClick("#faceEnrollButton", () => this.captureEnrollment());
@@ -562,17 +582,18 @@ const DELEGATES = {
   },
   employeePage: {
     methods: [
-      "clearSearch", "onCompanyFilterInput", "filterCompanyOptions", "selectCompanyFilterOption",
+      "clearSearch", "resetEmployeeSearch", "onCompanyFilterInput", "filterCompanyOptions", "selectCompanyFilterOption",
       "setCompanyOptionsOpen", "closeCompanyOptions",
       "openEmployeeProducts", "renderProductWindow", "removeUnavailableSelections", "repeatLastSelection",
       "incrementProduct", "decrementProduct", "selectionSummary", "closeEmployeeProducts",
+      "startProductIdleWatch", "stopProductIdleWatch", "noteProductActivity", "closeProductWindowIfIdle", "setIdleWarning",
       "registerSelectedProducts", "focusEmployeeRow", "focusProductWindowAction",
       "isGhostRowClick", "handleEmployeeRowKey"
     ],
-    fields: ["productWindowClosedAt"]
+    fields: ["productWindowClosedAt", "lastProductActivity", "productIdleTimer", "idleCloseMs", "idleWarningMs", "idleWarningShown"]
   },
   badge: {
-    methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge"],
+    methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge", "replaceProductWindow"],
     fields: ["scanStart"]
   },
   face: {

@@ -254,7 +254,7 @@ button {
   overflow:hidden
 }
 .theme-modes button {
-  min-height:36px;
+  min-height:44px;
   padding:0 12px;
   background:var(--paper);
   color:var(--muted);
@@ -278,7 +278,11 @@ button {
   border-radius:50%;
   margin-right:5px
 }
+/* Knop "Admin login": minstens 44 pixels hoog, groot genoeg om met een vinger te raken. */
 .avatar-button {
+  min-height:44px;
+  min-width:44px;
+  justify-content:center;
   background:none;
   color:var(--ink);
   font-size:13px
@@ -402,8 +406,10 @@ main {
   margin:0;
   font:600 22px "Space Grotesk"
 }
+/* Kleine kopjes boven een titel in de donkergroene huiskleur: op wit 5,9:1 (met --green was dat
+   3,56:1, te weinig voor kleine tekst). In het donkere thema is --green-dark de lichte groene tint. */
 .section-kicker {
-  color:var(--green);
+  color:var(--green-dark);
   margin-bottom:6px
 }
 .count-badge {
@@ -462,14 +468,14 @@ main {
   position:relative;
   display:flex;
   flex:1;
-  min-height:38px;
+  min-height:44px;
   background:var(--paper)
 }
 .company-combobox input {
   width:100%;
   flex:1;
   min-width:0;
-  min-height:38px;
+  min-height:44px;
   border:1px solid var(--line);
   border-radius:8px;
   padding:0 48px 0 10px !important;
@@ -487,7 +493,7 @@ main {
   position:absolute;
   right:4px;
   top:4px;
-  width:30px;
+  width:40px;
   height:10px;
   margin:0;
   border-radius:8px;
@@ -516,7 +522,7 @@ main {
   right:0;
   z-index:10;
   display:grid;
-  max-height:140px;
+  max-height:min(264px,50vh);
   overflow:auto;
   padding:7px 3px 3px;
   border:1px solid;
@@ -525,7 +531,7 @@ main {
   box-shadow:var(--shadow)
 }
 .company-options button {
-  min-height:30px;
+  min-height:44px;
   padding:5px 8px;
   border-radius:5px;
   background:var(--paper);
@@ -1024,25 +1030,93 @@ footer {
 .personal-product-amount {
   min-width:36px;
   text-align:center;
-  font-size:17px
+  font-size:17px;
+  font-weight:500;
+  color:var(--muted)
+}
+/* Product met een keuze (aantal 1 of meer): lichtgroene achtergrond, groene rand en een vet aantal.
+   De "−" krijgt dan de papierkleur, zodat hij op de lichtgroene achtergrond zichtbaar blijft. */
+.personal-product-item.is-selected {
+  background:var(--mint);
+  border-color:var(--green)
+}
+.personal-product-item.is-selected .personal-product-amount {
+  font-weight:700;
+  color:var(--green-dark)
+}
+.personal-product-item.is-selected .personal-product-minus {
+  background:var(--paper)
+}
+/* Demo gezichtsherkenning instellen: een eigen regel boven de knopbalk. */
+#faceEnrollArea {
+  margin-top:16px
+}
+/* Knopbalk onderaan het productvenster. position:sticky houdt de balk onderaan in beeld terwijl de
+   productlijst erachter scrolt (liggende tablet, telefoon en 200% zoom). De balk loopt over de hele
+   breedte van het venster: de negatieve marge heft de zijmarge van het venster op (--modal-pad-x).
+   bottom is min de ondermarge van het venster (--modal-pad-bottom): anders blijft de balk boven die
+   marge hangen en is de lijst eronder nog zichtbaar. */
+.employee-products-modal {
+  --modal-pad-x:31px;
+  --modal-pad-bottom:31px;
+  /* Een product dat met Tab in beeld komt, valt niet achter de knopbalk. */
+  scroll-padding-bottom:150px
 }
 .employee-products-actions {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-top:20px
+  position:sticky;
+  bottom:calc(-1 * var(--modal-pad-bottom));
+  z-index:1;
+  display:grid;
+  gap:8px;
+  margin:16px calc(-1 * var(--modal-pad-x)) 0;
+  padding:12px var(--modal-pad-x) 14px;
+  background:var(--paper);
+  border-top:1px solid var(--line)
 }
-/* Uitgeschakelde knoppen zien er ook uitgeschakeld uit. */
-.primary-button:disabled,.secondary-button:disabled {
+/* Registreren: over de volle breedte, 54 pixels hoog, 19 pixels vet. Witte tekst op --green is
+   3,56:1. Vette tekst van 19 pixels (ruim 14 punt) is "grote tekst" volgens WCAG 1.4.3, waarvoor 3:1
+   genoeg is. */
+.employee-products-actions .register-button {
+  width:100%;
+  min-height:54px;
+  font-size:19px;
+  font-weight:700
+}
+/* Uitleg bij de uitgeschakelde knop: "Kies eerst een product met +". */
+.register-hint {
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  text-align:center
+}
+/* Na een tik op de uitgeschakelde knop: vet in de bestaande foutkleur, zonder animatie. */
+.register-hint.register-hint-emphasis {
+  color:var(--error-text);
+  font-weight:700
+}
+/* "Venster sluit zo. Tik om door te gaan." Een vaste statusregel: leeg neemt hij geen ruimte in. */
+.idle-warning {
+  margin:0
+}
+.idle-warning:not(:empty) {
+  padding:8px 12px;
+  border:1px solid var(--warning-border);
+  border-radius:8px;
+  background:var(--warning-bg);
+  color:var(--warning-text);
+  font-weight:700;
+  text-align:center
+}
+/* Uitgeschakelde knoppen zien er ook uitgeschakeld uit. Registreren zonder keuze is uitgeschakeld met
+   aria-disabled (en niet met disabled), zodat de knop met Tab bereikbaar blijft. */
+.primary-button:disabled,.secondary-button:disabled,
+.primary-button[aria-disabled="true"] {
   opacity:.45;
   cursor:not-allowed;
   transform:none
 }
-/* De knop Registreren blijft rechts, ook als de demo-link links er niet is. */
-.employee-products-actions .primary-button {
-  margin-left:auto
+.primary-button[aria-disabled="true"]:hover {
+  background:var(--green)
 }
 /* Korte uitleg onder in het productvenster: wat er met een registratie gebeurt (AVG). */
 .privacy-note {
@@ -1314,12 +1388,20 @@ footer {
   color:var(--toast-text);
   border-radius:8px;
   padding:13px 18px;
-  font-size:13px;
+  font-size:16px;
   box-shadow:var(--shadow);
-  z-index:8
+  z-index:8;
+  /* Een melding heeft geen knoppen: een tik gaat erdoorheen naar wat eronder ligt (bijvoorbeeld Registreren). */
+  pointer-events:none
 }
 .toast.show {
   animation:pop .25s ease
+}
+/* Een meldingsregio is heel even leeg zichtbaar voordat de tekst erin komt (zie
+   RegistrationView.showToast). Dan is hij doorzichtig: zo staat er geen leeg vlak in beeld, maar
+   blijft de regio wel bestaan voor een schermlezer. */
+.toast:empty {
+  opacity:0
 }
 /* De melding schuift iets omhoog in beeld; translateX(-50%) houdt hem in het midden. */
 @keyframes pop {
@@ -1378,7 +1460,8 @@ footer {
 }
 .correction-actions {
   display:flex;
-  gap:6px
+  align-items:center;
+  gap:8px
 }
 .correction-product-list {
   display:grid;
@@ -1396,8 +1479,8 @@ footer {
   font-size:12px
 }
 .correction-button {
-  width:30px;
-  height:30px;
+  width:44px;
+  height:44px;
   border-radius:7px;
   font-size:19px;
   font-weight:700
@@ -1468,6 +1551,9 @@ footer {
 .personal-product-step:active:not(:disabled),
 .admin-employee-item .table-action:active,.stock-table .table-action:active {
   transform:scale(.95)
+}
+.primary-button[aria-disabled="true"]:active {
+  transform:none
 }
 /* Medewerkerrij: op een tablet (geen hover) is dit de reactie op een tik. */
 .employee-row-clickable:active {
@@ -1555,7 +1641,7 @@ footer {
 }
 .company-combobox-toggle {
   top:50%;
-  height:30px;
+  height:40px;
   transform:translateY(-50%)
 }
 .company-combobox-toggle .icon {
@@ -1578,6 +1664,14 @@ footer {
 @media (hover:none) {
   .search-box kbd {
     display:none
+  }
+}
+/* Aanraakscherm (vinger in plaats van muis): − en + in het productvenster worden 52 pixels, met
+   dezelfde tussenruimte. Zo zijn ze ook met een snelle tik bij de koelkast goed te raken. */
+@media (pointer:coarse) {
+  .personal-product-step {
+    width:52px;
+    height:52px
   }
 }
 /* Meldingen: succes met een vinkje, fout met een waarschuwingsteken. */
@@ -1711,9 +1805,64 @@ footer {
   color:var(--green)
 }
 /* Demo gezichtsherkenning: knop op de beginpagina en instellen in het productvenster. */
+/* De hint voor de pas en de knop "Herken mij met de camera (demo)" staan naast elkaar op één regel
+   (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger op het scherm. Staan ze
+   allebei uit (config.js), dan verdwijnt de regel helemaal. */
+.directory-tools {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px 16px;
+  margin-top:16px
+}
+.directory-tools:not(:has(> :not(.hidden))) {
+  display:none
+}
+.badge-hint {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  color:var(--muted);
+  font-size:14px
+}
+.badge-hint span {
+  display:inline-flex;
+  font-size:20px;
+  color:var(--green-dark)
+}
 .face-start {
-  width:100%;
-  margin-top:18px
+  min-height:44px;
+  margin-left:auto
+}
+/* "Tik op je naam": één keer, rechts in de kop naast de teller. */
+.card-heading-meta {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:6px 12px
+}
+.list-hint {
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  font-weight:600
+}
+/* Op een tablet en groter staan het zoekveld en het bedrijfsfilter naast elkaar op één regel, zodat
+   de medewerkerlijst hoger op het scherm begint. Op een telefoon staan ze onder elkaar. */
+@media (min-width:721px) {
+  .directory-filters {
+    display:grid;
+    grid-template-columns:minmax(0,3fr) minmax(0,2fr);
+    align-items:center;
+    gap:12px;
+    margin:16px 0 18px
+  }
+  .directory-filters .search-box,.directory-filters .company-filter {
+    margin:0
+  }
 }
 .face-enroll {
   display:flex;
@@ -1722,10 +1871,12 @@ footer {
   flex-wrap:wrap;
   font-size:13px
 }
+/* De link staat op een eigen regel en krijgt een aanraakvlak van 44 pixels hoog. */
 .face-enroll .text-link {
   display:inline-flex;
   align-items:center;
-  gap:6px
+  gap:6px;
+  min-height:44px
 }
 .face-enrolled {
   display:inline-flex;
@@ -1828,9 +1979,10 @@ footer {
   }
 }
 /* Mobiele layout: onderdelen stapelen op smalle schermen. */
-/* Staande tablet (bijv. bij een consumptiepunt): een compactere banner, zodat de
-   medewerkerlijst hoger op het scherm begint. Tekst, kleuren en afbeelding blijven hetzelfde. */
-@media (min-width:721px) and (max-width:1100px) and (orientation:portrait) {
+/* Staande tablet (bijv. bij een consumptiepunt) en schermen met weinig hoogte, zoals een liggende
+   tablet (1080 × 810): een compactere banner, zodat de medewerkerlijst hoger op het scherm begint
+   en er meer namen in beeld staan. Tekst, kleuren en afbeelding blijven hetzelfde. */
+@media (min-width:721px) and (max-width:1100px) and (orientation:portrait), (min-width:721px) and (max-height:900px) {
   .hero {
     min-height:0;
     padding:30px 40px
@@ -1858,6 +2010,20 @@ footer {
   }
   .content-grid {
     margin-top:18px
+  }
+}
+/* Liggende tablet en andere brede schermen met weinig hoogte: de banner nog iets lager. De uitleg
+   past daar op één regel naast het decoratieve symbool. */
+@media (min-width:1000px) and (max-height:900px) {
+  .hero {
+    padding:24px 40px
+  }
+  .hero h1 {
+    font-size:32px
+  }
+  .hero-copy {
+    max-width:700px;
+    margin-top:8px
   }
 }
 @media(max-width:720px) {
@@ -1902,6 +2068,13 @@ footer {
   }
   .modal {
     padding:25px 18px
+  }
+  .employee-products-modal {
+    --modal-pad-x:18px;
+    --modal-pad-bottom:25px
+  }
+  .face-start {
+    width:100%
   }
   .employee-row {
     min-height:58px

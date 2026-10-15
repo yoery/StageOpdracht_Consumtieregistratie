@@ -11,7 +11,9 @@
  *   - ThemeManager: DAYLIGHT_HOURS, voor de thema-instelling "Auto";
  *   - FaceRecognitionDemo en FaceController: FACE_DEMO, de instellingen van de demo;
  *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer);
- *   - AdminController: ADMIN_IDLE_LOGOUT_MS, na hoeveel tijd zonder invoer de beheerder wordt uitgelogd.
+ *   - AdminController: ADMIN_IDLE_LOGOUT_MS, na hoeveel tijd zonder invoer de beheerder wordt uitgelogd;
+ *   - EmployeeController: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS, na hoeveel tijd zonder
+ *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt.
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -114,6 +116,19 @@ export const BADGE_READER = {
 // sluit het beheervenster. Op een gedeelde tablet blijft het beheer zo niet open staan als de
 // beheerder wegloopt zonder uit te loggen. In milliseconden: 5 minuten.
 export const ADMIN_IDLE_LOGOUT_MS = 5 * 60 * 1000;
+
+// Automatisch sluiten van het productvenster (zie EmployeeController.closeProductWindowIfIdle).
+// Wordt het productvenster zo lang niet gebruikt (geen tik, klik, toets of scroll in het venster),
+// dan gaat het dicht zonder iets op te slaan. Daarna zijn het zoekveld en het bedrijfsfilter weer
+// leeg. Zo blijft op de gedeelde tablet niet het venster van een collega open staan, waarin de
+// volgende gebruiker per ongeluk op naam van die collega registreert. Dit geldt ook voor een venster
+// dat na herkenning met de pas of de camera is geopend. In milliseconden: 75 seconden.
+export const EMPLOYEE_IDLE_CLOSE_MS = 75 * 1000;
+
+// Zo lang vóór het automatisch sluiten verschijnt in het productvenster de regel
+// "Venster sluit zo. Tik om door te gaan." Iedere tik of toets begint de tijd opnieuw.
+// In milliseconden: de laatste 10 seconden.
+export const EMPLOYEE_IDLE_WARNING_MS = 10 * 1000;
 
 // Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.
 export const DEFAULT_PRODUCTS = [

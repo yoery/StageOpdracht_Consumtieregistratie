@@ -8,7 +8,9 @@
  *     daarna terugzetten, zodat er geen pasnummer in blijft staan;
  *   - een scan in het veld "Pasnummer" van het medewerkersformulier: het oude nummer vervangen
  *     door het nieuwe (fillBadgeFieldAfterScan);
- *   - na een scan de medewerker opzoeken en zijn productvenster openen, of een melding geven.
+ *   - na een scan de medewerker opzoeken en zijn productvenster openen, of een melding geven;
+ *   - een scan terwijl het productvenster van een collega open is: dat venster vervangen door
+ *     het venster van de gescande pas (replaceProductWindow).
  *
  * Verbonden met:
  *   - BadgeReader: herkent de scan. Deze class zet de callbacks onScan en onStart;
@@ -16,9 +18,13 @@
  *   - RegistrationModel: findEmployeeByBadge;
  *   - EmployeeController (via RegistrationApp): opent het productvenster en sluit de keuzelijst
  *     van het bedrijfsfilter;
- *   - ModalManager (via RegistrationApp): topModal, want met een open venster wordt er niemand herkend.
+ *   - ModalManager (via RegistrationApp): topModal, want met een ander open venster dan het
+ *     productvenster wordt er niemand herkend.
  */
 export class BadgeController {
+  // Melding als er een pas wordt gescand terwijl een ander venster dan het productvenster open is.
+  static CLOSE_WINDOW_FIRST = "Sluit eerst het open venster om je pas te gebruiken.";
+
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   // De pasjeslezer krijgt hier zijn callbacks: na een scan wordt de medewerker opgezocht
   // (recognizeBadge), en bij het begin van een mogelijke scan wordt onthouden waar de focus stond
@@ -49,8 +55,8 @@ export class BadgeController {
   // (productvenster, beheer, een formulier): de lezer houdt dan de Enter of Tab tegen waarmee
   // een scan eindigt, zodat die niet de knop met de focus indrukt (bijvoorbeeld "Registreren").
   // De tekens zelf gaan gewoon naar het veld met de focus, zoals het veld "Pasnummer" in het
-  // medewerkersformulier. Een medewerker herkennen gebeurt alleen op de beginpagina: dat
-  // controleert recognizeBadge.
+  // medewerkersformulier. Een medewerker herkennen gebeurt alleen op de beginpagina of in het
+  // productvenster: dat controleert recognizeBadge.
   handleBadgeKey(event) {
     this.badgeReader.handleKey(event);
   }
@@ -116,18 +122,31 @@ export class BadgeController {
   // Wordt door de pasjeslezer aangeroepen met het genormaliseerde pasnummer.
   //   - begon de scan in het veld "Pasnummer", dan komt het nummer in dat veld (zie
   //     fillBadgeFieldAfterScan) en wordt er niemand herkend;
+  //   - staat er een ander venster open dan het productvenster (beheer, een formulier, het
+  //     cameravenster of "Registratie verwijderen"), dan wordt er niemand herkend en volgt de
+  //     melding "Sluit eerst het open venster om je pas te gebruiken.";
   //   - hoort de pas bij een actieve medewerker, dan opent zijn productvenster met de tekst
   //     "Je bent herkend met je pas." (zie RegistrationView.renderEmployeeProducts);
   //   - anders volgt een melding. Een onbekende pas en de pas van een inactieve medewerker
   //     krijgen dezelfde melding, zodat er niets over een andere medewerker uitlekt.
-  // Staat er een venster open (productvenster, beheer, een formulier), dan wordt er niemand
-  // herkend. De lezer krijgt de toetsen dan wel (en houdt de afsluitende Enter of Tab tegen, zie
-  // handleBadgeKey), maar hier gebeurt verder niets.
+  // Staat het productvenster open (zie replaceProductWindow):
+  //   - van dezelfde medewerker: het venster blijft open met de keuze die er al stond;
+  //   - van een collega: dat venster gaat dicht zonder op te slaan (er was nog niet op
+  //     Registreren getikt) en het venster van de gescande pas gaat open. Zo hoeft de volgende
+  //     gebruiker het vergeten venster van een collega niet eerst te sluiten.
+  // De lezer houdt in alle gevallen de afsluitende Enter of Tab tegen (zie handleBadgeKey).
   recognizeBadge(code) {
     const filledBadgeField = this.fillBadgeFieldAfterScan(code);
     this.restoreSearchAfterScan();
     this.scanStart = null;
-    if (filledBadgeField || this.app.topModal()) return;
+    if (filledBadgeField) return;
+
+    const openModal = this.app.topModal();
+    const productWindowOpen = Boolean(openModal) && openModal === this.view.$("#employeeProductsModal");
+    if (openModal && !productWindowOpen) {
+      this.view.showToast(BadgeController.CLOSE_WINDOW_FIRST, { tone: "error", duration: 5000 });
+      return;
+    }
 
     const employee = this.model.findEmployeeByBadge(code);
     if (!employee?.active) {
@@ -138,6 +157,29 @@ export class BadgeController {
       return;
     }
 
+    if (productWindowOpen && this.replaceProductWindow(employee.id)) return;
     this.app.openEmployeeProducts(employee.id, { recognizedBy: "badge" });
+  }
+
+  // Een pas wordt gescand terwijl het productvenster open is. Is het venster van dezelfde
+  // medewerker, dan blijft het open: de keuze blijft staan en de scan telt als invoer (de tijd tot
+  // het automatisch sluiten begint opnieuw). Was hij nog niet herkend (naam aangetikt), dan is hij
+  // dat nu: de begroeting krijgt "Je bent herkend met je pas." Geeft dan true terug.
+  // Is het venster van een collega, dan gaat het dicht zonder op te slaan, worden het zoekveld en
+  // het bedrijfsfilter leeggemaakt (net als na automatisch sluiten) en geeft deze methode false
+  // terug: recognizeBadge opent daarna het venster van de gescande pas.
+  replaceProductWindow(employeeId) {
+    if (employeeId === this.app.selectedEmployeeId) {
+      this.app.noteProductActivity();
+      if (!this.app.recognizedBy) {
+        this.app.recognizedBy = "badge";
+        this.app.renderProductWindow();
+      }
+      return true;
+    }
+
+    this.app.closeEmployeeProducts();
+    this.app.resetEmployeeSearch();
+    return false;
   }
 }

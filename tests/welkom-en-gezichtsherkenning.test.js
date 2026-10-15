@@ -84,9 +84,14 @@ const createWindowView = (model) => {
   view.$ = (selector) => {
     if (!elements.has(selector)) {
       const classes = new Set();
+      const attributes = {};
       elements.set(selector, {
         textContent: "",
         innerHTML: "",
+        attributes,
+        setAttribute: (name, value) => { attributes[name] = String(value); },
+        removeAttribute: (name) => { delete attributes[name]; },
+        getAttribute: (name) => attributes[name] ?? null,
         classList: {
           add: (name) => classes.add(name),
           remove: (name) => classes.delete(name),

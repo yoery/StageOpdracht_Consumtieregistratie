@@ -28,6 +28,13 @@ export function cssAttributeValue(value) {
  *     render-methodes aan. De view weet zelf niets van de controller.
  */
 export class RegistrationView {
+  // De waarschuwing in het productvenster vlak voordat het vanzelf sluit (zie showIdleWarning).
+  static IDLE_WARNING_TEXT = "Venster sluit zo. Tik om door te gaan.";
+
+  // Hoe lang (in milliseconden) een meldingsregio eerst leeg zichtbaar is voordat de tekst erin komt
+  // (zie showToast).
+  static TOAST_TEXT_DELAY_MS = 60;
+
   // De view ontvangt het model om gegevens te kunnen tonen.
   // `$` is een korte schrijfwijze om één element op de pagina te zoeken.
   constructor(model) {
@@ -166,6 +173,14 @@ export class RegistrationView {
 
     this.$("#employeeCount").textContent = `${employees.length} totaal`;
     this.$("#emptyState").classList.toggle("hidden", employees.length > 0);
+    // "Tik op je naam" staat één keer boven de lijst, en alleen als er namen in de lijst staan.
+    this.$("#employeeListHint")?.classList.toggle("hidden", employees.length === 0);
+    // Een schermlezer hoort na het zoeken of filteren alleen het aantal, bijvoorbeeld
+    // "3 medewerkers gevonden", en niet de hele lijst. Daarom heeft #employeeList geen aria-live
+    // meer, maar is er een vaste, onzichtbare statusregel (#employeeResultsStatus in index.html).
+    // Verandert het aantal niet, dan blijft de tekst gelijk en wordt er niets voorgelezen.
+    const status = this.$("#employeeResultsStatus");
+    if (status) status.textContent = this.employeeResultsText(employees.length);
 
     const groups = employees.reduce((grouped, employee) => {
       const key = this.companyGroupKey(employee.companyId);
@@ -196,7 +211,7 @@ export class RegistrationView {
                 </span>
                 <div>
                   <div class="employee-name">${this.escapeHtml(employee.name)}</div>
-                  <div class="employee-total">Klik om een product te kiezen</div>
+                  <div class="employee-total">Tik om te kiezen</div>
                 </div>
               </div>
             </div>`
@@ -204,6 +219,22 @@ export class RegistrationView {
         </section>`
       )
       .join("");
+  }
+
+  // De tekst voor schermlezers na zoeken of filteren: "Geen medewerker gevonden",
+  // "1 medewerker gevonden" of "3 medewerkers gevonden" (zie employeeCountText).
+  employeeResultsText(count) {
+    return count === 0 ? "Geen medewerker gevonden" : `${this.employeeCountText(count)} gevonden`;
+  }
+
+  // Zet de medewerkerslijst weer bovenaan in beeld (na registreren of na het automatisch sluiten
+  // van het productvenster, zie EmployeeController.resetEmployeeSearch). Alleen als de bovenkant van
+  // de medewerkerskaart boven het scherm is weggescrold. Staat de kaart al in beeld, dan blijft de
+  // pagina staan. Zonder animatie: de pagina springt direct naar de juiste plek.
+  scrollEmployeeListToTop() {
+    const card = this.$(".directory-card");
+    if (!card?.getBoundingClientRect) return;
+    if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start" });
   }
 
   // Vult de bedrijfsfilter met de bedrijven waar actieve medewerkers aan gekoppeld zijn.
@@ -560,14 +591,28 @@ export class RegistrationView {
     const totalSelected = Object.values(selectedProducts).reduce((sum, amount) => sum + amount, 0);
     registerButton.textContent = totalSelected > 0 ? `Registreren (${totalSelected})` : "Registreren";
 
+    // Zonder keuze is de knop uitgeschakeld met aria-disabled (niet met disabled): zo blijft hij met
+    // Tab bereikbaar en leest een schermlezer de uitleg "Kies eerst een product met +" voor (de regel
+    // #registerHint, gekoppeld met aria-describedby). Een tik op de knop benadrukt die regel
+    // (zie emphasizeRegisterHint). Is er een keuze, dan verdwijnen de regel en de koppeling.
+    const hasChoice = totalSelected > 0;
+    registerButton.setAttribute("aria-disabled", String(!hasChoice));
+    if (hasChoice) registerButton.removeAttribute?.("aria-describedby");
+    else registerButton.setAttribute("aria-describedby", "registerHint");
+    const hint = this.$("#registerHint");
+    hint?.classList.toggle("hidden", hasChoice || products.length === 0);
+    hint?.classList.remove("register-hint-emphasis");
+
     // Per product: naam en prijs, en een teller met − en + (de − kan niet onder 0).
+    // Een product met een keuze (aantal 1 of meer) krijgt een lichtgroene achtergrond en een groene
+    // rand (klasse is-selected), zodat in één oogopslag te zien is wat er is gekozen.
     this.$("#employeeProductList").innerHTML = products.length === 0
       ? this.emptyState({ iconName: "location", title: "Geen producten op jouw consumptiepunt.", text: "Neem contact op met de beheerder als dit niet klopt." })
       : products.map(({ id, name, price }) => {
         const selectedAmount = selectedProducts[id] || 0;
 
         return `
-          <div class="personal-product-item">
+          <div class="personal-product-item${selectedAmount > 0 ? " is-selected" : ""}">
             <span>
               <strong>${this.escapeHtml(name)}</strong>
               <small>€ ${price.toFixed(2).replace(".", ",")}</small>
@@ -604,6 +649,27 @@ export class RegistrationView {
   announce(text) {
     const status = this.$("#productLiveStatus");
     if (status) status.textContent = text;
+  }
+
+  // Tik op "Registreren" zonder gekozen product (zie EmployeeController.registerSelectedProducts):
+  // de regel "Kies eerst een product met +" bij de knop wordt vet en rood (bestaande foutkleur),
+  // zonder animatie. Een schermlezer leest de regel voor via de live region van het productvenster.
+  emphasizeRegisterHint() {
+    const hint = this.$("#registerHint");
+    if (!hint) return;
+    hint.classList.remove("hidden");
+    hint.classList.add("register-hint-emphasis");
+    this.announce(hint.textContent);
+  }
+
+  // Toont of verbergt in het productvenster de regel "Venster sluit zo. Tik om door te gaan."
+  // (zie EmployeeController.closeProductWindowIfIdle). #productIdleWarning is een vaste statusregel
+  // (role="status") die altijd op de pagina staat. Is hij leeg, dan neemt hij geen ruimte in (zie
+  // .idle-warning:empty in styles.css). Omdat alleen de tekst verandert, leest een schermlezer de
+  // waarschuwing voor zodra die verschijnt.
+  showIdleWarning(shown) {
+    const warning = this.$("#productIdleWarning");
+    if (warning) warning.textContent = shown ? RegistrationView.IDLE_WARNING_TEXT : "";
   }
 
   // Vult de keuzelijsten bedrijf en consumptiepunt in het medewerkersformulier.
@@ -857,20 +923,52 @@ export class RegistrationView {
   // Toont een korte melding onderaan het scherm.
   //   tone: "success" (met vinkje), "error" (met waarschuwingsteken en rode rand) of "info";
   //   duration: hoe lang de melding zichtbaar blijft, in milliseconden (standaard 2,5 seconde).
+  // Er zijn twee vaste meldingsregio's in index.html die altijd op de pagina blijven: #toast
+  // (role="status", voor gewone meldingen) en #toastAlert (role="alert", voor foutmeldingen). Een
+  // schermlezer leest een live region alleen voor als die al bestond voordat de tekst veranderde.
+  // Daarom wordt de regio eerst leeg zichtbaar gemaakt en komt de tekst er pas daarna in (na
+  // TOAST_TEXT_DELAY_MS). Zolang de regio leeg is, is hij doorzichtig (.toast:empty in styles.css),
+  // dus op het scherm ziet de melding er hetzelfde uit als vroeger. Er staat steeds maar één
+  // melding in beeld: de andere regio wordt verborgen.
   showToast(message, { tone = "info", duration = 2500 } = {}) {
-    const toast = this.$("#toast");
+    const toast = this.$(tone === "error" ? "#toastAlert" : "#toast");
+    const other = this.$(tone === "error" ? "#toast" : "#toastAlert");
     const toneIcons = { success: "check", error: "alert" };
 
-    toast.innerHTML = `${toneIcons[tone] ? icon(toneIcons[tone]) : ""}<span></span>`;
-    toast.querySelector("span").textContent = message;
-    // Klassen opnieuw zetten; offsetWidth lezen zorgt dat de in-animatie opnieuw start.
-    toast.className = `toast toast-${tone}`;
-    void toast.offsetWidth;
-    toast.classList.add("show");
-    toast.setAttribute("role", tone === "error" ? "alert" : "status");
-
-    // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
+    clearTimeout(this.toastTextTimer);
+    if (other) {
+      other.classList.add("hidden");
+      other.textContent = "";
+    }
+
+    // Stap 1: de regio leeg zichtbaar maken.
+    toast.textContent = "";
+    toast.className = `toast toast-${tone}`;
+
+    // Stap 2: daarna de tekst erin zetten. offsetWidth lezen zorgt dat de in-animatie opnieuw start.
+    this.toastTextTimer = setTimeout(() => {
+      toast.innerHTML = `${toneIcons[tone] ? icon(toneIcons[tone]) : ""}<span></span>`;
+      toast.querySelector("span").textContent = message;
+      void toast.offsetWidth;
+      toast.classList.add("show");
+
+      // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
+      this.toastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
+    }, RegistrationView.TOAST_TEXT_DELAY_MS);
+  }
+
+  // Verbergt een melding die nog in beeld is. Wordt gebruikt als een productvenster opengaat: de
+  // melding van de vorige gebruiker (bijvoorbeeld "… geregistreerd") staat dan niet over de knop
+  // Registreren van de volgende gebruiker.
+  hideToast() {
+    clearTimeout(this.toastTimer);
+    clearTimeout(this.toastTextTimer);
+    for (const selector of ["#toast", "#toastAlert"]) {
+      const toast = this.$(selector);
+      if (!toast) continue;
+      toast.classList.add("hidden");
+      toast.textContent = "";
+    }
   }
 }

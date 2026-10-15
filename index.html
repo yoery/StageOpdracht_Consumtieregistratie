@@ -84,35 +84,50 @@
       <!-- Hoofdgebied met de medewerkerlijst en de statistiekkaarten. -->
       <section class="content-grid">
         <div class="directory-card card">
-          <!-- Koptekst en dynamische teller van het aantal medewerkers. -->
+          <!-- Koptekst, één keer de uitleg "Tik op je naam" (verborgen als er geen medewerker wordt gevonden)
+               en de dynamische teller van het aantal medewerkers. -->
           <div class="card-heading">
             <div>
               <p class="section-kicker">Medewerkers</p>
               <h2>Registreer je consumptie</h2>
             </div>
-            <span class="count-badge" id="employeeCount"></span>
-          </div>
-          <!-- Demo gezichtsherkenning (FaceRecognitionDemo.js). Alleen zichtbaar als de demo aan staat. -->
-          <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
-            <span data-icon="faceScan"></span> Herken mij met de camera (demo)
-          </button>
-          <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
-          <label class="search-box">
-            <span aria-hidden="true" data-icon="search"></span>
-            <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
-            <kbd>Ctrl K</kbd>
-          </label>
-          <label class="company-filter">
-            <span>Bedrijf</span>
-            <div class="company-combobox">
-              <!-- Combobox: aria-expanded zegt of de keuzelijst open is (EmployeeController.setCompanyOptionsOpen). Escape sluit de lijst. -->
-              <input id="employeeCompanyFilter" placeholder="Alle bedrijven" autocomplete="off" aria-label="Filter medewerkers op bedrijf" role="combobox" aria-autocomplete="list" aria-controls="companyFilterOptions" aria-expanded="false">
-              <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen" aria-controls="companyFilterOptions" aria-expanded="false" data-icon="chevron"></button>
-              <div class="company-options hidden" id="companyFilterOptions" role="listbox" aria-label="Bedrijven"></div>
+            <div class="card-heading-meta">
+              <p class="list-hint" id="employeeListHint">Tik op je naam</p>
+              <span class="count-badge" id="employeeCount"></span>
             </div>
-          </label>
-          <!-- JavaScript plaatst hier de actieve medewerkers, gegroepeerd per bedrijf. Een klik opent het productvenster. -->
-          <div class="employee-list" id="employeeList" aria-live="polite"></div>
+          </div>
+          <!-- Hint voor de pas (alleen als de pasjeslezer aan staat, zie RegistrationApp.initialize) en de
+               knop van de demo gezichtsherkenning (FaceRecognitionDemo.js, alleen als de demo aan staat).
+               Naast elkaar op één regel, zodat de medewerkerlijst hoger op het scherm begint. -->
+          <div class="directory-tools">
+            <p class="badge-hint hidden" id="badgeHint"><span aria-hidden="true" data-icon="userSearch"></span> Houd je pas tegen de lezer, of zoek je naam</p>
+            <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
+              <span data-icon="faceScan"></span> Herken mij met de camera (demo)
+            </button>
+          </div>
+          <!-- Zoekveld en bedrijfsfilter. Op een tablet en groter staan ze naast elkaar op één regel. -->
+          <div class="directory-filters">
+            <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
+            <label class="search-box">
+              <span aria-hidden="true" data-icon="search"></span>
+              <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
+              <kbd>Ctrl K</kbd>
+            </label>
+            <label class="company-filter">
+              <span>Bedrijf</span>
+              <div class="company-combobox">
+                <!-- Combobox: aria-expanded zegt of de keuzelijst open is (EmployeeController.setCompanyOptionsOpen). Escape sluit de lijst. -->
+                <input id="employeeCompanyFilter" placeholder="Alle bedrijven" autocomplete="off" aria-label="Filter medewerkers op bedrijf" role="combobox" aria-autocomplete="list" aria-controls="companyFilterOptions" aria-expanded="false">
+                <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen" aria-controls="companyFilterOptions" aria-expanded="false" data-icon="chevron"></button>
+                <div class="company-options hidden" id="companyFilterOptions" role="listbox" aria-label="Bedrijven"></div>
+              </div>
+            </label>
+          </div>
+          <!-- JavaScript plaatst hier de actieve medewerkers, gegroepeerd per bedrijf. Een klik opent het productvenster.
+               Geen aria-live: een schermlezer zou dan de hele lijst voorlezen. Het aantal staat in #employeeResultsStatus. -->
+          <div class="employee-list" id="employeeList"></div>
+          <!-- Vaste statusregel, alleen voor schermlezers: "3 medewerkers gevonden" of "Geen medewerker gevonden". -->
+          <p class="visually-hidden" id="employeeResultsStatus" role="status"></p>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
           <div class="empty-state hidden" id="emptyState">
             <span aria-hidden="true" data-icon="userSearch"></span>
@@ -320,13 +335,19 @@
       <!-- Persoonlijke begroeting en de keuze van de vorige keer. -->
       <p class="welcome-line" id="employeeWelcome"></p>
       <div class="suggestion hidden" id="employeeSuggestion"></div>
-      <p class="muted">Gebruik de plusknoppen om producten te kiezen. Klik daarna op registreren om alles tegelijk op te slaan.</p>
+      <p class="muted">Tik op + bij wat je pakt. Tik daarna op Registreren.</p>
       <div id="employeeProductList" class="personal-product-list"></div>
       <!-- Vaste live region: na "+" of "−" komt hier het nieuwe aantal, bijvoorbeeld "Blikje: 2" (alleen voor schermlezers). -->
       <p class="visually-hidden" id="productLiveStatus" aria-live="polite"></p>
+      <!-- Demo gezichtsherkenning instellen of uitzetten: een eigen regel boven de knopbalk. -->
+      <div class="face-enroll hidden" id="faceEnrollArea"></div>
+      <!-- Knopbalk die onderaan in beeld blijft als het venster scrolt (position: sticky). Daarin de
+           waarschuwing vlak voor het automatisch sluiten (vaste statusregel, leeg als er niets aan de hand is),
+           de uitleg bij een uitgeschakelde knop en de knop Registreren over de volle breedte. -->
       <div class="employee-products-actions">
-        <div class="face-enroll hidden" id="faceEnrollArea"></div>
-        <button class="primary-button" id="registerSelectedProductsButton" type="button">Registreren</button>
+        <p class="idle-warning" id="productIdleWarning" role="status"></p>
+        <p class="register-hint" id="registerHint">Kies eerst een product met +</p>
+        <button class="primary-button register-button" id="registerSelectedProductsButton" type="button" aria-disabled="true" aria-describedby="registerHint">Registreren</button>
       </div>
       <!-- Korte uitleg wat er met een registratie gebeurt (informatieplicht AVG, zie TO hoofdstuk 13). -->
       <p class="muted privacy-note" id="employeePrivacyNote">Wat je registreert, wordt maandelijks ingehouden op je loon. Meer informatie staat in de privacyverklaring voor medewerkers.</p>
@@ -467,8 +488,11 @@
     </div>
   </div>
 
-  <!-- Tijdelijke statusmelding na acties zoals opslaan of verwijderen. -->
+  <!-- Tijdelijke meldingen na acties zoals opslaan of verwijderen. Twee vaste regio's die altijd op de
+       pagina blijven, zodat een schermlezer ze voorleest: #toast voor gewone meldingen (role="status")
+       en #toastAlert voor foutmeldingen (role="alert"). Zie RegistrationView.showToast. -->
   <div class="toast hidden" id="toast" role="status"></div>
+  <div class="toast hidden" id="toastAlert" role="alert"></div>
   <!-- Browsers blokkeren JavaScript-modules via file://; dan zou de pagina leeg blijven zonder uitleg. -->
   <script>
     if (location.protocol === "file:") {

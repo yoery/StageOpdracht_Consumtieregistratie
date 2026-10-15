@@ -44,9 +44,14 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
   // Hulpfuncties die in meerdere tests terugkomen.
   const text = (selector) => browser.evaluate(`document.querySelector(${JSON.stringify(selector)})?.textContent.trim()`);
   const isHidden = (selector) => browser.evaluate(`document.querySelector(${JSON.stringify(selector)}).classList.contains("hidden")`);
+  // Er zijn twee vaste meldingsregio's: #toast (gewone meldingen) en #toastAlert (foutmeldingen).
   const waitForToast = (expected) => browser.waitFor(
-    `(() => { const toast = document.querySelector("#toast"); return !toast.classList.contains("hidden") && toast.textContent.includes(${JSON.stringify(expected)}); })()`,
+    `[...document.querySelectorAll("#toast, #toastAlert")].some((toast) => !toast.classList.contains("hidden") && toast.textContent.includes(${JSON.stringify(expected)}))`,
     { message: `Melding verscheen niet: ${expected}` }
+  );
+  // Is er nu een melding in beeld (in een van de twee regio's)?
+  const visibleToastText = () => browser.evaluate(
+    `[...document.querySelectorAll("#toast, #toastAlert")].filter((toast) => !toast.classList.contains("hidden")).map((toast) => toast.textContent.trim()).join(" ")`
   );
 
   // Registreert via het productvenster `amount` keer het product met deze id voor een medewerker.
@@ -151,14 +156,32 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await text("#employeeSuggestion"), "");
   });
 
-  test("registreren zonder keuze geeft een melding en slaat niets op", { timeout: TEST_TIMEOUT }, async () => {
+  test("UX 12: zonder keuze is Registreren uitgeschakeld met uitleg, een tik benadrukt de uitleg en slaat niets op", { timeout: TEST_TIMEOUT }, async () => {
     await browser.click(row("Mark Jansen"));
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-    await browser.click("#registerSelectedProductsButton");
 
-    await waitForToast("Kies eerst minimaal één product");
+    // aria-disabled (niet disabled): de knop blijft bereikbaar en heeft de uitleg als beschrijving.
+    const button = `document.querySelector("#registerSelectedProductsButton")`;
+    assert.equal(await browser.evaluate(`${button}.getAttribute("aria-disabled")`), "true");
+    assert.equal(await browser.evaluate(`${button}.disabled`), false);
+    assert.equal(await browser.evaluate(`${button}.getAttribute("aria-describedby")`), "registerHint");
+    assert.equal(await isHidden("#registerHint"), false);
+    assert.equal(await text("#registerHint"), "Kies eerst een product met +");
+
+    await browser.click("#registerSelectedProductsButton");
+    await browser.waitFor(`document.querySelector("#registerHint").classList.contains("register-hint-emphasis")`);
+    await sleep(200);
+    // Geen foutmelding meer, het venster blijft open en er is niets opgeslagen.
+    assert.equal(await visibleToastText(), "");
     assert.equal(await isHidden("#employeeProductsModal"), false);
     assert.equal((await browser.storedData())?.registrations.length ?? 0, 0);
+
+    // Na een keuze is de knop ingeschakeld en verdwijnt de uitleg. De rij krijgt de keuze-opmaak.
+    await browser.click(`[data-product-increment="blikje"]`);
+    await browser.waitFor(`${button}.getAttribute("aria-disabled") === "false"`);
+    assert.equal(await isHidden("#registerHint"), true);
+    assert.equal(await browser.evaluate(`${button}.hasAttribute("aria-describedby")`), false);
+    assert.equal(await browser.evaluate(`document.querySelector('[data-product-increment="blikje"]').closest(".personal-product-item").classList.contains("is-selected")`), true);
   });
 
   test("Escape sluit een venster en de focus gaat terug naar waar die was", { timeout: TEST_TIMEOUT }, async () => {
@@ -323,7 +346,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.match(lines[0], /^Jaar;Maand;Looncode;Personeelsnummer;/);
     assert.match(lines[1], /0,65/);
     // Er verscheen geen foutmelding.
-    assert.equal(await browser.evaluate(`document.querySelector("#toast").classList.contains("toast-error") && !document.querySelector("#toast").classList.contains("hidden")`), false);
+    assert.equal(await browser.evaluate(`!document.querySelector("#toastAlert").classList.contains("hidden")`), false);
   });
 
   // ------------------------------------------------------------------
@@ -428,5 +451,173 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await isHidden("#employeeFormModal"), false);
     const stored = await browser.storedData();
     assert.equal(stored?.employees.some((employee) => employee.firstName === "Test") ?? false, false);
+  });
+
+  // ------------------------------------------------------------------
+  // UX-review oktober 2026 (TO versie 3.12)
+  // ------------------------------------------------------------------
+
+  // Zet het schermformaat (CSS-pixels) en zet het na afloop terug op het standaardscherm van browser.js.
+  const withViewport = async (width, height, action) => {
+    await browser.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+    try {
+      await action();
+    } finally {
+      await browser.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+    }
+  };
+
+  // Koppelt een pas aan een demomedewerker zonder het beheer: na één registratie staan de gegevens in
+  // localStorage. Daar komt het pasnummer bij, en daarna wordt de pagina opnieuw geladen.
+  const linkBadgeDirectly = async (name, badgeId) => {
+    await registerProduct("Daan Smit", "blikje", 1);
+    await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      data.employees.find((employee) => employee.name === ${JSON.stringify(name)}).badgeId = ${JSON.stringify(badgeId)};
+      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
+      window.oudePagina = true;
+    })()`);
+    await browser.send("Page.reload");
+    await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+  };
+
+  test("UX 1: het productvenster sluit vanzelf na 75 seconden zonder invoer, met eerst een waarschuwing", { timeout: TEST_TIMEOUT }, async () => {
+    // Nep-klok voor de pagina: Date.now() loopt zo veel milliseconden voor als de test aangeeft. Zo
+    // hoeft de test niet 75 seconden te wachten. De app gebruikt Date.now() via AdminController.realClock.
+    const { identifier } = await browser.send("Page.addScriptToEvaluateOnNewDocument", {
+      source: "(() => { const echt = Date.now.bind(Date); window.klokVooruit = 0; Date.now = () => echt() + window.klokVooruit; })()"
+    });
+    try {
+      await browser.openApp();
+      await browser.click("#employeeSearch");
+      await browser.insertText("Lotte");
+      await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 1`);
+      await browser.click(row("Lotte van Dijk"));
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      await browser.click(`[data-product-increment="blikje"]`);
+      assert.equal(await text("#productIdleWarning"), "");
+
+      // 66 seconden niets gedaan: de waarschuwing staat in het venster.
+      await browser.evaluate("window.klokVooruit = 66000");
+      await browser.waitFor(`document.querySelector("#productIdleWarning").textContent === "Venster sluit zo. Tik om door te gaan."`, { timeout: 4000 });
+      assert.equal(await browser.evaluate(`document.querySelector("#productIdleWarning").getAttribute("role")`), "status");
+
+      // Een tik in het venster begint de tijd opnieuw: de waarschuwing verdwijnt en het venster blijft open.
+      await browser.click("#employeeProductsTitle");
+      await browser.waitFor(`document.querySelector("#productIdleWarning").textContent === ""`);
+      await sleep(1200);
+      assert.equal(await isHidden("#employeeProductsModal"), false);
+
+      // Daarna 76 seconden niets: het venster gaat dicht zonder op te slaan, het zoekveld is leeg.
+      await browser.evaluate("window.klokVooruit = 66000 + 76000");
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`, { timeout: 4000 });
+      assert.equal((await browser.storedData())?.registrations.length ?? 0, 0);
+      assert.equal(await browser.evaluate(`document.querySelector("#employeeSearch").value`), "");
+      assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
+      assert.equal(await text("#productIdleWarning"), "");
+    } finally {
+      await browser.send("Page.removeScriptToEvaluateOnNewDocument", { identifier });
+    }
+  });
+
+  test("UX 2: een pas vervangt het open productvenster van een collega en geeft een melding bij een ander venster", { timeout: TEST_TIMEOUT }, async () => {
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+
+    // Mark kiest iets, maar registreert niet en loopt weg. Lotte houdt haar pas tegen de lezer.
+    await browser.click(row("Mark Jansen"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.click(`[data-product-increment="ei"]`);
+    await browser.scanBadge("04A1B2C3");
+
+    await browser.waitFor(`document.querySelector("#employeeProductsTitle").textContent === "Product kiezen voor Lotte van Dijk"`);
+    assert.match(await text("#employeeWelcome"), /Je bent herkend met je pas\.$/);
+    assert.equal(await text("#registerSelectedProductsButton"), "Registreren");
+    // De keuze van Mark is niet opgeslagen (alleen de registratie van Daan uit de voorbereiding).
+    assert.equal((await browser.storedData()).registrations.length, 1);
+
+    // Dezelfde pas nog een keer: het venster van Lotte blijft open, met haar keuze.
+    await browser.click(`[data-product-increment="blikje"]`);
+    await browser.scanBadge("04A1B2C3");
+    await sleep(400);
+    assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
+    assert.equal(await text("#registerSelectedProductsButton"), "Registreren (1)");
+
+    // Staat een ander venster open (hier het beheer), dan opent er niets en volgt een melding.
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.click("#adminOpenButton");
+    await browser.waitFor(`!document.querySelector("#adminModal").classList.contains("hidden")`);
+    await browser.click("#adminTitle");
+    await browser.scanBadge("04A1B2C3");
+    await waitForToast("Sluit eerst het open venster om je pas te gebruiken.");
+    assert.equal(await isHidden("#employeeProductsModal"), true);
+    assert.equal(await isHidden("#adminModal"), false);
+  });
+
+  test("UX 3: de knop Registreren blijft in beeld op een liggende tablet, een telefoon en bij 200% zoom", { timeout: TEST_TIMEOUT }, async () => {
+    // [breedte, hoogte] in CSS-pixels. 540 × 405 is een liggende tablet van 1080 × 810 bij 200% zoom.
+    for (const [width, height] of [[1080, 810], [390, 844], [540, 405]]) {
+      await withViewport(width, height, async () => {
+        await browser.click(row("Lotte van Dijk"));
+        await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+        const inView = () => browser.evaluate(`(() => {
+          const button = document.querySelector("#registerSelectedProductsButton");
+          const box = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          return { top: box.top, bottom: box.bottom, height: box.height, fontSize: getComputedStyle(button).fontSize,
+            covered: !(hit === button || button.contains(hit)), viewport: innerHeight };
+        })()`);
+        const scroller = `document.querySelector("#employeeProductsModal .modal")`;
+        // Het venster is hier hoger dan het scherm: de productlijst scrolt.
+        assert.ok(await browser.evaluate(`${scroller}.scrollHeight > ${scroller}.clientHeight`), `${width}×${height}: het venster scrolt niet`);
+
+        for (const position of ["top", "middle"]) {
+          if (position === "middle") await browser.evaluate(`${scroller}.scrollTop = ${scroller}.scrollHeight / 3`);
+          const button = await inView();
+          assert.ok(button.top >= 0 && button.bottom <= button.viewport, `${width}×${height} (${position}): Registreren staat buiten beeld (${button.top}-${button.bottom})`);
+          assert.equal(button.covered, false, `${width}×${height} (${position}): Registreren wordt bedekt`);
+          assert.ok(button.height >= 52 && button.height <= 56, `${width}×${height}: hoogte ${button.height}`);
+          assert.equal(button.fontSize, "19px");
+        }
+
+        await browser.press("Escape");
+        await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+        await sleep(550);
+      });
+    }
+  });
+
+  test("UX 4: na registreren zijn zoekveld en bedrijfsfilter leeg en staat de lijst bovenaan in beeld", { timeout: TEST_TIMEOUT }, async () => {
+    await withViewport(390, 844, async () => {
+      // Een bedrijf kiezen in het filter en een zoekterm typen.
+      await browser.click("#employeeCompanyFilter");
+      await browser.waitFor(`!document.querySelector("#companyFilterOptions").classList.contains("hidden")`);
+      const companyId = await browser.evaluate(`document.querySelector('#companyFilterOptions [data-company-value]:not([data-company-value="all"])').dataset.companyValue`);
+      await browser.click(`#companyFilterOptions [data-company-value="${companyId}"]`);
+      await browser.click("#employeeSearch");
+      await browser.insertText("de");
+      await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 2`);
+      const name = await browser.evaluate(`[...document.querySelectorAll("[data-open-employee] .employee-name")].at(-1).textContent`);
+
+      // De laatste medewerker in de lijst kiest een product. De pagina erachter staat naar beneden gescrold.
+      await browser.click(row(name));
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      await browser.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)");
+      assert.ok(await browser.evaluate(`document.querySelector(".directory-card").getBoundingClientRect().top < 0`), "de pagina is niet naar beneden gescrold");
+      await browser.click(`[data-product-increment="blikje"]`);
+      await browser.click("#registerSelectedProductsButton");
+      await waitForToast(`${name}: 1× Blikje geregistreerd`);
+
+      assert.equal(await browser.evaluate(`document.querySelector("#employeeSearch").value`), "");
+      assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").value`), "");
+      assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").dataset.value`), "all");
+      assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").getAttribute("aria-expanded")`), "false");
+      assert.equal(await browser.evaluate(`document.querySelector('#companyFilterOptions [data-company-value="all"]').getAttribute("aria-selected")`), "true");
+      assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
+      // De medewerkerskaart staat bovenaan in beeld en de focus staat op de rij van deze medewerker.
+      assert.ok(await browser.evaluate(`document.querySelector(".directory-card").getBoundingClientRect().top >= 0`));
+      assert.equal(await browser.evaluate(`document.activeElement.getAttribute("aria-label")`), `Product kiezen voor ${name}`);
+    });
   });
 });

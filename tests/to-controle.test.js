@@ -656,7 +656,7 @@ test("punt 11 (FR-29): de publieke medewerkerlijst toont geen bedragen en geen p
   assert.equal(html.includes("€"), false); // geen bedrag
   assert.equal(html.includes("&euro;"), false);
   assert.doesNotMatch(visibleText, /\d/); // geen aantal (4 registraties) en geen totaalbedrag (€ 2,45)
-  assert.match(html, /<div class="employee-total">Klik om een product te kiezen<\/div>/);
+  assert.match(html, /<div class="employee-total">Tik om te kiezen<\/div>/);
 });
 
 // ------------------------------------------------------------------

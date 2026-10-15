@@ -247,7 +247,7 @@ test("bug 11: het statuslabel van één product wordt bijgewerkt", () => {
   view.updateStockStatus(point.id, "blikje");
 
   assert.equal(badge.className, "stock-badge stock-out");
-  assert.equal(badge.textContent, "Op");
+  assert.equal(badge.textContent, "Leeg");
 });
 
 // Bug 12 (Ctrl + K achter een venster) staat in controller.test.js bij de toetsenbordtests.
