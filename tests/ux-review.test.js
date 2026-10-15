@@ -11,7 +11,9 @@
 //  10. leesbaarheid van meldingen en kleine kopjes;
 //  11. kortere teksten ("Tik op je naam", "Tik om te kiezen", "Leeg");
 //  12. Registreren zonder keuze: aria-disabled met uitleg in plaats van een foutmelding.
-// De browsertests in tests/e2e/app.e2e.test.js controleren 1, 2, 3, 4 en 12 in een echte browser.
+//  13. een productvenster zonder producten toont geen knopbalk, geen lege strook en geen dubbele lijn (W11);
+//  14. vensters openen altijd bovenaan, ook na herkenning met de camera of de pas (W14).
+// De browsertests in tests/e2e/app.e2e.test.js controleren 1, 2, 3, 4, 12, 13 en 14 in een echte browser.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -251,7 +253,7 @@ test("UX 1: de echte klok van EmployeeController gebruikt Date.now", () => {
 });
 
 test("UX 1: de waarschuwing is een vaste statusregel in de knopbalk van het productvenster", () => {
-  assert.match(html, /<div class="employee-products-actions">\s*<p class="idle-warning" id="productIdleWarning" role="status"><\/p>/);
+  assert.match(html, /<div class="employee-products-actions" id="employeeProductsActions">\s*<p class="idle-warning" id="productIdleWarning" role="status"><\/p>/);
   assert.match(css, /\.idle-warning:not\(:empty\) \{[^}]*background:var\(--warning-bg\)/);
 
   const view = new RegistrationView(null);
@@ -688,7 +690,7 @@ test("UX 11: 'Tik op je naam' staat één keer in de kop bij de teller en iedere
 });
 
 test("UX 11: de uitleg in het productvenster en het voorraadlabel 'Leeg'", () => {
-  assert.match(html, /<p class="muted">Tik op \+ bij wat je pakt\. Tik daarna op Registreren\.<\/p>/);
+  assert.match(html, /<p class="muted" id="employeeProductsHelp">Tik op \+ bij wat je pakt\. Tik daarna op Registreren\.<\/p>/);
   assert.equal(STOCK_STATUS.out, "Leeg");
 });
 
@@ -759,4 +761,138 @@ test("UX 12: in index.html is de knop aria-disabled (niet disabled) en staat de 
   assert.equal(/\sdisabled[\s>]/.test(button), false);
   assert.match(html, /<p class="register-hint" id="registerHint">Kies eerst een product met \+<\/p>/);
   assert.match(css, /\.primary-button\[aria-disabled="true"\] \{\s*opacity:\.45/);
+});
+
+// ------------------------------------------------------------------
+// 13. Productvenster zonder producten (W11)
+// ------------------------------------------------------------------
+
+test("13: zonder producten vervallen de uitleg, de knopbalk (is-empty) en de regel over het loon", () => {
+  const { model } = createModel();
+  addEmployee(model); // employee-2 heeft geen consumptiepunt, dus geen producten
+  const view = createWindowView(model);
+
+  view.renderEmployeeProducts("employee-2", {});
+
+  assert.match(view.$("#employeeProductList").innerHTML, /Geen producten op jouw consumptiepunt\./);
+  assert.equal(view.$("#registerSelectedProductsButton").classList.contains("hidden"), true);
+  assert.equal(view.$("#registerHint").classList.contains("hidden"), true);
+  assert.equal(view.$("#employeeProductsHelp").classList.contains("hidden"), true);
+  assert.equal(view.$("#employeeProductsActions").classList.contains("is-empty"), true);
+  assert.equal(view.$("#employeePrivacyNote").classList.contains("hidden"), true);
+});
+
+test("13: met producten verandert er niets, ook niet na een venster zonder producten", () => {
+  const { model } = createModel();
+  addEmployee(model);
+  const view = createWindowView(model);
+
+  view.renderEmployeeProducts("employee-2", {});
+  view.renderEmployeeProducts("employee-1", {});
+
+  assert.equal(view.$("#registerSelectedProductsButton").classList.contains("hidden"), false);
+  assert.equal(view.$("#registerHint").classList.contains("hidden"), false);
+  assert.equal(view.$("#employeeProductsHelp").classList.contains("hidden"), false);
+  assert.equal(view.$("#employeeProductsActions").classList.contains("is-empty"), false);
+  assert.equal(view.$("#employeePrivacyNote").classList.contains("hidden"), false);
+});
+
+test("13: de lege knopbalk heeft geen lijn, geen ruimte en is niet sticky, de waarschuwing blijft mogelijk", () => {
+  const empty = rule(".employee-products-actions.is-empty");
+  assert.match(empty, /position:static/);
+  assert.match(empty, /margin:0/);
+  assert.match(empty, /padding:0/);
+  assert.match(empty, /border-top:0/);
+  assert.match(rule(".employee-products-actions.is-empty .idle-warning:not(:empty)"), /margin-top:16px/);
+  // De waarschuwing vlak voor het automatisch sluiten staat nog steeds in de knopbalk.
+  assert.match(html, /<div class="employee-products-actions" id="employeeProductsActions">\s*(<!--[\s\S]*?-->\s*)?<p class="idle-warning" id="productIdleWarning"/);
+  assert.match(html, /<p class="muted" id="employeeProductsHelp">Tik op \+ bij wat je pakt\. Tik daarna op Registreren\.<\/p>/);
+});
+
+test("13: zonder producten krijgt het kruisje de focus, zonder dat het venster scrolt", () => {
+  const { app, model, view } = createApp();
+  model.state.employees[1].pointId = null;
+  const close = view.$("#employeeProductsModal .modal-close");
+  let options = null;
+  close.focus = (focusOptions) => { options = focusOptions; };
+  view.$ = ((original) => (selector) => (selector === "#employeeProductList [data-product-increment]" ? null : original(selector)))(view.$);
+
+  app.openEmployeeProducts("employee-2");
+
+  assert.deepEqual(options, { preventScroll: true });
+});
+
+// ------------------------------------------------------------------
+// 14. Vensters openen bovenaan (W14)
+// ------------------------------------------------------------------
+
+// Geeft het venster (backdrop) een binnenste .modal met een scrollpositie, zoals in index.html.
+const withScrolledModal = (view, selector, scrollTop = 26) => {
+  const backdrop = view.$(selector);
+  const inner = createFakeElement();
+  inner.scrollTop = scrollTop;
+  backdrop.scrollTop = scrollTop;
+  backdrop.querySelector = (query) => (query === ".modal" ? inner : null);
+  return { backdrop, inner };
+};
+
+test("14: het productvenster begint bovenaan en de focus op de eerste + scrolt niet (naam, pas en camera)", () => {
+  for (const options of [{}, { recognizedBy: "badge" }, { recognized: true }]) {
+    const { app, view } = createApp();
+    const { backdrop, inner } = withScrolledModal(view, "#employeeProductsModal");
+    const plus = view.$("#employeeProductList [data-product-increment]");
+    let focusOptions = null;
+    plus.focus = (given) => { focusOptions = given; };
+
+    app.openEmployeeProducts("employee-1", options);
+
+    assert.equal(inner.scrollTop, 0, `venster omlaag gescrold (${JSON.stringify(options)})`);
+    assert.equal(backdrop.scrollTop, 0);
+    assert.deepEqual(focusOptions, { preventScroll: true });
+  }
+});
+
+test("14: na herkenning met de pas opent het venster ook bovenaan (BadgeController)", () => {
+  const { app, view } = createApp();
+  const { inner } = withScrolledModal(view, "#employeeProductsModal", 40);
+
+  app.recognizeBadge("04A1B2C3");
+
+  assert.equal(app.selectedEmployeeId, "employee-1");
+  assert.equal(inner.scrollTop, 0);
+});
+
+test("14: ieder venster dat met openModal opengaat, begint bovenaan", () => {
+  const { app, view } = createApp();
+  for (const selector of ["#adminModal", "#employeeFormModal", "#productFormModal", "#faceModal"]) {
+    const { backdrop, inner } = withScrolledModal(view, selector, 120);
+    app.openModal(selector);
+    assert.equal(backdrop.classList.contains("hidden"), false);
+    assert.equal(inner.scrollTop, 0, selector);
+    assert.equal(backdrop.scrollTop, 0, selector);
+  }
+});
+
+test("14: scrollModalToTop werkt ook zonder binnenste venster of zonder element", () => {
+  const { app, view } = createApp();
+  const backdrop = view.$("#removeRegistrationModal");
+  backdrop.scrollTop = 10;
+  app.scrollModalToTop("#removeRegistrationModal");
+  assert.equal(backdrop.scrollTop, 0);
+
+  view.$ = () => null;
+  assert.doesNotThrow(() => app.scrollModalToTop("#bestaatNiet"));
+});
+
+test("14: het cameravenster zet de focus zonder te scrollen, zodat titel en camerabeeld in beeld blijven", () => {
+  for (const mode of ["recognize", "enroll"]) {
+    const { app, view } = createApp();
+    const target = view.$(mode === "enroll" ? "#faceConsent" : "#faceModal .employee-form-actions [data-close-face-modal]");
+    let focusOptions = null;
+    target.focus = (given) => { focusOptions = given; };
+
+    app.openFaceModal(mode, "employee-1").catch(() => {});
+
+    assert.deepEqual(focusOptions, { preventScroll: true }, mode);
+  }
 });

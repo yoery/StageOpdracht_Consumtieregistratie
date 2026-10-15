@@ -1073,6 +1073,19 @@ footer {
   background:var(--paper);
   border-top:1px solid var(--line)
 }
+/* Geen producten op het consumptiepunt: geen knop en geen uitleg, dus ook geen balk. De lijn, de
+   ruimte en het sticky gedrag vervallen, zodat er geen lege strook tussen twee lijnen overblijft.
+   Alleen de waarschuwing vlak voor het automatisch sluiten kan hier nog verschijnen. */
+.employee-products-actions.is-empty {
+  position:static;
+  margin:0;
+  padding:0;
+  border-top:0;
+  background:none
+}
+.employee-products-actions.is-empty .idle-warning:not(:empty) {
+  margin-top:16px
+}
 /* Registreren: over de volle breedte, 54 pixels hoog, 19 pixels vet. Witte tekst op --green is
    3,56:1. Vette tekst van 19 pixels (ruim 14 punt) is "grote tekst" volgens WCAG 1.4.3, waarvoor 3:1
    genoeg is. */

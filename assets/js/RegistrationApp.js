@@ -575,7 +575,7 @@ export class RegistrationApp {
 const DELEGATES = {
   modals: {
     methods: [
-      "show", "hide", "rememberOpener", "openModal", "closeModal", "registerModalClose", "topModal", "keepFocusInModal",
+      "show", "hide", "rememberOpener", "openModal", "scrollModalToTop", "closeModal", "registerModalClose", "topModal", "keepFocusInModal",
       "focusSelector", "findFocusReplacement", "preserveFocus"
     ],
     fields: ["modalCloseActions", "modalOpeners"]

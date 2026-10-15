@@ -72,10 +72,28 @@ export class ModalManager {
     this.modalOpeners.set(this.view.$(modalSelector), globalThis.document?.activeElement || null);
   }
 
-  // Opent een venster en onthoudt waar de focus vandaan kwam.
+  // Opent een venster en onthoudt waar de focus vandaan kwam. Het venster begint altijd bovenaan
+  // (zie scrollModalToTop).
   openModal(modalSelector) {
     this.rememberOpener(modalSelector);
     this.show(modalSelector);
+    this.scrollModalToTop(modalSelector);
+  }
+
+  // Zet een venster dat net opengaat bovenaan: de scrollpositie van het venster (.modal, het element
+  // dat scrolt als de inhoud hoger is dan het scherm) en van de donkere achtergrond gaat naar 0.
+  // De browser onthoudt de scrollpositie van een verborgen venster en zet die bij het opnieuw tonen
+  // terug. Was het venster de vorige keer omlaag gescrold (bijvoorbeeld doordat de focus op de knop
+  // Registreren onderaan stond), dan opende het daardoor een stukje omlaag gescrold, met het kruisje
+  // en de titel half buiten beeld (gezien na herkenning met de camera op een staande tablet).
+  // Moet daarna een element in het venster de focus krijgen, gebruik dan focus({ preventScroll: true }),
+  // zodat de focus het venster niet alsnog omlaag scrolt.
+  scrollModalToTop(modalSelector) {
+    const backdrop = this.view.$(modalSelector);
+    if (!backdrop) return;
+    backdrop.scrollTop = 0;
+    const modal = backdrop.querySelector?.(".modal");
+    if (modal) modal.scrollTop = 0;
   }
 
   // Sluit een venster en zet de focus terug op het element waarmee het werd geopend.

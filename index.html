@@ -335,7 +335,7 @@
       <!-- Persoonlijke begroeting en de keuze van de vorige keer. -->
       <p class="welcome-line" id="employeeWelcome"></p>
       <div class="suggestion hidden" id="employeeSuggestion"></div>
-      <p class="muted">Tik op + bij wat je pakt. Tik daarna op Registreren.</p>
+      <p class="muted" id="employeeProductsHelp">Tik op + bij wat je pakt. Tik daarna op Registreren.</p>
       <div id="employeeProductList" class="personal-product-list"></div>
       <!-- Vaste live region: na "+" of "−" komt hier het nieuwe aantal, bijvoorbeeld "Blikje: 2" (alleen voor schermlezers). -->
       <p class="visually-hidden" id="productLiveStatus" aria-live="polite"></p>
@@ -343,8 +343,10 @@
       <div class="face-enroll hidden" id="faceEnrollArea"></div>
       <!-- Knopbalk die onderaan in beeld blijft als het venster scrolt (position: sticky). Daarin de
            waarschuwing vlak voor het automatisch sluiten (vaste statusregel, leeg als er niets aan de hand is),
-           de uitleg bij een uitgeschakelde knop en de knop Registreren over de volle breedte. -->
-      <div class="employee-products-actions">
+           de uitleg bij een uitgeschakelde knop en de knop Registreren over de volle breedte. Zonder producten
+           op het consumptiepunt krijgt de balk de klasse is-empty: dan staan er geen knop, geen lijn en geen
+           lege strook, alleen nog de waarschuwing als het venster bijna sluit. -->
+      <div class="employee-products-actions" id="employeeProductsActions">
         <p class="idle-warning" id="productIdleWarning" role="status"></p>
         <p class="register-hint" id="registerHint">Kies eerst een product met +</p>
         <button class="primary-button register-button" id="registerSelectedProductsButton" type="button" aria-disabled="true" aria-describedby="registerHint">Registreren</button>

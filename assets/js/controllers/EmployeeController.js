@@ -186,9 +186,12 @@ export class EmployeeController {
     this.lastProductActivity = this.clock.now();
     this.setIdleWarning(false);
     this.renderProductWindow();
+    // Het venster begint bovenaan, ook als het de vorige keer omlaag was gescrold. preventScroll:
+    // de focus op de eerste "+" scrolt het venster niet, zodat het kruisje en de titel in beeld blijven.
+    this.app.scrollModalToTop("#employeeProductsModal");
 
     const firstPlus = this.view.$("#employeeProductList [data-product-increment]");
-    (firstPlus || this.view.$("#employeeProductsModal .modal-close"))?.focus();
+    (firstPlus || this.view.$("#employeeProductsModal .modal-close"))?.focus({ preventScroll: true });
   }
 
   // Tekent het productvenster opnieuw, met de status van de demo gezichtsherkenning.

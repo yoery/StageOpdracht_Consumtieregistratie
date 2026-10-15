@@ -620,4 +620,116 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
       assert.equal(await browser.evaluate(`document.activeElement.getAttribute("aria-label")`), `Product kiezen voor ${name}`);
     });
   });
+
+  test("W11: zonder producten op het consumptiepunt staan er geen knopbalk, geen lege strook en geen dubbele lijn", { timeout: TEST_TIMEOUT }, async () => {
+    // Het consumptiepunt Hoofdkantoor biedt niets meer aan (rechtstreeks in localStorage, daarna herladen).
+    await registerProduct("Daan Smit", "blikje", 1);
+    await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      for (const point of data.points) for (const entry of Object.values(point.products)) entry.offered = false;
+      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
+      window.oudePagina = true;
+    })()`);
+    await browser.send("Page.reload");
+    await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+
+    await browser.click(row("Lotte van Dijk"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    assert.match(await text("#employeeProductList"), /Geen producten op jouw consumptiepunt\./);
+
+    const layout = await browser.evaluate(`(() => {
+      const shown = (selector) => getComputedStyle(document.querySelector(selector)).display !== "none";
+      const actions = document.querySelector("#employeeProductsActions");
+      const style = getComputedStyle(actions);
+      // Alle zichtbare scheidingslijnen (border-top) in het venster.
+      const lines = [...document.querySelectorAll("#employeeProductsModal .modal *")]
+        .filter((element) => element.getClientRects().length > 0 && parseFloat(getComputedStyle(element).borderTopWidth) > 0
+          && !element.closest(".personal-product-list"));
+      return {
+        button: shown("#registerSelectedProductsButton"), hint: shown("#registerHint"),
+        help: shown("#employeeProductsHelp"), note: shown("#employeePrivacyNote"),
+        actionsHeight: actions.getBoundingClientRect().height, actionsBorder: style.borderTopWidth, actionsPosition: style.position,
+        lines: lines.map((element) => element.id || element.className)
+      };
+    })()`);
+    assert.equal(layout.button, false, "de knop Registreren staat er nog");
+    assert.equal(layout.hint, false, "de uitleg 'Kies eerst een product met +' staat er nog");
+    assert.equal(layout.help, false, "de uitleg 'Tik op + ...' staat er nog");
+    assert.equal(layout.note, false, "de regel over de inhouding op het loon staat er nog");
+    assert.equal(layout.actionsHeight, 0, "de knopbalk laat een lege strook achter");
+    assert.equal(layout.actionsBorder, "0px");
+    assert.equal(layout.actionsPosition, "static");
+    assert.deepEqual(layout.lines, [], `er staan nog scheidingslijnen in het venster: ${layout.lines.join(", ")}`);
+    // De focus staat op het kruisje (er is geen "+").
+    assert.equal(await browser.evaluate(`document.activeElement.classList.contains("modal-close")`), true);
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await sleep(550);
+
+    // Bij een medewerker met producten verandert niets: knop, uitleg, knopbalk en de regel over het loon staan er.
+    await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      for (const point of data.points) for (const entry of Object.values(point.products)) entry.offered = true;
+      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
+      window.oudePagina = true;
+    })()`);
+    await browser.send("Page.reload");
+    await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.click(row("Lotte van Dijk"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    for (const selector of ["#registerSelectedProductsButton", "#registerHint", "#employeeProductsHelp", "#employeePrivacyNote"]) {
+      assert.equal(await isHidden(selector), false, `${selector} is verborgen`);
+    }
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeProductsActions").classList.contains("is-empty")`), false);
+    assert.equal(await browser.evaluate(`getComputedStyle(document.querySelector("#employeeProductsActions")).position`), "sticky");
+  });
+
+  test("W14: het productvenster opent altijd bovenaan met het kruisje en de titel in beeld (naam en pas)", { timeout: TEST_TIMEOUT }, async () => {
+    // Na herkenning met de camera, met de pas en na een tik op de naam opent hetzelfde productvenster
+    // (EmployeeController.openEmployeeProducts). Eerder onthield de browser de scrollpositie van het
+    // verborgen venster: stond de focus de vorige keer op Registreren onderaan, dan opende het venster
+    // de volgende keer omlaag gescrold. Hier wordt dat nagebootst door het venster omlaag te scrollen
+    // en te sluiten, en het daarna opnieuw te openen.
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+    const scroller = `document.querySelector("#employeeProductsModal .modal")`;
+    const header = () => browser.evaluate(`(() => {
+      const top = (selector) => document.querySelector(selector).getBoundingClientRect().top;
+      return { scrollTop: ${scroller}.scrollTop, close: top("#employeeProductsModal .modal-close"),
+        kicker: top("#employeeProductsModal .section-kicker"), title: top("#employeeProductsTitle"),
+        modal: top("#employeeProductsModal .modal"), focus: document.activeElement?.dataset?.productIncrement };
+    })()`);
+    const openedAndScrolledDown = async (open) => {
+      await open();
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      // Een klein stukje omlaag, zodat de eerste "+" in beeld blijft (zoals bij W14: na "Gezichtsherkenning
+      // instellen" stond het venster 26 pixels omlaag). Een focus op die "+" scrolt het venster dan niet
+      // vanzelf terug, en zonder het terugzetten van de scrollpositie opende het venster zo omlaag gescrold.
+      await browser.evaluate(`${scroller}.scrollTop = 40`);
+      assert.equal(await browser.evaluate(`${scroller}.scrollTop`), 40, "het venster scrolt niet");
+      await browser.press("Escape");
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      await sleep(550);
+    };
+
+    for (const [width, height] of [[390, 844], [1080, 810]]) {
+      await withViewport(width, height, async () => {
+        for (const [how, open] of [
+          ["naam", () => browser.click(row("Lotte van Dijk"))],
+          ["pas", () => browser.scanBadge("04A1B2C3")]
+        ]) {
+          await openedAndScrolledDown(open);
+          await open();
+          await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+          await sleep(300); // de openingsanimatie (0,22 s) laten uitlopen
+          const box = await header();
+          assert.equal(box.scrollTop, 0, `${width}×${height} (${how}): het venster opent omlaag gescrold`);
+          assert.ok(box.close >= 0 && box.kicker >= box.modal && box.title >= 0, `${width}×${height} (${how}): kruisje of titel buiten beeld (${JSON.stringify(box)})`);
+          assert.equal(box.focus, "blikje", `${width}×${height} (${how}): de focus staat niet op de eerste +`);
+          await browser.press("Escape");
+          await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+          await sleep(550);
+        }
+      });
+    }
+  });
 });

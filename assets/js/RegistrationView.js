@@ -603,6 +603,17 @@ export class RegistrationView {
     hint?.classList.toggle("hidden", hasChoice || products.length === 0);
     hint?.classList.remove("register-hint-emphasis");
 
+    // Zonder producten op het consumptiepunt valt er niets te kiezen en niets te registreren. Dan
+    // vervalt alles wat over kiezen en registreren gaat: de uitleg "Tik op + ...", de knopbalk
+    // (klasse is-empty: geen lijn en geen lege strook, zie styles.css) en de regel over de inhouding
+    // op het loon. Zo staat alleen de melding "Geen producten op jouw consumptiepunt." in het venster,
+    // zonder dubbele scheidingslijnen eronder. De waarschuwing vlak voor het automatisch sluiten
+    // staat in de knopbalk en blijft daardoor wel zichtbaar.
+    const noProducts = products.length === 0;
+    this.$("#employeeProductsHelp")?.classList.toggle("hidden", noProducts);
+    this.$("#employeeProductsActions")?.classList.toggle("is-empty", noProducts);
+    this.$("#employeePrivacyNote")?.classList.toggle("hidden", noProducts);
+
     // Per product: naam en prijs, en een teller met − en + (de − kan niet onder 0).
     // Een product met een keuze (aantal 1 of meer) krijgt een lichtgroene achtergrond en een groene
     // rand (klasse is-selected), zodat in één oogopslag te zien is wat er is gekozen.

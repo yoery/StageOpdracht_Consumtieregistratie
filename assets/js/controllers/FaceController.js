@@ -108,7 +108,9 @@ export class FaceController {
     this.view.$("#faceEnrollButton").disabled = true;
     this.app.openModal("#faceModal");
     // Focus in het venster: bij instellen op het toestemmingsvinkje, bij herkennen op "Annuleren".
-    this.view.$(enrolling ? "#faceConsent" : "#faceModal .employee-form-actions [data-close-face-modal]")?.focus();
+    // preventScroll: het venster begint bovenaan (openModal) en blijft daar, zodat de titel en het
+    // camerabeeld in beeld staan, ook als "Annuleren" op een telefoon onder de rand van het scherm valt.
+    this.view.$(enrolling ? "#faceConsent" : "#faceModal .employee-form-actions [data-close-face-modal]")?.focus({ preventScroll: true });
 
     const video = this.view.$("#faceVideo");
     this.setFaceStatus("Herkenningsmodel laden. De eerste keer kan dit even duren.");
