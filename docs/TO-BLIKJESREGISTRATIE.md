@@ -1,8 +1,8 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.12
-**Datum:** 15 oktober 2026
+**Versie:** 3.13
+**Datum:** 16 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
 Dit document is het enige ontwerpdocument van het project. Het bevat zowel de functionele kant (aanleiding, gebruikersrollen, eisen, use cases, wireframes en acceptatiecriteria) als de technische uitwerking (architectuur, database, interfaces, beveiliging en tests). Het eerdere functioneel ontwerp is hierin opgenomen.
@@ -27,6 +27,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.10 | 12 oktober 2026 | AVG-toets van de demo en van het ontwerp voor productie. Drie aanpassingen in de app: (1) "welkom terug" en de keuze van de vorige keer (`Zelfde als vorige keer`) verschijnen alleen nog als de medewerker is herkend met de pas of de camera. Wie op een naam tikt, krijgt een gewone begroeting, zodat een collega niet kan zien of iemand al eens iets registreerde en wat. FR-49, FR-50, UC-02, UC-20, W07 t/m W10, US-09, US-10 en AC-41 aangepast en AC-91 toegevoegd. (2) De beheerder wordt automatisch uitgelogd als het beheer 5 minuten niet is gebruikt (`ADMIN_IDLE_LOGOUT_MS` in `config.js`), met een melding. Nieuwe eis FR-68, UC-07 pad A3, US-65 en AC-92. (3) Onder in het productvenster staat een korte uitleg dat registraties maandelijks op het loon worden ingehouden, met een verwijzing naar de privacyverklaring voor medewerkers. Nieuwe eis FR-69, US-66 en AC-93. In hoofdstuk 13 de nieuwe paragraaf [AVG-verantwoording (productie)](#avg-verantwoording-productie) met grondslag, doelbinding, dataminimalisatie, bewaartermijnen, rechten van betrokkenen, informatieplicht, datalekken, verwerkersovereenkomsten, doorgifte, instemming van de ondernemingsraad, DPIA, verwerkingsregister en functionaris gegevensbescherming. Correcties: UAVG artikel 29 volgens de tekst die geldt vanaf 1 september 2026, en een duidelijke eis voor versleuteling (versleuteling van schijf of database, geen kolomversleuteling, zie ook het commentaar bij `pgcrypto` in `DATABASE-SCHEMA.sql`). De ondernemingsraad staat bij de stakeholders, de risico's in de demo zijn aangevuld, het testplan herkenningsnauwkeurigheid vraagt uitdrukkelijke schriftelijke toestemming en de bronnen zijn uitgebreid. Nieuw testbestand `tests/avg-toets.test.js`. 565 unit tests en 9 browsertests in totaal. De screenshots W07, W08 en W10 zijn opnieuw gemaakt en tonen nu de regel over de inhouding op het loon, en W10 is gemaakt na herkenning met de pas. |
 | 3.11 | 12 oktober 2026 | Fouten en afwijkingen uit drie reviews (gegevens, bediening en requirements) opgelost. **Opslag:** een lijst die er wel staat maar geen lijst is, maakt de gegevens onleesbaar (met reservekopie en melding) in plaats van stil leeg te worden. Een volle opslag geeft een eigen melding ("De opslag van de browser is vol. Er is niets opgeslagen. Vraag de beheerder om de registraties te exporteren en oude gegevens te wissen.") en de app verwijdert zelf niets. Dubbele passen worden pas na het opschonen gecontroleerd. Niet-bestaande datums zoals 31 februari zijn ongeldig. Een pasnummer in kleine letters of met `:` wordt bij het laden gelijk gemaakt. Mislukt wissen geeft "De gegevens konden niet worden gewist. Probeer het opnieuw." Een werkgevernummer als getal in een registratie wordt tekst. De demo gezichtsherkenning vergelijkt alleen nog met actieve, bestaande medewerkers. **Bediening:** een scan in het veld `Pasnummer` vervangt het oude nummer, een scan in het bedrijfsfilter laat geen pasnummer achter, een dubbelklik op `Registreren` en een ingedrukt gehouden Enter openen geen tweede productvenster, de focus blijft na opslaan, (de)activeren, verwijderen en wijzigingen uit een ander tabblad op de knop, en het datumveld van de correctie schuift na middernacht mee. Toegankelijkheid: een vaste live region voor het aantal in het productvenster, tabbladen met `role="tab"` en `aria-selected`, en een bedrijfsfilter met `aria-expanded`, opties met `aria-selected` en Escape. De cijfervelden zijn tekstvelden met een cijfertoetsenbord, zodat "12a" de melding "Gebruik alleen cijfers." geeft. **TO:** de laadmeldingen staan in de app nu zonder puntkomma zoals in dit document, FR-37, UC-01, UC-02, UC-10, UC-11, UC-12, UC-15, UC-17 t/m UC-20, AC-67 en NFR-05 en NFR-17 aangepast, AC-94 t/m AC-98 toegevoegd, het aandachtspunt over voorloopnullen in Excel (hoofdstuk 12) en twee bekende beperkingen (volle opslag en voorloopnullen) in hoofdstuk 16. Nieuw testbestand `tests/review-oktober.test.js`. 611 unit tests en 13 browsertests in totaal. |
 | 3.12 | 15 oktober 2026 | Twaalf verbeteringen uit een UX-review van de medewerkerskant (zie [UX-review oktober 2026](#ux-review-oktober-2026) in hoofdstuk 9), binnen de huisstijl en zonder nieuwe kleuren of animaties. (1) Het productvenster sluit na 75 seconden zonder invoer vanzelf zonder op te slaan, met in de laatste 10 seconden "Venster sluit zo. Tik om door te gaan." (`EMPLOYEE_IDLE_CLOSE_MS` in `config.js`). (2) Een pas vervangt het open productvenster van een collega. Bij een ander open venster verschijnt "Sluit eerst het open venster om je pas te gebruiken." (3) De knopbalk met `Registreren` blijft onderaan het productvenster in beeld, met een knop over de volle breedte (54 pixels hoog, 19 pixels vet). (4) Na registreren zijn het zoekveld en het bedrijfsfilter leeg en staat de lijst bovenaan. (5) Een compactere banner en het zoekveld naast het bedrijfsfilter, zodat op een liggende tablet de eerste naam op 511 in plaats van 691 pixels staat. (6) Boven het zoekveld de hint "Houd je pas tegen de lezer, of zoek je naam". (7) Een product met een keuze heeft een lichtgroene achtergrond en een groene rand. (8) Tikdoelen van minstens 44 pixels (pijlknop bedrijfsfilter 40) en op een aanraakscherm `−` en `+` van 52 pixels. (9) Een schermlezer hoort na zoeken alleen het aantal medewerkers, en meldingen staan in twee vaste regio's (`role="status"` en `role="alert"`). (10) Meldingen met tekst van 16 pixels en kleine kopjes in `--green-dark`. (11) "Tik op je naam", "Tik om te kiezen", "Tik op + bij wat je pakt. Tik daarna op Registreren." en het voorraadlabel "Leeg" in plaats van "Op". (12) `Registreren` zonder keuze is uitgeschakeld met `aria-disabled` en de uitleg "Kies eerst een product met +", in plaats van de foutmelding "Kies eerst minimaal één product". Nieuwe eisen FR-70 en FR-71, FR-47, FR-48, FR-65, NFR-04 en NFR-05 aangepast, UC-01, UC-02 en UC-20 bijgewerkt, US-67 t/m US-70 en AC-99 t/m AC-107 toegevoegd, hoofdstuk 13 (venster sluit vanzelf, zoekveld leeg) en 14 (meldingen) aangevuld. De screenshots W01 t/m W41 in hoofdstuk 9 zijn op 15 oktober 2026 opnieuw gemaakt, zodat ze de website na deze verbeteringen tonen, en hun omschrijvingen zijn daarop aangepast. Nieuw testbestand `tests/ux-review.test.js`. Daarna zijn twee fouten opgelost die op de nieuwe screenshots zichtbaar waren: zonder producten op het consumptiepunt staan de knopbalk en de regel over de inhouding op het loon niet meer als lege strook in het productvenster (W11), en ieder venster opent bovenaan, ook het productvenster na herkenning met de camera (W14). 661 unit tests en 19 browsertests in totaal. |
+| 3.13 | 16 oktober 2026 | Nieuwe [Bijlage B: Onderzoek naar een afgesloten koelkast of kast](#bijlage-b-onderzoek-naar-een-afgesloten-koelkast-of-kast): een klein onderzoek naar de wens dat de koelkast of kast alleen opengaat na registreren en dat zeker is dat iemand pakt wat hij registreert. Met hoofdvraag, deelvragen, onderzoeksmethode, beoordelingscriteria, vijf oplossingsrichtingen, een beslismatrix, het advies (een slot met weegcellen per schap en de pas als sleutel, met de voorraadtelling als controle), een ontwerpschets voor productie, risico's met maatregelen, privacy en de ondernemingsraad, en vervolgonderzoek. Er zijn geen leveranciers benaderd, geen prijzen opgevraagd en geen proef gedaan. Het idee "Slim slot" in hoofdstuk 16 verwijst naar de bijlage en hoofdstuk 17 heeft drie nieuwe bronnen. De app en `DATABASE-SCHEMA.sql` zijn niet veranderd. |
 
 ## Inhoudsopgave
 
@@ -48,6 +49,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 - [16. Onderhoud en toekomst](#16-onderhoud-en-toekomst)
 - [17. Bronnen](#17-bronnen)
 - [Bijlage A: Traceerbaarheidsmatrix](#bijlage-a-traceerbaarheidsmatrix)
+- [Bijlage B: Onderzoek naar een afgesloten koelkast of kast](#bijlage-b-onderzoek-naar-een-afgesloten-koelkast-of-kast)
 
 
 ## 1. Inleiding
@@ -3953,7 +3955,7 @@ Deze ideeën maken de registratie sneller en moderner. Ze zijn nog niet gebouwd,
 | **Koppeling met AFAS** | Medewerkers en hun gegevens (looncode, personeelsnummer, werkgevernummer) komen automatisch uit AFAS, en de CSV-export kan later direct naar AFAS. | Een backend die de AFAS Profit-connectoren (AFAS Software, z.d.-a) aanroept met een token. Dat token mag nooit in de browser staan. Het ontwerp staat in [Koppeling met AFAS Profit (ontwerp)](#koppeling-met-afas-profit-ontwerp) (FR-67). | Voorkomt dubbel invoeren en tikfouten. Afstemmen met de AFAS-beheerder, de IT-afdeling en de privacyfunctionaris van TVB. |
 | **Product scannen met de camera** | De medewerker houdt het product voor de camera. De barcode (EAN) wordt gelezen en het product toegevoegd. | Per product de EAN-code in productbeheer. De barcode-functie van de browser. | Betrouwbaarder dan "AI die het product herkent", omdat ieder product al een barcode heeft. |
 | **Spraakbesturing** | "Wat wil je vandaag hebben?" — "Een blikje en een ei." De producten worden automatisch gekozen. | De spraakherkenning van de browser (Web Speech API. MDN Web Docs, z.d.). | Werkt alleen in Chrome/Edge en stuurt de spraak naar een server van Google of Microsoft. Niet offline. |
-| **Slim slot op deur of koelkast** | Na identificatie gaat het slot automatisch open, zodat alleen geregistreerde medewerkers producten pakken. | Een elektronisch slot met een koppeling (bijv. via een kleine computer of een slim relais) en een backend die het slot aanstuurt. | Hardware en installatie nodig. Beveiliging van de koppeling is belangrijk. |
+| **Slim slot op deur of koelkast** | Na identificatie gaat het slot automatisch open, zodat alleen geregistreerde medewerkers producten pakken. | Een elektronisch slot met een koppeling (bijv. via een kleine computer of een slim relais) en een backend die het slot aanstuurt. | Hardware en installatie nodig. Beveiliging van de koppeling is belangrijk. Een slot alleen regelt wie de deur opent, niet hoeveel er wordt gepakt. Het onderzoek in [Bijlage B: Onderzoek naar een afgesloten koelkast of kast](#bijlage-b-onderzoek-naar-een-afgesloten-koelkast-of-kast) adviseert daarom een slot met weegcellen per schap, met de voorraadtelling als controle. |
 | **AI-camera in de koelkast** | Een camera ziet welk product wordt gepakt en registreert dat automatisch, inclusief voorraad. | Vaste camera's, een herkenningsmodel dat is getraind op de producten, en een server om het model te draaien. | Veel werk en foutgevoelig (handen, verpakkingen). De barcode-oplossing is een eenvoudiger alternatief. |
 
 ## 17. Bronnen
@@ -3962,10 +3964,10 @@ In de tekst staat bij een bron tussen haakjes de organisatie of auteur en het ja
 
 | Bron | Organisatie of auteur | Jaar | Gebruikt in | Adres |
 |---|---|---|---|---|
-| Algemene verordening gegevensbescherming (AVG), Verordening (EU) 2016/679, onder andere artikel 5, 6, 7, 9, 12 tot en met 21, 28, 30, 33 tot en met 35, 37 en 44 tot en met 49 | Europese Unie (EUR-Lex) | 2016 | Hoofdstuk 4, 13 (ook AVG-verantwoording) en 15 | https://eur-lex.europa.eu/eli/reg/2016/679/oj |
+| Algemene verordening gegevensbescherming (AVG), Verordening (EU) 2016/679, onder andere artikel 5, 6, 7, 9, 12 tot en met 21, 28, 30, 33 tot en met 35, 37 en 44 tot en met 49 | Europese Unie (EUR-Lex) | 2016 | Hoofdstuk 4, 13 (ook AVG-verantwoording), 15 en bijlage B | https://eur-lex.europa.eu/eli/reg/2016/679/oj |
 | Uitvoeringswet Algemene verordening gegevensbescherming (UAVG), artikel 29 (biometrische gegevens), versie geldend vanaf 1 september 2026 | Overheid.nl (wetten.overheid.nl) | 2026, geraadpleegd op 12 oktober 2026 | Hoofdstuk 13 | https://wetten.overheid.nl/BWBR0040940/2026-09-01 |
-| Wet op de ondernemingsraden (WOR), artikel 27 (instemmingsrecht) | Overheid.nl (wetten.overheid.nl) | z.d., geraadpleegd op 12 oktober 2026 | Hoofdstuk 1 en 13 | https://wetten.overheid.nl/BWBR0002747/ |
-| Besluit inzake lijst van verwerkingen van persoonsgegevens waarvoor een gegevensbeschermingseffectbeoordeling (DPIA) verplicht is (Staatscourant 2019, 64418) | Autoriteit Persoonsgegevens | 2019 | Hoofdstuk 13 | https://zoek.officielebekendmakingen.nl/stcrt-2019-64418.html |
+| Wet op de ondernemingsraden (WOR), artikel 27 (instemmingsrecht) | Overheid.nl (wetten.overheid.nl) | z.d., geraadpleegd op 12 oktober 2026 | Hoofdstuk 1, 13 en bijlage B | https://wetten.overheid.nl/BWBR0002747/ |
+| Besluit inzake lijst van verwerkingen van persoonsgegevens waarvoor een gegevensbeschermingseffectbeoordeling (DPIA) verplicht is (Staatscourant 2019, 64418) | Autoriteit Persoonsgegevens | 2019 | Hoofdstuk 13 en bijlage B | https://zoek.officielebekendmakingen.nl/stcrt-2019-64418.html |
 | Algemene wet inzake rijksbelastingen (AWR), artikel 52 (administratieplicht, lid 4: bewaartermijn van zeven jaar) | Overheid.nl (wetten.overheid.nl) | z.d., geraadpleegd op 12 oktober 2026 | Hoofdstuk 13 | https://wetten.overheid.nl/BWBR0002320/ |
 | Burgerlijk Wetboek Boek 7, artikel 632 (verrekening met het loon) | Overheid.nl (wetten.overheid.nl) | z.d., geraadpleegd op 12 oktober 2026 | Hoofdstuk 13 | https://wetten.overheid.nl/BWBR0005290/ |
 | Bewaarplicht van de administratie (7 jaar) | Belastingdienst | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 5 en 8 | https://www.belastingdienst.nl/ (hoofdpagina. Zoek op "bewaarplicht") |
@@ -3988,6 +3990,9 @@ In de tekst staat bij een bron tussen haakjes de organisatie of auteur en het ja
 | DM Sans | Google Fonts | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 7 | https://fonts.google.com/specimen/DM+Sans |
 | Space Grotesk | Google Fonts | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 7 | https://fonts.google.com/specimen/Space+Grotesk |
 | Test runner (`node:test`) | Node.js (OpenJS Foundation) | z.d., geraadpleegd op 6 oktober 2026 | Hoofdstuk 7 | https://nodejs.org/api/test.html |
+| Fail-safe vs fail-secure: What's the difference, & how to choose | Hansen, M. (Axis Communications) | 2026, geraadpleegd op 16 oktober 2026 | Bijlage B | https://newsroom.axis.com/blog/fail-safe-vs-fail-secure |
+| Load cell | Wikipedia | z.d., geraadpleegd op 16 oktober 2026 | Bijlage B | https://en.wikipedia.org/wiki/Load_cell |
+| Systems and methods for weighing products on a shelf (octrooi US11971293B2) | Shekel Scales (2008) Ltd (octrooihouder), via Google Patents | 2024, geraadpleegd op 16 oktober 2026 | Bijlage B | https://patents.google.com/patent/US11971293 |
 
 ## Bijlage A: Traceerbaarheidsmatrix
 
@@ -4072,3 +4077,253 @@ Deze matrix laat per functionele eis (hoofdstuk 4) zien in welke use case (hoofd
 - FR's zonder unit test: FR-67.
 
 FR-67 (de koppeling met AFAS) is alleen ontworpen voor productie en zit niet in de demo. Daarom is er geen use case van de demo en geen unit test voor. De acceptatiecriteria AC-87 t/m AC-89 worden getest in de testomgeving van AFAS zodra er een backend is.
+
+## Bijlage B: Onderzoek naar een afgesloten koelkast of kast
+
+Deze bijlage is een klein onderzoek naar de vraag of een slot op de koelkast of kast de registratie betrouwbaarder kan maken. Het is een verkenning op basis van deskresearch en het bestaande ontwerp. Er is nog niets gebouwd, gekocht of getest. Wat in deze bijlage staat over de productieversie is een voorstel en geen besluit.
+
+### Aanleiding en probleemstelling
+
+De wens is dat de deur van de koelkast of kast niet zomaar open kan. Er moet een slot op zitten dat pas open gaat als een medewerker een product kiest. Daarbij komt een tweede wens: "Als iemand zegt dat die er 1 pakt, wil ik er zeker van zijn dat diegene 1 pakt en niet 2."
+
+Die twee wensen gaan over verschillende dingen. Een slot regelt **wie** de deur opent. Het regelt niet **hoeveel** iemand pakt als de deur eenmaal open is. Een medewerker die 1 blikje registreert en daarna de deur opent, kan er net zo goed 2 pakken. Een slot alleen lost de tweede wens dus niet op.
+
+Het onderliggende probleem is dat de registratie nu volledig op vertrouwen is gebaseerd. Het systeem slaat op wat de medewerker zegt dat hij pakt (FR-05, UC-02). Of dat klopt, controleert niemand. Alleen bij een telling van de voorraad (FR-39, [UC-14 Voorraad bijhouden](#uc-14-voorraad-bijhouden)) kan de beheerder zien dat er meer weg is dan geregistreerd. Wie dat verschil heeft veroorzaakt, is dan niet meer te achterhalen. Hoe groot dat verschil (de derving) bij TVB nu is, is niet gemeten.
+
+De hoofdvraag van dit onderzoek is:
+
+**Hoe kan TVB ervoor zorgen dat wat een medewerker registreert overeenkomt met wat hij werkelijk uit de koelkast of kast pakt?**
+
+### Deelvragen
+
+1. Aan welke eisen moet een oplossing voldoen om voor TVB bruikbaar te zijn?
+2. Welke oplossingsrichtingen zijn er om te registreren wat werkelijk wordt gepakt, en wat zijn per richting de voor- en nadelen?
+3. Welke oplossingsrichting past het best bij die eisen?
+4. Hoe past die oplossing in de bestaande app en in het ontwerp voor productie (pasjeslezer, backend, voorraad)?
+5. Welke risico's en storingen moeten worden opgevangen, en hoe?
+6. Welke wettelijke en organisatorische randvoorwaarden gelden, vooral voor privacy (AVG) en de ondernemingsraad?
+
+### Onderzoeksmethode
+
+Het onderzoek bestaat uit twee delen:
+
+- **Analyse van het bestaande ontwerp.** De eisen (hoofdstuk 4 en 5), de voorraad (FR-38 t/m FR-40, UC-14), het herkennen met de pas (FR-65, FR-66, UC-20), de productieversie (hoofdstuk 6 en 11) en de AVG-verantwoording (hoofdstuk 13) zijn nagelopen om te zien waar een afgesloten koelkast of kast op aansluit en wat het zou veranderen.
+- **Deskresearch.** Openbare informatie over sloten die bij stroomuitval open of dicht blijven, over weegcellen en weegschappen in koelkasten, en over de wettelijke regels die al in hoofdstuk 13 zijn gebruikt (WOR artikel 27 en de DPIA-lijst van de Autoriteit Persoonsgegevens). De gebruikte bronnen staan onderaan deze bijlage.
+
+Dit onderzoek heeft duidelijke grenzen. Er zijn **geen leveranciers benaderd**, **geen prijzen opgevraagd** en **geen proef gedaan**. Er zijn geen interviews gehouden en niets gemeten. De afweging over kosten is daarom kwalitatief (hoger of lager dan een andere optie) en niet in euro's. De gewichten in deze bijlage zijn schattingen ter illustratie. Wat nog moet worden uitgezocht, staat bij [Conclusie en vervolgonderzoek](#conclusie-en-vervolgonderzoek).
+
+### Eisen en beoordelingscriteria
+
+De oplossingsrichtingen worden beoordeeld op de criteria hieronder. Waar een criterium aansluit op een bestaande eis, staat die erbij. Het eerste criterium is het belangrijkste, omdat het de hoofdvraag is.
+
+| Nr. | Criterium | Wat het betekent | Sluit aan op |
+|---|---|---|---|
+| K1 | Betrouwbaarheid | Wat er per medewerker wordt geregistreerd, is wat hij werkelijk heeft gepakt. Een verschil is terug te voeren op één opening en dus op één persoon. | FR-05, FR-38, NFR-07 |
+| K2 | Gebruiksgemak en snelheid | Een medewerker is niet langer bezig dan nu. Nu is dat hooguit 5 seconden en 3 tikken voor één product. | NFR-01, NFR-04, NFR-05 |
+| K3 | Kosten | Aanschaf, installatie en de kosten die steeds terugkomen (zoals labels of onderhoud). Alleen kwalitatief beoordeeld, er zijn geen prijzen opgevraagd. | – |
+| K4 | Beheer en onderhoud | Hoeveel werk de beheerder en IT eraan hebben: vullen, kalibreren, storingen oplossen, een nieuw product toevoegen. | FR-22 t/m FR-26, FR-39 |
+| K5 | Geschikt voor alle producten | Werkt de oplossing voor blikjes, maar ook voor brood, boter, beleg, melk, eieren en yoghurt (de standaardproducten in `config.js`)? | FR-22, FR-37 |
+| K6 | Privacy en AVG | Zo weinig mogelijk extra gegevens over medewerkers, geen beelden of biometrie, en een verwerking waarmee de ondernemingsraad kan instemmen. | NFR-11, FR-51 |
+| K7 | Robuustheid | Wat er gebeurt bij stroomuitval, een netwerkstoring of een deur die open blijft staan. Geen gegevens die stil verloren gaan. | NFR-06, NFR-13, FR-61 |
+| K8 | Aansluiting op de bestaande app | Past de oplossing bij de pas (FR-65), de backend uit hoofdstuk 6 en het voorraadbeheer (FR-38 t/m FR-40), zonder een tweede los systeem? | FR-38, FR-65, FR-66 |
+
+### Oplossingsrichtingen
+
+Er zijn vijf richtingen onderzocht. Optie E bestaat uit twee varianten die verschillend scoren (E1 en E2).
+
+#### Optie A: geen slot, controle achteraf met de voorraadtelling
+
+**Werking.** Dit is de huidige situatie. De medewerker registreert op de tablet wat hij pakt. De beheerder telt periodiek de voorraad (UC-14). Iedere registratie verlaagt de voorraad met 1 (FR-38), dus na een telling is te zien of er meer weg is dan er is geregistreerd.
+
+**Voordelen.** Bestaat al en kost niets extra. Werkt voor alle producten. Geen extra gegevens over medewerkers. Geen storingen door hardware.
+
+**Nadelen.** Een verschil is alleen zichtbaar als totaal over de periode sinds de vorige telling, niet per persoon. De registratie blijft gebaseerd op vertrouwen. Hoe vaker de beheerder telt, hoe kleiner de periode, maar tellen kost tijd.
+
+#### Optie B: alleen een slot dat opent na registreren
+
+**Werking.** Een elektrisch slot op de deur gaat pas open als een medewerker zich heeft herkend en een product heeft geregistreerd.
+
+**Voordelen.** Alleen medewerkers met een pas of naam in het systeem kunnen de deur openen. Iedere opening is aan een persoon gekoppeld.
+
+**Nadelen.** Lost het eigenlijke probleem niet op: wie 1 blikje registreert, kan er 2 pakken. Het slot maakt registreren wel trager (eerst kiezen, dan wachten op het slot) en kan storen. Het vastleggen wie wanneer de deur opent, is daarnaast een nieuwe verwerking van persoonsgegevens (zie [Privacy, AVG en ondernemingsraad](#privacy-avg-en-ondernemingsraad)).
+
+#### Optie C: slot met weegcellen per schap
+
+**Werking.** Dit is het principe van een "slimme koelkast" waarbij de medewerker pakt en gaat. Ieder schap ligt op weegcellen. Een weegcel is een metalen blokje dat onder gewicht een klein beetje vervormt. Rekstrookjes op dat blokje veranderen daardoor van elektrische weerstand, en die verandering is om te rekenen naar een gewicht (Wikipedia, z.d.). Schappen met weegcellen voor koelkasten bestaan al en zijn onder andere in octrooien beschreven (Shekel Scales, 2024). Het verloop:
+
+1. De medewerker houdt zijn pas tegen de lezer.
+2. Het slot gaat open en het systeem onthoudt het gewicht van ieder schap.
+3. De medewerker pakt wat hij wil en sluit de deur.
+4. Het slot gaat weer dicht en het systeem weegt de schappen opnieuw.
+5. Het gewichtsverschil per schap, gedeeld door het gewicht van één product, geeft het aantal dat is gepakt. Dat wordt geregistreerd.
+
+Op ieder schap ligt één soort product, zodat het systeem weet welk product bij een gewichtsverschil hoort. Een gevuld blikje van 330 ml weegt ongeveer 350 gram, maar dat verschilt per merk en soort. Daarom is per schap een tolerantie nodig: een verschil van ongeveer 700 gram op het schap met blikjes betekent 2 blikjes, ook als het niet precies 700 gram is. Hoe groot die tolerantie moet zijn, moet in een proef worden bepaald. Weegcellen kunnen in de loop van de tijd verlopen en moeten daarom periodiek opnieuw worden gekalibreerd (Wikipedia, z.d.).
+
+**Voordelen.** Registreert wat er werkelijk is gepakt, en niet wat iemand zegt. Een verschil is terug te voeren op één opening en één persoon. Voor de medewerker is het sneller: pas, pakken, deur dicht. Er hoeft niets op het scherm te worden gekozen. De voorraad wordt vanzelf bijgewerkt. Er worden geen beelden gemaakt.
+
+**Nadelen.** Hardware en installatie nodig (schappen, weegcellen, slot, deursensor en een kastcontroller). Werkt goed voor producten die per stuk worden gepakt en een vast gewicht hebben (blikjes, eieren, yoghurt). Voor producten die in een portie worden genomen, zoals een sneetje brood, boter, beleg of een glas melk uit een pak, is het gewicht per portie niet vast. Daar is de uitkomst onzeker. De schapindeling moet kloppen: een product op het verkeerde schap geeft een verkeerde registratie. Afhankelijk van stroom en netwerk.
+
+#### Optie D: automaat of één vak per product
+
+**Werking.** Een automaat met spiralen of een kast met kleine kluisjes. De medewerker kiest een product en precies één vak gaat open of één product valt uit de spiraal.
+
+**Voordelen.** Het meest betrouwbaar: er kan per keuze maar één product uit. Bekende techniek.
+
+**Nadelen.** Minder flexibel: ieder product moet in een vak of spiraal passen. Voor brood, boter en beleg is het lastig of onmogelijk. Vullen kost de beheerder meer tijd (ieder vak apart). Een automaat heeft vaak een eigen systeem voor kiezen en betalen, dat dan aan de app moet worden gekoppeld. Mechanische storingen (een product blijft hangen).
+
+#### Optie E: camera of RFID-labels per product
+
+**Werking E1 (camera).** Een camera in of bij de koelkast ziet welk product wordt gepakt. Een herkenningsmodel bepaalt welk product het is.
+
+**Werking E2 (RFID).** Ieder product krijgt een label met een chip. Een lezer in de kast ziet welke labels er na het sluiten van de deur niet meer zijn.
+
+**Voordelen.** Kan per product registreren, ook bij gemengde schappen.
+
+**Nadelen.** Duur in aanschaf en beheer. E1 vraagt een model dat op de eigen producten is getraind en opnieuw moet worden getraind bij ieder nieuw product. Een camera die medewerkers in beeld brengt, heeft dezelfde AVG-bezwaren als de demo gezichtsherkenning (zie [Privacy en de demo gezichtsherkenning](#privacy-en-de-demo-gezichtsherkenning)) en wordt daarom niet aangeraden. E2 vraagt dat ieder product een label krijgt, wat steeds terugkerend werk en kosten zijn. Op een sneetje brood of een portie beleg kan geen label. Of RFID-labels op metalen blikjes met vloeistof goed uit te lezen zijn, is in dit onderzoek niet uitgezocht.
+
+### Afweging
+
+In de beslismatrix staat per criterium hoe goed een optie scoort ten opzichte van de andere opties: `++` (zeer goed), `+` (goed), `0` (neutraal), `−` (slecht) en `−−` (zeer slecht). De scores zijn een onderbouwde inschatting op basis van de beschrijvingen hierboven, niet het resultaat van metingen.
+
+| Criterium | A Telling | B Alleen slot | C Slot met weegcellen | D Automaat of vakken | E1 Camera | E2 RFID |
+|---|---|---|---|---|---|---|
+| K1 Betrouwbaarheid | −− | − | + | ++ | 0 | + |
+| K2 Gebruiksgemak en snelheid | + | − | ++ | 0 | + | + |
+| K3 Kosten | ++ | + | − | − | −− | −− |
+| K4 Beheer en onderhoud | 0 | + | − | − | −− | −− |
+| K5 Geschikt voor alle producten | ++ | ++ | 0 | −− | 0 | − |
+| K6 Privacy en AVG | ++ | 0 | 0 | 0 | −− | 0 |
+| K7 Robuustheid | ++ | − | − | − | − | − |
+| K8 Aansluiting op de app | ++ | + | + | 0 | − | 0 |
+
+Toelichting op de scores:
+
+- **K1.** Optie A ziet alleen een totaal verschil en scoort daarom het laagst. Optie B legt wel vast wie de deur opent, maar niet hoeveel er is gepakt. Optie D is het betrouwbaarst omdat er per keuze maar één product uit kan. Optie C en E2 registreren wat er werkelijk weg is, met een kleine kans op fouten (tolerantie, leesfouten). Een camera (E1) is foutgevoeliger door handen, verpakkingen en producten die op elkaar lijken.
+- **K2.** Bij optie C hoeft de medewerker niets te kiezen en is hij met pas, pakken en deur dicht klaar. Bij optie B komt er juist een stap bij (wachten op het slot). Bij een automaat (D) kiest de medewerker per product en wacht hij tot het eruit is.
+- **K3 en K4.** Zonder offertes is alleen te zeggen dat A en B de minste extra kosten en het minste werk geven, en dat camera's en RFID-labels de meeste. Bij RFID komen de kosten van de labels steeds terug. Bij optie C bestaat het extra werk vooral uit kalibreren en de schapindeling bewaken.
+- **K5.** Een slot zonder meer (B) werkt voor ieder product. Weegcellen (C) werken goed voor producten per stuk, maar niet zeker voor porties. Een automaat (D) is niet geschikt voor brood en beleg.
+- **K6.** Iedere optie met een slot legt vast wie wanneer de deur opent. Dat is een nieuwe verwerking, maar zonder beelden. Alleen de camera (E1) brengt medewerkers in beeld.
+- **K7.** Alle opties met hardware zijn afhankelijk van stroom en netwerk. Alleen optie A heeft daar geen last van.
+- **K8.** Optie B en C gebruiken de pas (FR-65) en de backend uit het productieontwerp, en optie C werkt bovendien de voorraad bij (FR-38). Een automaat of een camerasysteem heeft meestal een eigen systeem dat apart gekoppeld moet worden.
+
+Optie A scoort op de meeste criteria goed, maar juist niet op het belangrijkste criterium (K1). Optie D scoort het best op K1, maar is ongeschikt voor een deel van de producten en minder flexibel. Optie C is de enige optie die op K1 en K2 allebei positief scoort zonder de hoge kosten en het AVG-bezwaar van optie E.
+
+### Advies
+
+Het advies is **optie C, een koelkast met een slot en weegcellen per schap, met de pas als sleutel**, en **optie A, de voorraadtelling, als aanvullende controle**. De redenen:
+
+- **Het lost het echte probleem op.** Het systeem registreert wat er werkelijk uit de koelkast is gehaald, en niet wat iemand zegt. Dat beantwoordt de wens "zeker weten dat iemand er 1 pakt en niet 2". Een slot alleen (optie B) doet dat niet.
+- **Het is sneller voor de medewerker.** Pas, pakken, deur dicht. Er hoeft op de tablet niets te worden gekozen.
+- **Het sluit aan op wat er al is.** De pas (FR-65, FR-66), de backend en de database uit het productieontwerp en de voorraad per consumptiepunt (FR-38) worden hergebruikt. De voorraad wordt vanzelf bijgewerkt.
+- **Geen beelden.** Er worden alleen een opening en een gewichtsverschil vastgelegd.
+
+Daarbij gelden drie kanttekeningen:
+
+- **Begin met de koelkast met blikjes.** Daar past optie C het best: producten per stuk met een vast gewicht. Eieren en yoghurt kunnen er ook bij. Voor de kast met brood, boter en beleg en voor melk uit een pak blijft de huidige manier van registreren gelden, met de telling als controle. Een slot zonder weegcellen (optie B) heeft voor die kast weinig zin, omdat het niet regelt hoeveel er wordt gepakt.
+- **De telling blijft nodig.** Weegcellen kunnen verlopen en een product kan op het verkeerde schap liggen. Een periodieke telling (UC-14) laat zien of de automatische registratie klopt.
+- **De pas wordt een sleutel.** In [Beveiliging van herkennen met de pas](#beveiliging-van-herkennen-met-de-pas) staat dat de huidige pas gemak is en geen bewijs van identiteit, en dat een pas met alleen een vast nummer niet geschikt is om een slot te openen. Wie met een gekopieerde pas de koelkast opent, registreert op naam van een collega. Voor de koelkast is daarom een pas met cryptografische controle nodig, bij voorkeur de pas van het toegangssysteem van TVB, en een lezer die niet als toetsenbord in de browser werkt maar via de backend of de kastcontroller wordt uitgelezen.
+
+### Ontwerpschets voor productie
+
+Deze schets laat zien hoe optie C in het productieontwerp past. Het is een voorstel. De demo en `DATABASE-SCHEMA.sql` zijn niet aangepast.
+
+**Architectuur.** De website in de browser kan het slot niet zelf aansturen. Een opdracht uit de browser is na te maken door iedereen die bij de tablet kan, en de browser mag volgens de Content-Security-Policy alleen met de eigen server praten (hoofdstuk 13). Alleen de backend uit [Mogelijke productieversie](#mogelijke-productieversie) mag het slot openen, net zoals alleen de backend met AFAS praat ([Koppeling met AFAS Profit (ontwerp)](#koppeling-met-afas-profit-ontwerp)).
+
+```text
+Pasjeslezer bij de koelkast
+    ↓  pasnummer (via de tablet of de kastcontroller)
+Backend en API (controle medewerker, kastopening, registraties, voorraad)
+    ↓  versleutelde verbinding in het lokale netwerk
+Kastcontroller (bijvoorbeeld een kleine computer of een netwerkrelais)
+    ├─ elektrisch slot (open en dicht)
+    ├─ deursensor (deur open of dicht)
+    └─ weegcellen per schap (gewicht voor en na)
+    ↓
+Tablet: "De deur is open." en daarna het overzicht van wat is geregistreerd
+```
+
+**Verloop van een kastopening.** De tijden hieronder zijn voorstellen en moeten in een proef worden bepaald.
+
+| Stap | Wat er gebeurt | Wie |
+|---|---|---|
+| 1 | De medewerker houdt zijn pas tegen de lezer bij de koelkast. | Medewerker |
+| 2 | Het pasnummer gaat naar de backend. | Tablet of kastcontroller |
+| 3 | De backend controleert of de pas bij een actieve medewerker hoort, of de koelkast dicht is en of er geen storing is. Zo niet, dan verschijnt een melding en blijft het slot dicht. Bij een onbekende pas en een pas van een inactieve medewerker is dat dezelfde melding, net als nu bij FR-65. | Backend |
+| 4 | De backend vraagt het gewicht van ieder schap op (de beginmeting) en legt een kastopening vast met de medewerker, het consumptiepunt en het tijdstip. | Backend en kastcontroller |
+| 5 | De backend geeft de kastcontroller de opdracht het slot te openen. De tablet toont "De deur is open. Pak wat je wilt en sluit de deur." | Backend en tablet |
+| 6 | Wordt de deur niet binnen bijvoorbeeld 10 seconden geopend, dan gaat het slot weer dicht en wordt de kastopening zonder registratie afgesloten. | Kastcontroller |
+| 7 | De medewerker pakt wat hij wil en sluit de deur. Het slot valt direct weer in. | Medewerker en kastcontroller |
+| 8 | Staat de deur langer open dan bijvoorbeeld 60 seconden, dan geeft de tablet een melding en een geluid. Staat hij na bijvoorbeeld 5 minuten nog open, dan krijgt de beheerder een melding. | Kastcontroller, tablet en backend |
+| 9 | Na het sluiten wacht de kastcontroller enkele seconden tot het gewicht stabiel is en doet dan de eindmeting. | Kastcontroller |
+| 10 | De backend berekent per schap het verschil, deelt het door het gewicht van één product en rondt af als de uitkomst binnen de tolerantie valt. | Backend |
+| 11 | Valt alles binnen de tolerantie, dan slaat de backend in één transactie de registraties op, verlaagt de voorraad en sluit de kastopening af (zoals FR-61). De tablet toont bijvoorbeeld "Geregistreerd: 1 Blikje". | Backend en tablet |
+| 12 | Valt een schap buiten de tolerantie, of is er gewicht bij gekomen, dan krijgt de kastopening de status "controle nodig". De beheerder ziet die in het beheer en beslist. | Backend en beheerder |
+| 13 | Van iedere kastopening blijft een regel bewaard: wie, wanneer, hoe lang de deur open was, de verschillen per schap en de status. | Backend |
+
+**Gevolgen voor de app.**
+
+- **Kiezen met `+` en `−`.** Bij deze koelkast is vooraf kiezen niet meer nodig: het gewicht bepaalt wat er wordt geregistreerd. Er zijn twee mogelijkheden. (1) Het kiezen vervalt en de tablet toont na het sluiten alleen wat er is geregistreerd, met een knop om een fout te melden bij de beheerder. (2) De medewerker kiest vooraf zoals nu en het systeem vergelijkt de keuze met het gewicht. Optie 2 maakt registreren weer trager en voegt niets toe aan de betrouwbaarheid, omdat het gewicht toch de doorslag geeft. Het advies is daarom optie 1, en optie 2 alleen tijdens de proef, om de keuze van de medewerker met de weging te kunnen vergelijken. Voor producten buiten de koelkast blijft het productvenster zoals het is.
+- **Correcties.** Een fout in een automatische registratie corrigeert de beheerder op dezelfde manier als nu (FR-13, FR-14, UC-09).
+- **Voorraad.** Iedere automatische registratie verlaagt de voorraad zoals nu (FR-38). Bij een telling ziet de beheerder of de automatische registraties kloppen.
+- **Datamodel.** Er zijn een paar tabellen en kolommen nodig. Dit is een voorstel, het schema is niet aangepast:
+
+| Voorstel | Inhoud | Doel |
+|---|---|---|
+| Tabel `cabinet_shelves` | Consumptiepunt, schapnummer, product, gewicht van één product en tolerantie | Vastleggen welk product op welk schap ligt en hoe zwaar het is |
+| Tabel `cabinet_openings` | Medewerker, consumptiepunt, tijdstip openen, tijdstip sluiten, status (`afgerond`, `niet geopend`, `controle nodig`, `storing`) | Iedere kastopening terugvinden en afwijkingen laten beoordelen |
+| Tabel `cabinet_shelf_readings` | Kastopening, schap, gewicht voor, gewicht na, berekend aantal | Laten zien waarop een registratie is gebaseerd |
+| Kolom `registrations.opening_id` | Verwijzing naar de kastopening (leeg bij registreren op de tablet) | Zien welke registraties automatisch zijn gemaakt |
+
+### Foutafhandeling en risico's
+
+| Risico | Wat er kan gebeuren | Maatregel |
+|---|---|---|
+| Deur blijft open staan | Anderen kunnen pakken op naam van degene die de deur opende, en de koelkast koelt minder goed. | Melding en geluid op de tablet na bijvoorbeeld 60 seconden, melding aan de beheerder na langere tijd. Wat er is gepakt, wordt na het sluiten toch gewogen. De kastopening krijgt de status "controle nodig". |
+| Stroomuitval | Een slot dat bij stroomuitval opengaat (fail-safe) laat de deur vrij. Een slot dat dicht blijft (fail-secure) houdt de deur op slot (Axis Communications, 2026). | Een koelkast is geen vluchtweg, dus de keuze is vrij. Advies: fail-secure, zodat er bij uitval niets ongeregistreerd verdwijnt, met een mechanische noodsleutel bij de beheerder. Een kastopening die door de stroomuitval niet is afgerond, krijgt de status "storing". Bij een langere uitval koelt de koelkast ook niet, dus dan moet de inhoud toch worden gecontroleerd. |
+| Weegcel geeft een vreemde waarde | Een verschil dat geen heel aantal producten is, of een sprong in het gewicht zonder dat de deur open was. | Geen registratie buiten de tolerantie, maar de status "controle nodig". Periodiek kalibreren. De telling als controle. |
+| Product op het verkeerde schap | Een product wordt teruggelegd of bijgevuld op een schap van een ander product, waardoor de weging niet meer klopt. | Duidelijke vakken met een label per schap. Bij het vullen controleert de beheerder de indeling. Een afwijking komt aan het licht bij de volgende opening of telling. |
+| Iets terugleggen of ruilen | Een medewerker legt in dezelfde opening een product terug (dan telt alleen wat er netto weg is), legt een product van eerder terug (gewicht omhoog) of ruilt een vol blikje voor een leeg. | Netto weg is wat wordt geregistreerd. Gewicht erbij of een verschil buiten de tolerantie geeft "controle nodig" en nooit automatisch geld terug. Een leeg blikje weegt veel minder dan een vol. Ruilen kan daardoor binnen de tolerantie van één gepakt blikje vallen en wordt dan gewoon als gepakt blikje geregistreerd. In de proef wordt nagegaan of dat zo is. |
+| Twee mensen tegelijk | Een collega pakt mee terwijl de deur open is. | Er is per keer maar één kastopening. Alles wat tijdens die opening wordt gepakt, staat op naam van degene die de deur opende. Dat moet duidelijk op de tablet en bij de koelkast staan. Een nieuwe opening kan pas als de deur dicht is en de weging klaar is. |
+| Netwerk weg | De backend kan de pas niet controleren of het slot niet aansturen. | Zonder controle door de backend gaat het slot niet open. De tablet toont een melding. Raakt het netwerk weg nadat de deur open is gegaan, dan bewaart de kastcontroller de metingen en stuurt ze later door. |
+| Onbekende of inactieve pas | Iemand probeert de koelkast te openen met een pas die niet (meer) geldig is. | Het slot blijft dicht. Eén melding voor beide gevallen, zoals bij FR-65. |
+| Sabotage | Iets zwaars op een schap leggen, de weegcellen blokkeren of de deur forceren. | De deursensor meldt een opening zonder kastopening als storing aan de beheerder. Een verschil buiten de tolerantie geeft "controle nodig". De telling laat een tekort zien. Een slot dat stevig genoeg is voor de koelkast. |
+| Gekopieerde pas | Iemand opent de koelkast met een kopie van de pas van een collega. | Een pas met cryptografische controle en een lezer die niet als toetsenbord werkt (zie [Advies](#advies)). Iedere medewerker kan zijn eigen registraties inzien en een fout melden. |
+
+### Privacy, AVG en ondernemingsraad
+
+Een afgesloten koelkast legt per medewerker vast **wie wanneer de koelkast opent**. Dat zegt iets over aanwezigheid en gedrag. Voor deze verwerking geldt daarom hetzelfde als in [AVG-verantwoording (productie)](#avg-verantwoording-productie), met een paar aanvullingen:
+
+- **Ondernemingsraad.** Een voorziening die geschikt is voor controle op aanwezigheid, gedrag of prestaties van medewerkers valt onder het instemmingsrecht van de ondernemingsraad (WOR artikel 27 lid 1 sub l, zie [Instemming van de ondernemingsraad (WOR artikel 27)](#instemming-van-de-ondernemingsraad-wor-artikel-27)). Een koelkast die openingen per persoon vastlegt, is zo'n voorziening. De instemming wordt gevraagd vóór de invoering, ook als de rest van het systeem al instemming heeft, omdat dit een wijziging van de regeling is.
+- **DPIA.** De Autoriteit Persoonsgegevens noemt "Controle werknemers" als categorie waarvoor een DPIA verplicht is (nr. 11, Autoriteit Persoonsgegevens, 2019). Het advies in [DPIA (artikel 35)](#dpia-artikel-35) om vóór productie een DPIA uit te voeren, geldt hier zeker. De DPIA wordt aangevuld met de kastopeningen.
+- **Doelbinding.** De kastopeningen worden alleen gebruikt om te registreren wat er is gepakt en om afwijkingen te controleren. Ze worden niet gebruikt om aanwezigheid, werktijden of pauzes te controleren. Dat staat in de privacyverklaring en in de regeling waarmee de ondernemingsraad instemt.
+- **Dataminimalisatie.** Er wordt alleen vastgelegd: de medewerker, het consumptiepunt, het tijdstip van openen en sluiten, de gewichtsverschillen per schap en de status. Geen camerabeelden, geen biometrie.
+- **Bewaartermijn.** Een kastopening wordt niet langer bewaard dan de registraties die erop zijn gebaseerd (zie [Bewaartermijnen (artikel 5 lid 1 sub e)](#bewaartermijnen-artikel-5-lid-1-sub-e)). Een kastopening zonder registratie (de deur werd niet geopend of er is niets gepakt) heeft na korte tijd geen doel meer. Een voorstel is om die na bijvoorbeeld 3 maanden te verwijderen. Dit stelt TVB vast.
+- **Inzage.** Een medewerker kan zijn eigen kastopeningen en de registraties die daaruit volgen inzien en een fout melden (AVG artikel 15 en 16).
+
+### Conclusie en vervolgonderzoek
+
+**Antwoord op de hoofdvraag.** Een slot alleen zorgt er niet voor dat wat een medewerker registreert overeenkomt met wat hij pakt. Het regelt alleen wie de deur opent. Dat lukt wel als het systeem zelf vaststelt wat er is gepakt. Voor TVB is een koelkast met een slot en weegcellen per schap, geopend met de pas, de meest passende oplossing (optie C). De registratie is dan gebaseerd op wat er werkelijk uit de koelkast is gehaald, de medewerker is sneller klaar en de oplossing sluit aan op de pas, de backend en het voorraadbeheer uit het productieontwerp. De voorraadtelling blijft als controle. Voor producten die in porties worden genomen (brood, boter, beleg, melk) is optie C minder geschikt. Daar blijft de huidige registratie met de telling gelden.
+
+De deelvragen zijn beantwoord in [Eisen en beoordelingscriteria](#eisen-en-beoordelingscriteria) (1), [Oplossingsrichtingen](#oplossingsrichtingen) (2), [Afweging](#afweging) en [Advies](#advies) (3), [Ontwerpschets voor productie](#ontwerpschets-voor-productie) (4), [Foutafhandeling en risico's](#foutafhandeling-en-risicos) (5) en [Privacy, AVG en ondernemingsraad](#privacy-avg-en-ondernemingsraad) (6).
+
+**Vervolgonderzoek.** Voordat TVB een besluit neemt, moet nog worden uitgezocht:
+
+1. **Kosten en baten.** Hoeveel er nu verdwijnt zonder registratie (de derving) is niet gemeten. Een eerste stap is een paar maanden vaker tellen en het verschil met de registraties bijhouden (UC-14). Pas dan is te beoordelen of de kosten van optie C opwegen tegen wat het oplevert.
+2. **Offertes.** Prijzen opvragen voor een kant-en-klare koelkast met weegschappen en voor zelfbouw (een bestaande koelkast met losse weegcellen, slot en kastcontroller), en nagaan of huren of leasen mogelijk is. Daarbij ook vragen hoe de koppeling met een eigen backend werkt.
+3. **Proef met één schap.** Eén schap met blikjes uitrusten en een paar weken naast de huidige registratie laten meelopen, met vooraf kiezen als controle (zie [Ontwerpschets voor productie](#ontwerpschets-voor-productie)).
+4. **Nauwkeurigheid meten.** In die proef het gewicht van de producten per merk meten, bepalen welke tolerantie nodig is, en meten hoe vaak de weging afwijkt van wat er werkelijk is gepakt, ook bij een volle koelkast en na het koelen.
+5. **Pas en lezer.** Met de beheerder van het toegangssysteem van TVB nagaan of de bestaande passen een cryptografische controle ondersteunen en of een lezer bij de koelkast daarop kan worden aangesloten.
+6. **Ondernemingsraad en privacyfunctionaris.** De ondernemingsraad en de privacyfunctionaris vroeg betrekken, met deze bijlage als uitgangspunt.
+
+### Bronnen bij deze bijlage
+
+De bronnen over wetgeving staan ook in [17. Bronnen](#17-bronnen). De bronnen over sloten en weegcellen zijn alleen gebruikt om de werking uit te leggen. Ze zijn geen aanbeveling voor een leverancier of merk.
+
+| Bron | Organisatie of auteur | Jaar | Gebruikt voor | Adres |
+|---|---|---|---|---|
+| Fail-safe vs fail-secure: What's the difference, & how to choose | Hansen, M. (Axis Communications) | 2026, geraadpleegd op 16 oktober 2026 | Het verschil tussen een slot dat bij stroomuitval opengaat en een slot dat dicht blijft | https://newsroom.axis.com/blog/fail-safe-vs-fail-secure |
+| Load cell | Wikipedia | z.d., geraadpleegd op 16 oktober 2026 | De werking van een weegcel met rekstrookjes en het periodiek kalibreren | https://en.wikipedia.org/wiki/Load_cell |
+| Systems and methods for weighing products on a shelf (octrooi US11971293B2) | Shekel Scales (2008) Ltd (octrooihouder), via Google Patents | 2024, geraadpleegd op 16 oktober 2026 | Dat schappen met weegcellen voor koelkasten bestaan en zijn beschreven | https://patents.google.com/patent/US11971293 |
+| Wet op de ondernemingsraden (WOR), artikel 27 (instemmingsrecht) | Overheid.nl (wetten.overheid.nl) | z.d., geraadpleegd op 12 oktober 2026 | Instemming van de ondernemingsraad | https://wetten.overheid.nl/BWBR0002747/ |
+| Besluit inzake lijst van verwerkingen van persoonsgegevens waarvoor een gegevensbeschermingseffectbeoordeling (DPIA) verplicht is (Staatscourant 2019, 64418) | Autoriteit Persoonsgegevens | 2019 | DPIA-plicht bij controle van werknemers | https://zoek.officielebekendmakingen.nl/stcrt-2019-64418.html |
+| Algemene verordening gegevensbescherming (AVG), artikel 5, 15, 16 en 35 | Europese Unie (EUR-Lex) | 2016 | Doelbinding, dataminimalisatie, bewaartermijn, inzage en DPIA | https://eur-lex.europa.eu/eli/reg/2016/679/oj |
