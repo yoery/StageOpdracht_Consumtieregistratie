@@ -46,7 +46,8 @@ jobs:
   e2e:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Ruim genomen: op een drukke runner duren de browsertests veel langer dan op een laptop.
+    timeout-minutes: 15
     env:
       # Vast pad naar de browser die op de runner staat.
       BROWSER_PATH: /usr/bin/google-chrome
@@ -71,3 +72,16 @@ jobs:
 
       - name: Browsertests uitvoeren
         run: npm run test:e2e
+
+      # Mislukt een browsertest, dan maakt tests/e2e/browser.js per scenario een schermafdruk in
+      # test-results/e2e. Die map wordt alleen bij een fout als artifact bewaard (7 dagen), te
+      # downloaden onder "Artifacts" op de pagina van de run. De foutuitvoer van de tests zelf noemt
+      # het scenario, de toestand van de pagina en de laatste meldingen uit de console.
+      - name: Schermafdrukken bewaren bij een fout
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-schermafdrukken
+          path: test-results/e2e/
+          if-no-files-found: ignore
+          retention-days: 7

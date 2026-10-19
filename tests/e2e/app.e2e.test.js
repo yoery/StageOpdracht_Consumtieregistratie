@@ -15,13 +15,14 @@ import path from "node:path";
 
 import { launch, sleep } from "./browser.js";
 
-// Maximale duur van één test, in milliseconden (een vastgelopen test stopt dan vanzelf).
-const TEST_TIMEOUT = 30000;
+// Maximale duur van één test, in milliseconden (een vastgelopen test stopt dan vanzelf). Ruim
+// genomen, omdat een server in GitHub Actions veel trager kan zijn dan een laptop.
+const TEST_TIMEOUT = 60000;
 
 // Selector voor de rij van een medewerker op de beginpagina.
 const row = (name) => `[data-open-employee][aria-label="Product kiezen voor ${name}"]`;
 
-describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
+describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   let browser;
 
   before(async () => {
@@ -38,7 +39,20 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
 
   // Geen enkele test mag een fout in de console van de browser geven.
   afterEach(() => {
-    assert.deepEqual(browser.errors, [], "Er staan fouten in de console van de browser");
+    assert.deepEqual(browser.errors, [], `Er staan fouten in de console van de browser.\nLaatste meldingen:\n  ${browser.consoleLog.join("\n  ")}`);
+  });
+
+  // Eén scenario (test). Mislukt het, dan komen achter de foutmelding de naam van het scenario, de
+  // toestand van de pagina, de laatste meldingen uit de console en het pad van een schermafdruk
+  // (zie browser.diagnose). Zo is een fout in GitHub Actions ook zonder de browser te lezen.
+  const scenario = (name, action) => test(name, { timeout: TEST_TIMEOUT }, async () => {
+    try {
+      await action();
+    } catch (error) {
+      const details = await browser.diagnose(name);
+      if (error instanceof Error) error.message += details;
+      throw error;
+    }
   });
 
   // Hulpfuncties die in meerdere tests terugkomen.
@@ -72,13 +86,9 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
 
   // Dubbelklik met de muis in het midden van een element: twee keer indrukken en loslaten, de
   // tweede keer met clickCount 2 (zoals de browser een echte dubbelklik doorgeeft).
+  // Het punt wordt net als bij browser.click pas gemeten als het element stilstaat en niet bedekt is.
   const doubleClick = async (selector) => {
-    const point = await browser.evaluate(`(() => {
-      const element = document.querySelector(${JSON.stringify(selector)});
-      element.scrollIntoView({ block: "center" });
-      const box = element.getBoundingClientRect();
-      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
-    })()`);
+    const point = await browser.clickablePoint(selector);
     await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
     for (const clickCount of [1, 2]) {
       const mouse = { x: point.x, y: point.y, button: "left", clickCount };
@@ -100,7 +110,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     await browser.waitFor(`!document.querySelector("#adminView").classList.contains("hidden")`);
   };
 
-  test("de pagina laadt met de demogegevens en zonder fouten", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("de pagina laadt met de demogegevens en zonder fouten", async () => {
     assert.equal(await browser.evaluate("document.title"), "Consumptieregistratie | TVB");
     assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
     assert.equal(await text("#todayTotal"), "0");
@@ -112,7 +122,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.fonts.ready.then(() => document.fonts.check("16px 'DM Sans'"))`), true);
   });
 
-  test("een medewerker zoeken en het productvenster openen", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("een medewerker zoeken en het productvenster openen", async () => {
     await browser.click("#employeeSearch");
     await browser.insertText("Lotte");
     await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 1`);
@@ -134,7 +144,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 0);
   });
 
-  test("een product registreren geeft een bevestiging en werkt de totalen bij", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("een product registreren geeft een bevestiging en werkt de totalen bij", async () => {
     await registerProduct("Lotte van Dijk", "blikje", 2);
 
     await waitForToast("Lotte van Dijk: 2× Blikje geregistreerd");
@@ -156,7 +166,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await text("#employeeSuggestion"), "");
   });
 
-  test("UX 12: zonder keuze is Registreren uitgeschakeld met uitleg, een tik benadrukt de uitleg en slaat niets op", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("UX 12: zonder keuze is Registreren uitgeschakeld met uitleg, een tik benadrukt de uitleg en slaat niets op", async () => {
     await browser.click(row("Mark Jansen"));
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
 
@@ -184,7 +194,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.querySelector('[data-product-increment="blikje"]').closest(".personal-product-item").classList.contains("is-selected")`), true);
   });
 
-  test("Escape sluit een venster en de focus gaat terug naar waar die was", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("Escape sluit een venster en de focus gaat terug naar waar die was", async () => {
     // Productvenster: openen met het toetsenbord (Enter op de rij), sluiten met Escape.
     await browser.evaluate(`document.querySelector(${JSON.stringify(row("Mark Jansen"))}).focus()`);
     await browser.press("Enter");
@@ -202,7 +212,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate("document.activeElement.id"), "adminOpenButton");
   });
 
-  test("inloggen als beheerder en de registratie zien in het overzicht", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("inloggen als beheerder en de registratie zien in het overzicht", async () => {
     await registerProduct("Sophie de Boer", "ei", 1);
     await waitForToast("Sophie de Boer: 1× Ei geregistreerd");
 
@@ -232,7 +242,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.querySelector("#loginPassword").value`), "");
   });
 
-  test("het thema wisselen naar donker blijft bewaard na herladen", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("het thema wisselen naar donker blijft bewaard na herladen", async () => {
     // Het apparaat staat op licht (zie browser.js), dus de pagina begint licht.
     assert.equal(await browser.evaluate("document.documentElement.dataset.theme"), "light");
     const lightBackground = await browser.evaluate("getComputedStyle(document.body).backgroundColor");
@@ -253,7 +263,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.querySelector("#themeSwitch").getAttribute("aria-checked")`), "true");
   });
 
-  test("een pas koppelen en daarna herkennen met de pas (nagebootste lezer)", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("een pas koppelen en daarna herkennen met de pas (nagebootste lezer)", async () => {
     // Lotte heeft al eens zelf iets geregistreerd (voor "welkom terug" na de scan).
     await registerProduct("Lotte van Dijk", "blikje", 1);
     await waitForToast("Lotte van Dijk: 1× Blikje geregistreerd");
@@ -315,7 +325,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
   });
 
-  test("de CSV-export downloadt een bestand voor de loonadministratie", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("de CSV-export downloadt een bestand voor de loonadministratie", async () => {
     await loginAsAdmin();
 
     // Zonder registraties valt er niets te exporteren.
@@ -353,7 +363,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
   // Review oktober 2026 (TO versie 3.11)
   // ------------------------------------------------------------------
 
-  test("U2: een dubbelklik op Registreren opent niet het productvenster van de medewerker eronder", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("U2: een dubbelklik op Registreren opent niet het productvenster van de medewerker eronder", async () => {
     await browser.click(row("Lotte van Dijk"));
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
     await browser.click(`[data-product-increment="blikje"]`);
@@ -367,7 +377,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal((await browser.storedData()).registrations.length, 1);
   });
 
-  test("U4 en U7c: een scan in het bedrijfsfilter laat geen pasnummer achter en Escape sluit de keuzelijst", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("U4 en U7c: een scan in het bedrijfsfilter laat geen pasnummer achter en Escape sluit de keuzelijst", async () => {
     // Een bedrijf kiezen in het filter.
     await browser.click("#employeeCompanyFilter");
     await browser.waitFor(`!document.querySelector("#companyFilterOptions").classList.contains("hidden")`);
@@ -397,7 +407,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`document.querySelectorAll(".modal-backdrop:not(.hidden)").length`), 0);
   });
 
-  test("U5: na opslaan van een wijzigformulier en na (de)activeren staat de focus weer op de knop", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("U5: na opslaan van een wijzigformulier en na (de)activeren staat de focus weer op de knop", async () => {
     await loginAsAdmin();
 
     // Product: eerst opnieuw tekenen, dan het formulier sluiten.
@@ -426,7 +436,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await activeData("toggleEmployee"), employeeId);
   });
 
-  test("R1: letters in een cijferveld geven 'Gebruik alleen cijfers.' en er wordt niets opgeslagen", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("R1: letters in een cijferveld geven 'Gebruik alleen cijfers.' en er wordt niets opgeslagen", async () => {
     await loginAsAdmin();
     await browser.click(`.tab[data-tab="employees"]`);
     await browser.click("#addEmployeeButton");
@@ -481,7 +491,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
   };
 
-  test("UX 1: het productvenster sluit vanzelf na 75 seconden zonder invoer, met eerst een waarschuwing", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("UX 1: het productvenster sluit vanzelf na 75 seconden zonder invoer, met eerst een waarschuwing", async () => {
     // Nep-klok voor de pagina: Date.now() loopt zo veel milliseconden voor als de test aangeeft. Zo
     // hoeft de test niet 75 seconden te wachten. De app gebruikt Date.now() via AdminController.realClock.
     const { identifier } = await browser.send("Page.addScriptToEvaluateOnNewDocument", {
@@ -499,7 +509,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
 
       // 66 seconden niets gedaan: de waarschuwing staat in het venster.
       await browser.evaluate("window.klokVooruit = 66000");
-      await browser.waitFor(`document.querySelector("#productIdleWarning").textContent === "Venster sluit zo. Tik om door te gaan."`, { timeout: 4000 });
+      await browser.waitFor(`document.querySelector("#productIdleWarning").textContent === "Venster sluit zo. Tik om door te gaan."`);
       assert.equal(await browser.evaluate(`document.querySelector("#productIdleWarning").getAttribute("role")`), "status");
 
       // Een tik in het venster begint de tijd opnieuw: de waarschuwing verdwijnt en het venster blijft open.
@@ -510,7 +520,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
 
       // Daarna 76 seconden niets: het venster gaat dicht zonder op te slaan, het zoekveld is leeg.
       await browser.evaluate("window.klokVooruit = 66000 + 76000");
-      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`, { timeout: 4000 });
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
       assert.equal((await browser.storedData())?.registrations.length ?? 0, 0);
       assert.equal(await browser.evaluate(`document.querySelector("#employeeSearch").value`), "");
       assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
@@ -520,7 +530,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     }
   });
 
-  test("UX 2: een pas vervangt het open productvenster van een collega en geeft een melding bij een ander venster", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("UX 2: een pas vervangt het open productvenster van een collega en geeft een melding bij een ander venster", async () => {
     await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
 
     // Mark kiest iets, maar registreert niet en loopt weg. Lotte houdt haar pas tegen de lezer.
@@ -554,7 +564,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await isHidden("#adminModal"), false);
   });
 
-  test("UX 3: de knop Registreren blijft in beeld op een liggende tablet, een telefoon en bij 200% zoom", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("UX 3: de knop Registreren blijft in beeld op een liggende tablet, een telefoon en bij 200% zoom", async () => {
     // [breedte, hoogte] in CSS-pixels. 540 × 405 is een liggende tablet van 1080 × 810 bij 200% zoom.
     for (const [width, height] of [[1080, 810], [390, 844], [540, 405]]) {
       await withViewport(width, height, async () => {
@@ -588,7 +598,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     }
   });
 
-  test("UX 4: na registreren zijn zoekveld en bedrijfsfilter leeg en staat de lijst bovenaan in beeld", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("UX 4: na registreren zijn zoekveld en bedrijfsfilter leeg en staat de lijst bovenaan in beeld", async () => {
     await withViewport(390, 844, async () => {
       // Een bedrijf kiezen in het filter en een zoekterm typen.
       await browser.click("#employeeCompanyFilter");
@@ -621,7 +631,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     });
   });
 
-  test("W11: zonder producten op het consumptiepunt staan er geen knopbalk, geen lege strook en geen dubbele lijn", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("W11: zonder producten op het consumptiepunt staan er geen knopbalk, geen lege strook en geen dubbele lijn", async () => {
     // Het consumptiepunt Hoofdkantoor biedt niets meer aan (rechtstreeks in localStorage, daarna herladen).
     await registerProduct("Daan Smit", "blikje", 1);
     await browser.evaluate(`(() => {
@@ -684,7 +694,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.equal(await browser.evaluate(`getComputedStyle(document.querySelector("#employeeProductsActions")).position`), "sticky");
   });
 
-  test("W14: het productvenster opent altijd bovenaan met het kruisje en de titel in beeld (naam en pas)", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("W14: het productvenster opent altijd bovenaan met het kruisje en de titel in beeld (naam en pas)", async () => {
     // Na herkenning met de camera, met de pas en na een tik op de naam opent hetzelfde productvenster
     // (EmployeeController.openEmployeeProducts). Eerder onthield de browser de scrollpositie van het
     // verborgen venster: stond de focus de vorige keer op Registreren onderaan, dan opende het venster
@@ -720,7 +730,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
           await openedAndScrolledDown(open);
           await open();
           await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-          await sleep(300); // de openingsanimatie (0,22 s) laten uitlopen
+          await browser.settle(); // de openingsanimatie laten uitlopen
           const box = await header();
           assert.equal(box.scrollTop, 0, `${width}×${height} (${how}): het venster opent omlaag gescrold`);
           assert.ok(box.close >= 0 && box.kicker >= box.modal && box.title >= 0, `${width}×${height} (${how}): kruisje of titel buiten beeld (${JSON.stringify(box)})`);
@@ -737,7 +747,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
   // Slimme koelkast (demo, TO versie 3.14)
   // ------------------------------------------------------------------
 
-  test("koelkast: pas koppelen, openen met de pas, 2 blikjes pakken, deur dicht en de registratie in de totalen en het beheer", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("koelkast: pas koppelen, openen met de pas, 2 blikjes pakken, deur dicht en de registratie in de totalen en het beheer", async () => {
     // Pas koppelen bij Lotte in het medewerkersformulier (de lezer typt in het veld Pasnummer).
     await loginAsAdmin();
     await browser.click(`.tab[data-tab="employees"]`);
@@ -810,7 +820,7 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
     assert.match(await text("#auditTableBody tr td:nth-child(2)"), /^Lotte van Dijk: 2× Blikje geregistreerd \(TVB · Hoofdkantoor\)$/);
   });
 
-  test("koelkast: een onbekende pas laat de koelkast dicht, Escape sluit het venster", { timeout: TEST_TIMEOUT }, async () => {
+  scenario("koelkast: een onbekende pas laat de koelkast dicht, Escape sluit het venster", async () => {
     await browser.click("#fridgeOpenButton");
     await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
 

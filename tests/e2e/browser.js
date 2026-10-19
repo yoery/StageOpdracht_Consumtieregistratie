@@ -11,6 +11,13 @@
 // Welke browser: de omgevingsvariabele BROWSER_PATH, anders Edge op Windows en Google Chrome of
 // Chromium op Linux en macOS (zie findBrowser).
 //
+// Andere omgevingsvariabelen:
+//   - E2E_CPU_THROTTLE: maakt de browser een aantal keer trager (bijvoorbeeld 4), om lokaal na te
+//     bootsen dat een server in GitHub Actions trager is dan een laptop;
+//   - E2E_SCREENSHOT_DIR: de map voor de schermafdrukken van een mislukte test (standaard
+//     test-results/e2e in de projectmap). In GitHub Actions wordt die map bij een fout als
+//     artifact bewaard.
+//
 // Dit bestand heet bewust niet *.test.js: het is geen test, maar wordt door de tests gebruikt.
 import http from "node:http";
 import fs from "node:fs";
@@ -27,8 +34,18 @@ export const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.
 // of op een server in UTC draait.
 export const TIME_ZONE = "Europe/Amsterdam";
 
-// Hoe lang er maximaal op iets wordt gewacht, in milliseconden.
-const DEFAULT_TIMEOUT = 10000;
+// Hoe lang er maximaal op iets wordt gewacht, in milliseconden. Ruim genomen: op een drukke server
+// in GitHub Actions kan de browser veel trager zijn dan op een laptop. Een test die slaagt, wacht
+// nooit zo lang (er wordt steeds opnieuw gekeken, zie waitFor).
+const DEFAULT_TIMEOUT = 15000;
+
+// De map voor schermafdrukken van mislukte tests.
+export const SCREENSHOT_DIR = process.env.E2E_SCREENSHOT_DIR
+  ? path.resolve(process.env.E2E_SCREENSHOT_DIR)
+  : path.join(PROJECT_ROOT, "test-results", "e2e");
+
+// Hoeveel meldingen uit de console van de pagina worden bewaard voor de foutuitvoer.
+const CONSOLE_HISTORY = 30;
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -219,6 +236,12 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
   // Fouten uit de pagina: niet-afgevangen fouten, console.error en browsermeldingen van het
   // niveau "error" (bijvoorbeeld een bestand dat niet laadt of een blokkade door de CSP).
   const errors = [];
+  // De laatste meldingen uit de console (alle soorten), voor de foutuitvoer van een mislukte test.
+  const consoleLog = [];
+  const remember = (line) => {
+    consoleLog.push(line);
+    if (consoleLog.length > CONSOLE_HISTORY) consoleLog.shift();
+  };
 
   ws.addEventListener("message", ({ data }) => {
     const message = JSON.parse(data);
@@ -233,13 +256,19 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
 
     if (message.method === "Runtime.exceptionThrown") {
       const details = message.params.exceptionDetails;
-      errors.push(details.exception?.description || details.text);
+      const text = details.exception?.description || details.text;
+      errors.push(text);
+      remember(`[exception] ${text}`);
     }
-    if (message.method === "Runtime.consoleAPICalled" && message.params.type === "error") {
-      errors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(" "));
+    if (message.method === "Runtime.consoleAPICalled") {
+      const text = message.params.args.map((arg) => arg.value ?? arg.description).join(" ");
+      if (message.params.type === "error") errors.push(text);
+      remember(`[console.${message.params.type}] ${text}`);
     }
-    if (message.method === "Log.entryAdded" && message.params.entry.level === "error") {
-      errors.push(`${message.params.entry.text} ${message.params.entry.url || ""}`.trim());
+    if (message.method === "Log.entryAdded") {
+      const text = `${message.params.entry.text} ${message.params.entry.url || ""}`.trim();
+      if (message.params.entry.level === "error") errors.push(text);
+      remember(`[log.${message.params.entry.level}] ${text}`);
     }
     for (const listener of listeners) listener(message);
   });
@@ -296,24 +325,69 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
   // Een selector veilig in een stuk JavaScript zetten.
   const quote = (value) => JSON.stringify(value);
 
-  // Klikt met de muis in het midden van een element, zoals een gebruiker. Eerst wordt gewacht
-  // tot het element zichtbaar is en niet bedekt wordt door iets anders (bijvoorbeeld een venster).
+  // Wacht tot de pagina stilstaat: twee beelden (animation frames) verder en geen animatie of
+  // overgang meer bezig. Gebruik dit voordat een test posities op het scherm meet.
+  const settle = ({ timeout = DEFAULT_TIMEOUT } = {}) => waitFor(`(async () => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    await frame();
+    await frame();
+    return !document.getAnimations().some((animation) => animation.playState === "running" || animation.pending);
+  })()`, { timeout, message: "De pagina komt niet tot stilstand: er blijft een animatie lopen." });
+
+  // Het punt (midden van een element) waar een gebruiker zou klikken. Er wordt gewacht tot:
+  //   - het element zichtbaar is en niet bedekt wordt door iets anders (bijvoorbeeld een venster);
+  //   - er geen animatie of overgang (CSS transition) meer loopt en het element twee beelden
+  //     (animation frames) na elkaar op dezelfde plek staat.
+  // Dat laatste is nodig omdat een overgang ook met prefers-reduced-motion (0,01 ms) pas klaar is
+  // bij het volgende beeld. De muisbeweging van CDP wacht op dat beeld. Zonder deze stap werd het
+  // punt gemeten vóór dat beeld, schoof het venster daarna nog op en viel de klik ernaast (gezien bij
+  // de koelkast: het venster staat in het midden en schuift omhoog als de knopbalk verschijnt).
+  const clickablePoint = (selector, { timeout = DEFAULT_TIMEOUT } = {}) => waitFor(`(async () => {
+    const element = document.querySelector(${quote(selector)});
+    if (!element || element.getClientRects().length === 0) return null;
+    element.scrollIntoView({ block: "center", inline: "center" });
+    const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    const place = () => { const box = element.getBoundingClientRect(); return [box.left, box.top, box.width, box.height].join(","); };
+    await frame();
+    const before = place();
+    await frame();
+    if (!element.isConnected || place() !== before) return null;
+    if (document.getAnimations().some((animation) => animation.playState === "running" || animation.pending)) return null;
+    const box = element.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return hit && (hit === element || element.contains(hit)) ? { x, y } : null;
+  })()`, { timeout, message: `Element niet klikbaar (niet zichtbaar, bedekt of nog in beweging): ${selector}` });
+
+  // Klikt met de muis in het midden van een element, zoals een gebruiker (zie clickablePoint).
+  // Daarna wordt gecontroleerd dat de klik ook echt op het element viel. Zo niet, dan volgt een
+  // duidelijke fout in plaats van een test die later op iets anders vastloopt.
   const click = async (selector, { timeout = DEFAULT_TIMEOUT } = {}) => {
-    const point = await waitFor(`(() => {
-      const element = document.querySelector(${quote(selector)});
-      if (!element || element.getClientRects().length === 0) return null;
-      element.scrollIntoView({ block: "center", inline: "center" });
-      const box = element.getBoundingClientRect();
-      const x = box.left + box.width / 2;
-      const y = box.top + box.height / 2;
-      const hit = document.elementFromPoint(x, y);
-      return hit && (hit === element || element.contains(hit)) ? { x, y } : null;
-    })()`, { timeout, message: `Element niet klikbaar: ${selector}` });
+    const point = await clickablePoint(selector, { timeout });
+    // Eén luisteraar per pagina onthoudt waar de volgende pointerdown op viel.
+    await evaluate(`(() => {
+      window.__e2eKlik = { selector: ${quote(selector)}, hit: null };
+      if (window.__e2eKlikLuisteraar) return;
+      window.__e2eKlikLuisteraar = true;
+      addEventListener("pointerdown", (event) => {
+        const klik = window.__e2eKlik;
+        if (!klik || klik.hit) return;
+        const target = event.target;
+        klik.hit = target.closest?.(klik.selector) ? "ok"
+          : (target.id ? "#" + target.id : target.tagName?.toLowerCase() + (typeof target.className === "string" && target.className ? "." + target.className.trim().split(/\\s+/).join(".") : ""));
+      }, { capture: true });
+    })()`);
 
     const mouse = { x: point.x, y: point.y, button: "left", clickCount: 1 };
     await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
     await send("Input.dispatchMouseEvent", { type: "mousePressed", ...mouse });
     await send("Input.dispatchMouseEvent", { type: "mouseReleased", ...mouse });
+
+    const hit = await evaluate("window.__e2eKlik?.hit");
+    if (hit !== "ok") {
+      throw new Error(`De klik op ${selector} viel op ${hit || "niets"} (punt ${Math.round(point.x)},${Math.round(point.y)}): het element verschoof of werd bedekt.`);
+    }
   };
 
   // Typt tekst in het element met de focus (zoals plakken: één input-event, geen losse toetsen).
@@ -361,6 +435,7 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
     await send("Page.navigate", { url: "about:blank" });
     await send("Storage.clearDataForOrigin", { origin: baseUrl, storageTypes: "local_storage" });
     errors.length = 0;
+    consoleLog.length = 0;
     await send("Page.navigate", { url: `${baseUrl}/index.html` });
     await waitFor(`document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`, {
       message: "De pagina laadde niet: er verschijnen geen medewerkers."
@@ -377,6 +452,47 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
     downloadPath: downloadDir,
     eventsEnabled: true
   });
+
+  // Slaat een schermafdruk van de pagina op als PNG in SCREENSHOT_DIR en geeft het pad terug.
+  const screenshot = async (name) => {
+    const { data } = await send("Page.captureScreenshot", { format: "png" });
+    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    const safeName = name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").slice(0, 80) || "scenario";
+    const file = path.join(SCREENSHOT_DIR, `${safeName}.png`);
+    fs.writeFileSync(file, Buffer.from(data, "base64"));
+    return file;
+  };
+
+  // Tekst voor de foutuitvoer van een mislukte test: welk scenario, wat er op de pagina stond (open
+  // venster, focus, schermformaat), de laatste meldingen uit de console en het pad van de
+  // schermafdruk. Gaat er hierbij zelf iets mis, dan staat dat in de tekst; de oorspronkelijke fout
+  // blijft altijd zichtbaar.
+  const diagnose = async (name) => {
+    const lines = [``, `--- Browsertest mislukt: ${name}`];
+    try {
+      const state = await Promise.race([
+        evaluate(`({
+          url: location.href,
+          viewport: innerWidth + "×" + innerHeight,
+          openModals: [...document.querySelectorAll(".modal-backdrop:not(.hidden)")].map((modal) => "#" + modal.id),
+          focus: document.activeElement ? (document.activeElement.id ? "#" + document.activeElement.id : document.activeElement.outerHTML.slice(0, 120)) : null,
+          toasts: [...document.querySelectorAll("#toast, #toastAlert")].filter((toast) => !toast.classList.contains("hidden")).map((toast) => toast.textContent.trim())
+        })`),
+        sleep(3000).then(() => { throw new Error("de pagina reageert niet"); })
+      ]);
+      lines.push(`Pagina: ${state.url} (${state.viewport}), open vensters: ${state.openModals.join(", ") || "geen"}, focus: ${state.focus}`);
+      if (state.toasts.length) lines.push(`Meldingen in beeld: ${state.toasts.join(" | ")}`);
+    } catch (error) {
+      lines.push(`Toestand van de pagina niet leesbaar: ${error.message}`);
+    }
+    lines.push(consoleLog.length ? `Laatste meldingen in de console:\n  ${consoleLog.join("\n  ")}` : "Geen meldingen in de console.");
+    try {
+      lines.push(`Schermafdruk: ${await Promise.race([screenshot(name), sleep(5000).then(() => { throw new Error("timeout"); })])}`);
+    } catch (error) {
+      lines.push(`Geen schermafdruk: ${error.message}`);
+    }
+    return lines.join("\n");
+  };
 
   // Sluit de browser en de webserver en ruimt het tijdelijke profiel op.
   const close = async () => {
@@ -408,16 +524,24 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
       { name: "prefers-reduced-motion", value: "reduce" }
     ]
   });
+  // Lokaal een trage server nabootsen (zie E2E_CPU_THROTTLE bovenaan).
+  const throttle = Number(process.env.E2E_CPU_THROTTLE);
+  if (throttle > 1) await send("Emulation.setCPUThrottlingRate", { rate: throttle });
 
   return {
     baseUrl,
     downloadDir,
     errors,
+    consoleLog,
     send,
     evaluate,
     waitFor,
     waitForEvent,
+    settle,
+    clickablePoint,
     click,
+    screenshot,
+    diagnose,
     insertText,
     press,
     scanBadge,

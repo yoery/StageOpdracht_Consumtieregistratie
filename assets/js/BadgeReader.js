@@ -79,7 +79,7 @@ export class BadgeReader {
       return false;
     }
 
-    const time = this.clock.now();
+    const time = this.keyTime(event);
 
     if (event.key === "Enter" || event.key === "Tab") {
       if (!this.isScan(time)) {
@@ -107,6 +107,17 @@ export class BadgeReader {
     this.lastKeyTime = time;
     this.scheduleEnd();
     return false;
+  }
+
+  // Het tijdstip (ms) van een toets: wanneer de toets binnenkwam (event.timeStamp), niet wanneer
+  // de pagina hem verwerkt. Op een trage tablet staan de tekens van een scan soms even in de rij,
+  // bijvoorbeeld terwijl de lijst opnieuw wordt getekend. Met de verwerkingstijd zaten er dan meer
+  // dan maxKeyIntervalMs tussen twee tekens en werd een scan gezien als typen: "DEADBEEF" werd
+  // "DBEEF" en "DEA" bleef in het zoekveld staan (gezien met een vier keer tragere processor).
+  // Zonder bruikbaar timeStamp (de nep-events van de unit tests) geldt de klok.
+  keyTime(event) {
+    const stamp = event?.timeStamp;
+    return Number.isFinite(stamp) && stamp > 0 ? stamp : this.clock.now();
   }
 
   // Zijn de tekens in de buffer samen een scan? Er moeten genoeg tekens zijn, en de afsluitende

@@ -164,6 +164,34 @@ test("sneltoetsen, een ingedrukt gehouden toets en een uitgezette lezer geven ge
   assert.deepEqual(off.scans, []);
 });
 
+test("een scan op een trage tablet: het tijdstip waarop de toets binnenkwam telt, niet de verwerking", () => {
+  // De pagina verwerkt de tekens 60 ms na elkaar (trager dan maxKeyIntervalMs), maar ze kwamen binnen
+  // 1 ms na elkaar binnen (event.timeStamp). Eerder werd "DEADBEEF" zo "DBEEF" en bleef "DEA" in het
+  // zoekveld staan (gezien in de browsertests met een vier keer tragere processor).
+  const { reader, clock, scans } = createReader();
+  let starts = 0;
+  reader.onStart = () => { starts += 1; };
+
+  [..."DEADBEEF"].forEach((character, index) => {
+    reader.handleKey(keyEvent(character, { timeStamp: 1000 + index }));
+    clock.advance(60);
+  });
+  const enter = keyEvent("Enter", { timeStamp: 1008 });
+  reader.handleKey(enter);
+
+  assert.deepEqual(scans, ["DEADBEEF"]);
+  assert.equal(starts, 1, "de scan is één buffer gebleven");
+  assert.equal(enter.prevented, true);
+
+  // Een mens die typt, blijft een mens, ook met timeStamp.
+  const human = createReader();
+  [..."lotte"].forEach((character, index) => human.reader.handleKey(keyEvent(character, { timeStamp: 5000 + index * 150 })));
+  const humanEnter = keyEvent("Enter", { timeStamp: 5800 });
+  human.reader.handleKey(humanEnter);
+  assert.deepEqual(human.scans, []);
+  assert.equal(humanEnter.prevented, false);
+});
+
 test("onStart wordt aangeroepen als er een nieuwe buffer begint", () => {
   const { reader, clock } = createReader();
   let starts = 0;
