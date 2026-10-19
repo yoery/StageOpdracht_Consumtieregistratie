@@ -54,6 +54,16 @@ const MAX_PRICE = 1000;
 // iets afwijkt; een registratie die meer dan een dag later ligt, is vrijwel zeker geknoeid.
 const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 
+// Slimme koelkast (demo): de geldige statussen van een opening (gelijk aan FRIDGE_STATUS in
+// RegistrationModel.js), de markeringen per schap (zie SmartFridge.countShelf) en grenzen voor de
+// getallen. Een hoger schapnummer, gewicht of aantal is vrijwel zeker geknoeid.
+const FRIDGE_STATUSES = new Set(["registered", "nothing", "check"]);
+const FRIDGE_FLAGS = new Set(["added", "mismatch", "unknown"]);
+const MAX_SHELF = 20;
+const MAX_UNIT_WEIGHT = 5000;
+const MAX_SHELF_WEIGHT = 1000000;
+const MAX_TAKEN = 1000;
+
 /**
  * DataStore — de opslaglaag: leest en schrijft alle gegevens in de browser (localStorage).
  *
@@ -74,7 +84,9 @@ const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 export class DataStore {
   // De lijsten in de opgeslagen gegevens. Staat er bij een van deze namen iets anders dan een
   // lijst, dan zijn de gegevens beschadigd (zie migrate).
-  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog"];
+  // De twee lijsten van de slimme koelkast (fridgeShelves en fridgeOpenings) ontbreken in gegevens
+  // van vóór de koelkast. Die krijgen dan een lege lijst (zie migrate).
+  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog", "fridgeShelves", "fridgeOpenings"];
 
   // De sleutel waaronder de gegevens in localStorage staan.
   // `loadProblem` zegt na load() of er iets mis was met de opgeslagen gegevens:
@@ -237,7 +249,9 @@ export class DataStore {
       registrations: (registration) => this.isValidRegistration(registration, now),
       products: (product) => this.isValidProduct(product),
       companies: (company) => this.isValidCompany(company),
-      points: (point) => this.isValidPoint(point)
+      points: (point) => this.isValidPoint(point),
+      fridgeShelves: (shelf) => this.isValidFridgeShelf(shelf),
+      fridgeOpenings: (opening) => this.isValidFridgeOpening(opening, now)
     };
   }
 
@@ -420,6 +434,8 @@ export class DataStore {
   // Een registratie moet een veilige id, medewerker, product en geldige datum hebben.
   // De prijs is optioneel (oude registraties hebben er nog geen), maar als die er staat,
   // moet het een geldige prijs zijn; anders zou de CSV-export een verkeerd bedrag tonen.
+  // Een registratie van de slimme koelkast heeft `source: "fridge"` en de id van de opening
+  // (`openingId`). Beide zijn optioneel; een andere bron dan "fridge" is ongeldig.
   // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
   // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
   // Het tijdstip (`createdAt`) moet een ISO-tijdstip vanaf 1 januari 2000 zijn en mag hooguit
@@ -439,7 +455,58 @@ export class DataStore {
       this.isSafeOptionalId(registration.pointId) &&
       this.isValidDateTime(registration.createdAt, now.getTime() + MAX_FUTURE_MS) &&
       hasValidPrice &&
-      hasValidEmployerNumber
+      hasValidEmployerNumber &&
+      (registration.source === undefined || registration.source === "fridge") &&
+      (registration.openingId === undefined || this.isSafeId(registration.openingId))
+    );
+  }
+
+  // Is dit een heel getal van `min` tot en met `max`?
+  isWholeNumber(value, min, max) {
+    return Number.isInteger(value) && value >= min && value <= max;
+  }
+
+  // Eén schap van de indeling van de slimme koelkast: een veilige id, een consumptiepunt (veilige id),
+  // een schapnummer van 1 tot en met MAX_SHELF, en een product met het gewicht van één
+  // stuk (1 tot en met MAX_UNIT_WEIGHT gram), of een leeg schap (product en gewicht allebei null).
+  isValidFridgeShelf(shelf) {
+    if (!this.isSafeId(shelf?.id) || !this.isSafeId(shelf.pointId) || !this.isWholeNumber(shelf.shelf, 1, MAX_SHELF)) return false;
+    if (shelf.productId === null) return shelf.unitWeight === null;
+    return this.isSafeId(shelf.productId) && this.isWholeNumber(shelf.unitWeight, 1, MAX_UNIT_WEIGHT);
+  }
+
+  // Eén opening van de slimme koelkast: een veilige id, medewerker en (optioneel) consumptiepunt, een
+  // geldig tijdstip van openen en sluiten (sluiten niet vóór openen en hooguit één dag na `now`), een
+  // bekende status en per schap het gewicht voor en na, het berekende aantal en een eventuele markering.
+  // Een opening die halverwege is afgebroken (bijvoorbeeld door herladen) wordt nooit opgeslagen.
+  isValidFridgeOpening(opening, now = new Date()) {
+    const latest = now.getTime() + MAX_FUTURE_MS;
+    return (
+      this.isSafeId(opening?.id) &&
+      this.isSafeId(opening.employeeId) &&
+      this.isSafeOptionalId(opening.pointId) &&
+      this.isValidDateTime(opening.openedAt, latest) &&
+      this.isValidDateTime(opening.closedAt, latest) &&
+      Date.parse(opening.closedAt) >= Date.parse(opening.openedAt) &&
+      FRIDGE_STATUSES.has(opening.status) &&
+      (opening.longOpen === undefined || typeof opening.longOpen === "boolean") &&
+      Array.isArray(opening.shelves) &&
+      opening.shelves.length <= MAX_SHELF &&
+      opening.shelves.every((shelf) => this.isValidOpeningShelf(shelf))
+    );
+  }
+
+  // Eén schap in een opening (zie isValidFridgeOpening).
+  isValidOpeningShelf(shelf) {
+    return (
+      this.isObject(shelf) &&
+      this.isWholeNumber(shelf.shelf, 1, MAX_SHELF) &&
+      this.isSafeOptionalId(shelf.productId) &&
+      (shelf.unitWeight === null || this.isWholeNumber(shelf.unitWeight, 1, MAX_UNIT_WEIGHT)) &&
+      this.isWholeNumber(shelf.before, 0, MAX_SHELF_WEIGHT) &&
+      this.isWholeNumber(shelf.after, 0, MAX_SHELF_WEIGHT) &&
+      this.isWholeNumber(shelf.count, 0, MAX_TAKEN) &&
+      (shelf.flag === null || FRIDGE_FLAGS.has(shelf.flag))
     );
   }
 
@@ -526,7 +593,11 @@ export class DataStore {
       products,
       companies,
       points: points.map((point) => this.completePointStock(point, validProducts, now)),
-      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry, now)) : []
+      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry, now)) : [],
+      // Slimme koelkast (demo): gegevens van vóór de koelkast hebben deze lijsten niet en krijgen een
+      // lege lijst. De koelkast gebruikt dan de standaardindeling uit config.js.
+      fridgeShelves: objects(data.fridgeShelves),
+      fridgeOpenings: objects(data.fridgeOpenings)
     };
   }
 

@@ -13,7 +13,9 @@
  *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer);
  *   - AdminController: ADMIN_IDLE_LOGOUT_MS, na hoeveel tijd zonder invoer de beheerder wordt uitgelogd;
  *   - EmployeeController: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS, na hoeveel tijd zonder
- *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt.
+ *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt;
+ *   - SmartFridge, FridgeController en RegistrationModel: SMART_FRIDGE, de instellingen van de
+ *     simulatie van de slimme koelkast (slot en weegschalen per schap).
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -129,6 +131,48 @@ export const EMPLOYEE_IDLE_CLOSE_MS = 75 * 1000;
 // "Venster sluit zo. Tik om door te gaan." Iedere tik of toets begint de tijd opnieuw.
 // In milliseconden: de laatste 10 seconden.
 export const EMPLOYEE_IDLE_WARNING_MS = 10 * 1000;
+
+// Slimme koelkast (demo), zie SmartFridge.js en TO bijlage B (optie C: een slot en weegschalen per
+// schap, met de pas als sleutel). De demo simuleert het slot en de weegschalen in de browser. In
+// productie stuurt alleen de backend het echte slot en de weegschalen aan. Zet enabled op false om de
+// simulatie helemaal uit te zetten: de knop op de beginpagina en het tabblad Koelkast verdwijnen dan.
+//   - shelfCount: het aantal schappen. Op ieder schap ligt één soort product;
+//   - defaultShelves: de indeling zolang de beheerder voor een consumptiepunt nog niets heeft ingesteld
+//     (schap 1, 2, 3, ...). unitWeight is het gewicht van één product in grammen. Een product dat het
+//     consumptiepunt niet aanbiedt, telt als leeg schap;
+//   - toleranceRatio: hoeveel het gewichtsverschil van een heel aantal producten mag afwijken, als
+//     deel van het gewicht van één product (0.15 = 15 procent, bij een blikje van 350 gram 52 gram);
+//   - emptyShelfToleranceGrams: zo veel gram mag een leeg schap verschillen voordat het opvalt;
+//   - weightVariation: alleen voor de simulatie. Ieder product wijkt tot zo veel (0.02 = 2 procent)
+//     af van het opgegeven gewicht, zoals echte blikjes ook niet allemaal even zwaar zijn;
+//   - foreignWeightGrams: alleen voor de simulatie. Zo veel gram legt de demoknop "Iets anders op
+//     het schap leggen" op schap 1, om een onverklaarbaar verschil te laten zien;
+//   - autoLockMs: het slot gaat weer dicht als de deur niet binnen deze tijd wordt geopend;
+//   - doorWarningMs: staat de deur langer open, dan verschijnt "De deur staat al lang open.";
+//   - doorAlertMs: staat de deur langer open, dan krijgt de opening de status "Controle nodig";
+//   - idleCloseMs: het koelkastvenster sluit vanzelf als het zo lang niet wordt gebruikt terwijl de
+//     deur dicht is (wachten op een pas of het overzicht na sluiten);
+//   - maxUnitWeight: het hoogste gewicht van één product dat de beheerder kan invullen (grammen);
+//   - recentOpenings: zo veel openingen staan in het beheer bij "Laatste openingen".
+export const SMART_FRIDGE = {
+  enabled: true,
+  shelfCount: 3,
+  defaultShelves: [
+    { productId: "blikje", unitWeight: 350 },
+    { productId: "yoghurt", unitWeight: 150 },
+    { productId: "ei", unitWeight: 60 }
+  ],
+  toleranceRatio: 0.15,
+  emptyShelfToleranceGrams: 25,
+  weightVariation: 0.02,
+  foreignWeightGrams: 120,
+  autoLockMs: 10 * 1000,
+  doorWarningMs: 60 * 1000,
+  doorAlertMs: 5 * 60 * 1000,
+  idleCloseMs: 60 * 1000,
+  maxUnitWeight: 5000,
+  recentOpenings: 10
+};
 
 // Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.
 export const DEFAULT_PRODUCTS = [

@@ -1818,9 +1818,10 @@ footer {
   color:var(--green)
 }
 /* Demo gezichtsherkenning: knop op de beginpagina en instellen in het productvenster. */
-/* De hint voor de pas en de knop "Herken mij met de camera (demo)" staan naast elkaar op één regel
-   (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger op het scherm. Staan ze
-   allebei uit (config.js), dan verdwijnt de regel helemaal. */
+/* De hint voor de pas en de demoknoppen ("Herken mij met de camera (demo)" en "Slimme koelkast (demo)")
+   staan naast elkaar op één regel (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger
+   op het scherm. De demoknoppen staan samen rechts (.directory-actions). Staan ze allemaal uit
+   (config.js), dan verdwijnt de regel helemaal. */
 .directory-tools {
   display:flex;
   align-items:center;
@@ -1829,7 +1830,17 @@ footer {
   gap:10px 16px;
   margin-top:16px
 }
-.directory-tools:not(:has(> :not(.hidden))) {
+.directory-tools:not(:has(> .badge-hint:not(.hidden), > .directory-actions > :not(.hidden))) {
+  display:none
+}
+.directory-actions {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:10px;
+  margin-left:auto
+}
+.directory-actions:not(:has(> :not(.hidden))) {
   display:none
 }
 .badge-hint {
@@ -1960,6 +1971,395 @@ footer {
   margin:14px 0 0;
   color:var(--muted);
   font-size:12px
+}
+/* Slimme koelkast (demo): de knop op de beginpagina, het koelkastvenster en het tabblad Koelkast.
+   Alleen bestaande kleuren, lettertypes en iconen. Tikdoelen zijn minstens 44 pixels hoog. */
+.fridge-start {
+  min-height:44px
+}
+.fridge-modal {
+  max-width:600px
+}
+/* Statusregel (role="status"): leeg neemt hij geen ruimte in. Een fout is rood en vet. */
+.fridge-status {
+  margin:8px 0 0;
+  color:var(--green-dark);
+  font-size:15px;
+  font-weight:600
+}
+.fridge-status:empty {
+  margin:0
+}
+.fridge-status[data-tone="error"] {
+  color:var(--error-text);
+  font-weight:700
+}
+.fridge-body {
+  margin-top:14px
+}
+/* De koelkast zelf: een kast met een deur. Dicht bedekt de deur de hele kast. */
+.fridge-cabinet {
+  display:grid;
+  grid-template-columns:44px 1fr;
+  border:2px solid var(--mint-border);
+  border-radius:16px;
+  background:var(--paper-soft);
+  overflow:hidden
+}
+.fridge-cabinet.is-closed {
+  grid-template-columns:1fr;
+  max-width:280px;
+  margin:0 auto
+}
+.fridge-door {
+  position:relative;
+  display:grid;
+  place-items:center;
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.fridge-cabinet.is-closed .fridge-door {
+  min-height:170px;
+  background:var(--paper)
+}
+.fridge-lock {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border-radius:999px;
+  background:var(--mint);
+  color:var(--green-dark);
+  font-weight:700;
+  font-size:14px
+}
+.fridge-cabinet.is-open .fridge-lock {
+  flex-direction:column;
+  gap:4px;
+  padding:6px 0;
+  background:none;
+  font-size:11px
+}
+.fridge-lock .icon {
+  width:18px;
+  height:18px
+}
+.fridge-handle {
+  position:absolute;
+  right:18px;
+  top:50%;
+  width:6px;
+  height:56px;
+  margin-top:-28px;
+  border-radius:3px;
+  background:var(--mint-border)
+}
+.fridge-instruction {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin:18px 0 0;
+  color:var(--ink);
+  font-size:17px;
+  font-weight:700;
+  text-align:center
+}
+.fridge-instruction .icon {
+  width:24px;
+  height:24px;
+  color:var(--green-dark)
+}
+/* Demo zonder pasjeslezer: duidelijk apart, met een stippellijn. */
+.fridge-demo {
+  margin-top:18px;
+  padding:14px;
+  border:1px dashed var(--warning-border);
+  border-radius:10px;
+  background:var(--warning-soft)
+}
+.fridge-demo-title {
+  margin:0 0 4px;
+  color:var(--warning-text);
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.6px
+}
+.fridge-demo .muted {
+  margin:0 0 10px
+}
+.fridge-demo-row {
+  display:flex;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  gap:10px
+}
+.modal .fridge-demo-label {
+  flex:1 1 200px;
+  margin:0
+}
+.fridge-demo-row select {
+  height:44px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 10px;
+  background:var(--paper);
+  color:var(--ink)
+}
+.fridge-demo-row .secondary-button {
+  min-height:44px
+}
+.fridge-help {
+  margin:6px 0 12px
+}
+/* De open koelkast: links de open deur, rechts de schappen. Ieder schap eindigt met een plank. */
+.fridge-shelves {
+  display:grid
+}
+.fridge-shelf {
+  display:grid;
+  gap:8px;
+  padding:12px 14px;
+  border-bottom:4px solid var(--mint-border)
+}
+.fridge-shelf:last-child {
+  border-bottom:0
+}
+.fridge-shelf-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:10px;
+  color:var(--ink)
+}
+.fridge-shelf-head small {
+  color:var(--muted);
+  font-size:13px;
+  white-space:nowrap
+}
+.fridge-shelf.is-empty .fridge-shelf-head {
+  color:var(--muted)
+}
+.fridge-shelf-row {
+  display:flex;
+  align-items:center;
+  gap:10px
+}
+/* Alle tegels van een schap samen zijn één knop: een tik pakt één product. */
+.fridge-shelf-take {
+  flex:1;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px;
+  min-height:56px;
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--paper);
+  color:var(--green-dark);
+  cursor:pointer;
+  transition:border-color .15s,background-color .15s,transform .1s
+}
+.fridge-shelf-take:hover,.fridge-shelf-take:focus-visible {
+  border-color:var(--green);
+  background:var(--hover-bg)
+}
+.fridge-shelf-take:active:not(:disabled) {
+  transform:scale(.98)
+}
+.fridge-shelf-take:disabled {
+  cursor:default;
+  opacity:.6
+}
+.fridge-item {
+  display:inline-grid;
+  place-items:center;
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:var(--mint)
+}
+.fridge-item .icon {
+  width:20px;
+  height:20px
+}
+.fridge-more,.fridge-shelf-empty-text {
+  color:var(--muted);
+  font-size:14px;
+  font-weight:700
+}
+.fridge-return {
+  flex:none;
+  min-height:44px
+}
+.fridge-hand {
+  margin:14px 0 0;
+  padding:10px 14px;
+  border:1px solid var(--mint-border);
+  border-radius:10px;
+  background:var(--mint);
+  color:var(--ink);
+  font-size:15px
+}
+.fridge-foreign {
+  min-height:44px;
+  margin-top:6px;
+  font-size:13px
+}
+/* De knop "Deur dicht" staat in dezelfde knopbalk als Registreren in het productvenster. */
+.fridge-actions .register-button.hidden {
+  display:none
+}
+/* Het overzicht na het sluiten. */
+.fridge-summary {
+  display:grid;
+  justify-items:center;
+  gap:8px;
+  padding:18px 12px 4px;
+  text-align:center
+}
+.fridge-summary > .icon {
+  width:44px;
+  height:44px;
+  padding:9px;
+  border-radius:50%;
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.fridge-summary.is-error > .icon {
+  background:var(--error-bg);
+  color:var(--error-text)
+}
+.fridge-summary h3 {
+  margin:4px 0 0;
+  color:var(--ink);
+  font-size:22px
+}
+.fridge-summary p {
+  margin:0;
+  color:var(--muted);
+  font-size:15px
+}
+.fridge-summary .primary-button {
+  min-width:180px;
+  min-height:48px;
+  margin-top:10px;
+  font-size:16px
+}
+.fridge-flag {
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  margin-top:6px;
+  padding:10px 12px;
+  border:1px solid var(--warning-border);
+  border-radius:8px;
+  background:var(--warning-bg);
+  text-align:left
+}
+.fridge-summary .fridge-flag p {
+  color:var(--warning-text);
+  font-weight:600
+}
+.fridge-flag .icon {
+  width:18px;
+  height:18px;
+  margin-top:2px;
+  color:var(--warning-text)
+}
+/* Tabblad Koelkast in het beheer. */
+.fridge-admin-heading {
+  margin:4px 0 6px;
+  color:var(--green-dark);
+  font-size:15px
+}
+.fridge-admin-heading + .muted {
+  margin:0 0 14px
+}
+.fridge-shelf-form {
+  margin:0 0 26px
+}
+.fridge-shelf-fields {
+  display:grid;
+  gap:8px;
+  margin-bottom:14px
+}
+.fridge-shelf-field {
+  display:grid;
+  grid-template-columns:80px minmax(0,1fr) minmax(0,1fr);
+  align-items:end;
+  gap:12px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:8px
+}
+.fridge-shelf-number {
+  align-self:center;
+  color:var(--ink);
+  font-weight:700
+}
+.modal .fridge-shelf-field label {
+  margin:0
+}
+.fridge-shelf-field select {
+  height:43px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 10px;
+  background:var(--paper);
+  color:var(--ink)
+}
+.admin-table-wrap .badge-linked {
+  display:inline-block;
+  margin-left:6px;
+  padding:2px 8px;
+  border-radius:999px;
+  background:var(--mint);
+  color:var(--green-dark);
+  font-size:11px;
+  font-weight:700
+}
+.fridge-status-registered {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.fridge-status-nothing {
+  background:var(--paper-soft);
+  color:var(--muted)
+}
+.fridge-status-check {
+  background:var(--warning-bg);
+  color:var(--warning-text)
+}
+.fridge-issue {
+  display:block;
+  margin-top:4px;
+  color:var(--warning-text);
+  font-size:12px;
+  white-space:normal
+}
+#fridgeTab:not(.hidden) {
+  animation:fade-in .2s ease-out
+}
+@media (max-width:720px) {
+  .directory-actions,.fridge-start {
+    width:100%
+  }
+  .fridge-shelf-field {
+    grid-template-columns:1fr
+  }
+  .fridge-cabinet {
+    grid-template-columns:36px 1fr
+  }
+  .fridge-shelf {
+    padding:10px
+  }
+  .fridge-item {
+    width:32px;
+    height:32px
+  }
 }
 @media (min-width:721px) and (max-width:900px) {
   :root {

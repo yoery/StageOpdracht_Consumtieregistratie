@@ -19,7 +19,8 @@
  *   - EmployeeController (via RegistrationApp): opent het productvenster en sluit de keuzelijst
  *     van het bedrijfsfilter;
  *   - ModalManager (via RegistrationApp): topModal, want met een ander open venster dan het
- *     productvenster wordt er niemand herkend.
+ *     productvenster wordt er niemand herkend;
+ *   - FridgeController (via RegistrationApp): krijgt de scan als het koelkastvenster open is.
  */
 export class BadgeController {
   // Melding als er een pas wordt gescand terwijl een ander venster dan het productvenster open is.
@@ -122,6 +123,8 @@ export class BadgeController {
   // Wordt door de pasjeslezer aangeroepen met het genormaliseerde pasnummer.
   //   - begon de scan in het veld "Pasnummer", dan komt het nummer in dat veld (zie
   //     fillBadgeFieldAfterScan) en wordt er niemand herkend;
+  //   - staat het koelkastvenster open (slimme koelkast, demo), dan gaat de scan naar
+  //     FridgeController.fridgeScan: de pas opent dan de koelkast in plaats van het productvenster;
   //   - staat er een ander venster open dan het productvenster (beheer, een formulier, het
   //     cameravenster of "Registratie verwijderen"), dan wordt er niemand herkend en volgt de
   //     melding "Sluit eerst het open venster om je pas te gebruiken.";
@@ -142,6 +145,12 @@ export class BadgeController {
     if (filledBadgeField) return;
 
     const openModal = this.app.topModal();
+    // Staat het koelkastvenster (slimme koelkast, demo) bovenaan, dan is de pas de sleutel van de
+    // koelkast: FridgeController controleert de pas en opent de koelkast, of geeft een melding.
+    if (openModal && openModal === this.view.$("#fridgeModal")) {
+      this.app.fridgeScan(code);
+      return;
+    }
     const productWindowOpen = Boolean(openModal) && openModal === this.view.$("#employeeProductsModal");
     if (openModal && !productWindowOpen) {
       this.view.showToast(BadgeController.CLOSE_WINDOW_FIRST, { tone: "error", duration: 5000 });

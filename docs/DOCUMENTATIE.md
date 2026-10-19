@@ -13,11 +13,11 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
 | `assets/css/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
 | `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
-| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang, de instellingen van de demo gezichtsherkenning (`FACE_DEMO`), van de pasjeslezer (`BADGE_READER`), na hoeveel tijd zonder invoer de beheerder wordt uitgelogd (`ADMIN_IDLE_LOGOUT_MS`, 5 minuten) en na hoeveel tijd zonder invoer het productvenster vanzelf sluit (`EMPLOYEE_IDLE_CLOSE_MS`, 75 seconden, met de waarschuwing `EMPLOYEE_IDLE_WARNING_MS`, de laatste 10 seconden) |
+| `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang, de instellingen van de demo gezichtsherkenning (`FACE_DEMO`), van de pasjeslezer (`BADGE_READER`), na hoeveel tijd zonder invoer de beheerder wordt uitgelogd (`ADMIN_IDLE_LOGOUT_MS`, 5 minuten) en na hoeveel tijd zonder invoer het productvenster vanzelf sluit (`EMPLOYEE_IDLE_CLOSE_MS`, 75 seconden, met de waarschuwing `EMPLOYEE_IDLE_WARNING_MS`, de laatste 10 seconden) en de instellingen van de slimme koelkast (`SMART_FRIDGE`, zie 4.17) |
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
-| `assets/js/RegistrationApp.js` | Controller: maakt de acht onderdelen hieronder en koppelt ze, slaat op via `persist`, neemt wijzigingen uit een ander tabblad over, werkt de datum bij na middernacht en koppelt alle klikken en toetsen. Alle methodes van de onderdelen zijn ook via deze class te gebruiken |
+| `assets/js/RegistrationApp.js` | Controller: maakt de negen onderdelen hieronder en koppelt ze, slaat op via `persist`, neemt wijzigingen uit een ander tabblad over, werkt de datum bij na middernacht en koppelt alle klikken en toetsen. Alle methodes van de onderdelen zijn ook via deze class te gebruiken |
 | `assets/js/controllers/ModalManager.js` | Class `ModalManager` (onderdeel van de controller): vensters openen en sluiten, de focus terugzetten, Escape en Tab binnen een venster |
 | `assets/js/controllers/EmployeeController.js` | Class `EmployeeController` (onderdeel van de controller): zoeken en bedrijfsfilter op de beginpagina, het productvenster en registreren |
 | `assets/js/controllers/BadgeController.js` | Class `BadgeController` (onderdeel van de controller): herkennen met de pas, koppelt `BadgeReader` aan de app |
@@ -26,6 +26,11 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `assets/js/controllers/CorrectionController.js` | Class `CorrectionController` (onderdeel van de controller): correcties `+` en `−` en het venster `Registratie verwijderen` |
 | `assets/js/controllers/StockController.js` | Class `StockController` (onderdeel van de controller): het tabblad Voorraad (leveringen, tellingen en minimum) |
 | `assets/js/controllers/FormController.js` | Class `FormController` (onderdeel van de controller): de formulieren voor medewerker, product, bedrijf en consumptiepunt, met de controle van de invoer |
+| `assets/js/controllers/FridgeController.js` | Class `FridgeController` (onderdeel van de controller): de slimme koelkast (demo), het koelkastvenster en het tabblad Koelkast (zie 4.17) |
+| `assets/js/FridgeView.js` | Class `FridgeView`: tekent het koelkastvenster en het tabblad Koelkast. `RegistrationView` maakt deze class en geeft de methodes door |
+| `assets/js/fridge/SmartFridge.js` | Class `SmartFridge`: de slimme koelkast. Weegt bij openen en sluiten en rekent het gewichtsverschil per schap om naar aantallen, met een tolerantie |
+| `assets/js/fridge/FridgeLock.js` en `assets/js/fridge/ShelfScale.js` | De afspraken (interfaces) voor het slot en de weegschaal per schap. In productie komen hier classes die via de backend werken |
+| `assets/js/fridge/SimulatedLock.js` en `assets/js/fridge/SimulatedShelfScale.js` | Het nagebootste slot (gaat na 10 seconden vanzelf dicht als de deur niet opengaat) en de nagebootste weegschaal van de demo |
 | `assets/js/CsvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
 | `assets/js/ThemeManager.js` | Class `ThemeManager`: licht en donker thema (Systeem, Auto of zelf kiezen met de slider) |
 | `assets/js/icons.js` | De SVG-iconen van de website, met de hulpfunctie `icon(naam)` |
@@ -40,7 +45,8 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-BLIKJESREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het sjabloon `docs/tvbsjabloon.docx`: voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
 | `docs/` | Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie |
 | `docs/wireframes/` | Low-fidelity (`lofi-…`), mid-fidelity (`midfi-…`) en high-fidelity (`w…`) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9) |
-| `tests/` | Unit tests (661) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/slimme-koelkast.test.js` | Tests voor de slimme koelkast: omrekenen van gewicht naar aantallen (tolerantie, terugleggen, meerdere schappen, onverklaarbaar verschil), het slot met een nep-klok, de weegschaal, registraties met voorraad en logboek, de indeling, de controle en migratie in `DataStore`, wissen, en het koelkastvenster met de pas (onbekende pas, tweede scan, deur te lang open, mislukt opslaan, herladen) |
+| `tests/` | Unit tests (716) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
 | `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
@@ -53,7 +59,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tests/ux-review.test.js` | Tests voor de verbeteringen uit de UX-review van oktober 2026 (UX 1 t/m UX 12 in de naam van iedere test, daarna 13 en 14): het productvenster dat na 75 seconden vanzelf sluit (met een nep-klok, de waarschuwing en iedere invoer die opnieuw begint), een pas terwijl een venster open is, de knopbalk met `Registreren`, zoekveld en bedrijfsfilter leeg na registreren, de compacte banner, de pashint, de opmaak van een gekozen product, de grootte van knoppen, de statusregel en de meldingsregio's voor schermlezers, de leesbaarheid, de nieuwe teksten, `Registreren` zonder keuze, een productvenster zonder producten zonder knopbalk en loonregel (13) en vensters die altijd bovenaan openen (14) |
 | `tests/review-oktober.test.js` | Regressietests voor de review van oktober 2026 (D1 t/m D7, U1 t/m U7, R1 t/m R3 in de naam van iedere test): beschadigde lijsten en volle opslag, dubbele passen, niet-bestaande datums, pasnummers gelijk maken, mislukt wissen, gezichtsherkenning alleen met actieve medewerkers, een scan in het veld `Pasnummer` en in het bedrijfsfilter, dubbelklik op `Registreren`, een ingedrukt gehouden Enter, de focus na opslaan en (de)activeren, het datumveld na middernacht, toegankelijkheid (live region, tabbladen, bedrijfsfilter) en de cijfervelden |
 | `.gitattributes` | Zorgt dat Git de bestanden in `assets/vendor/` en `assets/fonts/` niet aanpast (geen omzetting van regeleinden), zodat de controlegetallen blijven kloppen |
-| `tests/e2e/` | Browsertests (end-to-end): `app.e2e.test.js` test de echte pagina in headless Edge of Chrome (17 tests: laden zonder fouten, zoeken, registreren (daarna bij kiezen op naam geen "welkom terug"), `Registreren` zonder keuze, Escape en focus, inloggen, thema, pas koppelen en herkennen (ook een tweede scan in het veld `Pasnummer`), CSV-export, een dubbelklik op `Registreren`, een scan in het bedrijfsfilter, de focus na opslaan en (de)activeren in het beheer, letters in een cijferveld, het productvenster dat vanzelf sluit, een pas terwijl een venster open is, `Registreren` in beeld op een liggende tablet, een telefoon en bij 200% zoom, en een leeg zoekveld na registreren), `browser.js` bevat de webserver en de besturing van de browser via het Chrome DevTools Protocol. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
+| `tests/e2e/` | Browsertests (end-to-end): `app.e2e.test.js` test de echte pagina in headless Edge of Chrome (21 tests: laden zonder fouten, zoeken, registreren (daarna bij kiezen op naam geen "welkom terug"), `Registreren` zonder keuze, Escape en focus, inloggen, thema, pas koppelen en herkennen (ook een tweede scan in het veld `Pasnummer`), CSV-export, een dubbelklik op `Registreren`, een scan in het bedrijfsfilter, de focus na opslaan en (de)activeren in het beheer, letters in een cijferveld, het productvenster dat vanzelf sluit, een pas terwijl een venster open is, `Registreren` in beeld op een liggende tablet, een telefoon en bij 200% zoom, een leeg zoekveld na registreren, een productvenster zonder producten, vensters die bovenaan openen, en de slimme koelkast: openen met de pas, twee blikjes pakken en de registratie terugzien, en een onbekende pas), `browser.js` bevat de webserver en de besturing van de browser via het Chrome DevTools Protocol. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
 | `.github/workflows/ci.yml` | Voert de unit tests en daarna de browsertests (in Google Chrome) automatisch uit op GitHub met Node.js 24 (LTS), met alleen leesrechten en actions die op een commit-SHA zijn vastgezet |
 
 Bij het toevoegen of wijzigen van een medewerker kiest de beheerder een bedrijf uit de keuzelijst en daarna een consumptiepunt van dat bedrijf. Met het bedrijf worden medewerkers op de beginpagina gegroepeerd en gefilterd. Het bedrijfsfilter op de beginpagina is een keuzelijst waarin je ook kunt typen. De lijst filtert direct tijdens het typen en toont alleen bedrijven met actieve medewerkers. Wat je typt, wordt niet overschreven als de lijst intussen opnieuw wordt getekend. Hebben actieve medewerkers geen bedrijf, of bestaat hun bedrijf niet meer, dan staat er ook de keuze `Onbekend bedrijf`. Die toont al deze medewerkers. Escape sluit een open keuzelijst, en een schermlezer hoort of de lijst open is en welk bedrijf is gekozen.
@@ -182,7 +188,7 @@ Het tabblad `Logboek` toont standaard maximaal 20 wijzigingen. Met `Meer laden` 
 Onder het logboek staat de rode knop `Alle gegevens wissen`. Daarmee wis je alle persoonsgegevens op de tablet, bijvoorbeeld als de tablet ergens anders wordt gebruikt (recht op vergetelheid uit de AVG).
 
 1. Klik op `Alle gegevens wissen`.
-2. De browser vraagt: "Alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet wissen?" Klik op OK.
+2. De browser vraagt: "Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, het logboek en de reservekopieën op deze tablet wissen?" Klik op OK.
 3. De browser vraagt nog een keer: "Weet je het zeker? Dit kan niet ongedaan worden gemaakt." Klik op OK.
 
 Daarna zijn alle gegevens, beide reservekopieën en de ingestelde gezichten van de demo gewist. Je bent uitgelogd, het beheervenster is dicht en de demogegevens staan er weer (8 voorbeeldmedewerkers, de standaardproducten, de 13 bedrijven en het consumptiepunt Hoofdkantoor). Er verschijnt de melding "Alle gegevens zijn gewist. De demogegevens staan er weer." Klik je bij een van de twee vragen op `Annuleren`, dan verandert er niets. Andere open tabbladen laden de nieuwe demogegevens vanzelf in. Lukt het wissen niet, dan blijft alles staan en verschijnt "De gegevens konden niet worden gewist. Probeer het opnieuw."
@@ -246,6 +252,34 @@ Medewerkers kunnen zich ook laten herkennen met hun pas, via een USB-NFC-lezer d
 Een medewerker herkennen gebeurt op de beginpagina en als het productvenster open is. Staat het productvenster van een collega nog open, dan sluit dat venster zonder op te slaan en opent het venster van de pas. Staat het eigen venster al open, dan blijft het open met de keuze die er al stond. Staat er een ander venster open (het beheer, een formulier of de camera), dan opent er niets en verschijnt "Sluit eerst het open venster om je pas te gebruiken." De website houdt dan wel de Enter of Tab tegen waarmee de lezer een scan afsluit, zodat die niet de knop met de focus indrukt. Staat de focus in het zoekveld, dan haalt de website de getypte tekens van de lezer daar weer uit. Het zoekveld heeft na een scan dezelfde inhoud als ervoor. Hetzelfde geldt voor het bedrijfsfilter: daar komen na een scan ook het gekozen bedrijf terug en gaat de keuzelijst dicht. In het veld `Pasnummer` van het medewerkersformulier vervangt een scan het nummer dat er al stond. Gewoon typen in het zoekveld werkt zoals altijd: een mens typt veel trager dan de lezer, en dat ziet de website nooit als een scan. De instellingen staan in `BADGE_READER` in `config.js` (minimaal 4 tekens, net als het kortste pasnummer in het medewerkersformulier, hooguit 40 milliseconden tussen twee tekens, en 120 milliseconden stilte als einde van de scan voor lezers zonder Enter). Met `BADGE_READER.enabled = false` staat herkennen met de pas helemaal uit en verdwijnt ook de hint boven het zoekveld. `Alle gegevens wissen` wist ook de gekoppelde pasnummers, want die horen bij de medewerkers.
 
 Let op: het nummer van een pas is niet geheim en kan met goedkope apparatuur worden gekopieerd. Herkennen met de pas is dus gemak, geen bewijs van identiteit. Zie het TO voor de beveiliging en de koppeling met AFAS of het toegangssysteem van TVB in productie.
+
+### 4.17 Slimme koelkast (demo)
+
+De slimme koelkast laat zien hoe het advies uit het TO (bijlage B) zou werken: een koelkast met een slot en een weegschaal per schap, die je opent met je pas. Wat je pakt, wordt aan de hand van het gewicht vanzelf geregistreerd. Het slot en de weegschalen zijn nagebootst. De simulatie staat aan met `SMART_FRIDGE.enabled` in `config.js`. Staat die op `false`, dan zijn de knop en het tabblad Koelkast weg. Registreren met `+` en `−` werkt daarnaast gewoon.
+
+Voor de medewerker:
+
+1. Tik op de beginpagina op `Slimme koelkast (demo)`. Je ziet een koelkast die "Op slot" is en "Houd je pas tegen de lezer om de koelkast te openen".
+2. Houd je pas tegen de lezer (de pas moet zijn gekoppeld, zie 4.5). Heb je geen lezer, kies dan in het vak "Demo zonder pasjeslezer" een medewerker en tik op `Openen (demo)`.
+3. De deur is open. Per schap zie je het product en hoeveel er liggen. Tik op een schap om een product te pakken. Onder de koelkast staat wat je in de hand hebt, bijvoorbeeld "In je hand: 2× Blikje". Zet je iets terug, tik dan op `Terugleggen` bij dat schap.
+4. Tik op `Deur dicht`. Het slot gaat dicht en de koelkast weegt de schappen. Je ziet bijvoorbeeld "Je hebt gepakt: 2× Blikje" en "Dit is geregistreerd op naam van Lotte van Dijk. De koelkast is weer op slot." Tik op `Klaar`.
+
+Goed om te weten:
+
+- Een onbekende pas of de pas van een inactieve medewerker laat de koelkast dicht: "Deze pas is niet gekoppeld aan een medewerker. De koelkast blijft dicht."
+- Een tweede pas terwijl de deur open is, telt niet: "De koelkast is al open. Sluit eerst de deur." Alles wat je pakt, staat op naam van wie de deur opende.
+- Staat de deur langer dan een minuut open, dan verschijnt "De deur staat al lang open. Sluit de deur."
+- Heb je niets gepakt, dan wordt er niets geregistreerd ("Je hebt niets gepakt"). Escape met de deur open sluit de deur.
+- Klopt het gewicht van een schap niet (in de demo na een tik op `Iets anders op schap 1 leggen (demo)`), dan wordt dat schap niet geregistreerd en kijkt de beheerder ernaar. De andere schappen worden wel geregistreerd.
+- Wordt de pagina herladen terwijl de deur open is, dan is er niets opgeslagen.
+
+Voor de beheerder staat in het beheer het tabblad `Koelkast`:
+
+1. Kies een consumptiepunt.
+2. Kies per schap een product (alleen producten die het punt aanbiedt) of `Leeg schap`, en vul het gewicht van één stuk in gram in (1 tot en met 5000).
+3. Klik op `Indeling opslaan`. In het logboek komt "Koelkastindeling gewijzigd".
+
+Zonder eigen indeling geldt de standaardindeling uit `config.js` (schap 1 Blikje 350 gram, schap 2 Yoghurt 150 gram, schap 3 Ei 60 gram). Onder de indeling staan de laatste 10 openingen met datum en tijd, medewerker, wat er is gepakt en de status: `Geregistreerd`, `Niets gepakt` of `Controle nodig` met de reden. Iedere opening geeft één logboekregel ("Koelkast geopend" of "Koelkast: controle nodig"). Registraties van de koelkast staan in de registratietabel met het label `Koelkast` en tellen gewoon mee in de totalen en de CSV-export. Een fout corrigeer je met `+` of `−` (zie 4.4). De instellingen in `config.js` (`SMART_FRIDGE`) zijn onder andere de tolerantie (`toleranceRatio`, 15 procent), het aantal schappen, de standaardindeling, de waarschuwing bij een open deur (`doorWarningMs`, 60 seconden) en wanneer het venster vanzelf sluit (`idleCloseMs`, 60 seconden).
 
 ## 5. Uitleg van `index.html`
 
@@ -466,7 +500,7 @@ Naast de gegevens zelf kunnen er twee reservekopieën in `localStorage` staan: `
 
 ### Objectgeoriënteerde structuur
 
-De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in zestien classes, ieder in een eigen bestand. Acht daarvan vormen samen de controller: `RegistrationApp` en de onderdelen `ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController` en `FormController`. De andere acht zijn `DataStore`, `RegistrationModel`, `RegistrationView`, `CsvExport`, `ThemeManager` (licht en donker thema), `FaceRecognitionDemo` (demo gezichtsherkenning) en `BadgeReader` (pasjeslezer). Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
+De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in drieëntwintig classes, ieder in een eigen bestand. Tien daarvan vormen samen de controller: `RegistrationApp` en de onderdelen `ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController`, `FormController` en (sinds versie 3.14) `FridgeController`. Zeven zijn `DataStore`, `RegistrationModel`, `RegistrationView`, `CsvExport`, `ThemeManager` (licht en donker thema), `FaceRecognitionDemo` (demo gezichtsherkenning) en `BadgeReader` (pasjeslezer). De laatste zes horen bij de slimme koelkast (demo): `FridgeView` en, in de map `assets/js/fridge/`, `SmartFridge`, `FridgeLock`, `SimulatedLock`, `ShelfScale` en `SimulatedShelfScale`. Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
 
 ```text
 DataStore ──► RegistrationModel ──► RegistrationView
@@ -476,7 +510,9 @@ DataStore ──► RegistrationModel ──► RegistrationView
                RegistrationApp (controller, stuurt model, view, export, FaceRecognitionDemo en BadgeReader aan)
                      │
                      └──► onderdelen: ModalManager, EmployeeController, BadgeController, FaceController,
-                          AdminController, CorrectionController, StockController, FormController
+                          AdminController, CorrectionController, StockController, FormController,
+                          FridgeController ──► SmartFridge ──► FridgeLock (SimulatedLock)
+                                                           └──► ShelfScale (SimulatedShelfScale)
 
 ThemeManager (los: alleen het thema van de pagina)
 ```
@@ -487,7 +523,7 @@ Toegepaste OOP-principes:
 
 - **Encapsulatie:** iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (`model.employees`, `model.products`) en wijzigen ze alleen via methodes (`model.addRegistration`, `model.saveCompany`).
 - **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class. Ook de besturing zelf is verdeeld: ieder onderdeel van de controller heeft één taak (vensters, beginpagina, pas, camera, beheer, correcties, voorraad, formulieren).
-- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning, de pasjeslezer en de klok voor het automatisch uitloggen mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven. De controller maakt wel zelf zijn acht onderdelen en geeft zichzelf daarbij mee.
+- **Compositie:** de controller krijgt het model, de view, de export, de demo gezichtsherkenning, de pasjeslezer en de klok voor het automatisch uitloggen mee in de constructor, in plaats van ze zelf te maken. Daardoor kan in de tests een nep-view of nep-export worden meegegeven. De controller maakt wel zelf zijn negen onderdelen en geeft zichzelf daarbij mee. Ook de slimme koelkast (`SmartFridge`) wordt meegegeven, zodat in de tests een koelkast met een nep-klok kan worden gebruikt.
 - **Losse koppeling:** de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes `load()` en `save()`.
 
 #### `DataStore`
@@ -526,7 +562,7 @@ Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerli
 
 #### `RegistrationApp`
 
-Vormt de controller van de applicatie. Eerder stond alle besturing in deze ene class (2414 regels). Nu maakt `RegistrationApp` in de constructor acht kleinere onderdelen, elk met één taak (zie hieronder), en houdt zelf alleen wat bij de hele app hoort:
+Vormt de controller van de applicatie. Eerder stond alle besturing in deze ene class (2414 regels). Nu maakt `RegistrationApp` in de constructor negen kleinere onderdelen, elk met één taak (zie hieronder), en houdt zelf alleen wat bij de hele app hoort:
 
 - het starten (`initialize`) en de dagwissel (`refreshIfNewDay`, `renderTodayLabel`).
 - de melding bij beschadigde opgeslagen gegevens (`showLoadProblem`).
@@ -572,6 +608,21 @@ Ieder onderdeel krijgt `RegistrationApp` mee in de constructor (`this.app`). Het
 **`StockController`** regelt het tabblad Voorraad. `saveStockField` en `bookDelivery` controleren dat voorraad en minimum hele getallen van 0 tot en met 100.000 zijn, en een levering van 1 tot en met 100.000. `isRepeatedDeliveryTap` negeert een tweede tik op dezelfde knop `Toevoegen` binnen 800 milliseconden.
 
 **`FormController`** regelt de vier beheerformulieren (medewerker, product, bedrijf en consumptiepunt): openen (`openEmployeeForm`, `openEditEmployeeForm` enzovoort), controleren en opslaan (`saveEmployee`, `saveProduct`, `saveCompany`, `savePoint`) en sluiten. De controles staan in `validateRequiredFields`, `validateNumberFields`, `isValidPrice`, `isDigitsOnly`, `validateBadgeField` en `validateEmployeeAssignment`. `setSaveButtons` zet de opslagknoppen van het medewerkers- en productformulier goed. Bij toevoegen staan er `Opslaan` (secundair) en `Opslaan + opnieuw` (primair), bij wijzigen alleen `Opslaan`, en die is dan primair. Bij het openen van een wijzigformulier onthoudt `rememberEditing` een kopie van het gegeven. `closeStaleForms` vergelijkt die kopie bij een wijziging in een ander tabblad en sluit het formulier als het gegeven intussen is verwijderd of gewijzigd.
+
+**`FridgeController`** (sinds versie 3.14) is de slimme koelkast (zie 4.17). `openFridgeWindow` opent het koelkastvenster. Een scan gaat via `BadgeController.recognizeBadge` naar `fridgeScan` als het koelkastvenster bovenaan staat. `startFridgeOpening` controleert de medewerker, neemt de indeling van zijn consumptiepunt (`model.fridgeLayout`), vult in de simulatie de schappen met de voorraad (`stockSimulatedShelves`) en laat `SmartFridge` het slot openen. `takeFromShelf` en `returnToShelf` bootsen pakken en terugleggen na, en `addForeignWeight` legt in de demo iets anders op een schap. `closeFridgeDoor` laat `SmartFridge` het slot sluiten en wegen, en slaat via `persist` in één keer de opening, de registraties en één logboekregel op (`openingAudit`). `checkFridgeTimers` geeft na 60 seconden de waarschuwing bij een open deur en sluit het venster met de deur dicht na 60 seconden zonder invoer. `saveFridgeShelves` slaat in het beheer de indeling op.
+
+#### Slimme koelkast (`assets/js/fridge/`)
+
+- **`SmartFridge`** weegt bij het openen ieder schap (`start`), opent het slot, en weegt bij het sluiten opnieuw (`finish`). `countShelf` rekent het verschil van één schap om naar een aantal: verschil gedeeld door het gewicht van één product, afgerond als het binnen de tolerantie valt (`SMART_FRIDGE.toleranceRatio`). Valt het erbuiten of is er iets bij gekomen, dan krijgt het schap een markering (`mismatch`, `added` of `unknown`) en wordt het niet geteld. `statusOf` geeft de status van de opening: `registered`, `nothing` of `check`. `SmartFridge.createSimulated()` maakt de koelkast van de demo.
+- **`FridgeLock`** en **`ShelfScale`** zijn afspraken (interfaces): ze beschrijven alleen welke methodes een slot (`unlock`, `lock`, `cancelAutoLock`, `isLocked`) en een weegschaal (`read`) hebben.
+- **`SimulatedLock`** is het nagebootste slot. Na `unlock` gaat het na 10 seconden vanzelf weer dicht als de deur niet is geopend.
+- **`SimulatedShelfScale`** is de nagebootste weegschaal met een lijst van producten op het schap. Ieder product wijkt tot 2 procent af van het opgegeven gewicht.
+
+In productie stuurt alleen de backend het echte slot en de weegschalen aan. De browser mag het echte slot nooit zelf openen. Dan worden alleen `SimulatedLock` en `SimulatedShelfScale` vervangen door classes met dezelfde methodes die de backend aanroepen (zie het TO, bijlage B).
+
+#### `FridgeView`
+
+Tekent het koelkastvenster (`renderFridgeWindow`, met de drie stappen deur dicht, deur open en overzicht), de statusregel (`setFridgeStatus`), de live region (`announceFridge`), de waarschuwing bij een open deur (`setDoorWarning`) en het tabblad Koelkast (`renderFridgeAdmin`). `RegistrationView` maakt deze class en geeft de methodes door, zodat de controller alleen met `RegistrationView` praat.
 
 #### `CsvExport`
 
@@ -732,6 +783,7 @@ De huidige demo gebruikt JavaScript-objecten. De logische koppeling is:
 | `employerNumber` | Werkgevernummer op het moment van registreren (voor de CSV-export, zie `RegistrationModel.registrationEmployerNumber`). Ontbreekt als er toen nog geen nummer was. Dan gebruikt de export het huidige nummer |
 | `pointId` | Consumptiepunt waar de voorraad van af ging. Bij een correctie gaat het product hier weer naartoe terug. Leeg (`null`) als het punt het product niet aanbiedt en er dus geen voorraad af ging |
 | `correction` | Alleen aanwezig (`true`) als de beheerder de registratie met `+` heeft toegevoegd |
+| `source` en `openingId` | Alleen aanwezig bij een registratie van de slimme koelkast: `source` is dan `"fridge"` en `openingId` de opening waarbij het product is gepakt |
 | `createdAt` | Datum en tijd van registratie. Bij een correctie `+` met een eerdere datum is dat 12:00 uur op die dag |
 
 Oude gegevens uit een eerdere versie worden bij het laden automatisch omgezet (`DataStore.migrateCompanies`): de vrij ingevulde bedrijfsnaam wordt een bedrijf, het eerste werkgevernummer wordt de standaard van dat bedrijf (een afwijkend nummer blijft bij de medewerker staan) en ieder bedrijf met medewerkers krijgt één consumptiepunt met alle producten.
@@ -741,6 +793,15 @@ Het aantal is in de demo altijd `1`, omdat iedere klik één registratie maakt. 
 Een medewerker met registraties kan niet definitief worden verwijderd (alleen gedeactiveerd), zodat de export altijd een naam en looncode heeft. Ontbreekt een medewerker toch (bijvoorbeeld in oude gegevens), dan wordt bij die registraties `Verwijderd` getoond.
 
 Voor de CSV-export wordt de prijs gebruikt die bij iedere registratie is bewaard (`price`). Oude registraties zonder prijs gebruiken de huidige prijs uit het productbeheer. Het bestand bevat per medewerker per loonmaand het aantal en de totale prijs. Deze gegevens zijn alleen zichtbaar voor de beheerder.
+
+### Slimme koelkast
+
+| Lijst | Inhoud |
+|---|---|
+| `fridgeShelves` | De indeling die de beheerder heeft opgeslagen: per consumptiepunt en schap (`shelf`) het product (`productId`, `null` bij een leeg schap) en het gewicht van één stuk in gram (`unitWeight`). Zonder eigen indeling geldt `SMART_FRIDGE.defaultShelves` uit `config.js` |
+| `fridgeOpenings` | Iedere afgeronde opening: de medewerker, het consumptiepunt, `openedAt` en `closedAt`, de status (`registered`, `nothing` of `check`), of de deur te lang open stond (`longOpen`) en per schap het gewicht voor en na (`before`, `after`), het berekende aantal (`count`) en een eventuele markering (`flag`). Geen beelden of andere gegevens |
+
+Gegevens van vóór versie 3.14 hebben deze lijsten niet. Ze krijgen bij het laden twee lege lijsten, zonder melding. `Alle gegevens wissen` wist ze mee.
 
 ## 9. Belangrijke demo-beperkingen
 
@@ -763,6 +824,7 @@ Deze versie is bedoeld als prototype:
 - Bescherming tegen inbedden in een frame (`frame-ancestors` of `X-Frame-Options`) kan alleen met een HTTP-header van de webserver en zit dus niet in de demo.
 - De gezichtsherkenning is alleen een demo. Ingestelde gezichten zijn na het herladen van de pagina weg. Er is geen controle of er een echt, levend gezicht voor de camera staat, en hoe vaak de verkeerde persoon wordt herkend, is niet gemeten. Bij het laden toont de console één onschadelijke CSP-melding over `wasm-eval`, omdat de bibliotheek test of WebAssembly werkt. De bibliotheek face-api wordt niet meer onderhouden (de repository is gearchiveerd) en krijgt dus geen beveiligingsupdates. Ze staat met een vaste versie en controlegetallen in het project en is alleen voor de demo bedoeld. Zie het TO (hoofdstuk 13) voor de privacyregels en de beveiliging.
 - Herkennen met de pas is gemak, geen bewijs van identiteit: het nummer van een pas is niet geheim en kan worden gekopieerd. In productie komt het pasnummer uit AFAS of het toegangssysteem van TVB, gekoppeld aan het personeelsnummer.
+- De slimme koelkast is een simulatie. Er is geen echt slot en geen echte weegschaal. De browser opent het nagebootste slot zelf en rekent zelf om. In productie mag alleen de backend het slot openen. De tolerantie en de gewichten per stuk zijn schattingen, en in het vak "Demo zonder pasjeslezer" kan iedere actieve medewerker worden gekozen.
 
 Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig. Het TO (hoofdstuk 13) bevat de volledige lijst van wat vóór productie moet gebeuren.
 
@@ -778,6 +840,7 @@ De applicatie volgt het principe van separation of concerns:
 6. `ThemeManager` weet welk thema (licht of donker) actief moet zijn.
 7. `FaceRecognitionDemo` weet hoe de camera en de demo gezichtsherkenning werken.
 8. `BadgeReader` weet wanneer snel getypte tekens een scan van de pasjeslezer zijn.
+9. `SmartFridge` weet hoe een gewichtsverschil per schap wordt omgerekend naar een aantal producten. Het slot en de weegschalen zitten achter de interfaces `FridgeLock` en `ShelfScale`, zodat de nagebootste versies later door echte (via de backend) kunnen worden vervangen.
 
 De schermen zelf staan als screenshots in het TO, hoofdstuk 9, paragraaf Wireframes (`docs/wireframes/`). Die zijn handig om tijdens een presentatie te laten zien welke code bij welk scherm hoort.
 

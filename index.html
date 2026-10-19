@@ -101,9 +101,15 @@
                Naast elkaar op één regel, zodat de medewerkerlijst hoger op het scherm begint. -->
           <div class="directory-tools">
             <p class="badge-hint hidden" id="badgeHint"><span aria-hidden="true" data-icon="userSearch"></span> Houd je pas tegen de lezer, of zoek je naam</p>
-            <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
-              <span data-icon="faceScan"></span> Herken mij met de camera (demo)
-            </button>
+            <div class="directory-actions">
+              <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
+                <span data-icon="faceScan"></span> Herken mij met de camera (demo)
+              </button>
+              <!-- Slimme koelkast (demo, SMART_FRIDGE in config.js): opent het koelkastvenster (#fridgeModal). -->
+              <button type="button" class="secondary-button fridge-start hidden" id="fridgeOpenButton" aria-haspopup="dialog">
+                <span data-icon="fridge"></span> Slimme koelkast (demo)
+              </button>
+            </div>
           </div>
           <!-- Zoekveld en bedrijfsfilter. Op een tablet en groter staan ze naast elkaar op één regel. -->
           <div class="directory-filters">
@@ -221,6 +227,7 @@
           <button class="tab" type="button" role="tab" id="tab-products" aria-controls="productsTab" aria-selected="false" data-tab="products">Producten</button>
           <button class="tab" type="button" role="tab" id="tab-companies" aria-controls="companiesTab" aria-selected="false" data-tab="companies">Bedrijven</button>
           <button class="tab" type="button" role="tab" id="tab-stock" aria-controls="stockTab" aria-selected="false" data-tab="stock">Voorraad</button>
+          <button class="tab hidden" type="button" role="tab" id="tab-fridge" aria-controls="fridgeTab" aria-selected="false" data-tab="fridge">Koelkast</button>
           <button class="tab" type="button" role="tab" id="tab-audit" aria-controls="auditTab" aria-selected="false" data-tab="audit">Logboek</button>
         </div>
         <div id="registrationsTab" role="tabpanel" aria-labelledby="tab-registrations">
@@ -285,6 +292,27 @@
             <table class="stock-table">
               <thead><tr><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Status</th><th>Levering</th></tr></thead>
               <tbody id="stockTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Slimme koelkast (demo): welk product op welk schap ligt en de laatste openingen (FridgeView). -->
+        <div id="fridgeTab" class="hidden" role="tabpanel" aria-labelledby="tab-fridge">
+          <h3 class="fridge-admin-heading">Indeling van de schappen</h3>
+          <p class="muted">Op ieder schap ligt één soort product. Met het gewicht van één stuk rekent de koelkast uit hoeveel er is gepakt.</p>
+          <form id="fridgeShelfForm" class="fridge-shelf-form" novalidate>
+            <div class="filter-row">
+              <label>Consumptiepunt
+                <select id="fridgePointSelect"></select>
+              </label>
+            </div>
+            <div id="fridgeShelfFields" class="fridge-shelf-fields"></div>
+            <button class="primary-button" id="fridgeShelfSaveButton" type="submit">Indeling opslaan</button>
+          </form>
+          <h3 class="fridge-admin-heading">Laatste openingen</h3>
+          <div class="admin-table-wrap">
+            <table>
+              <thead><tr><th>Datum & tijd</th><th>Medewerker</th><th>Gepakt</th><th>Status</th></tr></thead>
+              <tbody id="fridgeOpeningsBody"></tbody>
             </table>
           </div>
         </div>
@@ -353,6 +381,29 @@
       </div>
       <!-- Korte uitleg wat er met een registratie gebeurt (informatieplicht AVG, zie TO hoofdstuk 13). -->
       <p class="muted privacy-note" id="employeePrivacyNote">Wat je registreert, wordt maandelijks ingehouden op je loon. Meer informatie staat in de privacyverklaring voor medewerkers.</p>
+    </div>
+  </div>
+
+  <!-- Slimme koelkast (demo, zie FridgeController en TO bijlage B): eerst de pas tegen de lezer houden,
+       dan gaat het nagebootste slot open en pakt de medewerker van de schappen. Na "Deur dicht" volgt het
+       overzicht van wat er is geregistreerd. #fridgeBody wordt per stap opnieuw getekend (FridgeView). De
+       statusregel (#fridgeStatus) en de live region (#fridgeLiveStatus) staan vast in de pagina, zodat
+       een schermlezer ze voorleest. De knopbalk met "Deur dicht" blijft onderaan in beeld (zoals bij het
+       productvenster) en is er alleen als de deur open is. -->
+  <div class="modal-backdrop hidden" id="fridgeModal" role="dialog" aria-modal="true" aria-labelledby="fridgeTitle">
+    <div class="modal employee-products-modal fridge-modal">
+      <button class="modal-close" data-close-fridge aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Slimme koelkast (demo)</p>
+      <h2 id="fridgeTitle">Koelkast openen</h2>
+      <p class="fridge-status" id="fridgeStatus" role="status"></p>
+      <div id="fridgeBody" class="fridge-body"></div>
+      <p class="visually-hidden" id="fridgeLiveStatus" aria-live="polite"></p>
+      <div class="employee-products-actions fridge-actions is-empty" id="fridgeActions">
+        <p class="idle-warning" id="fridgeDoorWarning" role="alert"></p>
+        <button class="primary-button register-button hidden" id="fridgeCloseDoorButton" type="button">Deur dicht</button>
+      </div>
+      <!-- Wat de koelkast vastlegt (informatieplicht AVG, zie TO bijlage B). -->
+      <p class="muted privacy-note">De koelkast legt alleen vast wie hem opent, wanneer, en hoeveel gewicht er van ieder schap verdwijnt. Er worden geen beelden gemaakt. Wat je pakt, wordt maandelijks ingehouden op je loon.</p>
     </div>
   </div>
 

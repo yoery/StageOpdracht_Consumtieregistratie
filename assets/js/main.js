@@ -18,6 +18,8 @@
  * - ThemeManager regelt het lichte en donkere thema; die staat los van de rest.
  * - FaceRecognitionDemo is de demo gezichtsherkenning (uit te zetten in config.js).
  * - BadgeReader herkent een pas via een USB-NFC-lezer (uit te zetten in config.js).
+ * - SmartFridge is de slimme koelkast (demo) met een nagebootst slot en nagebootste weegschalen per
+ *   schap (uit te zetten in config.js). In productie stuurt alleen de backend het echte slot aan.
  */
 import { STORAGE_KEY } from "./config.js";
 import { DataStore } from "./DataStore.js";
@@ -28,6 +30,8 @@ import { CsvExport } from "./CsvExport.js";
 import { ThemeManager } from "./ThemeManager.js";
 import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
 import { BadgeReader } from "./BadgeReader.js";
+import { SmartFridge } from "./fridge/SmartFridge.js";
+import { AdminController } from "./controllers/AdminController.js";
 
 // Het thema eerst, zodat de kleuren kloppen voordat de rest wordt getekend.
 new ThemeManager().initialize();
@@ -37,6 +41,7 @@ const view = new RegistrationView(model);
 const csvExport = new CsvExport(model);
 const faceDemo = new FaceRecognitionDemo();
 const badgeReader = new BadgeReader();
-const app = new RegistrationApp(model, view, csvExport, faceDemo, badgeReader);
+const smartFridge = SmartFridge.createSimulated();
+const app = new RegistrationApp(model, view, csvExport, faceDemo, badgeReader, AdminController.realClock(), smartFridge);
 
 app.initialize();

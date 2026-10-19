@@ -732,4 +732,98 @@ describe("Browsertests (end-to-end)", { timeout: 240000 }, () => {
       });
     }
   });
+
+  // ------------------------------------------------------------------
+  // Slimme koelkast (demo, TO versie 3.14)
+  // ------------------------------------------------------------------
+
+  test("koelkast: pas koppelen, openen met de pas, 2 blikjes pakken, deur dicht en de registratie in de totalen en het beheer", { timeout: TEST_TIMEOUT }, async () => {
+    // Pas koppelen bij Lotte in het medewerkersformulier (de lezer typt in het veld Pasnummer).
+    await loginAsAdmin();
+    await browser.click(`.tab[data-tab="employees"]`);
+    await browser.waitFor(`!document.querySelector("#employeesTab").classList.contains("hidden")`);
+    const lotteId = await browser.evaluate(`[...document.querySelectorAll("[data-edit-employee]")]
+      .find((button) => button.closest(".admin-employee-item").textContent.includes("Lotte van Dijk")).dataset.editEmployee`);
+    await browser.click(`[data-edit-employee="${lotteId}"]`);
+    await browser.waitFor(`!document.querySelector("#employeeFormModal").classList.contains("hidden")`);
+    await browser.click("#newEmployeePayrollCode");
+    await browser.insertText("101");
+    await browser.click("#newEmployeePersonnelNumber");
+    await browser.insertText("5001");
+    await browser.click("#newEmployeeBadgeId");
+    await browser.scanBadge("04:a1:b2:c3");
+    await browser.waitFor(`document.querySelector("#newEmployeeBadgeId").value === "04A1B2C3"`);
+    await browser.click(`#employeeForm [data-save-mode="close"]`);
+    await browser.waitFor(`document.querySelector("#employeeFormModal").classList.contains("hidden")`);
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#adminModal").classList.contains("hidden")`);
+
+    // Het koelkastvenster: de deur is dicht en op slot.
+    await browser.click("#fridgeOpenButton");
+    await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    assert.equal(await text("#fridgeTitle"), "Koelkast openen");
+    assert.match(await text("#fridgeBody"), /Houd je pas tegen de lezer om de koelkast te openen/);
+    assert.equal(await isHidden("#fridgeCloseDoorButton"), true);
+
+    // De pas opent de koelkast (en niet het productvenster).
+    await browser.scanBadge("04A1B2C3");
+    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
+    assert.equal(await isHidden("#employeeProductsModal"), true);
+    assert.match(await text("#fridgeBody"), /Lotte\. Pak wat je wilt en sluit de deur\./);
+    assert.match(await text(`.fridge-shelf`), /Schap 1 · Blikje\s*24 op het schap/);
+
+    // Twee blikjes pakken: de tegels van schap 1 zijn één knop. Daarna de deur dicht.
+    await browser.click(`[data-fridge-take="1"]`);
+    await browser.click(`[data-fridge-take="1"]`);
+    await browser.waitFor(`document.querySelector("#fridgeHandText").textContent === "2× Blikje"`);
+    // Een tweede scan terwijl de deur open is, telt niet.
+    await browser.scanBadge("04A1B2C3");
+    await browser.waitFor(`document.querySelector("#fridgeStatus").textContent === "De koelkast is al open. Sluit eerst de deur."`);
+    await browser.click("#fridgeCloseDoorButton");
+    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
+    assert.equal(await text("#fridgeSummaryHeading"), "Je hebt gepakt: 2× Blikje");
+    assert.match(await text("#fridgeBody"), /Dit is geregistreerd op naam van Lotte van Dijk\. De koelkast is weer op slot\./);
+    assert.equal(await browser.evaluate(`document.activeElement?.hasAttribute("data-fridge-done")`), true);
+
+    // Klaar: het venster sluit en de totalen zijn bijgewerkt.
+    await browser.press("Enter");
+    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    assert.equal(await text("#todayTotal"), "2");
+    assert.equal(await text("#monthTotal"), "2");
+
+    const stored = await browser.storedData();
+    assert.deepEqual(stored.registrations.map(({ productId, source }) => [productId, source]), [["blikje", "fridge"], ["blikje", "fridge"]]);
+    assert.equal(stored.points[0].products.blikje.stock, 22);
+    assert.equal(stored.fridgeOpenings.length, 1);
+    assert.equal(stored.fridgeOpenings[0].status, "registered");
+
+    // In het beheer: de registraties met het label Koelkast, de opening en één logboekregel.
+    await loginAsAdmin();
+    const rows = await browser.evaluate(`[...document.querySelectorAll("#adminTableBody tr")].map((tr) => [...tr.cells].slice(0, 3).map((td) => td.textContent.trim().replace(/\\s+/g, " ")))`);
+    assert.deepEqual(rows, [["Lotte van Dijk", "Blikje Koelkast", "+1"], ["Lotte van Dijk", "Blikje Koelkast", "+1"]]);
+    await browser.click(`.tab[data-tab="fridge"]`);
+    await browser.waitFor(`!document.querySelector("#fridgeTab").classList.contains("hidden")`);
+    const opening = await browser.evaluate(`[...document.querySelector("#fridgeOpeningsBody tr").cells].slice(1).map((td) => td.textContent.trim())`);
+    assert.deepEqual(opening, ["Lotte van Dijk", "2× Blikje", "Geregistreerd"]);
+    await browser.click(`.tab[data-tab="audit"]`);
+    assert.equal(await text("#auditTableBody tr td"), "Koelkast geopend");
+    assert.match(await text("#auditTableBody tr td:nth-child(2)"), /^Lotte van Dijk: 2× Blikje geregistreerd \(TVB · Hoofdkantoor\)$/);
+  });
+
+  test("koelkast: een onbekende pas laat de koelkast dicht, Escape sluit het venster", { timeout: TEST_TIMEOUT }, async () => {
+    await browser.click("#fridgeOpenButton");
+    await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
+
+    await browser.scanBadge("DEADBEEF");
+    await browser.waitFor(`document.querySelector("#fridgeStatus").textContent === "Deze pas is niet gekoppeld aan een medewerker. De koelkast blijft dicht."`);
+    assert.equal(await browser.evaluate(`document.querySelector("#fridgeStatus").getAttribute("role")`), "status");
+    assert.equal(await text("#fridgeTitle"), "Koelkast openen");
+    assert.equal(await isHidden("#employeeProductsModal"), true);
+    assert.equal(await browser.evaluate(`Boolean(document.querySelector("[data-fridge-take]"))`), false);
+
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "fridgeOpenButton");
+    assert.equal((await browser.storedData())?.fridgeOpenings?.length ?? 0, 0);
+  });
 });

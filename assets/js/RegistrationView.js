@@ -1,5 +1,6 @@
 import { STOCK_STATUS } from "./RegistrationModel.js";
 import { icon } from "./icons.js";
+import { FridgeView } from "./FridgeView.js";
 
 // Maakt een waarde veilig om tussen aanhalingstekens in een CSS-selector te zetten, zoals
 // `[data-stock-status="${cssAttributeValue(id)}"]`. Zonder deze stap breekt een id met een " of \
@@ -26,6 +27,8 @@ export function cssAttributeValue(value) {
  *   - index.html: de view vult de elementen met een id, zoals #employeeList en #stockTableBody.
  *   - RegistrationApp: bepaalt wanneer er opnieuw getekend moet worden en roept dan de
  *     render-methodes aan. De view weet zelf niets van de controller.
+ *   - FridgeView: tekent het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo). Deze
+ *     view maakt FridgeView en geeft de methodes daarvan door (renderFridgeWindow en verder).
  */
 export class RegistrationView {
   // De waarschuwing in het productvenster vlak voordat het vanzelf sluit (zie showIdleWarning).
@@ -40,6 +43,32 @@ export class RegistrationView {
   constructor(model) {
     this.model = model;
     this.$ = (selector) => document.querySelector(selector);
+    // Het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo) staan in een eigen class.
+    this.fridge = new FridgeView(this);
+  }
+
+  // ------------------------------------------------------------------
+  // Slimme koelkast (demo): doorgegeven aan FridgeView
+  // ------------------------------------------------------------------
+
+  renderFridgeWindow(state) {
+    this.fridge.renderFridgeWindow(state);
+  }
+
+  setFridgeStatus(text, tone) {
+    this.fridge.setFridgeStatus(text, tone);
+  }
+
+  announceFridge(text) {
+    this.fridge.announceFridge(text);
+  }
+
+  setDoorWarning(shown) {
+    this.fridge.setDoorWarning(shown);
+  }
+
+  renderFridgeAdmin() {
+    this.fridge.renderFridgeAdmin();
   }
 
   // Escapet tekst voordat die in innerHTML wordt geplaatst. Dit geldt voor namen, maar ook
@@ -280,7 +309,8 @@ export class RegistrationView {
     this.$("#monthTotal").textContent = this.model.countForMonth(now);
   }
 
-  // Rendert de gefilterde registratietabel in het admin-dashboard.
+  // Rendert de gefilterde registratietabel in het admin-dashboard. Een registratie die de slimme
+  // koelkast (demo) automatisch heeft gemaakt, krijgt het label "Koelkast" achter de productnaam.
   renderAdmin() {
     const monthFilter = this.$("#filterMonth").value;
     const employeeFilter = this.$("#filterEmployee").value;
@@ -300,7 +330,7 @@ export class RegistrationView {
         return `
           <tr>
             <td>${employee ? this.escapeHtml(employee.name) : "Verwijderd"}</td>
-            <td>${this.escapeHtml(this.model.productName(registration.productId))}</td>
+            <td>${this.escapeHtml(this.model.productName(registration.productId))}${registration.source === "fridge" ? ` <span class="badge-linked">Koelkast</span>` : ""}</td>
             <td>+1</td>
             <td>${this.formatDate(registration.createdAt)}</td>
           </tr>`;

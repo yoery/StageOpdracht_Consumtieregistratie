@@ -119,6 +119,7 @@ export class AdminController {
       this.view.renderAdminCompanies();
       if (redrawStockTable) this.view.renderStock();
       this.renderAuditLog();
+      this.view.renderFridgeAdmin();
     });
     this.view.showToast(message, { tone: "success" });
   }
@@ -273,11 +274,13 @@ export class AdminController {
     this.view.renderAdminCompanies();
     this.view.renderStock();
     this.renderAuditLog();
+    this.view.renderFridgeAdmin();
   }
 
-  // Wisselt naar een ander tabblad in het dashboard.
+  // Wisselt naar een ander tabblad in het dashboard. Het tabblad Koelkast (slimme koelkast, demo)
+  // bestaat alleen in index.html als de koelkast erin staat; een ontbrekend paneel wordt overgeslagen.
   switchTab(activeTab) {
-    const tabNames = ["registrations", "employees", "products", "companies", "stock", "audit"];
+    const tabNames = ["registrations", "employees", "products", "companies", "stock", "fridge", "audit"];
     if (!activeTab) return; // geen bestaand tabblad gevonden (bijvoorbeeld een onbekende naam)
 
     // aria-selected zegt een schermlezer welk tabblad (role="tab") gekozen is.
@@ -289,7 +292,7 @@ export class AdminController {
     activeTab.setAttribute("aria-selected", "true");
 
     for (const name of tabNames) {
-      this.view.$(`#${name}Tab`).classList.toggle("hidden", activeTab.dataset.tab !== name);
+      this.view.$(`#${name}Tab`)?.classList.toggle("hidden", activeTab.dataset.tab !== name);
     }
   }
 
@@ -321,7 +324,7 @@ export class AdminController {
   wipeAllData() {
     // Alleen voor een ingelogde beheerder: wissen kan niet ongedaan worden gemaakt.
     if (!this.requireAdmin()) return;
-    const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet wissen?";
+    const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, het logboek en de reservekopieën op deze tablet wissen?";
     if (!window.confirm(firstQuestion)) return;
     if (!window.confirm("Weet je het zeker? Dit kan niet ongedaan worden gemaakt.")) return;
 
@@ -348,6 +351,7 @@ export class AdminController {
     this.view.renderAdminCompanies();
     this.view.renderStock();
     this.renderAuditLog();
+    this.view.renderFridgeAdmin();
     if (saved) {
       this.view.showToast("Alle gegevens zijn gewist. De demogegevens staan er weer.", { tone: "success", duration: 4000 });
     } else {

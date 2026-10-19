@@ -35,6 +35,14 @@ assets/
       CorrectionController.js # correcties + en − (registratie verwijderen)
       StockController.js    # voorraad, leveringen en minimum
       FormController.js     # formulieren medewerker, product, bedrijf en consumptiepunt
+      FridgeController.js   # slimme koelkast (demo): koelkastvenster en tabblad Koelkast
+    fridge/                 # Slimme koelkast (demo, uit te zetten in config.js)
+      SmartFridge.js        # weegt de schappen en rekent het gewichtsverschil om naar aantallen
+      FridgeLock.js         # interface voor het slot (in productie via de backend)
+      SimulatedLock.js      # nagebootst slot
+      ShelfScale.js         # interface voor de weegschaal per schap (in productie via de backend)
+      SimulatedShelfScale.js # nagebootste weegschaal
+    FridgeView.js           # Weergave van het koelkastvenster en het tabblad Koelkast
     CsvExport.js            # Class CsvExport: CSV-export voor de loonadministratie
     ThemeManager.js         # Class ThemeManager: licht/donker thema
     icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
@@ -52,8 +60,8 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  e2e/                      # 19 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 661 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review)
+  e2e/                      # 21 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
+  *.test.js                 # 716 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
@@ -89,6 +97,7 @@ archief/
 - Gemaakt voor een tablet: de knop `Registreren` blijft onderaan het productvenster in beeld (over de volle breedte), zonder keuze is hij uitgeschakeld met de uitleg "Kies eerst een product met +", een gekozen product krijgt een lichtgroene achtergrond en knoppen zijn minstens 44 pixels hoog. Een schermlezer hoort na zoeken alleen het aantal medewerkers en leest de meldingen voor. Zie de paragraaf "UX-review oktober 2026" in het TO (hoofdstuk 9).
 - Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`), niets opgeslagen; uit te zetten in `config.js`. Zie het TO voor de privacy-afweging en toekomstige uitbreidingen (QR-pas, AFAS, barcode, spraak, slim slot).
 - Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer; de beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig; uit te zetten in `config.js`.
+- Slimme koelkast (demo, uit te zetten met `SMART_FRIDGE` in `config.js`): de koelkast opent met de pas, de medewerker pakt van de schappen en sluit de deur, en het gewichtsverschil per schap wordt vanzelf als registratie opgeslagen (met voorraad en logboekregel). Een verschil dat niet klopt, wordt gemarkeerd voor de beheerder. Het slot en de weegschalen zijn nagebootst. In productie stuurt alleen de backend ze aan. In het beheer staan de indeling van de schappen en de laatste openingen. Zie het TO, bijlage B.
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en in de TVB-huisstijl als [`docs/DOCUMENTATIE.docx`](./docs/DOCUMENTATIE.docx) en [`docs/DOCUMENTATIE.pdf`](./docs/DOCUMENTATIE.pdf).
 - Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.

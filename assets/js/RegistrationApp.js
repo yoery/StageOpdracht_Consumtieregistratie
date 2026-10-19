@@ -10,12 +10,14 @@ import { AdminController } from "./controllers/AdminController.js";
 import { CorrectionController } from "./controllers/CorrectionController.js";
 import { StockController } from "./controllers/StockController.js";
 import { FormController } from "./controllers/FormController.js";
+import { FridgeController } from "./controllers/FridgeController.js";
+import { SmartFridge } from "./fridge/SmartFridge.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
  * (de "Controller" in MVC).
  *
- * De controller bestaat uit deze class en acht kleinere classes met elk één taak. RegistrationApp
+ * De controller bestaat uit deze class en negen kleinere classes met elk één taak. RegistrationApp
  * maakt die onderdelen, koppelt de knoppen en toetsen eraan en is voor de rest van de app (en
  * voor de tests) het ene aanspreekpunt: iedere methode van een onderdeel is ook als methode van
  * RegistrationApp te gebruiken (zie de lijst DELEGATES onderaan dit bestand).
@@ -39,7 +41,8 @@ import { FormController } from "./controllers/FormController.js";
  *     wissen, (de)activeren en verwijderen, en requireAdmin voor iedere beheeractie;
  *   - CorrectionController: correcties "+" en "−" en het venster "Registratie verwijderen";
  *   - StockController: het tabblad Voorraad (leveringen, tellingen en minimum);
- *   - FormController: de formulieren voor medewerker, product, bedrijf en consumptiepunt.
+ *   - FormController: de formulieren voor medewerker, product, bedrijf en consumptiepunt;
+ *   - FridgeController: de slimme koelkast (demo), het koelkastvenster en het tabblad Koelkast.
  * Ieder onderdeel krijgt deze controller mee en gebruikt het model, de view, persist en de
  * gedeelde toestand via this.app.
  *
@@ -49,6 +52,7 @@ import { FormController } from "./controllers/FormController.js";
  *   - CsvExport: maakt het CSV-bestand als de beheerder op "CSV exporteren" klikt.
  *   - FaceRecognitionDemo: de demo gezichtsherkenning (camera, herkennen, instellen).
  *   - BadgeReader: herkent een pas via de USB-NFC-lezer; de controller geeft de toetsen door.
+ *   - SmartFridge: de slimme koelkast (demo) met het nagebootste slot en de weegschalen per schap.
  *   - index.html: de knoppen en formulieren waar de event listeners op zitten.
  *
  * Opbouw van deze class:
@@ -66,12 +70,15 @@ export class RegistrationApp {
   // Daarna maakt hij zijn onderdelen; BadgeController geeft de pasjeslezer daarbij zijn callbacks.
   // `clock` is de klok voor het automatisch uitloggen van de beheerder (AdminController) en voor het
   // automatisch sluiten van het productvenster (EmployeeController); de unit tests geven een nep-klok mee.
-  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader(), clock = AdminController.realClock()) {
+  // `smartFridge` is de slimme koelkast (demo); standaard met een nagebootst slot en nagebootste
+  // weegschalen (SmartFridge.createSimulated). In productie komt hier een koelkast die via de backend werkt.
+  constructor(model, view, csvExport = new CsvExport(model), faceDemo = new FaceRecognitionDemo(), badgeReader = new BadgeReader(), clock = AdminController.realClock(), smartFridge = SmartFridge.createSimulated()) {
     this.model = model;
     this.view = view;
     this.csvExport = csvExport;
     this.faceDemo = faceDemo;
     this.badgeReader = badgeReader;
+    this.smartFridge = smartFridge;
 
     // Tijdelijke status van het scherm die meerdere onderdelen delen; deze wordt niet opgeslagen.
     // De status die maar bij één onderdeel hoort (bijvoorbeeld het sessienummer van het
@@ -91,6 +98,7 @@ export class RegistrationApp {
     this.corrections = new CorrectionController(this);
     this.stock = new StockController(this);
     this.forms = new FormController(this);
+    this.fridge = new FridgeController(this, clock);
   }
 
   // Is de medewerker in het productvenster herkend met de camera (demo gezichtsherkenning)?
@@ -140,10 +148,15 @@ export class RegistrationApp {
 
   // Toont op de beginpagina alleen de manieren van herkennen die aan staan in config.js:
   //   - de knop "Herken mij met de camera (demo)" als de demo gezichtsherkenning beschikbaar is;
-  //   - de hint "Houd je pas tegen de lezer, of zoek je naam" als de pasjeslezer aan staat (BADGE_READER).
+  //   - de hint "Houd je pas tegen de lezer, of zoek je naam" als de pasjeslezer aan staat (BADGE_READER);
+  //   - de knop "Slimme koelkast (demo)" en het tabblad Koelkast in het beheer als de slimme koelkast
+  //     aan staat (SMART_FRIDGE).
   showRecognitionOptions() {
     this.view.$("#faceRecognizeButton").classList.toggle("hidden", !this.faceDemo.isAvailable());
     this.view.$("#badgeHint")?.classList.toggle("hidden", !this.badgeReader.isEnabled());
+    const fridge = this.isFridgeAvailable();
+    this.view.$("#fridgeOpenButton")?.classList.toggle("hidden", !fridge);
+    this.view.$("#tab-fridge")?.classList.toggle("hidden", !fridge);
   }
 
   // Zet de datum van vandaag bovenaan de pagina, bijvoorbeeld "2 oktober 2026".
@@ -229,6 +242,7 @@ export class RegistrationApp {
       if (this.isTypingInStockTable()) this.view.renderStockAlerts();
       else this.view.renderStock();
       this.renderAuditLog();
+      if (!this.isTypingInFridgeForm()) this.view.renderFridgeAdmin();
     });
 
     this.closeStaleForms();
@@ -267,6 +281,9 @@ export class RegistrationApp {
 
     if (!this.view.$("#faceModal").classList.contains("hidden")) this.closeFaceModal();
     if (this.selectedEmployeeId) this.closeEmployeeProducts();
+    // Een koelkastopening die bezig is, hoort bij gegevens die niet meer bestaan: afbreken zonder
+    // te registreren (het slot gaat dicht).
+    this.abortFridge();
     for (const [formSelector, , , close] of this.editForms()) {
       delete this.view.$(formSelector).dataset.editingId;
       this.editingCopies.delete(formSelector);
@@ -283,6 +300,7 @@ export class RegistrationApp {
     this.view.renderAdminCompanies();
     this.view.renderStock();
     this.renderAuditLog();
+    this.view.renderFridgeAdmin();
     this.view.showToast("De gegevens zijn in een ander venster gewist.", { tone: "error", duration: 5000 });
   }
 
@@ -369,7 +387,13 @@ export class RegistrationApp {
       ["[data-go-tab]", (button) => this.switchTab(document.querySelector(`.tab[data-tab="${cssAttributeValue(button.dataset.goTab)}"]`))],
       ["[data-repeat-last]", () => this.repeatLastSelection()],
       ["[data-face-enroll]", () => this.startFaceEnrollment()],
-      ["[data-face-forget]", () => this.forgetFace()]
+      ["[data-face-forget]", () => this.forgetFace()],
+      // Slimme koelkast (demo)
+      ["[data-fridge-take]", (button) => this.takeFromShelf(button.dataset.fridgeTake)],
+      ["[data-fridge-return]", (button) => this.returnToShelf(button.dataset.fridgeReturn)],
+      ["[data-fridge-foreign]", (button) => this.addForeignWeight(button.dataset.fridgeForeign)],
+      ["[data-fridge-demo-open]", () => this.openFridgeForDemo()],
+      ["[data-fridge-done]", () => this.finishFridgeWindow()]
     ];
 
     for (const [selector, action] of actions) {
@@ -421,6 +445,19 @@ export class RegistrationApp {
     this.onClick("#faceEnrollButton", () => this.captureEnrollment());
     this.registerModalClose("#faceModal", "[data-close-face-modal]", () => this.closeFaceModal());
     this.view.$("#faceConsent").addEventListener("change", () => this.updateEnrollButton());
+
+    // Slimme koelkast (demo): de knop op de beginpagina, het venster (sluitknop, achtergrond en Escape
+    // via closeFridgeWindow) en "Deur dicht". Iedere invoer in het venster telt als gebruik
+    // (FridgeController.noteFridgeActivity), net als bij het productvenster.
+    const fridgeModal = this.view.$("#fridgeModal");
+    if (fridgeModal) {
+      this.onClick("#fridgeOpenButton", () => this.openFridgeWindow());
+      this.onClick("#fridgeCloseDoorButton", () => this.closeFridgeDoor());
+      this.registerModalClose("#fridgeModal", "[data-close-fridge]", () => this.closeFridgeWindow());
+      for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
+        fridgeModal.addEventListener(type, () => this.noteFridgeActivity(), { capture: true, passive: true });
+      }
+    }
   }
 
   // Inloggen, uitloggen, tabbladen, logboek en export in het dashboard.
@@ -512,6 +549,23 @@ export class RegistrationApp {
     this.view.$("#stockTableBody").addEventListener("change", (event) => {
       if (event.target.matches("[data-stock-field]")) this.saveStockField(event.target);
     });
+
+    // Tabblad Koelkast: een ander consumptiepunt kiezen en de indeling van de schappen opslaan. Een
+    // foutmelding bij een gewicht verdwijnt zodra de beheerder het veld aanpast.
+    const fridgeForm = this.view.$("#fridgeShelfForm");
+    if (!fridgeForm) return;
+    this.view.$("#fridgePointSelect").addEventListener("change", () => this.renderFridgeAdmin());
+    fridgeForm.addEventListener("submit", (event) => this.saveFridgeShelves(event));
+    fridgeForm.addEventListener("input", (event) => {
+      if (event.target.getAttribute("aria-invalid") === "true") this.view.clearFieldError(event.target);
+    });
+  }
+
+  // Typt de beheerder nu in het formulier van de koelkastindeling? Dan wordt het niet opnieuw
+  // getekend als een ander tabblad iets opslaat (net als de voorraadtabel), anders verdwijnt de invoer.
+  isTypingInFridgeForm() {
+    const focused = globalThis.document?.activeElement;
+    return Boolean(focused) && Boolean(this.view.$("#fridgeShelfForm")?.contains?.(focused));
   }
 
   // Toetsen: Escape sluit het bovenste venster, Tab blijft binnen een open venster,
@@ -637,6 +691,16 @@ const DELEGATES = {
       "openPointForm", "openEditPointForm", "closePointForm", "savePoint"
     ],
     fields: ["editingCopies"]
+  },
+  fridge: {
+    methods: [
+      "isFridgeAvailable", "openFridgeWindow", "renderFridge", "openShelves", "closeFridgeWindow", "finishFridgeWindow", "abortFridge",
+      "fridgeScan", "openFridgeForDemo", "startFridgeOpening", "stockSimulatedShelves", "handleFridgeNotOpened",
+      "takeFromShelf", "returnToShelf", "addForeignWeight", "handText", "closeFridgeDoor", "openingAudit",
+      "startFridgeTimer", "stopFridgeTimer", "noteFridgeActivity", "checkFridgeTimers", "setFridgeDoorWarning",
+      "renderFridgeAdmin", "saveFridgeShelves", "unitWeightError"
+    ],
+    fields: ["fridgePhase", "fridgeEmployeeId", "fridgeHeld", "fridgeResult", "fridgeSaveFailed", "lastFridgeActivity", "fridgeTimer"]
   }
 };
 
