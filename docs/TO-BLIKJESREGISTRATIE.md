@@ -1,8 +1,8 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.14
-**Datum:** 19 oktober 2026
+**Versie:** 3.15
+**Datum:** 20 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
 Dit document is het enige ontwerpdocument van het project. Het bevat zowel de functionele kant (aanleiding, gebruikersrollen, eisen, use cases, wireframes en acceptatiecriteria) als de technische uitwerking (architectuur, database, interfaces, beveiliging en tests). Het eerdere functioneel ontwerp is hierin opgenomen.
@@ -29,6 +29,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.12 | 15 oktober 2026 | Twaalf verbeteringen uit een UX-review van de medewerkerskant (zie [UX-review oktober 2026](#ux-review-oktober-2026) in hoofdstuk 9), binnen de huisstijl en zonder nieuwe kleuren of animaties. (1) Het productvenster sluit na 75 seconden zonder invoer vanzelf zonder op te slaan, met in de laatste 10 seconden "Venster sluit zo. Tik om door te gaan." (`EMPLOYEE_IDLE_CLOSE_MS` in `config.js`). (2) Een pas vervangt het open productvenster van een collega. Bij een ander open venster verschijnt "Sluit eerst het open venster om je pas te gebruiken." (3) De knopbalk met `Registreren` blijft onderaan het productvenster in beeld, met een knop over de volle breedte (54 pixels hoog, 19 pixels vet). (4) Na registreren zijn het zoekveld en het bedrijfsfilter leeg en staat de lijst bovenaan. (5) Een compactere banner en het zoekveld naast het bedrijfsfilter, zodat op een liggende tablet de eerste naam op 511 in plaats van 691 pixels staat. (6) Boven het zoekveld de hint "Houd je pas tegen de lezer, of zoek je naam". (7) Een product met een keuze heeft een lichtgroene achtergrond en een groene rand. (8) Tikdoelen van minstens 44 pixels (pijlknop bedrijfsfilter 40) en op een aanraakscherm `−` en `+` van 52 pixels. (9) Een schermlezer hoort na zoeken alleen het aantal medewerkers, en meldingen staan in twee vaste regio's (`role="status"` en `role="alert"`). (10) Meldingen met tekst van 16 pixels en kleine kopjes in `--green-dark`. (11) "Tik op je naam", "Tik om te kiezen", "Tik op + bij wat je pakt. Tik daarna op Registreren." en het voorraadlabel "Leeg" in plaats van "Op". (12) `Registreren` zonder keuze is uitgeschakeld met `aria-disabled` en de uitleg "Kies eerst een product met +", in plaats van de foutmelding "Kies eerst minimaal één product". Nieuwe eisen FR-70 en FR-71, FR-47, FR-48, FR-65, NFR-04 en NFR-05 aangepast, UC-01, UC-02 en UC-20 bijgewerkt, US-67 t/m US-70 en AC-99 t/m AC-107 toegevoegd, hoofdstuk 13 (venster sluit vanzelf, zoekveld leeg) en 14 (meldingen) aangevuld. De screenshots W01 t/m W41 in hoofdstuk 9 zijn op 15 oktober 2026 opnieuw gemaakt, zodat ze de website na deze verbeteringen tonen, en hun omschrijvingen zijn daarop aangepast. Nieuw testbestand `tests/ux-review.test.js`. Daarna zijn twee fouten opgelost die op de nieuwe screenshots zichtbaar waren: zonder producten op het consumptiepunt staan de knopbalk en de regel over de inhouding op het loon niet meer als lege strook in het productvenster (W11), en ieder venster opent bovenaan, ook het productvenster na herkenning met de camera (W14). 661 unit tests en 19 browsertests in totaal. |
 | 3.13 | 16 oktober 2026 | Nieuwe [Bijlage B: Onderzoek naar een afgesloten koelkast of kast](#bijlage-b-onderzoek-naar-een-afgesloten-koelkast-of-kast): een klein onderzoek naar de wens dat de koelkast of kast alleen opengaat na registreren en dat zeker is dat iemand pakt wat hij registreert. Met hoofdvraag, deelvragen, onderzoeksmethode, beoordelingscriteria, vijf oplossingsrichtingen, een beslismatrix, het advies (een slot met weegcellen per schap en de pas als sleutel, met de voorraadtelling als controle), een ontwerpschets voor productie, risico's met maatregelen, privacy en de ondernemingsraad, en vervolgonderzoek. Er zijn geen leveranciers benaderd, geen prijzen opgevraagd en geen proef gedaan. Het idee "Slim slot" in hoofdstuk 16 verwijst naar de bijlage en hoofdstuk 17 heeft drie nieuwe bronnen. De app en `DATABASE-SCHEMA.sql` zijn niet veranderd. |
 | 3.14 | 19 oktober 2026 | Het advies uit bijlage B (optie C: een slot met weegschalen per schap en de pas als sleutel) als simulatie in de demo: de slimme koelkast, uit te zetten met `SMART_FRIDGE` in `config.js`. Op de beginpagina opent de knop `Slimme koelkast (demo)` het koelkastvenster: "Houd je pas tegen de lezer om de koelkast te openen", daarna de open koelkast met de schappen, pakken met een tik en `Terugleggen`, en na `Deur dicht` het overzicht, bijvoorbeeld "Je hebt gepakt: 2× Blikje". Het gewichtsverschil per schap wordt met een tolerantie omgerekend naar aantallen en in één keer geregistreerd (met de voorraad en één logboekregel). Een onverklaarbaar verschil wordt niet geregistreerd en geeft de status "Controle nodig". Nieuwe classes `SmartFridge`, de interfaces `FridgeLock` en `ShelfScale` met de nagebootste `SimulatedLock` en `SimulatedShelfScale` (map `assets/js/fridge/`), `FridgeController` (het negende onderdeel van de controller) en `FridgeView`. In productie stuurt alleen de backend het slot en de weegschalen aan en worden alleen de nagebootste classes vervangen. In het beheer het tabblad Koelkast met de indeling van de schappen en de laatste openingen. Nieuwe gegevens `fridgeShelves` en `fridgeOpenings` met controle en migratie in `DataStore`, en registraties met `source: "fridge"`. Nieuwe eisen FR-72 t/m FR-77, UC-21, US-71 t/m US-76 en AC-108 t/m AC-115. FR-52 en de vraag bij `Alle gegevens wissen` noemen nu ook de koelkastopeningen. Hoofdstuk 6, 8, 9 (screenshots W42 t/m W44), 13, 14, 15, 16, bijlage A en bijlage B ([Simulatie in de demo (versie 3.14)](#simulatie-in-de-demo-versie-314)) bijgewerkt, net als het klassendiagram, het architectuurdiagram en het use-casediagram. Nieuw testbestand `tests/slimme-koelkast.test.js`. Na het uitbrengen van deze versie faalden de browsertests in GitHub Actions. Oorzaak: de testcode mat de plek van een knop voordat een overgang (met prefers-reduced-motion 0,01 ms) klaar was. Die is pas bij het volgende beeld klaar, het koelkastvenster schoof dan nog op en de klik viel naast de knop. De browsertests klikken nu pas als het element stilstaat, wachten ruimer en geven bij een fout het scenario, de toestand van de pagina, de laatste meldingen uit de console en een schermafdruk (in GitHub Actions bewaard als artifact). Verder gebruikt `BadgeReader` het tijdstip waarop een toets binnenkwam (`event.timeStamp`), zodat een scan op een trage tablet niet meer als typen wordt gezien. 717 unit tests en 21 browsertests in totaal. |
+| 3.15 | 20 oktober 2026 | Proefplan voor één weegschap toegevoegd aan bijlage B ([Proefplan: één weegschap](#proefplan-één-weegschap)): onderzoeksvragen, opstelling met standaardonderdelen, voorwaarden, acht metingen, voorgestelde criteria voor slagen en het vervolg. De proef is nog niet uitgevoerd. |
 
 ## Inhoudsopgave
 
@@ -4548,7 +4549,7 @@ De deelvragen zijn beantwoord in [Eisen en beoordelingscriteria](#eisen-en-beoor
 
 1. **Kosten en baten.** Hoeveel er nu verdwijnt zonder registratie (de derving) is niet gemeten. Een eerste stap is een paar maanden vaker tellen en het verschil met de registraties bijhouden (UC-14). Pas dan is te beoordelen of de kosten van optie C opwegen tegen wat het oplevert.
 2. **Offertes.** Prijzen opvragen voor een kant-en-klare koelkast met weegschappen en voor zelfbouw (een bestaande koelkast met losse weegcellen, slot en kastcontroller), en nagaan of huren of leasen mogelijk is. Daarbij ook vragen hoe de koppeling met een eigen backend werkt.
-3. **Proef met één schap.** Eén schap met blikjes uitrusten en een paar weken naast de huidige registratie laten meelopen, met vooraf kiezen als controle (zie [Ontwerpschets voor productie](#ontwerpschets-voor-productie)).
+3. **Proef met één schap.** Eén schap met blikjes uitrusten en een paar weken naast de huidige registratie laten meelopen, met vooraf kiezen als controle (zie [Ontwerpschets voor productie](#ontwerpschets-voor-productie)). Het [proefplan](#proefplan-één-weegschap) hieronder werkt dit en punt 4 uit.
 4. **Nauwkeurigheid meten.** In die proef het gewicht van de producten per merk meten, bepalen welke tolerantie nodig is, en meten hoe vaak de weging afwijkt van wat er werkelijk is gepakt, ook bij een volle koelkast en na het koelen.
 5. **Pas en lezer.** Met de beheerder van het toegangssysteem van TVB nagaan of de bestaande passen een cryptografische controle ondersteunen en of een lezer bij de koelkast daarop kan worden aangesloten.
 6. **Ondernemingsraad en privacyfunctionaris.** De ondernemingsraad en de privacyfunctionaris vroeg betrekken, met deze bijlage als uitgangspunt.
@@ -4562,6 +4563,56 @@ Om het advies zichtbaar te maken voor TVB, de ondernemingsraad en de begeleider 
 **Wat de simulatie niet doet.** Er is geen echt slot, geen deursensor en geen weegcel. Het slot (`SimulatedLock`) en de weegschalen (`SimulatedShelfScale`) bestaan alleen in de browser. Bij iedere opening worden de nagebootste schappen gevuld met de voorraad van het consumptiepunt, en ieder product wijkt tot 2 procent af van het opgegeven gewicht. In de demo gaat de deur direct open na het slot. Een onverklaarbaar verschil is na te bootsen met de knop `Iets anders op schap 1 leggen (demo)`. Er is geen backend: de browser opent het nagebootste slot zelf en rekent zelf om. Er is geen pas met cryptografische controle en er is een vak "Demo zonder pasjeslezer" waarin iedere actieve medewerker kan worden gekozen. De status "storing" (stroomuitval, netwerk weg) en de melding aan de beheerder bij een deur die langer open blijft, zijn niet nagebootst. Wordt de pagina herladen terwijl de deur open is, dan wordt de opening zonder registratie afgebroken en niet bewaard. De tolerantie (15 procent) en de gewichten per stuk (Blikje 350, Yoghurt 150 en Ei 60 gram) zijn schattingen die in de proef moeten worden bepaald.
 
 **Hoe de hardware later wordt aangesloten.** De code gebruikt het slot alleen via de interface `FridgeLock` (`unlock`, `lock`, `cancelAutoLock`, `isLocked`) en een weegschaal alleen via de interface `ShelfScale` (`read`). In productie komen er twee classes met dezelfde methodes die niet zelf iets doen, maar de backend aanroepen. De backend controleert de pas, legt de opening vast en stuurt via de kastcontroller het slot en de weegcellen aan. De browser opent het echte slot nooit zelf (zie [Beveiliging van de slimme koelkast (demo)](#beveiliging-van-de-slimme-koelkast-demo) in hoofdstuk 13). Het omrekenen (`SmartFridge.countShelf` en `SmartFridge.statusOf`) gaat mee naar de backend, met dezelfde regels en tests. Dan vervallen alleen `SimulatedLock`, `SimulatedShelfScale`, het vullen van de schappen (`FridgeController.stockSimulatedShelves`) en het demovak. Het koelkastvenster, het overzicht, het tabblad Koelkast en het datamodel blijven hetzelfde. Daarnaast moet `DATABASE-SCHEMA.sql` worden uitgebreid met de tabellen uit het datamodelvoorstel.
+
+### Proefplan: één weegschap
+
+Dit plan werkt punt 3 en 4 van het [vervolgonderzoek](#conclusie-en-vervolgonderzoek) uit. Het doel is met echte meetgegevens vast te stellen of een weegcel in een koelkast betrouwbaar kan tellen hoeveel blikjes er van een schap worden gepakt. De proef is nog niet uitgevoerd. De getallen in dit plan (aantallen herhalingen, tijden en grenzen) zijn voorstellen die vóór de proef met de begeleider worden afgestemd.
+
+**Onderzoeksvragen van de proef.**
+
+1. Hoe zwaar is één blikje, en hoeveel verschilt dat per blikje en per merk?
+2. Hoe nauwkeurig en hoe stabiel meet een weegcel in een koelkast (kou, condens, de deur die open en dicht gaat)?
+3. Hoe vaak telt de omrekening (`SmartFridge.countShelf`) het juiste aantal gepakte blikjes?
+4. Welke tolerantie is nodig? In de demo staat die op 15 procent van het gewicht van één stuk (`SMART_FRIDGE.toleranceRatio`).
+5. Hoe lang moet de weegschaal na het sluiten van de deur wachten voordat de meting betrouwbaar is?
+
+**Opstelling.** De proef gebruikt één schap in een bestaande koelkast en standaardonderdelen uit de elektronicahandel:
+
+| Onderdeel | Functie | Aandachtspunt |
+|---|---|---|
+| Weegcel (load cell) | Meet het gewicht van het schap met blikjes | Een bereik dat past bij een vol schap (bijvoorbeeld 10 of 20 kilogram) en geschikt voor lage temperaturen |
+| Versterker (bijvoorbeeld HX711) | Maakt het kleine signaal van de weegcel leesbaar | Dicht bij de weegcel, beschermd tegen condens |
+| Microcontroller (bijvoorbeeld een ESP32) | Leest de weegcel uit en geeft de metingen door | In de proef alleen meten en bewaren, nog geen slot aansturen |
+| Laptop met een eenvoudig logprogramma | Bewaart iedere meting met datum en tijd | De metingen komen via USB binnen, er is nog geen backend nodig |
+| Thermometer | Legt de temperatuur in de koelkast vast | Om te zien of de meting met de temperatuur verandert |
+| Bekende gewichten | Om de weegcel te ijken (kalibreren) | Bijvoorbeeld een paar gewichten van 100 tot 1000 gram |
+
+Het slot en de deursensor vallen buiten deze proef. Eerst moet vaststaan dat het tellen klopt. Een slot heeft pas zin als het wegen betrouwbaar is.
+
+**Voorwaarden.** Er wordt alleen met laagspanning gewerkt en niets aan het koelcircuit of de stroomvoorziening van de koelkast veranderd. De facilitaire dienst van TVB geeft vooraf toestemming voor de plek en de koelkast. De elektronica komt niet in contact met de producten en zit in een afgesloten behuizing. In de proef wordt niets aan een medewerker gekoppeld: er worden alleen gewichten en tijden vastgelegd. Daarmee worden er geen persoonsgegevens verwerkt. Pas bij een proef met de pas en echte medewerkers gelden de afspraken uit [Privacy, AVG en ondernemingsraad](#privacy-avg-en-ondernemingsraad).
+
+**Metingen.** De metingen worden in deze volgorde gedaan. Bij iedere handeling wordt genoteerd wat er werkelijk is gebeurd en wat de weegschaal zegt.
+
+| Nr. | Meting | Werkwijze | Wat wordt vastgelegd |
+|---|---|---|---|
+| M1 | IJken | De weegcel ijken met de bekende gewichten, in de koelkast op temperatuur | Afwijking per bekend gewicht |
+| M2 | Gewicht per blikje | Van ieder merk dat TVB inkoopt een aantal blikjes (bijvoorbeeld 20) los wegen | Gemiddelde, kleinste en grootste gewicht per merk |
+| M3 | Stabiliteit | Een vol schap 24 uur laten staan zonder iets te pakken | Hoeveel de meting in die tijd verloopt |
+| M4 | Wachttijd na sluiten | De deur openen, een blikje pakken, de deur sluiten en iedere seconde meten | Na hoeveel seconden de meting stabiel is |
+| M5 | Pakken | Herhaaldelijk 1, 2 en 3 blikjes pakken (bijvoorbeeld ieder 30 keer), bij een vol, half vol en bijna leeg schap | Het werkelijke aantal en het aantal volgens de omrekening |
+| M6 | Terugleggen | Een blikje pakken en terugzetten, en een blikje pakken en een ander terugzetten | Of de omrekening 0 telt |
+| M7 | Fout product | Een ander product of een leeg blikje op het schap zetten | Of de omrekening "Controle nodig" geeft |
+| M8 | Deur lang open | De deur een paar minuten open laten en daarna een blikje pakken | Of de warmte en condens de meting verstoren |
+
+**Wanneer is de proef geslaagd?** Voorstel voor de criteria, vooraf af te stemmen:
+
+- bij M5 telt de omrekening in minstens 99 van de 100 handelingen het juiste aantal, en een fout leidt tot "Controle nodig" en niet tot een verkeerd bedrag,
+- bij M6 telt een teruggelegd blikje altijd als 0,
+- bij M7 wordt een fout product altijd gemarkeerd,
+- het verloop bij M3 blijft ruim binnen de helft van de tolerantie,
+- de wachttijd uit M4 is zo kort dat de medewerker er niets van merkt (bijvoorbeeld binnen een paar seconden na het sluiten).
+
+**Uitkomst en vervolg.** De metingen komen in een kort verslag als aanvulling op deze bijlage. Daarin staan de gemeten gewichten per merk, de tolerantie die nodig is (die daarna in `SMART_FRIDGE` wordt ingesteld), de wachttijd en het percentage goed getelde handelingen. Is de proef geslaagd, dan volgen een offerte voor een kant-en-klare oplossing en een kostenvergelijking met zelfbouw (punt 2 van het vervolgonderzoek). Daarna kan een tweede proef met het slot en de pas, met echte medewerkers. Is de proef niet geslaagd, dan blijft de huidige registratie met de telling als controle het advies, of wordt een andere optie uit de [afweging](#afweging) verder onderzocht.
 
 ### Bronnen bij deze bijlage
 
