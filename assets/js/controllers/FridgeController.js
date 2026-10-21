@@ -6,6 +6,12 @@ import { SmartFridge } from "../fridge/SmartFridge.js";
  * FridgeController — de slimme koelkast (demo): het koelkastvenster voor de medewerker en het
  * tabblad Koelkast in het beheer (TO bijlage B, optie C).
  *
+ * Het koelkastvenster opent op twee manieren: met de knop "Slimme koelkast (demo)" (de deur is dicht
+ * en het venster wacht op een pas), of na herkenning op de beginpagina met de pas of de camera
+ * (openFridgeFor, via RecognitionController en RECOGNITION_TARGET "fridge"): dan gaat de koelkast
+ * meteen open voor die medewerker. In de open koelkast staat dan ook de knop om in plaats daarvan het
+ * productvenster te openen (switchFridgeToProducts), voor wie brood of beleg wil.
+ *
  * Het koelkastvenster kent drie stappen (`fridgePhase`):
  *   - "waiting": de deur is dicht en op slot. "Houd je pas tegen de lezer om de koelkast te openen".
  *     Voor de demo kan ook een medewerker worden gekozen (zonder pasjeslezer);
@@ -92,6 +98,7 @@ export class FridgeController {
     this.fridgeTimer = null;          // timer die iedere seconde checkFridgeTimers aanroept
     this.doorWarningShown = false;    // staat "De deur staat al lang open." in beeld?
     this.fridgePhaseChangedAt = -Infinity; // tijdstip (ms) van de laatste nieuwe stap (zie isFridgeGhostClick)
+    this.fridgeRecognizedBy = null;   // geopend na herkenning op de beginpagina: "badge", "face" of null
     if (this.smartFridge) this.smartFridge.onNotOpened = () => this.handleFridgeNotOpened();
   }
 
@@ -174,7 +181,8 @@ export class FridgeController {
       badgeReader: Boolean(this.app.badgeReader?.isEnabled?.()),
       shelves: this.fridgePhase === "open" ? this.openShelves() : [],
       result: this.fridgeResult,
-      saveFailed: this.fridgeSaveFailed
+      saveFailed: this.fridgeSaveFailed,
+      recognizedBy: this.fridgeRecognizedBy
     });
   }
 
@@ -215,6 +223,7 @@ export class FridgeController {
     this.fridgeHeld = {};
     this.fridgeResult = null;
     this.fridgeSaveFailed = false;
+    this.fridgeRecognizedBy = null;
     this.lastFridgeActivity = null;
     this.stopFridgeTimer();
     this.setFridgeDoorWarning(false);
@@ -261,7 +270,54 @@ export class FridgeController {
       this.view.setFridgeStatus(FridgeController.MESSAGES.unknownBadge, "error");
       return false;
     }
+    this.fridgeRecognizedBy = null; // geopend in het koelkastvenster zelf, niet na herkenning op de beginpagina
     return this.startFridgeOpening(employee.id);
+  }
+
+  // Kan de koelkast voor deze medewerker open na herkenning (RecognitionController)? Dat kan als de
+  // slimme koelkast aan staat, de medewerker actief is en op minstens één schap van zijn consumptiepunt
+  // een product ligt volgens de indeling (fridgeLayout).
+  canOpenFridgeFor(employeeId) {
+    const employee = this.model.findEmployee(employeeId);
+    if (!this.isFridgeAvailable() || !employee?.active) return false;
+    return this.model.fridgeLayout(employee.pointId, this.settings).some(({ productId }) => productId);
+  }
+
+  // Na herkenning op de beginpagina (met de pas of de camera, zie RecognitionController): het
+  // koelkastvenster opent en de koelkast gaat meteen open voor deze medewerker, met dezelfde stappen
+  // als na een geldige passcan in het koelkastvenster (startFridgeOpening). De begroeting zegt hoe hij
+  // is herkend ("Je bent herkend met de camera." of "Je bent herkend met je pas."). `how` is "badge"
+  // of "face". Geeft false terug (en opent niets) als het venster al open is of de koelkast voor deze
+  // medewerker niet open kan.
+  openFridgeFor(employeeId, how = null) {
+    if (this.fridgePhase !== "closed" || !this.canOpenFridgeFor(employeeId)) return false;
+
+    this.app.openModal("#fridgeModal");
+    this.setFridgePhase("waiting");
+    this.fridgeRecognizedBy = how;
+    this.view.setFridgeStatus("");
+    this.view.announceFridge("");
+    this.noteFridgeActivity();
+    this.startFridgeTimer();
+    if (this.startFridgeOpening(employeeId)) return true;
+    // Ging het openen toch mis, dan blijft het venster open met de foutmelding en wacht het op een pas.
+    this.fridgeRecognizedBy = null;
+    this.renderFridge();
+    return true;
+  }
+
+  // Knop "Liever brood of beleg? Open het productvenster" in de open koelkast: de deur gaat dicht
+  // zonder iets te registreren (de medewerker heeft nog niets in zijn hand), het koelkastvenster sluit
+  // en het productvenster van dezelfde medewerker opent, met dezelfde herkenning. De knop staat er
+  // alleen zolang er niets in de hand is (FridgeView.openHtml). Geeft true terug als het lukte.
+  switchFridgeToProducts() {
+    if (this.fridgePhase !== "open" || this.handText()) return false;
+    const employeeId = this.fridgeEmployeeId;
+    const how = this.fridgeRecognizedBy;
+    this.closeFridgeDoor({ cancel: true });
+    this.finishFridgeWindow();
+    this.app.openEmployeeProducts(employeeId, { recognizedBy: how });
+    return true;
   }
 
   // Demo zonder pasjeslezer: de gekozen medewerker opent de koelkast alsof hij zijn pas toont.
@@ -272,6 +328,7 @@ export class FridgeController {
       this.view.setFridgeStatus(FridgeController.MESSAGES.unknownEmployee, "error");
       return false;
     }
+    this.fridgeRecognizedBy = null; // geopend in het koelkastvenster zelf, niet na herkenning op de beginpagina
     return this.startFridgeOpening(employee.id);
   }
 

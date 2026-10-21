@@ -181,6 +181,18 @@
     </footer>
   </div>
 
+  <!-- Standby (StandbyController, STANDBY in config.js): na een tijd zonder invoer op de beginpagina
+       dimt dit scherm de pagina. Het is één knop over het hele scherm: een tik (of Enter of spatie)
+       maakt de tablet wakker en start, als dat kan, de korte scan van de demo gezichtsherkenning. De tik
+       valt op deze knop en niet op een knop eronder. #standbyHint zegt vooraf wat er na de tik gebeurt. -->
+  <button type="button" class="standby-overlay hidden" id="standbyOverlay" aria-labelledby="standbyTitle" aria-describedby="standbyHint">
+    <span class="standby-card">
+      <span class="brand-mark standby-mark" aria-hidden="true">TVB</span>
+      <strong class="standby-title" id="standbyTitle">Tik op het scherm om te beginnen</strong>
+      <span class="standby-hint" id="standbyHint"></span>
+    </span>
+  </button>
+
   <!-- Modal voor admin-login en het beheerdashboard. -->
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal">
@@ -516,8 +528,28 @@
     </div>
   </div>
 
+  <!-- Demo gezichtsherkenning: de vraag na een passcan (RecognitionController) aan een medewerker zonder
+       (geldige) gezichtsinstelling. Staat vóór het cameravenster, zodat het instelvenster erboven ligt.
+       "Nee" wordt onthouden. Het kruisje, de achtergrond en Escape onthouden niets. Daarna gaat de koelkast
+       of het productvenster open. -->
+  <div class="modal-backdrop hidden" id="faceOfferModal" role="dialog" aria-modal="true" aria-labelledby="faceOfferTitle" aria-describedby="faceOfferHelp">
+    <div class="modal face-offer-modal">
+      <button class="modal-close" data-close-face-offer aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Demo gezichtsherkenning</p>
+      <h2 id="faceOfferTitle">Gezichtsherkenning nog niet ingesteld. Wil je dit?</h2>
+      <p class="welcome-line" id="faceOfferGreeting"></p>
+      <p class="muted" id="faceOfferHelp"></p>
+      <div class="employee-form-actions face-offer-actions">
+        <button class="secondary-button" type="button" id="faceOfferNoButton">Nee</button>
+        <button class="primary-button" type="button" id="faceOfferYesButton"><span data-icon="faceScan"></span> Ja, instellen</button>
+      </div>
+      <p class="face-privacy"><span data-icon="lock"></span> Er worden geen foto's gemaakt of bewaard. Alles gebeurt op dit apparaat.</p>
+    </div>
+  </div>
+
   <!-- Demo gezichtsherkenning: camerabeeld met een kader voor het gezicht.
-       Wordt gebruikt om een gezicht in te stellen (per medewerker) en om iemand te herkennen. -->
+       Wordt gebruikt om een gezicht in te stellen (per medewerker), om iemand te herkennen met
+       "Herken mij" en voor de korte scan na een tik op het standby-scherm (klasse is-wake). -->
   <div class="modal-backdrop hidden" id="faceModal" role="dialog" aria-modal="true" aria-labelledby="faceTitle">
     <div class="modal face-modal">
       <button class="modal-close" data-close-face-modal aria-label="Sluiten" data-icon="close"></button>
@@ -531,7 +563,7 @@
       <p class="face-status" id="faceStatus" role="status"></p>
       <label class="face-consent hidden" id="faceConsentLabel">
         <input type="checkbox" id="faceConsent">
-        <span>Ik doe vrijwillig mee aan deze demo. Mijn gezicht wordt alleen in deze browser verwerkt en niet opgeslagen of verstuurd. Na het herladen van de pagina is alles weg.</span>
+        <span>Ik doe vrijwillig mee aan deze demo. Alleen kenmerken van mijn gezicht (getallen, geen foto) worden op deze tablet bewaard en nooit verstuurd. Na een jaar worden ze vanzelf gewist en ik kan het altijd uitzetten.</span>
       </label>
       <div class="employee-form-actions">
         <button class="secondary-button" type="button" data-close-face-modal>Annuleren</button>

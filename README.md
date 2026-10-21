@@ -30,12 +30,14 @@ assets/
       ModalManager.js       # vensters openen en sluiten, focus
       EmployeeController.js # beginpagina, productvenster, registreren en automatisch sluiten van het productvenster
       BadgeController.js    # herkennen met de pas (koppelt BadgeReader aan de app)
-      FaceController.js     # cameravenster van de demo gezichtsherkenning
+      FaceController.js     # cameravenster van de demo gezichtsherkenning, scan na een tik, opgeslagen gezichten en verlopen
       AdminController.js    # inloggen, dashboard, logboek, export, wissen, verwijderen
       CorrectionController.js # correcties + en − (registratie verwijderen)
       StockController.js    # voorraad, leveringen en minimum
       FormController.js     # formulieren medewerker, product, bedrijf en consumptiepunt
       FridgeController.js   # slimme koelkast (demo): koelkastvenster en tabblad Koelkast
+      RecognitionController.js # na herkennen: koelkast of productvenster, en de vraag over gezichtsherkenning na een passcan
+      StandbyController.js  # standby van de tablet en wakker maken met een tik (tik om te scannen)
     fridge/                 # Slimme koelkast (demo, uit te zetten in config.js)
       SmartFridge.js        # weegt de schappen en rekent het gewichtsverschil om naar aantallen
       FridgeLock.js         # interface voor het slot (in productie via de backend)
@@ -60,8 +62,8 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests
-  e2e/                      # 26 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 760 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober)
+  e2e/                      # 30 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
+  *.test.js                 # 802 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
@@ -95,8 +97,11 @@ archief/
 - De beheerder wordt automatisch uitgelogd als het beheer 5 minuten niet is gebruikt (`ADMIN_IDLE_LOGOUT_MS` in `config.js`).
 - Het productvenster sluit vanzelf zonder op te slaan als het 75 seconden niet wordt gebruikt, met in de laatste 10 seconden "Venster sluit zo. Tik om door te gaan." (`EMPLOYEE_IDLE_CLOSE_MS` in `config.js`). Een pas van een collega vervangt een open productvenster. Na registreren zijn het zoekveld en het bedrijfsfilter weer leeg.
 - Gemaakt voor een tablet: de knop `Registreren` blijft onderaan het productvenster in beeld (over de volle breedte), zonder keuze is hij uitgeschakeld met de uitleg "Kies eerst een product met +", een gekozen product krijgt een lichtgroene achtergrond en knoppen zijn minstens 44 pixels hoog. Een schermlezer hoort na zoeken alleen het aantal medewerkers en leest de meldingen voor. Zie de paragraaf "UX-review oktober 2026" in het TO (hoofdstuk 9).
-- Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`), niets opgeslagen; uit te zetten in `config.js`. Zie het TO voor de privacy-afweging en toekomstige uitbreidingen (QR-pas, AFAS, barcode, spraak, slim slot).
-- Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer; de beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig; uit te zetten in `config.js`.
+- Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`). Er worden geen foto's gemaakt. Sinds versie 3.17 worden alleen de kenmerken (128 getallen) met een datum op de tablet bewaard en na een jaar vanzelf gewist. Uit te zetten in `config.js`. Zie het TO (hoofdstuk 13 en bijlage B) voor de privacy-afweging. Voor productie is het advies de pas.
+- Standby en tik om te scannen (demo): na 2 minuten zonder gebruik dimt de tablet met "Tik op het scherm om te beginnen" (`STANDBY` in `config.js`). Na een tik kijkt de camera hooguit 10 seconden of iemand met een ingesteld gezicht er staat. De camera gaat alleen na een tik aan en scant nooit constant.
+- Vraag na een passcan (demo): wie met de pas wordt herkend en nog geen gezichtsherkenning heeft, krijgt "Gezichtsherkenning nog niet ingesteld. Wil je dit?" met `Ja, instellen` en `Nee`. `Nee` wordt onthouden.
+- Na herkennen met de pas of de camera opent standaard de slimme koelkast, met een knop naar het productvenster voor brood en beleg (`RECOGNITION_TARGET` in `config.js`, "fridge" of "products").
+- Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer. De beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig. Uit te zetten in `config.js`.
 - Slimme koelkast (demo, uit te zetten met `SMART_FRIDGE` in `config.js`): de koelkast opent met de pas, de medewerker pakt van de schappen en sluit de deur, en het gewichtsverschil per schap wordt vanzelf als registratie opgeslagen (met voorraad en logboekregel). Een verschil dat niet klopt, wordt gemarkeerd voor de beheerder. Het slot en de weegschalen zijn nagebootst. In productie stuurt alleen de backend ze aan. In het beheer staan de indeling van de schappen en de laatste openingen. Zie het TO, bijlage B.
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en in de TVB-huisstijl als [`docs/DOCUMENTATIE.docx`](./docs/DOCUMENTATIE.docx) en [`docs/DOCUMENTATIE.pdf`](./docs/DOCUMENTATIE.pdf).

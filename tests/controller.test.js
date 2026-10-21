@@ -691,7 +691,7 @@ test("'Uitzetten' vergeet het gezicht van de medewerker", () => {
   app.forgetFace();
 
   assert.equal(app.faceDemo.isEnrolled("employee-1"), false);
-  assert.deepEqual(toastTexts(view), ["Gezichtsherkenning staat uit voor deze medewerker."]);
+  assert.deepEqual(toastTexts(view), ["Gezichtsherkenning staat uit voor deze medewerker. De kenmerken zijn gewist."]);
 });
 
 test("venster gesloten terwijl de camera start: de camera wordt niet getoond", async () => {

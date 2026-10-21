@@ -1,6 +1,13 @@
 // Gedeelde hulpfuncties voor de unit tests.
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { DataStore } from "../assets/js/DataStore.js";
+import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
+import { SMART_FRIDGE } from "../assets/js/config.js";
+
+// Een slimme koelkast die uit staat. Vanaf versie 3.17 opent herkennen met de pas of de camera de
+// koelkast (RECOGNITION_TARGET "fridge"). Tests die over het productvenster na herkenning gaan, geven
+// deze koelkast mee: zonder koelkast opent het productvenster, zoals vóór 3.17.
+export const disabledFridge = () => SmartFridge.createSimulated({ ...SMART_FRIDGE, enabled: false });
 
 // Nep-opslag die alles in het geheugen bewaart. Met `failSave` mislukt opslaan.
 export const createStore = (state = null, { failSave = false } = {}) => ({

@@ -59,9 +59,10 @@
 <text x="1005" y="364" text-anchor="middle" font-size="13.5">licht, donker, auto of systeem,</text>
 <text x="1005" y="383" text-anchor="middle" font-size="13.5">staat los en bewaart de keuze (tvb-theme)</text>
 <rect x="230" y="454" width="1430" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
-<text x="945" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller) met negen onderdelen</text>
+<text x="945" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller) met elf onderdelen</text>
 <text x="945" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren en slaat op met persist(): wijziging en logboekregel samen, anders allebei terugdraaien.</text>
-<text x="945" y="525" text-anchor="middle" font-size="13.5">onderdelen: ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController, FormController, FridgeController</text>
+<text x="945" y="525" text-anchor="middle" font-size="13.5">onderdelen: ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController,</text>
+<text x="945" y="544" text-anchor="middle" font-size="13.5">FormController, FridgeController, RecognitionController (na herkennen: koelkast of productvenster) en StandbyController (standby, tik om te scannen)</text>
 <rect x="230" y="596" width="330" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="395" y="626" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
 <text x="395" y="648" text-anchor="middle" font-size="13.5">registraties, medewerkers, producten,</text>
@@ -92,8 +93,9 @@
     <ellipse cx="395" cy="874" rx="165" ry="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
   </g>
 <text x="395" y="916" text-anchor="middle" font-size="17" class="kop">localStorage</text>
-<text x="395" y="938" text-anchor="middle" font-size="13.5">tvb-blikjesregistratie (gegevens)</text>
-<text x="395" y="957" text-anchor="middle" font-size="13.5">tvb-theme (gekozen thema)</text>
+<text x="395" y="938" text-anchor="middle" font-size="13.5">tvb-blikjesregistratie (gegevens, ook</text>
+<text x="395" y="957" text-anchor="middle" font-size="13.5">gezichtskenmerken in de demo)</text>
+<text x="395" y="976" text-anchor="middle" font-size="13.5">tvb-theme (gekozen thema)</text>
 <rect x="640" y="862" width="240" height="126" rx="12" fill="#fdf1e7" stroke="#a55a16" stroke-width="1.8" class="box"/>
 <text x="760" y="896" text-anchor="middle" font-size="17" class="kop">CSV-bestand</text>
 <text x="760" y="918" text-anchor="middle" font-size="13.5">openen in Excel en</text>
@@ -101,9 +103,9 @@
 <text x="760" y="956" text-anchor="middle" font-size="13.5">loonadministratie</text>
 <rect x="920" y="862" width="230" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
 <text x="1035" y="896" text-anchor="middle" font-size="16" class="kop">Camera + face-api</text>
-<text x="1035" y="918" text-anchor="middle" font-size="13.5">modellen uit</text>
-<text x="1035" y="937" text-anchor="middle" font-size="13.5">assets/vendor/face-api/,</text>
-<text x="1035" y="956" text-anchor="middle" font-size="13.5">beeld alleen in geheugen</text>
+<text x="1035" y="918" text-anchor="middle" font-size="13.5">alleen na een tik aan,</text>
+<text x="1035" y="937" text-anchor="middle" font-size="13.5">modellen uit het project,</text>
+<text x="1035" y="956" text-anchor="middle" font-size="13.5">geen beeld bewaard</text>
 <rect x="1450" y="862" width="210" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
 <text x="1555" y="896" text-anchor="middle" font-size="16" class="kop">Koelkast (demo)</text>
 <text x="1555" y="918" text-anchor="middle" font-size="13.5">nagebootst slot en</text>

@@ -11,13 +11,15 @@ import { CorrectionController } from "./controllers/CorrectionController.js";
 import { StockController } from "./controllers/StockController.js";
 import { FormController } from "./controllers/FormController.js";
 import { FridgeController } from "./controllers/FridgeController.js";
+import { RecognitionController } from "./controllers/RecognitionController.js";
+import { StandbyController } from "./controllers/StandbyController.js";
 import { SmartFridge } from "./fridge/SmartFridge.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
  * (de "Controller" in MVC).
  *
- * De controller bestaat uit deze class en negen kleinere classes met elk één taak. RegistrationApp
+ * De controller bestaat uit deze class en elf kleinere classes met elk één taak. RegistrationApp
  * maakt die onderdelen, koppelt de knoppen en toetsen eraan en is voor de rest van de app (en
  * voor de tests) het ene aanspreekpunt: iedere methode van een onderdeel is ook als methode van
  * RegistrationApp te gebruiken (zie de lijst DELEGATES onderaan dit bestand).
@@ -42,7 +44,10 @@ import { SmartFridge } from "./fridge/SmartFridge.js";
  *   - CorrectionController: correcties "+" en "−" en het venster "Registratie verwijderen";
  *   - StockController: het tabblad Voorraad (leveringen, tellingen en minimum);
  *   - FormController: de formulieren voor medewerker, product, bedrijf en consumptiepunt;
- *   - FridgeController: de slimme koelkast (demo), het koelkastvenster en het tabblad Koelkast.
+ *   - FridgeController: de slimme koelkast (demo), het koelkastvenster en het tabblad Koelkast;
+ *   - RecognitionController: wat er opent na herkennen met de pas of de camera (koelkast of
+ *     productvenster) en de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" na een passcan;
+ *   - StandbyController: de standby van de tablet en wakker maken met een tik (tik om te scannen).
  * Ieder onderdeel krijgt deze controller mee en gebruikt het model, de view, persist en de
  * gedeelde toestand via this.app.
  *
@@ -99,6 +104,8 @@ export class RegistrationApp {
     this.stock = new StockController(this);
     this.forms = new FormController(this);
     this.fridge = new FridgeController(this, clock);
+    this.recognition = new RecognitionController(this, clock);
+    this.standby = new StandbyController(this, clock);
   }
 
   // Is de medewerker in het productvenster herkend met de camera (demo gezichtsherkenning)?
@@ -131,7 +138,11 @@ export class RegistrationApp {
   // volgende ochtend nog de cijfers van gisteren tonen. Een tweede timer logt de beheerder uit
   // als het beheer 5 minuten niet is gebruikt (AdminController.startIdleWatch). Een derde timer
   // sluit het productvenster als dat 75 seconden niet is gebruikt
-  // (EmployeeController.startProductIdleWatch).
+  // (EmployeeController.startProductIdleWatch). Een vierde timer zet de tablet in standby na een tijd
+  // zonder invoer op de beginpagina (StandbyController.startStandbyWatch).
+  // Demo gezichtsherkenning: verlopen gezichtsinstellingen worden gewist, de geldige opgeslagen
+  // gezichten gaan in het geheugen om mee te vergelijken, en de app kijkt (zonder de camera aan te
+  // zetten) of er een camera is.
   initialize() {
     this.renderTodayLabel(new Date());
 
@@ -141,9 +152,14 @@ export class RegistrationApp {
     this.view.renderAll();
     this.showLoadProblem();
 
+    this.expireFaces();
+    this.loadSavedFaces();
+    this.faceDemo.detectCamera?.();
+
     this.dayTimer = setInterval(() => this.refreshIfNewDay(), 60 * 1000);
     this.startIdleWatch();
     this.startProductIdleWatch();
+    this.startStandbyWatch();
   }
 
   // Toont op de beginpagina alleen de manieren van herkennen die aan staan in config.js:
@@ -223,11 +239,11 @@ export class RegistrationApp {
       return;
     }
 
-    // Een ingesteld gezicht (demo) van een medewerker die in het andere tabblad is verwijderd,
-    // hoort bij niemand meer en wordt vergeten.
-    this.faceDemo.enrolledIds()
-      .filter((employeeId) => !this.model.findEmployee(employeeId))
-      .forEach((employeeId) => this.faceDemo.forget(employeeId));
+    // De gezichten in het geheugen (demo) komen weer overeen met de opgeslagen gezichtsinstellingen:
+    // een gezicht dat in het andere tabblad is ingesteld, doet mee, en een gezicht van een medewerker
+    // die daar is uitgezet, gedeactiveerd of verwijderd, wordt vergeten.
+    this.loadSavedFaces();
+    if (this.isFaceOfferOpen() && !this.model.findEmployee(this.recognition.offerEmployeeId)?.active) this.closeFaceOffer();
 
     // Alles opnieuw tekenen. Had een knop in een lijst de focus, dan krijgt de nieuwe knop met
     // dezelfde id die focus terug (zie ModalManager.preserveFocus).
@@ -278,8 +294,10 @@ export class RegistrationApp {
     this.model.wipeAll({ clearStore: !keepStore });
     if (keepStore) this.model.reload();
     this.faceDemo.enrolledIds().forEach((employeeId) => this.faceDemo.forget(employeeId));
+    this.loadSavedFaces();
 
-    if (!this.view.$("#faceModal").classList.contains("hidden")) this.closeFaceModal();
+    if (!this.view.$("#faceModal").classList.contains("hidden")) this.closeFaceModal({ continueFlow: false });
+    this.closeFaceOffer();
     if (this.selectedEmployeeId) this.closeEmployeeProducts();
     // Een koelkastopening die bezig is, hoort bij gegevens die niet meer bestaan: afbreken zonder
     // te registreren (het slot gaat dicht).
@@ -418,6 +436,7 @@ export class RegistrationApp {
       ["[data-fridge-return]", (button) => this.returnToShelf(button.dataset.fridgeReturn)],
       ["[data-fridge-foreign]", (button) => this.addForeignWeight(button.dataset.fridgeForeign)],
       ["[data-fridge-demo-open]", () => this.openFridgeForDemo()],
+      ["[data-fridge-to-products]", () => this.switchFridgeToProducts()],
       ["[data-fridge-done]", () => {
         // De tweede tik van een dubbeltik op "Deur dicht" kan op "Klaar" vallen.
         if (!this.isFridgeGhostClick(event)) this.finishFridgeWindow();
@@ -445,6 +464,7 @@ export class RegistrationApp {
     this.registerFormEvents();
     this.registerStockEvents();
     this.registerKeyboardEvents();
+    this.registerStandbyEvents();
 
     // Wijzigingen die een ander tabblad in dezelfde browser opslaat.
     window.addEventListener("storage", (event) => this.handleStorageChange(event));
@@ -475,6 +495,19 @@ export class RegistrationApp {
     this.onClick("#faceEnrollButton", () => this.captureEnrollment());
     this.registerModalClose("#faceModal", "[data-close-face-modal]", () => this.closeFaceModal());
     this.view.$("#faceConsent").addEventListener("change", () => this.updateEnrollButton());
+
+    // De vraag na een passcan (demo gezichtsherkenning): "Ja, instellen", "Nee", en het kruisje, de
+    // achtergrond en Escape (niets onthouden, wel verder). Iedere tik of toets in het venster telt als
+    // invoer (RecognitionController.closeFaceOfferIfIdle).
+    const offerModal = this.view.$("#faceOfferModal");
+    if (offerModal) {
+      this.onClick("#faceOfferYesButton", () => this.acceptFaceOffer());
+      this.onClick("#faceOfferNoButton", () => this.declineFaceOffer());
+      this.registerModalClose("#faceOfferModal", "[data-close-face-offer]", () => this.dismissFaceOffer());
+      for (const type of ["pointerdown", "keydown", "touchstart"]) {
+        offerModal.addEventListener(type, () => this.noteFaceOfferActivity(), { capture: true, passive: true });
+      }
+    }
 
     // Slimme koelkast (demo): de knop op de beginpagina, het venster (sluitknop, achtergrond en Escape
     // via closeFridgeWindow) en "Deur dicht". Een klik op de achtergrond of de sluitknop krijgt het
@@ -597,6 +630,21 @@ export class RegistrationApp {
     });
   }
 
+  // Standby (StandbyController): een tik op het standby-scherm maakt wakker en start de scan, een
+  // toets maakt wakker, en een klik vlak na het wakker worden wordt tegengehouden (geen klik-door).
+  // Iedere tik, klik, toets, aanraking of scroll telt als invoer. In de capture-fase, zodat ook invoer
+  // meetelt die een andere listener tegenhoudt.
+  registerStandbyEvents() {
+    const overlay = this.view.$("#standbyOverlay");
+    if (!overlay) return;
+    overlay.addEventListener("click", (event) => this.handleStandbyTap(event));
+    document.addEventListener("click", (event) => this.swallowStandbyGhostClick(event), { capture: true });
+    document.addEventListener("keydown", (event) => this.handleStandbyKey(event), { capture: true });
+    for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
+      document.addEventListener(type, () => this.noteStandbyActivity(), { capture: true, passive: true });
+    }
+  }
+
   // Typt de beheerder nu in het formulier van de koelkastindeling? Dan wordt het niet opnieuw
   // getekend als een ander tabblad iets opslaat (net als de voorraadtabel), anders verdwijnt de invoer.
   isTypingInFridgeForm() {
@@ -688,11 +736,28 @@ const DELEGATES = {
   },
   face: {
     methods: [
-      "startFaceRecognition", "startFaceEnrollment", "forgetFace", "setFaceStatus", "openFaceModal",
-      "updateEnrollButton", "scanForFace", "stopCameraAfterTimeout", "scheduleEnrollTimeout",
+      "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "forgetFace", "setFaceStatus",
+      "faceTexts", "openFaceModal", "hasActiveFace", "loadSavedFaces", "expireFaces",
+      "updateEnrollButton", "scanForFace", "endWakeScan", "stopCameraAfterTimeout", "scheduleEnrollTimeout",
       "captureEnrollment", "readFaceForEnrollment", "closeFaceModal"
     ],
-    fields: ["faceSession", "faceMode", "faceEmployeeId", "cameraReady", "captureSession", "enrollTimer", "capturing"]
+    fields: ["faceSession", "faceMode", "faceEmployeeId", "cameraReady", "captureSession", "enrollTimer", "enrollContinuation", "capturing"]
+  },
+  recognition: {
+    methods: [
+      "recognitionTarget", "afterRecognition", "continueAfterRecognition", "shouldOfferFace", "isFaceOfferOpen",
+      "openFaceOffer", "noteFaceOfferActivity", "closeFaceOffer", "acceptFaceOffer", "declineFaceOffer", "dismissFaceOffer",
+      "closeFaceOfferIfIdle"
+    ],
+    fields: ["offerEmployeeId", "offerHow", "offerKind", "lastOfferActivity"]
+  },
+  standby: {
+    methods: [
+      "isStandbyEnabled", "startStandbyWatch", "stopStandbyWatch", "tickStandby", "isHomeIdle", "noteStandbyActivity",
+      "checkStandby", "enterStandby", "standbyHint", "wakeFromStandby", "handleStandbyTap", "handleStandbyKey",
+      "isStandbyGhostClick", "swallowStandbyGhostClick"
+    ],
+    fields: ["standbyActive", "lastStandbyActivity", "standbyTimer", "standbyWokeAt"]
   },
   admin: {
     methods: [
@@ -732,12 +797,12 @@ const DELEGATES = {
     methods: [
       "isFridgeAvailable", "openFridgeWindow", "renderFridge", "openShelves", "closeFridgeWindow", "finishFridgeWindow", "abortFridge",
       "setFridgePhase", "isFridgeGhostClick", "updateFridgeDemoButton",
-      "fridgeScan", "openFridgeForDemo", "startFridgeOpening", "stockSimulatedShelves", "handleFridgeNotOpened",
+      "fridgeScan", "canOpenFridgeFor", "openFridgeFor", "switchFridgeToProducts", "openFridgeForDemo", "startFridgeOpening", "stockSimulatedShelves", "handleFridgeNotOpened",
       "takeFromShelf", "returnToShelf", "addForeignWeight", "handText", "closeFridgeDoor", "openingAudit",
       "startFridgeTimer", "stopFridgeTimer", "noteFridgeActivity", "checkFridgeTimers", "setFridgeDoorWarning",
       "renderFridgeAdmin", "saveFridgeShelves", "unitWeightError"
     ],
-    fields: ["fridgePhase", "fridgeEmployeeId", "fridgeHeld", "fridgeResult", "fridgeSaveFailed", "lastFridgeActivity", "fridgeTimer", "fridgePhaseChangedAt"]
+    fields: ["fridgePhase", "fridgeEmployeeId", "fridgeHeld", "fridgeResult", "fridgeSaveFailed", "lastFridgeActivity", "fridgeTimer", "fridgePhaseChangedAt", "fridgeRecognizedBy"]
   }
 };
 

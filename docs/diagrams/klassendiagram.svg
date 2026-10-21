@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="3757" viewBox="0 0 1960 3757" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="4380" viewBox="0 0 1960 4380" role="img" aria-labelledby="title desc">
   <title id="title">Klassendiagram JavaScript</title>
-  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de negen onderdelen van de controller (ModalManager, EmployeeController, AdminController, FaceController, BadgeController, CorrectionController, StockController, FormController en FridgeController), FridgeView, de slimme koelkast (SmartFridge met de interfaces FridgeLock en ShelfScale en de nagebootste SimulatedLock en SimulatedShelfScale) en de modules main.js, config.js, ids.js en icons.js.</desc>
+  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de elf onderdelen van de controller (ModalManager, EmployeeController, AdminController, FaceController, BadgeController, CorrectionController, StockController, FormController, FridgeController, RecognitionController en StandbyController), FridgeView, de slimme koelkast (SmartFridge met de interfaces FridgeLock en ShelfScale en de nagebootste SimulatedLock en SimulatedShelfScale) en de modules main.js, config.js, ids.js en icons.js.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -19,7 +19,7 @@
       <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
     </marker>
   </defs>
-  <rect width="1960" height="3757" fill="#ffffff"/>
+  <rect width="1960" height="4380" fill="#ffffff"/>
 <text x="40" y="50" font-size="28" class="kop">Klassendiagram – JavaScript van de demo</text>
 <text x="40" y="78" font-size="15" class="sub">Classes met de belangrijkste attributen en methodes (selectie) en hun onderlinge relaties</text>
 <g>
@@ -81,7 +81,7 @@
 <text x="432" y="782" font-size="13">+ escapeHtml(value): string</text>
 </g>
 <g>
-<rect x="940" y="250" width="480" height="678" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<rect x="940" y="250" width="480" height="716" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M946,250 H1414 A6,6 0 0 1 1420,256 V292 H940 V256 A6,6 0 0 1 946,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
 <text x="1180" y="278" text-anchor="middle" font-size="17" class="kop">RegistrationApp</text>
 <text x="952" y="312" font-size="13">+ model: RegistrationModel</text>
@@ -104,22 +104,24 @@
 <text x="952" y="635" font-size="13">+ stock: StockController</text>
 <text x="952" y="654" font-size="13">+ forms: FormController</text>
 <text x="952" y="673" font-size="13">+ fridge: FridgeController</text>
-<path d="M940,686 L1420,686" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="952" y="706" font-size="13">+ constructor(model, view, …, clock)</text>
-<text x="952" y="725" font-size="13">+ initialize()</text>
-<text x="952" y="744" font-size="13">+ showRecognitionOptions()</text>
-<text x="952" y="763" font-size="13">+ registerEventListeners()</text>
-<text x="952" y="782" font-size="13">+ handleClick(event)</text>
-<text x="952" y="801" font-size="13">+ handleStorageChange(event)</text>
-<text x="952" y="820" font-size="13">+ handleStorageCleared(opties)</text>
-<text x="952" y="839" font-size="13">+ refreshIfNewDay(now)</text>
-<text x="952" y="858" font-size="13">+ persist(change, audit): boolean</text>
-<text x="952" y="877" font-size="13">+ employeeLabel(employeeId): string</text>
-<text x="952" y="896" font-size="13">+ pointLabel(pointId): string</text>
-<text x="952" y="915" font-size="13">+ … doorgeefmethodes en -velden (DELEGATES)</text>
+<text x="952" y="692" font-size="13">+ recognition: RecognitionController</text>
+<text x="952" y="711" font-size="13">+ standby: StandbyController</text>
+<path d="M940,724 L1420,724" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="952" y="744" font-size="13">+ constructor(model, view, …, clock)</text>
+<text x="952" y="763" font-size="13">+ initialize()</text>
+<text x="952" y="782" font-size="13">+ showRecognitionOptions()</text>
+<text x="952" y="801" font-size="13">+ registerEventListeners()</text>
+<text x="952" y="820" font-size="13">+ handleClick(event)</text>
+<text x="952" y="839" font-size="13">+ handleStorageChange(event)</text>
+<text x="952" y="858" font-size="13">+ handleStorageCleared(opties)</text>
+<text x="952" y="877" font-size="13">+ refreshIfNewDay(now)</text>
+<text x="952" y="896" font-size="13">+ persist(change, audit): boolean</text>
+<text x="952" y="915" font-size="13">+ employeeLabel(employeeId): string</text>
+<text x="952" y="934" font-size="13">+ pointLabel(pointId): string</text>
+<text x="952" y="953" font-size="13">+ … doorgeefmethodes en -velden (DELEGATES)</text>
 </g>
 <g>
-<rect x="1520" y="250" width="400" height="412" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<rect x="1520" y="250" width="400" height="488" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M1526,250 H1914 A6,6 0 0 1 1920,256 V292 H1520 V256 A6,6 0 0 1 1526,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
 <text x="1720" y="278" text-anchor="middle" font-size="17" class="kop">FaceRecognitionDemo</text>
 <text x="1532" y="312" font-size="13">+ settings: object (FACE_DEMO)</text>
@@ -129,21 +131,25 @@
 <text x="1532" y="388" font-size="13">+ knownFaces: Map</text>
 <text x="1532" y="407" font-size="13">+ lastCandidate: string | null</text>
 <text x="1532" y="426" font-size="13">+ streak: number</text>
-<path d="M1520,439 L1920,439" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1532" y="459" font-size="13">+ isAvailable(): boolean</text>
-<text x="1532" y="478" font-size="13">+ load(): Promise</text>
-<text x="1532" y="497" font-size="13">+ startCamera(video, isCurrent): Promise</text>
-<text x="1532" y="516" font-size="13">+ stopCamera(video)</text>
-<text x="1532" y="535" font-size="13">+ readFace(video): Promise</text>
-<text x="1532" y="554" font-size="13">+ enroll(employeeId, descriptor)</text>
-<text x="1532" y="573" font-size="13">+ forget(employeeId)</text>
-<text x="1532" y="592" font-size="13">+ isEnrolled(employeeId): boolean</text>
-<text x="1532" y="611" font-size="13">+ findMatch(descriptor, allowedIds)</text>
-<text x="1532" y="630" font-size="13">+ confirm(employeeId, required): boolean</text>
-<text x="1532" y="649" font-size="13">+ resetConfirmation()</text>
+<text x="1532" y="445" font-size="13">+ hasCamera: boolean | null</text>
+<path d="M1520,458 L1920,458" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1532" y="478" font-size="13">+ isAvailable(): boolean</text>
+<text x="1532" y="497" font-size="13">+ detectCamera(): Promise</text>
+<text x="1532" y="516" font-size="13">+ hasCameraDevice(): boolean</text>
+<text x="1532" y="535" font-size="13">+ load(): Promise</text>
+<text x="1532" y="554" font-size="13">+ startCamera(video, isCurrent): Promise</text>
+<text x="1532" y="573" font-size="13">+ stopCamera(video)</text>
+<text x="1532" y="592" font-size="13">+ readFace(video): Promise</text>
+<text x="1532" y="611" font-size="13">+ enroll(employeeId, descriptor)</text>
+<text x="1532" y="630" font-size="13">+ loadFaces(entries)</text>
+<text x="1532" y="649" font-size="13">+ forget(employeeId)</text>
+<text x="1532" y="668" font-size="13">+ isEnrolled(employeeId): boolean</text>
+<text x="1532" y="687" font-size="13">+ findMatch(descriptor, allowedIds)</text>
+<text x="1532" y="706" font-size="13">+ confirm(employeeId, required): boolean</text>
+<text x="1532" y="725" font-size="13">+ resetConfirmation()</text>
 </g>
 <g>
-<rect x="40" y="840" width="320" height="431" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<rect x="40" y="840" width="320" height="450" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M46,840 H354 A6,6 0 0 1 360,846 V882 H40 V846 A6,6 0 0 1 46,840 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
 <text x="200" y="868" text-anchor="middle" font-size="17" class="kop">DataStore</text>
 <text x="52" y="902" font-size="13" text-decoration="underline">+ LISTS: string[]</text>
@@ -164,11 +170,12 @@
 <text x="52" y="1182" font-size="13">+ isValidRegistration(r): boolean</text>
 <text x="52" y="1201" font-size="13">+ isValidFridgeShelf(shelf): boolean</text>
 <text x="52" y="1220" font-size="13">+ isValidFridgeOpening(o, now): boolean</text>
-<text x="52" y="1239" font-size="13">+ existsAsWritten(value): boolean</text>
-<text x="52" y="1258" font-size="13">+ isSafeBadgeId(value): boolean</text>
+<text x="52" y="1239" font-size="13">+ isValidFaceEnrollment(e, now): boolean</text>
+<text x="52" y="1258" font-size="13">+ existsAsWritten(value): boolean</text>
+<text x="52" y="1277" font-size="13">+ isSafeBadgeId(value): boolean</text>
 </g>
 <g>
-<rect x="420" y="840" width="420" height="887" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<rect x="420" y="840" width="420" height="1001" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M426,840 H834 A6,6 0 0 1 840,846 V882 H420 V846 A6,6 0 0 1 426,840 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
 <text x="630" y="868" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
 <text x="432" y="902" font-size="13">+ store: DataStore</text>
@@ -178,43 +185,49 @@
 <text x="432" y="978" font-size="13">«get» employees, registrations, products</text>
 <text x="432" y="997" font-size="13">«get» companies, points, auditLog</text>
 <text x="432" y="1016" font-size="13">«get» fridgeShelves, fridgeOpenings</text>
-<path d="M420,1029 L840,1029" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="432" y="1049" font-size="13">+ reload()</text>
-<text x="432" y="1068" font-size="13">+ snapshot(): object</text>
-<text x="432" y="1087" font-size="13">+ restore(snapshot)</text>
-<text x="432" y="1106" font-size="13">+ save(): boolean</text>
-<text x="432" y="1125" font-size="13">+ wipeAll(opties)</text>
-<text x="432" y="1144" font-size="13">+ addRegistration(employeeId, productId, opties)</text>
-<text x="432" y="1163" font-size="13">+ lastRegistration(employeeId, productId)</text>
-<text x="432" y="1182" font-size="13">+ removeLastRegistration(employeeId, productId)</text>
-<text x="432" y="1201" font-size="13">+ removeRegistration(registrationId)</text>
-<text x="432" y="1220" font-size="13">+ lastSelection(employeeId): object</text>
-<text x="432" y="1239" font-size="13">+ countForDate(date): number</text>
-<text x="432" y="1258" font-size="13">+ countForMonth(date): number</text>
-<text x="432" y="1277" font-size="13">+ payrollPeriod(date)</text>
-<text x="432" y="1296" font-size="13">+ addEmployee(employeeData)</text>
-<text x="432" y="1315" font-size="13">+ updateEmployee(employeeId, employeeData)</text>
-<text x="432" y="1334" font-size="13">+ setEmployeeActive(employeeId, active)</text>
-<text x="432" y="1353" font-size="13">+ removeEmployee(employeeId)</text>
-<text x="432" y="1372" font-size="13">+ findEmployeeByBadge(badgeId)</text>
-<text x="432" y="1391" font-size="13">+ isBadgeTaken(badgeId, exceptEmployeeId): boolean</text>
-<text x="432" y="1410" font-size="13">+ productsForEmployee(employeeId)</text>
-<text x="432" y="1429" font-size="13">+ saveProduct(productData)</text>
-<text x="432" y="1448" font-size="13">+ removeProduct(productId)</text>
-<text x="432" y="1467" font-size="13">+ saveCompany({ id, name, employerNumber })</text>
-<text x="432" y="1486" font-size="13">+ removeCompany(companyId)</text>
-<text x="432" y="1505" font-size="13">+ savePoint({ id, name, companyId, … })</text>
-<text x="432" y="1524" font-size="13">+ removePoint(pointId)</text>
-<text x="432" y="1543" font-size="13">+ moveEmployeesOfPoint(pointId, companyId)</text>
-<text x="432" y="1562" font-size="13">+ setStock(pointId, productId, stock)</text>
-<text x="432" y="1581" font-size="13">+ setMinimum(pointId, productId, minimum)</text>
-<text x="432" y="1600" font-size="13">+ changeStock(pointId, productId, amount)</text>
-<text x="432" y="1619" font-size="13">+ stockAlerts(): array</text>
-<text x="432" y="1638" font-size="13">+ fridgeLayout(pointId): array</text>
-<text x="432" y="1657" font-size="13">+ saveFridgeShelves(pointId, shelves): boolean</text>
-<text x="432" y="1676" font-size="13">+ addFridgeOpening(result): object | false</text>
-<text x="432" y="1695" font-size="13">+ recentFridgeOpenings(limit): array</text>
-<text x="432" y="1714" font-size="13">+ logAdminAction(action, details)</text>
+<text x="432" y="1035" font-size="13">«get» faceEnrollments, faceOffers</text>
+<path d="M420,1048 L840,1048" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="432" y="1068" font-size="13">+ reload()</text>
+<text x="432" y="1087" font-size="13">+ snapshot(): object</text>
+<text x="432" y="1106" font-size="13">+ restore(snapshot)</text>
+<text x="432" y="1125" font-size="13">+ save(): boolean</text>
+<text x="432" y="1144" font-size="13">+ wipeAll(opties)</text>
+<text x="432" y="1163" font-size="13">+ addRegistration(employeeId, productId, opties)</text>
+<text x="432" y="1182" font-size="13">+ lastRegistration(employeeId, productId)</text>
+<text x="432" y="1201" font-size="13">+ removeLastRegistration(employeeId, productId)</text>
+<text x="432" y="1220" font-size="13">+ removeRegistration(registrationId)</text>
+<text x="432" y="1239" font-size="13">+ lastSelection(employeeId): object</text>
+<text x="432" y="1258" font-size="13">+ countForDate(date): number</text>
+<text x="432" y="1277" font-size="13">+ countForMonth(date): number</text>
+<text x="432" y="1296" font-size="13">+ payrollPeriod(date)</text>
+<text x="432" y="1315" font-size="13">+ addEmployee(employeeData)</text>
+<text x="432" y="1334" font-size="13">+ updateEmployee(employeeId, employeeData)</text>
+<text x="432" y="1353" font-size="13">+ setEmployeeActive(employeeId, active)</text>
+<text x="432" y="1372" font-size="13">+ removeEmployee(employeeId)</text>
+<text x="432" y="1391" font-size="13">+ findEmployeeByBadge(badgeId)</text>
+<text x="432" y="1410" font-size="13">+ isBadgeTaken(badgeId, exceptEmployeeId): boolean</text>
+<text x="432" y="1429" font-size="13">+ productsForEmployee(employeeId)</text>
+<text x="432" y="1448" font-size="13">+ saveProduct(productData)</text>
+<text x="432" y="1467" font-size="13">+ removeProduct(productId)</text>
+<text x="432" y="1486" font-size="13">+ saveCompany({ id, name, employerNumber })</text>
+<text x="432" y="1505" font-size="13">+ removeCompany(companyId)</text>
+<text x="432" y="1524" font-size="13">+ savePoint({ id, name, companyId, … })</text>
+<text x="432" y="1543" font-size="13">+ removePoint(pointId)</text>
+<text x="432" y="1562" font-size="13">+ moveEmployeesOfPoint(pointId, companyId)</text>
+<text x="432" y="1581" font-size="13">+ setStock(pointId, productId, stock)</text>
+<text x="432" y="1600" font-size="13">+ setMinimum(pointId, productId, minimum)</text>
+<text x="432" y="1619" font-size="13">+ changeStock(pointId, productId, amount)</text>
+<text x="432" y="1638" font-size="13">+ stockAlerts(): array</text>
+<text x="432" y="1657" font-size="13">+ fridgeLayout(pointId): array</text>
+<text x="432" y="1676" font-size="13">+ saveFridgeShelves(pointId, shelves): boolean</text>
+<text x="432" y="1695" font-size="13">+ addFridgeOpening(result): object | false</text>
+<text x="432" y="1714" font-size="13">+ recentFridgeOpenings(limit): array</text>
+<text x="432" y="1733" font-size="13">+ saveFaceEnrollment(id, descriptor): boolean</text>
+<text x="432" y="1752" font-size="13">+ removeFaceEnrollment(employeeId)</text>
+<text x="432" y="1771" font-size="13">+ validFaceEnrollments(now): array</text>
+<text x="432" y="1790" font-size="13">+ declineFaceOffer(employeeId): boolean</text>
+<text x="432" y="1809" font-size="13">+ expireFaceEnrollments(now): string[]</text>
+<text x="432" y="1828" font-size="13">+ logAdminAction(action, details)</text>
 </g>
 <g>
 <rect x="1520" y="840" width="400" height="374" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
@@ -239,334 +252,398 @@
 <text x="1532" y="1201" font-size="13">+ reset()</text>
 </g>
 <g>
-<rect x="940" y="988" width="400" height="203" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M946,988 H1334 A6,6 0 0 1 1340,994 V1030 H940 V994 A6,6 0 0 1 946,988 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1140" y="1016" text-anchor="middle" font-size="17" class="kop">CsvExport</text>
-<text x="952" y="1050" font-size="13" text-decoration="underline">+ COLUMNS: string[]</text>
-<text x="952" y="1069" font-size="13">+ model: RegistrationModel</text>
-<path d="M940,1082 L1340,1082" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="952" y="1102" font-size="13">+ buildRows(selectedEmployee, selectedMonth)</text>
-<text x="952" y="1121" font-size="13">+ toCsv(rows): string</text>
-<text x="952" y="1140" font-size="13">+ escapeField(value): string</text>
-<text x="952" y="1159" font-size="13">+ fileName(selectedMonth): string</text>
-<text x="952" y="1178" font-size="13">+ download(selectedEmployee, selectedMonth)</text>
+<rect x="940" y="1026" width="400" height="203" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M946,1026 H1334 A6,6 0 0 1 1340,1032 V1068 H940 V1032 A6,6 0 0 1 946,1026 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1140" y="1054" text-anchor="middle" font-size="17" class="kop">CsvExport</text>
+<text x="952" y="1088" font-size="13" text-decoration="underline">+ COLUMNS: string[]</text>
+<text x="952" y="1107" font-size="13">+ model: RegistrationModel</text>
+<path d="M940,1120 L1340,1120" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="952" y="1140" font-size="13">+ buildRows(selectedEmployee, selectedMonth)</text>
+<text x="952" y="1159" font-size="13">+ toCsv(rows): string</text>
+<text x="952" y="1178" font-size="13">+ escapeField(value): string</text>
+<text x="952" y="1197" font-size="13">+ fileName(selectedMonth): string</text>
+<text x="952" y="1216" font-size="13">+ download(selectedEmployee, selectedMonth)</text>
 </g>
 <!-- Onderdelen van de controller -->
 <g>
-<rect x="40" y="1855" width="455" height="336" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M46,1855 H489 A6,6 0 0 1 495,1861 V1897 H40 V1861 A6,6 0 0 1 46,1855 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="267.5" y="1883" text-anchor="middle" font-size="17" class="kop">ModalManager</text>
-<text x="52" y="1917" font-size="13">+ app: RegistrationApp</text>
-<text x="52" y="1936" font-size="13">+ modalCloseActions: Map</text>
-<text x="52" y="1955" font-size="13">+ modalOpeners: Map</text>
-<path d="M40,1968 L495,1968" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="52" y="1988" font-size="13">+ show(selector)</text>
-<text x="52" y="2007" font-size="13">+ hide(selector)</text>
-<text x="52" y="2026" font-size="13">+ openModal(modalSelector)</text>
-<text x="52" y="2045" font-size="13">+ scrollModalToTop(modalSelector)</text>
-<text x="52" y="2064" font-size="13">+ closeModal(modalSelector)</text>
-<text x="52" y="2083" font-size="13">+ focusSelector(element): string | null</text>
-<text x="52" y="2102" font-size="13">+ findFocusReplacement(element)</text>
-<text x="52" y="2121" font-size="13">+ preserveFocus(render)</text>
-<text x="52" y="2140" font-size="13">+ registerModalClose(modal, buttons, action)</text>
-<text x="52" y="2159" font-size="13">+ topModal(): Element | null</text>
-<text x="52" y="2178" font-size="13">+ keepFocusInModal(event, modal)</text>
+<rect x="40" y="1969" width="455" height="336" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,1969 H489 A6,6 0 0 1 495,1975 V2011 H40 V1975 A6,6 0 0 1 46,1969 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="267.5" y="1997" text-anchor="middle" font-size="17" class="kop">ModalManager</text>
+<text x="52" y="2031" font-size="13">+ app: RegistrationApp</text>
+<text x="52" y="2050" font-size="13">+ modalCloseActions: Map</text>
+<text x="52" y="2069" font-size="13">+ modalOpeners: Map</text>
+<path d="M40,2082 L495,2082" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="2102" font-size="13">+ show(selector)</text>
+<text x="52" y="2121" font-size="13">+ hide(selector)</text>
+<text x="52" y="2140" font-size="13">+ openModal(modalSelector)</text>
+<text x="52" y="2159" font-size="13">+ scrollModalToTop(modalSelector)</text>
+<text x="52" y="2178" font-size="13">+ closeModal(modalSelector)</text>
+<text x="52" y="2197" font-size="13">+ focusSelector(element): string | null</text>
+<text x="52" y="2216" font-size="13">+ findFocusReplacement(element)</text>
+<text x="52" y="2235" font-size="13">+ preserveFocus(render)</text>
+<text x="52" y="2254" font-size="13">+ registerModalClose(modal, buttons, action)</text>
+<text x="52" y="2273" font-size="13">+ topModal(): Element | null</text>
+<text x="52" y="2292" font-size="13">+ keepFocusInModal(event, modal)</text>
 </g>
 <g>
-<rect x="515" y="1855" width="455" height="602" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M521,1855 H964 A6,6 0 0 1 970,1861 V1897 H515 V1861 A6,6 0 0 1 521,1855 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="742.5" y="1883" text-anchor="middle" font-size="17" class="kop">EmployeeController</text>
-<text x="527" y="1917" font-size="13" text-decoration="underline">+ GHOST_CLICK_MS: number</text>
-<text x="527" y="1936" font-size="13" text-decoration="underline">+ PRODUCT_IDLE_CHECK_MS: number</text>
-<text x="527" y="1955" font-size="13">+ app: RegistrationApp</text>
-<text x="527" y="1974" font-size="13">+ clock: object</text>
-<text x="527" y="1993" font-size="13">+ idleCloseMs: number</text>
-<text x="527" y="2012" font-size="13">+ idleWarningMs: number</text>
-<text x="527" y="2031" font-size="13">+ productWindowClosedAt: number</text>
-<text x="527" y="2050" font-size="13">+ lastProductActivity: number | null</text>
-<text x="527" y="2069" font-size="13">+ productIdleTimer: number | null</text>
-<text x="527" y="2088" font-size="13">+ idleWarningShown: boolean</text>
-<path d="M515,2101 L970,2101" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="527" y="2121" font-size="13" text-decoration="underline">+ realClock(): object</text>
-<text x="527" y="2140" font-size="13">+ clearSearch()</text>
-<text x="527" y="2159" font-size="13">+ resetEmployeeSearch()</text>
-<text x="527" y="2178" font-size="13">+ onCompanyFilterInput()</text>
-<text x="527" y="2197" font-size="13">+ openEmployeeProducts(employeeId, opties)</text>
-<text x="527" y="2216" font-size="13">+ renderProductWindow()</text>
-<text x="527" y="2235" font-size="13">+ incrementProduct(productId)</text>
-<text x="527" y="2254" font-size="13">+ decrementProduct(productId)</text>
-<text x="527" y="2273" font-size="13">+ repeatLastSelection()</text>
-<text x="527" y="2292" font-size="13">+ registerSelectedProducts()</text>
-<text x="527" y="2311" font-size="13">+ closeEmployeeProducts()</text>
-<text x="527" y="2330" font-size="13">+ startProductIdleWatch()</text>
-<text x="527" y="2349" font-size="13">+ stopProductIdleWatch()</text>
-<text x="527" y="2368" font-size="13">+ noteProductActivity()</text>
-<text x="527" y="2387" font-size="13">+ closeProductWindowIfIdle(now)</text>
-<text x="527" y="2406" font-size="13">+ setIdleWarning(shown)</text>
-<text x="527" y="2425" font-size="13">+ isGhostRowClick(event, now): boolean</text>
-<text x="527" y="2444" font-size="13">+ handleEmployeeRowKey(event)</text>
+<rect x="515" y="1969" width="455" height="602" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M521,1969 H964 A6,6 0 0 1 970,1975 V2011 H515 V1975 A6,6 0 0 1 521,1969 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="742.5" y="1997" text-anchor="middle" font-size="17" class="kop">EmployeeController</text>
+<text x="527" y="2031" font-size="13" text-decoration="underline">+ GHOST_CLICK_MS: number</text>
+<text x="527" y="2050" font-size="13" text-decoration="underline">+ PRODUCT_IDLE_CHECK_MS: number</text>
+<text x="527" y="2069" font-size="13">+ app: RegistrationApp</text>
+<text x="527" y="2088" font-size="13">+ clock: object</text>
+<text x="527" y="2107" font-size="13">+ idleCloseMs: number</text>
+<text x="527" y="2126" font-size="13">+ idleWarningMs: number</text>
+<text x="527" y="2145" font-size="13">+ productWindowClosedAt: number</text>
+<text x="527" y="2164" font-size="13">+ lastProductActivity: number | null</text>
+<text x="527" y="2183" font-size="13">+ productIdleTimer: number | null</text>
+<text x="527" y="2202" font-size="13">+ idleWarningShown: boolean</text>
+<path d="M515,2215 L970,2215" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="527" y="2235" font-size="13" text-decoration="underline">+ realClock(): object</text>
+<text x="527" y="2254" font-size="13">+ clearSearch()</text>
+<text x="527" y="2273" font-size="13">+ resetEmployeeSearch()</text>
+<text x="527" y="2292" font-size="13">+ onCompanyFilterInput()</text>
+<text x="527" y="2311" font-size="13">+ openEmployeeProducts(employeeId, opties)</text>
+<text x="527" y="2330" font-size="13">+ renderProductWindow()</text>
+<text x="527" y="2349" font-size="13">+ incrementProduct(productId)</text>
+<text x="527" y="2368" font-size="13">+ decrementProduct(productId)</text>
+<text x="527" y="2387" font-size="13">+ repeatLastSelection()</text>
+<text x="527" y="2406" font-size="13">+ registerSelectedProducts()</text>
+<text x="527" y="2425" font-size="13">+ closeEmployeeProducts()</text>
+<text x="527" y="2444" font-size="13">+ startProductIdleWatch()</text>
+<text x="527" y="2463" font-size="13">+ stopProductIdleWatch()</text>
+<text x="527" y="2482" font-size="13">+ noteProductActivity()</text>
+<text x="527" y="2501" font-size="13">+ closeProductWindowIfIdle(now)</text>
+<text x="527" y="2520" font-size="13">+ setIdleWarning(shown)</text>
+<text x="527" y="2539" font-size="13">+ isGhostRowClick(event, now): boolean</text>
+<text x="527" y="2558" font-size="13">+ handleEmployeeRowKey(event)</text>
 </g>
 <g>
-<rect x="990" y="1855" width="455" height="621" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M996,1855 H1439 A6,6 0 0 1 1445,1861 V1897 H990 V1861 A6,6 0 0 1 996,1855 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1217.5" y="1883" text-anchor="middle" font-size="17" class="kop">AdminController</text>
-<text x="1002" y="1917" font-size="13" text-decoration="underline">+ IDLE_CHECK_MS: number</text>
-<text x="1002" y="1936" font-size="13">+ app: RegistrationApp</text>
-<text x="1002" y="1955" font-size="13">+ clock: object</text>
-<text x="1002" y="1974" font-size="13">+ idleLogoutMs: number</text>
-<text x="1002" y="1993" font-size="13">+ auditLogLimit: number</text>
-<text x="1002" y="2012" font-size="13">+ lastAdminActivity: number | null</text>
-<text x="1002" y="2031" font-size="13">+ idleTimer: number | null</text>
-<path d="M990,2044 L1445,2044" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1002" y="2064" font-size="13" text-decoration="underline">+ realClock(): object</text>
-<text x="1002" y="2083" font-size="13">+ requireAdmin(): boolean</text>
-<text x="1002" y="2102" font-size="13">+ showMissing(subject)</text>
-<text x="1002" y="2121" font-size="13">+ finishAdminChange(message, opties)</text>
-<text x="1002" y="2140" font-size="13">+ openAdmin()</text>
-<text x="1002" y="2159" font-size="13">+ login(event)</text>
-<text x="1002" y="2178" font-size="13">+ logout()</text>
-<text x="1002" y="2197" font-size="13">+ closeAdmin()</text>
-<text x="1002" y="2216" font-size="13">+ startIdleWatch()</text>
-<text x="1002" y="2235" font-size="13">+ stopIdleWatch()</text>
-<text x="1002" y="2254" font-size="13">+ noteAdminActivity()</text>
-<text x="1002" y="2273" font-size="13">+ logoutIfIdle(now)</text>
-<text x="1002" y="2292" font-size="13">+ idleLogoutMessage(): string</text>
-<text x="1002" y="2311" font-size="13">+ switchTab(activeTab)</text>
-<text x="1002" y="2330" font-size="13">+ loadMoreAudit()</text>
-<text x="1002" y="2349" font-size="13">+ exportCsv()</text>
-<text x="1002" y="2368" font-size="13">+ wipeAllData()</text>
-<text x="1002" y="2387" font-size="13">+ toggleEmployee(employeeId)</text>
-<text x="1002" y="2406" font-size="13">+ removeEmployee(employeeId)</text>
-<text x="1002" y="2425" font-size="13">+ removeProduct(productId)</text>
-<text x="1002" y="2444" font-size="13">+ removeCompany(companyId)</text>
-<text x="1002" y="2463" font-size="13">+ removePoint(pointId)</text>
+<rect x="990" y="1969" width="455" height="621" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M996,1969 H1439 A6,6 0 0 1 1445,1975 V2011 H990 V1975 A6,6 0 0 1 996,1969 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1217.5" y="1997" text-anchor="middle" font-size="17" class="kop">AdminController</text>
+<text x="1002" y="2031" font-size="13" text-decoration="underline">+ IDLE_CHECK_MS: number</text>
+<text x="1002" y="2050" font-size="13">+ app: RegistrationApp</text>
+<text x="1002" y="2069" font-size="13">+ clock: object</text>
+<text x="1002" y="2088" font-size="13">+ idleLogoutMs: number</text>
+<text x="1002" y="2107" font-size="13">+ auditLogLimit: number</text>
+<text x="1002" y="2126" font-size="13">+ lastAdminActivity: number | null</text>
+<text x="1002" y="2145" font-size="13">+ idleTimer: number | null</text>
+<path d="M990,2158 L1445,2158" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1002" y="2178" font-size="13" text-decoration="underline">+ realClock(): object</text>
+<text x="1002" y="2197" font-size="13">+ requireAdmin(): boolean</text>
+<text x="1002" y="2216" font-size="13">+ showMissing(subject)</text>
+<text x="1002" y="2235" font-size="13">+ finishAdminChange(message, opties)</text>
+<text x="1002" y="2254" font-size="13">+ openAdmin()</text>
+<text x="1002" y="2273" font-size="13">+ login(event)</text>
+<text x="1002" y="2292" font-size="13">+ logout()</text>
+<text x="1002" y="2311" font-size="13">+ closeAdmin()</text>
+<text x="1002" y="2330" font-size="13">+ startIdleWatch()</text>
+<text x="1002" y="2349" font-size="13">+ stopIdleWatch()</text>
+<text x="1002" y="2368" font-size="13">+ noteAdminActivity()</text>
+<text x="1002" y="2387" font-size="13">+ logoutIfIdle(now)</text>
+<text x="1002" y="2406" font-size="13">+ idleLogoutMessage(): string</text>
+<text x="1002" y="2425" font-size="13">+ switchTab(activeTab)</text>
+<text x="1002" y="2444" font-size="13">+ loadMoreAudit()</text>
+<text x="1002" y="2463" font-size="13">+ exportCsv()</text>
+<text x="1002" y="2482" font-size="13">+ wipeAllData()</text>
+<text x="1002" y="2501" font-size="13">+ toggleEmployee(employeeId)</text>
+<text x="1002" y="2520" font-size="13">+ removeEmployee(employeeId)</text>
+<text x="1002" y="2539" font-size="13">+ removeProduct(productId)</text>
+<text x="1002" y="2558" font-size="13">+ removeCompany(companyId)</text>
+<text x="1002" y="2577" font-size="13">+ removePoint(pointId)</text>
 </g>
 <g>
-<rect x="1465" y="1855" width="455" height="393" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1471,1855 H1914 A6,6 0 0 1 1920,1861 V1897 H1465 V1861 A6,6 0 0 1 1471,1855 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1692.5" y="1883" text-anchor="middle" font-size="17" class="kop">FaceController</text>
-<text x="1477" y="1917" font-size="13">+ app: RegistrationApp</text>
-<text x="1477" y="1936" font-size="13">+ faceSession: number</text>
-<text x="1477" y="1955" font-size="13">+ faceMode: string | null</text>
-<text x="1477" y="1974" font-size="13">+ faceEmployeeId: string | null</text>
-<text x="1477" y="1993" font-size="13">+ cameraReady: boolean</text>
-<text x="1477" y="2012" font-size="13">+ captureSession: number | null</text>
-<text x="1477" y="2031" font-size="13">+ enrollTimer: number | null</text>
-<text x="1477" y="2050" font-size="13">«get» capturing: boolean</text>
-<path d="M1465,2063 L1920,2063" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1477" y="2083" font-size="13">+ startFaceRecognition()</text>
-<text x="1477" y="2102" font-size="13">+ startFaceEnrollment()</text>
-<text x="1477" y="2121" font-size="13">+ forgetFace()</text>
-<text x="1477" y="2140" font-size="13">+ openFaceModal(mode, employeeId)</text>
-<text x="1477" y="2159" font-size="13">+ scanForFace(session)</text>
-<text x="1477" y="2178" font-size="13">+ scheduleEnrollTimeout(session)</text>
-<text x="1477" y="2197" font-size="13">+ captureEnrollment()</text>
-<text x="1477" y="2216" font-size="13">+ stopCameraAfterTimeout()</text>
-<text x="1477" y="2235" font-size="13">+ closeFaceModal()</text>
+<rect x="1465" y="1969" width="455" height="507" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1471,1969 H1914 A6,6 0 0 1 1920,1975 V2011 H1465 V1975 A6,6 0 0 1 1471,1969 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1692.5" y="1997" text-anchor="middle" font-size="17" class="kop">FaceController</text>
+<text x="1477" y="2031" font-size="13">+ app: RegistrationApp</text>
+<text x="1477" y="2050" font-size="13">+ faceSession: number</text>
+<text x="1477" y="2069" font-size="13">+ faceMode: string | null</text>
+<text x="1477" y="2088" font-size="13">+ faceEmployeeId: string | null</text>
+<text x="1477" y="2107" font-size="13">+ cameraReady: boolean</text>
+<text x="1477" y="2126" font-size="13">+ captureSession: number | null</text>
+<text x="1477" y="2145" font-size="13">+ enrollTimer: number | null</text>
+<text x="1477" y="2164" font-size="13">+ enrollContinuation: function | null</text>
+<text x="1477" y="2183" font-size="13">«get» capturing: boolean</text>
+<path d="M1465,2196 L1920,2196" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1477" y="2216" font-size="13">+ startFaceRecognition()</text>
+<text x="1477" y="2235" font-size="13">+ startWakeScan(): boolean</text>
+<text x="1477" y="2254" font-size="13">+ startFaceEnrollment()</text>
+<text x="1477" y="2273" font-size="13">+ startFaceEnrollmentFor(id, continuation)</text>
+<text x="1477" y="2292" font-size="13">+ forgetFace()</text>
+<text x="1477" y="2311" font-size="13">+ loadSavedFaces(now)</text>
+<text x="1477" y="2330" font-size="13">+ expireFaces(now): string[]</text>
+<text x="1477" y="2349" font-size="13">+ openFaceModal(mode, employeeId)</text>
+<text x="1477" y="2368" font-size="13">+ scanForFace(session, timeoutMs)</text>
+<text x="1477" y="2387" font-size="13">+ endWakeScan(message)</text>
+<text x="1477" y="2406" font-size="13">+ scheduleEnrollTimeout(session)</text>
+<text x="1477" y="2425" font-size="13">+ captureEnrollment()</text>
+<text x="1477" y="2444" font-size="13">+ stopCameraAfterTimeout()</text>
+<text x="1477" y="2463" font-size="13">+ closeFaceModal(opties)</text>
 </g>
 <g>
-<rect x="40" y="2516" width="455" height="241" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M46,2516 H489 A6,6 0 0 1 495,2522 V2558 H40 V2522 A6,6 0 0 1 46,2516 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="267.5" y="2544" text-anchor="middle" font-size="17" class="kop">BadgeController</text>
-<text x="52" y="2578" font-size="13" text-decoration="underline">+ CLOSE_WINDOW_FIRST: string</text>
-<text x="52" y="2597" font-size="13">+ app: RegistrationApp</text>
-<text x="52" y="2616" font-size="13">+ scanStart: object | null</text>
-<path d="M40,2629 L495,2629" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="52" y="2649" font-size="13">+ handleBadgeKey(event)</text>
-<text x="52" y="2668" font-size="13">+ rememberSearchBeforeScan()</text>
-<text x="52" y="2687" font-size="13">+ restoreSearchAfterScan()</text>
-<text x="52" y="2706" font-size="13">+ fillBadgeFieldAfterScan(code): boolean</text>
-<text x="52" y="2725" font-size="13">+ recognizeBadge(code)</text>
-<text x="52" y="2744" font-size="13">+ replaceProductWindow(employeeId)</text>
+<rect x="40" y="2630" width="455" height="241" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,2630 H489 A6,6 0 0 1 495,2636 V2672 H40 V2636 A6,6 0 0 1 46,2630 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="267.5" y="2658" text-anchor="middle" font-size="17" class="kop">BadgeController</text>
+<text x="52" y="2692" font-size="13" text-decoration="underline">+ CLOSE_WINDOW_FIRST: string</text>
+<text x="52" y="2711" font-size="13">+ app: RegistrationApp</text>
+<text x="52" y="2730" font-size="13">+ scanStart: object | null</text>
+<path d="M40,2743 L495,2743" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="2763" font-size="13">+ handleBadgeKey(event)</text>
+<text x="52" y="2782" font-size="13">+ rememberSearchBeforeScan()</text>
+<text x="52" y="2801" font-size="13">+ restoreSearchAfterScan()</text>
+<text x="52" y="2820" font-size="13">+ fillBadgeFieldAfterScan(code): boolean</text>
+<text x="52" y="2839" font-size="13">+ recognizeBadge(code)</text>
+<text x="52" y="2858" font-size="13">+ replaceProductWindow(employeeId)</text>
 </g>
 <g>
-<rect x="515" y="2516" width="455" height="298" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M521,2516 H964 A6,6 0 0 1 970,2522 V2558 H515 V2522 A6,6 0 0 1 521,2516 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="742.5" y="2544" text-anchor="middle" font-size="17" class="kop">CorrectionController</text>
-<text x="527" y="2578" font-size="13">+ app: RegistrationApp</text>
-<text x="527" y="2597" font-size="13">+ removalTarget: object | null</text>
-<path d="M515,2610 L970,2610" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="527" y="2630" font-size="13" text-decoration="underline">+ dateValue(date): string</text>
-<text x="527" y="2649" font-size="13">+ renderCorrectionList()</text>
-<text x="527" y="2668" font-size="13">+ resetCorrectionDate(now)</text>
-<text x="527" y="2687" font-size="13">+ readCorrectionDate(now)</text>
-<text x="527" y="2706" font-size="13">+ confirmOldMonthAddition(date, now)</text>
-<text x="527" y="2725" font-size="13">+ addCorrection(employeeId, productId, now)</text>
-<text x="527" y="2744" font-size="13">+ removeCorrection(employeeId, productId)</text>
-<text x="527" y="2763" font-size="13">+ removeChosenRegistration(registrationId)</text>
-<text x="527" y="2782" font-size="13">+ closeRemoveRegistration()</text>
-<text x="527" y="2801" font-size="13">+ confirmOldMonthRemoval(registration, now)</text>
+<rect x="515" y="2630" width="455" height="298" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M521,2630 H964 A6,6 0 0 1 970,2636 V2672 H515 V2636 A6,6 0 0 1 521,2630 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="742.5" y="2658" text-anchor="middle" font-size="17" class="kop">CorrectionController</text>
+<text x="527" y="2692" font-size="13">+ app: RegistrationApp</text>
+<text x="527" y="2711" font-size="13">+ removalTarget: object | null</text>
+<path d="M515,2724 L970,2724" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="527" y="2744" font-size="13" text-decoration="underline">+ dateValue(date): string</text>
+<text x="527" y="2763" font-size="13">+ renderCorrectionList()</text>
+<text x="527" y="2782" font-size="13">+ resetCorrectionDate(now)</text>
+<text x="527" y="2801" font-size="13">+ readCorrectionDate(now)</text>
+<text x="527" y="2820" font-size="13">+ confirmOldMonthAddition(date, now)</text>
+<text x="527" y="2839" font-size="13">+ addCorrection(employeeId, productId, now)</text>
+<text x="527" y="2858" font-size="13">+ removeCorrection(employeeId, productId)</text>
+<text x="527" y="2877" font-size="13">+ removeChosenRegistration(registrationId)</text>
+<text x="527" y="2896" font-size="13">+ closeRemoveRegistration()</text>
+<text x="527" y="2915" font-size="13">+ confirmOldMonthRemoval(registration, now)</text>
 </g>
 <g>
-<rect x="990" y="2516" width="455" height="203" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M996,2516 H1439 A6,6 0 0 1 1445,2522 V2558 H990 V2522 A6,6 0 0 1 996,2516 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1217.5" y="2544" text-anchor="middle" font-size="17" class="kop">StockController</text>
-<text x="1002" y="2578" font-size="13">+ app: RegistrationApp</text>
-<text x="1002" y="2597" font-size="13">+ lastDelivery: object | null</text>
-<path d="M990,2610 L1445,2610" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1002" y="2630" font-size="13">+ showStockPoint(pointId)</text>
-<text x="1002" y="2649" font-size="13">+ isTypingInStockTable(): boolean</text>
-<text x="1002" y="2668" font-size="13">+ isRepeatedDeliveryTap(productId, now)</text>
-<text x="1002" y="2687" font-size="13">+ bookDelivery(productId)</text>
-<text x="1002" y="2706" font-size="13">+ saveStockField(input)</text>
+<rect x="990" y="2630" width="455" height="203" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M996,2630 H1439 A6,6 0 0 1 1445,2636 V2672 H990 V2636 A6,6 0 0 1 996,2630 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1217.5" y="2658" text-anchor="middle" font-size="17" class="kop">StockController</text>
+<text x="1002" y="2692" font-size="13">+ app: RegistrationApp</text>
+<text x="1002" y="2711" font-size="13">+ lastDelivery: object | null</text>
+<path d="M990,2724 L1445,2724" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1002" y="2744" font-size="13">+ showStockPoint(pointId)</text>
+<text x="1002" y="2763" font-size="13">+ isTypingInStockTable(): boolean</text>
+<text x="1002" y="2782" font-size="13">+ isRepeatedDeliveryTap(productId, now)</text>
+<text x="1002" y="2801" font-size="13">+ bookDelivery(productId)</text>
+<text x="1002" y="2820" font-size="13">+ saveStockField(input)</text>
 </g>
 <g>
-<rect x="1465" y="2516" width="455" height="317" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1471,2516 H1914 A6,6 0 0 1 1920,2522 V2558 H1465 V2522 A6,6 0 0 1 1471,2516 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1692.5" y="2544" text-anchor="middle" font-size="17" class="kop">FormController</text>
-<text x="1477" y="2578" font-size="13">+ app: RegistrationApp</text>
-<text x="1477" y="2597" font-size="13">+ editingCopies: Map</text>
-<path d="M1465,2610 L1920,2610" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1477" y="2630" font-size="13" text-decoration="underline">+ isValidPrice(value): boolean</text>
-<text x="1477" y="2649" font-size="13" text-decoration="underline">+ isDigitsOnly(value): boolean</text>
-<text x="1477" y="2668" font-size="13">+ validateRequiredFields(form): boolean</text>
-<text x="1477" y="2687" font-size="13">+ closeStaleForms()</text>
-<text x="1477" y="2706" font-size="13">+ openEmployeeForm()</text>
-<text x="1477" y="2725" font-size="13">+ saveEmployee(event)</text>
-<text x="1477" y="2744" font-size="13">+ validateBadgeField(badgeId, editingId)</text>
-<text x="1477" y="2763" font-size="13">+ validateEmployeeAssignment(opties)</text>
-<text x="1477" y="2782" font-size="13">+ saveProduct(event)</text>
-<text x="1477" y="2801" font-size="13">+ saveCompany(event)</text>
-<text x="1477" y="2820" font-size="13">+ savePoint(event)</text>
+<rect x="1465" y="2630" width="455" height="317" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1471,2630 H1914 A6,6 0 0 1 1920,2636 V2672 H1465 V2636 A6,6 0 0 1 1471,2630 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1692.5" y="2658" text-anchor="middle" font-size="17" class="kop">FormController</text>
+<text x="1477" y="2692" font-size="13">+ app: RegistrationApp</text>
+<text x="1477" y="2711" font-size="13">+ editingCopies: Map</text>
+<path d="M1465,2724 L1920,2724" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1477" y="2744" font-size="13" text-decoration="underline">+ isValidPrice(value): boolean</text>
+<text x="1477" y="2763" font-size="13" text-decoration="underline">+ isDigitsOnly(value): boolean</text>
+<text x="1477" y="2782" font-size="13">+ validateRequiredFields(form): boolean</text>
+<text x="1477" y="2801" font-size="13">+ closeStaleForms()</text>
+<text x="1477" y="2820" font-size="13">+ openEmployeeForm()</text>
+<text x="1477" y="2839" font-size="13">+ saveEmployee(event)</text>
+<text x="1477" y="2858" font-size="13">+ validateBadgeField(badgeId, editingId)</text>
+<text x="1477" y="2877" font-size="13">+ validateEmployeeAssignment(opties)</text>
+<text x="1477" y="2896" font-size="13">+ saveProduct(event)</text>
+<text x="1477" y="2915" font-size="13">+ saveCompany(event)</text>
+<text x="1477" y="2934" font-size="13">+ savePoint(event)</text>
 </g>
+<g>
+<rect x="40" y="2987" width="455" height="412" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,2987 H489 A6,6 0 0 1 495,2993 V3029 H40 V2993 A6,6 0 0 1 46,2987 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="267.5" y="3015" text-anchor="middle" font-size="17" class="kop">RecognitionController</text>
+<text x="52" y="3049" font-size="13" text-decoration="underline">+ OFFER_TITLES: object</text>
+<text x="52" y="3068" font-size="13" text-decoration="underline">+ OFFER_HELP: string</text>
+<text x="52" y="3087" font-size="13">+ app: RegistrationApp</text>
+<text x="52" y="3106" font-size="13">+ clock: object</text>
+<text x="52" y="3125" font-size="13">+ recognitionTargetSetting: string</text>
+<text x="52" y="3144" font-size="13">+ offerEmployeeId: string | null</text>
+<text x="52" y="3163" font-size="13">+ offerHow: string | null</text>
+<text x="52" y="3182" font-size="13">+ offerKind: string | null</text>
+<text x="52" y="3201" font-size="13">«get» offerSettings: object (FACE_DEMO)</text>
+<path d="M40,3214 L495,3214" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="3234" font-size="13">+ recognitionTarget(employeeId): string</text>
+<text x="52" y="3253" font-size="13">+ afterRecognition(employeeId, how)</text>
+<text x="52" y="3272" font-size="13">+ continueAfterRecognition(employeeId, how)</text>
+<text x="52" y="3291" font-size="13">+ shouldOfferFace(employeeId, now): string | null</text>
+<text x="52" y="3310" font-size="13">+ openFaceOffer(employeeId, how, kind)</text>
+<text x="52" y="3329" font-size="13">+ acceptFaceOffer()</text>
+<text x="52" y="3348" font-size="13">+ declineFaceOffer()</text>
+<text x="52" y="3367" font-size="13">+ dismissFaceOffer()</text>
+<text x="52" y="3386" font-size="13">+ closeFaceOfferIfIdle(now): boolean</text>
+</g>
+<g>
+<rect x="515" y="2987" width="455" height="393" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M521,2987 H964 A6,6 0 0 1 970,2993 V3029 H515 V2993 A6,6 0 0 1 521,2987 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="742.5" y="3015" text-anchor="middle" font-size="17" class="kop">StandbyController</text>
+<text x="527" y="3049" font-size="13" text-decoration="underline">+ TICK_MS: number</text>
+<text x="527" y="3068" font-size="13" text-decoration="underline">+ GHOST_CLICK_MS: number</text>
+<text x="527" y="3087" font-size="13">+ app: RegistrationApp</text>
+<text x="527" y="3106" font-size="13">+ clock: object</text>
+<text x="527" y="3125" font-size="13">+ standbySettings: object (STANDBY)</text>
+<text x="527" y="3144" font-size="13">+ standbyActive: boolean</text>
+<text x="527" y="3163" font-size="13">+ lastStandbyActivity: number | null</text>
+<text x="527" y="3182" font-size="13">+ standbyWokeAt: number</text>
+<path d="M515,3195 L970,3195" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="527" y="3215" font-size="13">+ startStandbyWatch()</text>
+<text x="527" y="3234" font-size="13">+ tickStandby(now): boolean</text>
+<text x="527" y="3253" font-size="13">+ noteStandbyActivity(now)</text>
+<text x="527" y="3272" font-size="13">+ checkStandby(now): boolean</text>
+<text x="527" y="3291" font-size="13">+ enterStandby()</text>
+<text x="527" y="3310" font-size="13">+ wakeFromStandby({ scan }): boolean</text>
+<text x="527" y="3329" font-size="13">+ handleStandbyTap(event)</text>
+<text x="527" y="3348" font-size="13">+ handleStandbyKey(event)</text>
+<text x="527" y="3367" font-size="13">+ swallowStandbyGhostClick(event): boolean</text>
+</g>
+<path d="M1455,2610 V2967 H267.5" class="lijn"/>
+<path d="M267.5,2967 V2985" class="lijn" marker-end="url(#open)"/>
+<path d="M742.5,2967 V2985" class="lijn" marker-end="url(#open)"/>
+<text x="990" y="3027" font-size="17" class="kop">Herkennen en standby (sinds versie 3.17)</text>
+<text x="990" y="3049" font-size="13" class="sub">RecognitionController opent na de pas of de camera de koelkast of het productvenster</text>
+<text x="990" y="3067" font-size="13" class="sub">(RECOGNITION_TARGET) en stelt na een passcan de vraag over gezichtsherkenning.</text>
+<text x="990" y="3085" font-size="13" class="sub">StandbyController dimt het scherm en start na een tik de scan (FaceController).</text>
+<text x="990" y="3103" font-size="13" class="sub">De camera gaat alleen na een tik aan. Beide krijgen de klok (clock).</text>
 <!-- Slimme koelkast -->
 <g>
-<rect x="40" y="2953" width="430" height="526" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M46,2953 H464 A6,6 0 0 1 470,2959 V2995 H40 V2959 A6,6 0 0 1 46,2953 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="255" y="2981" text-anchor="middle" font-size="17" class="kop">FridgeController</text>
-<text x="52" y="3015" font-size="13" text-decoration="underline">+ TICK_MS: number</text>
-<text x="52" y="3034" font-size="13" text-decoration="underline">+ MESSAGES: object</text>
-<text x="52" y="3053" font-size="13">+ app: RegistrationApp</text>
-<text x="52" y="3072" font-size="13">+ clock: object</text>
-<text x="52" y="3091" font-size="13">+ settings: object (SMART_FRIDGE)</text>
-<text x="52" y="3110" font-size="13">+ fridgePhase: string</text>
-<text x="52" y="3129" font-size="13">+ fridgeEmployeeId: string | null</text>
-<text x="52" y="3148" font-size="13">+ fridgeHeld: object</text>
-<text x="52" y="3167" font-size="13">+ fridgeResult: object | null</text>
-<text x="52" y="3186" font-size="13">«get» smartFridge: SmartFridge</text>
-<path d="M40,3199 L470,3199" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="52" y="3219" font-size="13">+ openFridgeWindow()</text>
-<text x="52" y="3238" font-size="13">+ fridgeScan(code): boolean</text>
-<text x="52" y="3257" font-size="13">+ openFridgeForDemo(): boolean</text>
-<text x="52" y="3276" font-size="13">+ startFridgeOpening(employeeId): boolean</text>
-<text x="52" y="3295" font-size="13">+ stockSimulatedShelves(pointId, layout)</text>
-<text x="52" y="3314" font-size="13">+ takeFromShelf(shelf)</text>
-<text x="52" y="3333" font-size="13">+ returnToShelf(shelf)</text>
-<text x="52" y="3352" font-size="13">+ addForeignWeight(shelf)</text>
-<text x="52" y="3371" font-size="13">+ closeFridgeDoor(opties): boolean</text>
-<text x="52" y="3390" font-size="13">+ openingAudit(result): object</text>
-<text x="52" y="3409" font-size="13">+ closeFridgeWindow()</text>
-<text x="52" y="3428" font-size="13">+ finishFridgeWindow()</text>
-<text x="52" y="3447" font-size="13">+ checkFridgeTimers(now): boolean</text>
-<text x="52" y="3466" font-size="13">+ saveFridgeShelves(event): boolean</text>
+<rect x="40" y="3519" width="430" height="583" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,3519 H464 A6,6 0 0 1 470,3525 V3561 H40 V3525 A6,6 0 0 1 46,3519 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="255" y="3547" text-anchor="middle" font-size="17" class="kop">FridgeController</text>
+<text x="52" y="3581" font-size="13" text-decoration="underline">+ TICK_MS: number</text>
+<text x="52" y="3600" font-size="13" text-decoration="underline">+ MESSAGES: object</text>
+<text x="52" y="3619" font-size="13">+ app: RegistrationApp</text>
+<text x="52" y="3638" font-size="13">+ clock: object</text>
+<text x="52" y="3657" font-size="13">+ settings: object (SMART_FRIDGE)</text>
+<text x="52" y="3676" font-size="13">+ fridgePhase: string</text>
+<text x="52" y="3695" font-size="13">+ fridgeEmployeeId: string | null</text>
+<text x="52" y="3714" font-size="13">+ fridgeHeld: object</text>
+<text x="52" y="3733" font-size="13">+ fridgeResult: object | null</text>
+<text x="52" y="3752" font-size="13">«get» smartFridge: SmartFridge</text>
+<path d="M40,3765 L470,3765" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="3785" font-size="13">+ openFridgeWindow()</text>
+<text x="52" y="3804" font-size="13">+ fridgeScan(code): boolean</text>
+<text x="52" y="3823" font-size="13">+ canOpenFridgeFor(employeeId): boolean</text>
+<text x="52" y="3842" font-size="13">+ openFridgeFor(employeeId, how): boolean</text>
+<text x="52" y="3861" font-size="13">+ switchFridgeToProducts(): boolean</text>
+<text x="52" y="3880" font-size="13">+ openFridgeForDemo(): boolean</text>
+<text x="52" y="3899" font-size="13">+ startFridgeOpening(employeeId): boolean</text>
+<text x="52" y="3918" font-size="13">+ stockSimulatedShelves(pointId, layout)</text>
+<text x="52" y="3937" font-size="13">+ takeFromShelf(shelf)</text>
+<text x="52" y="3956" font-size="13">+ returnToShelf(shelf)</text>
+<text x="52" y="3975" font-size="13">+ addForeignWeight(shelf)</text>
+<text x="52" y="3994" font-size="13">+ closeFridgeDoor(opties): boolean</text>
+<text x="52" y="4013" font-size="13">+ openingAudit(result): object</text>
+<text x="52" y="4032" font-size="13">+ closeFridgeWindow()</text>
+<text x="52" y="4051" font-size="13">+ finishFridgeWindow()</text>
+<text x="52" y="4070" font-size="13">+ checkFridgeTimers(now): boolean</text>
+<text x="52" y="4089" font-size="13">+ saveFridgeShelves(event): boolean</text>
 </g>
 <g>
-<rect x="40" y="3519" width="430" height="198" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M46,3519 H464 A6,6 0 0 1 470,3525 V3575 H40 V3525 A6,6 0 0 1 46,3519 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="255" y="3540" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«deel van RegistrationView»</text>
-<text x="255" y="3563" text-anchor="middle" font-size="17" class="kop">FridgeView</text>
-<text x="52" y="3595" font-size="13">+ view: RegistrationView</text>
-<path d="M40,3608 L470,3608" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="52" y="3628" font-size="13">+ renderFridgeWindow(state)</text>
-<text x="52" y="3647" font-size="13">+ setFridgeStatus(text, tone)</text>
-<text x="52" y="3666" font-size="13">+ announceFridge(text)</text>
-<text x="52" y="3685" font-size="13">+ setDoorWarning(shown)</text>
-<text x="52" y="3704" font-size="13">+ renderFridgeAdmin()</text>
+<rect x="40" y="4142" width="430" height="198" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M46,4142 H464 A6,6 0 0 1 470,4148 V4198 H40 V4148 A6,6 0 0 1 46,4142 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="255" y="4163" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«deel van RegistrationView»</text>
+<text x="255" y="4186" text-anchor="middle" font-size="17" class="kop">FridgeView</text>
+<text x="52" y="4218" font-size="13">+ view: RegistrationView</text>
+<path d="M40,4231 L470,4231" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="52" y="4251" font-size="13">+ renderFridgeWindow(state)</text>
+<text x="52" y="4270" font-size="13">+ setFridgeStatus(text, tone)</text>
+<text x="52" y="4289" font-size="13">+ announceFridge(text)</text>
+<text x="52" y="4308" font-size="13">+ setDoorWarning(shown)</text>
+<text x="52" y="4327" font-size="13">+ renderFridgeAdmin()</text>
 </g>
 <g>
-<rect x="560" y="2953" width="420" height="450" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M566,2953 H974 A6,6 0 0 1 980,2959 V2995 H560 V2959 A6,6 0 0 1 566,2953 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="770" y="2981" text-anchor="middle" font-size="17" class="kop">SmartFridge</text>
-<text x="572" y="3015" font-size="13">+ lock: FridgeLock</text>
-<text x="572" y="3034" font-size="13">+ scales: ShelfScale[]</text>
-<text x="572" y="3053" font-size="13">+ settings: object (SMART_FRIDGE)</text>
-<text x="572" y="3072" font-size="13">+ clock: object</text>
-<text x="572" y="3091" font-size="13">+ opening: object | null</text>
-<text x="572" y="3110" font-size="13">+ onNotOpened: (employeeId) =&gt; void</text>
-<path d="M560,3123 L980,3123" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="572" y="3143" font-size="13" text-decoration="underline">+ createSimulated(settings, opties)</text>
-<text x="572" y="3162" font-size="13" text-decoration="underline">+ countShelf(removed, unitWeight, settings)</text>
-<text x="572" y="3181" font-size="13" text-decoration="underline">+ evaluate(layout, before, after, settings)</text>
-<text x="572" y="3200" font-size="13" text-decoration="underline">+ takenProducts(shelves): object</text>
-<text x="572" y="3219" font-size="13" text-decoration="underline">+ statusOf(shelves, longOpen): string</text>
-<text x="572" y="3238" font-size="13" text-decoration="underline">+ issueText(shelf, productName): string</text>
-<text x="572" y="3257" font-size="13">+ isEnabled(): boolean</text>
-<text x="572" y="3276" font-size="13">+ scale(shelf): ShelfScale</text>
-<text x="572" y="3295" font-size="13">+ start(employeeId, pointId, layout): boolean</text>
-<text x="572" y="3314" font-size="13">+ openDoor()</text>
-<text x="572" y="3333" font-size="13">+ finish(): object | null</text>
-<text x="572" y="3352" font-size="13">+ abort()</text>
-<text x="572" y="3371" font-size="13">+ doorOpenMs(now): number</text>
-<text x="572" y="3390" font-size="13">+ isOpen(): boolean</text>
+<rect x="560" y="3519" width="420" height="450" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M566,3519 H974 A6,6 0 0 1 980,3525 V3561 H560 V3525 A6,6 0 0 1 566,3519 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="770" y="3547" text-anchor="middle" font-size="17" class="kop">SmartFridge</text>
+<text x="572" y="3581" font-size="13">+ lock: FridgeLock</text>
+<text x="572" y="3600" font-size="13">+ scales: ShelfScale[]</text>
+<text x="572" y="3619" font-size="13">+ settings: object (SMART_FRIDGE)</text>
+<text x="572" y="3638" font-size="13">+ clock: object</text>
+<text x="572" y="3657" font-size="13">+ opening: object | null</text>
+<text x="572" y="3676" font-size="13">+ onNotOpened: (employeeId) =&gt; void</text>
+<path d="M560,3689 L980,3689" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="572" y="3709" font-size="13" text-decoration="underline">+ createSimulated(settings, opties)</text>
+<text x="572" y="3728" font-size="13" text-decoration="underline">+ countShelf(removed, unitWeight, settings)</text>
+<text x="572" y="3747" font-size="13" text-decoration="underline">+ evaluate(layout, before, after, settings)</text>
+<text x="572" y="3766" font-size="13" text-decoration="underline">+ takenProducts(shelves): object</text>
+<text x="572" y="3785" font-size="13" text-decoration="underline">+ statusOf(shelves, longOpen): string</text>
+<text x="572" y="3804" font-size="13" text-decoration="underline">+ issueText(shelf, productName): string</text>
+<text x="572" y="3823" font-size="13">+ isEnabled(): boolean</text>
+<text x="572" y="3842" font-size="13">+ scale(shelf): ShelfScale</text>
+<text x="572" y="3861" font-size="13">+ start(employeeId, pointId, layout): boolean</text>
+<text x="572" y="3880" font-size="13">+ openDoor()</text>
+<text x="572" y="3899" font-size="13">+ finish(): object | null</text>
+<text x="572" y="3918" font-size="13">+ abort()</text>
+<text x="572" y="3937" font-size="13">+ doorOpenMs(now): number</text>
+<text x="572" y="3956" font-size="13">+ isOpen(): boolean</text>
 </g>
 <g>
-<rect x="1070" y="2953" width="400" height="179" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1076,2953 H1464 A6,6 0 0 1 1470,2959 V3009 H1070 V2959 A6,6 0 0 1 1076,2953 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1270" y="2974" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«interface»</text>
-<text x="1270" y="2997" text-anchor="middle" font-size="17" class="kop">FridgeLock</text>
-<text x="1082" y="3029" font-size="13">+ onAutoLock: () =&gt; void</text>
-<path d="M1070,3042 L1470,3042" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1082" y="3062" font-size="13">+ unlock()</text>
-<text x="1082" y="3081" font-size="13">+ lock()</text>
-<text x="1082" y="3100" font-size="13">+ cancelAutoLock()</text>
-<text x="1082" y="3119" font-size="13">+ isLocked(): boolean</text>
+<rect x="1070" y="3519" width="400" height="179" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1076,3519 H1464 A6,6 0 0 1 1470,3525 V3575 H1070 V3525 A6,6 0 0 1 1076,3519 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1270" y="3540" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«interface»</text>
+<text x="1270" y="3563" text-anchor="middle" font-size="17" class="kop">FridgeLock</text>
+<text x="1082" y="3595" font-size="13">+ onAutoLock: () =&gt; void</text>
+<path d="M1070,3608 L1470,3608" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1082" y="3628" font-size="13">+ unlock()</text>
+<text x="1082" y="3647" font-size="13">+ lock()</text>
+<text x="1082" y="3666" font-size="13">+ cancelAutoLock()</text>
+<text x="1082" y="3685" font-size="13">+ isLocked(): boolean</text>
 </g>
 <g>
-<rect x="1530" y="2953" width="400" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1536,2953 H1924 A6,6 0 0 1 1930,2959 V2995 H1530 V2959 A6,6 0 0 1 1536,2953 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1730" y="2981" text-anchor="middle" font-size="17" class="kop">SimulatedLock</text>
-<text x="1542" y="3015" font-size="13">+ autoLockMs: number</text>
-<text x="1542" y="3034" font-size="13">+ clock: object</text>
-<text x="1542" y="3053" font-size="13">+ status: string</text>
-<text x="1542" y="3072" font-size="13">+ autoLockTimer: number | null</text>
-<path d="M1530,3085 L1930,3085" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1542" y="3105" font-size="13" text-decoration="underline">+ realClock(): object</text>
-<text x="1542" y="3124" font-size="13">+ unlock()</text>
-<text x="1542" y="3143" font-size="13">+ autoLock()</text>
-<text x="1542" y="3162" font-size="13">+ cancelAutoLock()</text>
-<text x="1542" y="3181" font-size="13">+ lock()</text>
-<text x="1542" y="3200" font-size="13">+ isLocked(): boolean</text>
+<rect x="1530" y="3519" width="400" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1536,3519 H1924 A6,6 0 0 1 1930,3525 V3561 H1530 V3525 A6,6 0 0 1 1536,3519 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1730" y="3547" text-anchor="middle" font-size="17" class="kop">SimulatedLock</text>
+<text x="1542" y="3581" font-size="13">+ autoLockMs: number</text>
+<text x="1542" y="3600" font-size="13">+ clock: object</text>
+<text x="1542" y="3619" font-size="13">+ status: string</text>
+<text x="1542" y="3638" font-size="13">+ autoLockTimer: number | null</text>
+<path d="M1530,3651 L1930,3651" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1542" y="3671" font-size="13" text-decoration="underline">+ realClock(): object</text>
+<text x="1542" y="3690" font-size="13">+ unlock()</text>
+<text x="1542" y="3709" font-size="13">+ autoLock()</text>
+<text x="1542" y="3728" font-size="13">+ cancelAutoLock()</text>
+<text x="1542" y="3747" font-size="13">+ lock()</text>
+<text x="1542" y="3766" font-size="13">+ isLocked(): boolean</text>
 </g>
 <g>
-<rect x="1070" y="3263" width="400" height="122" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1076,3263 H1464 A6,6 0 0 1 1470,3269 V3319 H1070 V3269 A6,6 0 0 1 1076,3263 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1270" y="3284" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«interface»</text>
-<text x="1270" y="3307" text-anchor="middle" font-size="17" class="kop">ShelfScale</text>
-<text x="1082" y="3339" font-size="13">+ shelf: number</text>
-<path d="M1070,3352 L1470,3352" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1082" y="3372" font-size="13">+ read(): number</text>
+<rect x="1070" y="3829" width="400" height="122" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1076,3829 H1464 A6,6 0 0 1 1470,3835 V3885 H1070 V3835 A6,6 0 0 1 1076,3829 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1270" y="3850" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«interface»</text>
+<text x="1270" y="3873" text-anchor="middle" font-size="17" class="kop">ShelfScale</text>
+<text x="1082" y="3905" font-size="13">+ shelf: number</text>
+<path d="M1070,3918 L1470,3918" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1082" y="3938" font-size="13">+ read(): number</text>
 </g>
 <g>
-<rect x="1530" y="3263" width="400" height="241" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
-<path d="M1536,3263 H1924 A6,6 0 0 1 1930,3269 V3305 H1530 V3269 A6,6 0 0 1 1536,3263 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="1730" y="3291" text-anchor="middle" font-size="17" class="kop">SimulatedShelfScale</text>
-<text x="1542" y="3325" font-size="13">+ random: () =&gt; number</text>
-<text x="1542" y="3344" font-size="13">+ items: number[]</text>
-<text x="1542" y="3363" font-size="13">+ extraWeight: number</text>
-<path d="M1530,3376 L1930,3376" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1542" y="3396" font-size="13">+ fill(count, unitWeight, variation)</text>
-<text x="1542" y="3415" font-size="13">+ itemCount(): number</text>
-<text x="1542" y="3434" font-size="13">+ takeItem(): number | null</text>
-<text x="1542" y="3453" font-size="13">+ returnItem(weight)</text>
-<text x="1542" y="3472" font-size="13">+ addWeight(grams)</text>
-<text x="1542" y="3491" font-size="13">+ read(): number</text>
+<rect x="1530" y="3829" width="400" height="241" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1536,3829 H1924 A6,6 0 0 1 1930,3835 V3871 H1530 V3835 A6,6 0 0 1 1536,3829 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1730" y="3857" text-anchor="middle" font-size="17" class="kop">SimulatedShelfScale</text>
+<text x="1542" y="3891" font-size="13">+ random: () =&gt; number</text>
+<text x="1542" y="3910" font-size="13">+ items: number[]</text>
+<text x="1542" y="3929" font-size="13">+ extraWeight: number</text>
+<path d="M1530,3942 L1930,3942" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1542" y="3962" font-size="13">+ fill(count, unitWeight, variation)</text>
+<text x="1542" y="3981" font-size="13">+ itemCount(): number</text>
+<text x="1542" y="4000" font-size="13">+ takeItem(): number | null</text>
+<text x="1542" y="4019" font-size="13">+ returnItem(weight)</text>
+<text x="1542" y="4038" font-size="13">+ addWeight(grams)</text>
+<text x="1542" y="4057" font-size="13">+ read(): number</text>
 </g>
-<path d="M1455,2496 V2857 H255" class="lijn"/>
-<path d="M255,2857 V2951" class="lijn" marker-end="url(#open)"/>
-<text x="560" y="2899" font-size="17" class="kop">Slimme koelkast (demo, sinds versie 3.14)</text>
-<text x="560" y="2921" font-size="13" class="sub">FridgeController is het negende onderdeel. In productie worden alleen SimulatedLock en SimulatedShelfScale vervangen (via de backend).</text>
+<path d="M1455,2967 V3423 H255" class="lijn"/>
+<path d="M255,3423 V3517" class="lijn" marker-end="url(#open)"/>
+<text x="560" y="3465" font-size="17" class="kop">Slimme koelkast (demo, sinds versie 3.14)</text>
+<text x="560" y="3487" font-size="13" class="sub">FridgeController is het negende onderdeel. In productie worden alleen SimulatedLock en SimulatedShelfScale vervangen (via de backend).</text>
 <defs><marker id="erft" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="14" markerHeight="14" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M1,1 L13,7 L1,13 z" fill="#ffffff" stroke="#163540" stroke-width="1.4"/></marker></defs>
-<path d="M470,3023 H558" class="lijn" marker-end="url(#open)"/>
-<text x="478" y="3015" font-size="13" class="lbl">smartFridge</text>
-<text x="478" y="3045" font-size="13" class="lbl">1</text>
-<path d="M980,3023 H1068" class="lijn" marker-end="url(#open)"/>
-<text x="990" y="3015" font-size="13" class="lbl">lock</text>
-<text x="990" y="3045" font-size="13" class="lbl">1</text>
-<path d="M980,3313 H1068" class="lijn" marker-end="url(#open)"/>
-<text x="990" y="3305" font-size="13" class="lbl">scales</text>
-<text x="990" y="3335" font-size="13" class="lbl">1..*</text>
-<path d="M1530,3023 H1472" class="lijn" marker-end="url(#erft)"/>
-<path d="M1530,3313 H1472" class="lijn" marker-end="url(#erft)"/>
+<path d="M470,3589 H558" class="lijn" marker-end="url(#open)"/>
+<text x="478" y="3581" font-size="13" class="lbl">smartFridge</text>
+<text x="478" y="3611" font-size="13" class="lbl">1</text>
+<path d="M980,3589 H1068" class="lijn" marker-end="url(#open)"/>
+<text x="990" y="3581" font-size="13" class="lbl">lock</text>
+<text x="990" y="3611" font-size="13" class="lbl">1</text>
+<path d="M980,3879 H1068" class="lijn" marker-end="url(#open)"/>
+<text x="990" y="3871" font-size="13" class="lbl">scales</text>
+<text x="990" y="3901" font-size="13" class="lbl">1..*</text>
+<path d="M1530,3589 H1472" class="lijn" marker-end="url(#erft)"/>
+<path d="M1530,3879 H1472" class="lijn" marker-end="url(#erft)"/>
 <!-- «create»-afhankelijkheden vanuit main.js -->
 <path d="M960,204 V210" class="stip"/>
 <path d="M200,210 H1940" class="stip"/>
@@ -577,7 +654,7 @@
 <path d="M1720,210 V248" class="stip" marker-end="url(#open)"/>
 <path d="M390,210 V810 H200 V838" class="stip" marker-end="url(#open)"/>
 <path d="M920,210 V810 H760 V838" class="stip" marker-end="url(#open)"/>
-<path d="M1940,210 V1234 H1240 V1193" class="stip" marker-end="url(#open)"/>
+<path d="M1940,210 V1234 H1240 V1231" class="stip" marker-end="url(#open)"/>
 <path d="M1940,890 H1922" class="stip" marker-end="url(#open)"/>
 <!-- Associaties -->
 <path d="M940,430 H842" class="lijn" marker-end="url(#open)"/>
@@ -589,41 +666,41 @@
 <path d="M1420,870 H1518" class="lijn" marker-end="url(#open)"/>
 <text x="1512" y="862" text-anchor="end" font-size="13" class="lbl">badgeReader</text>
 <text x="1512" y="888" text-anchor="end" font-size="13" class="lbl">1</text>
-<path d="M1140,928 V986" class="lijn" marker-end="url(#open)"/>
-<text x="1150" y="953" font-size="13" class="lbl">csvExport</text>
-<text x="1150" y="971" font-size="13" class="lbl">1</text>
+<path d="M1140,966 V1024" class="lijn" marker-end="url(#open)"/>
+<text x="1150" y="991" font-size="13" class="lbl">csvExport</text>
+<text x="1150" y="1009" font-size="13" class="lbl">1</text>
 <path d="M940,860 H842" class="lijn" marker-end="url(#open)"/>
 <text x="850" y="852" font-size="13" class="lbl">model</text>
 <text x="850" y="878" font-size="13" class="lbl">1</text>
 <path d="M630,795 V838" class="lijn" marker-end="url(#open)"/>
 <text x="640" y="819" font-size="13" class="lbl">model</text>
 <text x="640" y="837" font-size="13" class="lbl">1</text>
-<path d="M940,1098 H842" class="lijn" marker-end="url(#open)"/>
-<text x="850" y="1090" font-size="13" class="lbl">model</text>
-<text x="850" y="1116" font-size="13" class="lbl">1</text>
+<path d="M940,1136 H842" class="lijn" marker-end="url(#open)"/>
+<text x="850" y="1128" font-size="13" class="lbl">model</text>
+<text x="850" y="1154" font-size="13" class="lbl">1</text>
 <path d="M420,990 H362" class="lijn" marker-end="url(#open)"/>
 <text x="412" y="982" text-anchor="end" font-size="13" class="lbl">store</text>
 <text x="412" y="1008" text-anchor="end" font-size="13" class="lbl">1</text>
 <!-- Compositie met de onderdelen -->
 <defs><marker id="ruit" viewBox="0 0 16 10" refX="15" refY="5" markerWidth="16" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M1,5 L8,1 L15,5 L8,9 z" fill="#163540"/></marker></defs>
-<path d="M1400,928 V1815" class="lijn" marker-start="url(#ruit)"/>
-<text x="1410" y="1797" font-size="13" class="lbl">9 onderdelen</text>
-<path d="M267.5,1815 H1692.5" class="lijn"/>
-<path d="M267.5,1815 V1853" class="lijn" marker-end="url(#open)"/>
-<path d="M742.5,1815 V1853" class="lijn" marker-end="url(#open)"/>
-<path d="M1217.5,1815 V1853" class="lijn" marker-end="url(#open)"/>
-<path d="M1692.5,1815 V1853" class="lijn" marker-end="url(#open)"/>
-<path d="M1455,1815 V2496" class="lijn"/>
-<path d="M267.5,2496 H1692.5" class="lijn"/>
-<path d="M267.5,2496 V2514" class="lijn" marker-end="url(#open)"/>
-<path d="M742.5,2496 V2514" class="lijn" marker-end="url(#open)"/>
-<path d="M1217.5,2496 V2514" class="lijn" marker-end="url(#open)"/>
-<path d="M1692.5,2496 V2514" class="lijn" marker-end="url(#open)"/>
-<text x="40" y="1765" font-size="17" class="kop">Onderdelen van de controller (sinds versie 3.8)</text>
-<text x="40" y="1785" font-size="13" class="sub">RegistrationApp maakt ze en geeft zichzelf mee (app). EmployeeController en AdminController krijgen ook de klok (clock).</text>
+<path d="M1400,966 V1929" class="lijn" marker-start="url(#ruit)"/>
+<text x="1410" y="1911" font-size="13" class="lbl">11 onderdelen</text>
+<path d="M267.5,1929 H1692.5" class="lijn"/>
+<path d="M267.5,1929 V1967" class="lijn" marker-end="url(#open)"/>
+<path d="M742.5,1929 V1967" class="lijn" marker-end="url(#open)"/>
+<path d="M1217.5,1929 V1967" class="lijn" marker-end="url(#open)"/>
+<path d="M1692.5,1929 V1967" class="lijn" marker-end="url(#open)"/>
+<path d="M1455,1929 V2610" class="lijn"/>
+<path d="M267.5,2610 H1692.5" class="lijn"/>
+<path d="M267.5,2610 V2628" class="lijn" marker-end="url(#open)"/>
+<path d="M742.5,2610 V2628" class="lijn" marker-end="url(#open)"/>
+<path d="M1217.5,2610 V2628" class="lijn" marker-end="url(#open)"/>
+<path d="M1692.5,2610 V2628" class="lijn" marker-end="url(#open)"/>
+<text x="40" y="1879" font-size="17" class="kop">Onderdelen van de controller (sinds versie 3.8)</text>
+<text x="40" y="1899" font-size="13" class="sub">RegistrationApp maakt ze en geeft zichzelf mee (app). EmployeeController en AdminController krijgen ook de klok (clock).</text>
 <!-- Modules zonder class -->
 <g>
-<rect x="1520" y="1264" width="400" height="279" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<rect x="1520" y="1264" width="400" height="317" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
 <path d="M1526,1264 H1914 A6,6 0 0 1 1920,1270 V1320 H1520 V1270 A6,6 0 0 1 1526,1264 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
 <text x="1720" y="1285" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
 <text x="1720" y="1308" text-anchor="middle" font-size="17" class="kop">config.js</text>
@@ -632,49 +709,51 @@
 <text x="1532" y="1378" font-size="13">   DAYLIGHT_HOURS, FACE_DEMO, BADGE_READER,</text>
 <text x="1532" y="1397" font-size="13">   ADMIN_IDLE_LOGOUT_MS,</text>
 <text x="1532" y="1416" font-size="13">   EMPLOYEE_IDLE_CLOSE_MS,</text>
-<text x="1532" y="1435" font-size="13">   EMPLOYEE_IDLE_WARNING_MS, SMART_FRIDGE</text>
-<text x="1532" y="1454" font-size="13">gebruikt door: DataStore, RegistrationModel,</text>
-<text x="1532" y="1473" font-size="13">ThemeManager, FaceRecognitionDemo,</text>
-<text x="1532" y="1492" font-size="13">BadgeReader, AdminController,</text>
-<text x="1532" y="1511" font-size="13">EmployeeController, SmartFridge,</text>
-<text x="1532" y="1530" font-size="13">FridgeController, main.js</text>
+<text x="1532" y="1435" font-size="13">   EMPLOYEE_IDLE_WARNING_MS, SMART_FRIDGE,</text>
+<text x="1532" y="1454" font-size="13">   RECOGNITION_TARGET, STANDBY</text>
+<text x="1532" y="1473" font-size="13">gebruikt door: DataStore, RegistrationModel,</text>
+<text x="1532" y="1492" font-size="13">ThemeManager, FaceRecognitionDemo,</text>
+<text x="1532" y="1511" font-size="13">BadgeReader, AdminController,</text>
+<text x="1532" y="1530" font-size="13">EmployeeController, SmartFridge,</text>
+<text x="1532" y="1549" font-size="13">FridgeController, RecognitionController,</text>
+<text x="1532" y="1568" font-size="13">StandbyController, main.js</text>
 </g>
 <g>
-<rect x="1520" y="1553" width="195" height="146" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<path d="M1526,1553 H1709 A6,6 0 0 1 1715,1559 V1609 H1520 V1559 A6,6 0 0 1 1526,1553 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
-<text x="1617.5" y="1574" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
-<text x="1617.5" y="1597" text-anchor="middle" font-size="17" class="kop">ids.js</text>
-<text x="1532" y="1629" font-size="13">+ createId(): string</text>
-<text x="1532" y="1648" font-size="13">gebruikt door: DataStore,</text>
-<text x="1532" y="1667" font-size="13">RegistrationModel,</text>
-<text x="1532" y="1686" font-size="13">FormController</text>
+<rect x="1520" y="1591" width="195" height="146" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1526,1591 H1709 A6,6 0 0 1 1715,1597 V1647 H1520 V1597 A6,6 0 0 1 1526,1591 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1617.5" y="1612" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1617.5" y="1635" text-anchor="middle" font-size="17" class="kop">ids.js</text>
+<text x="1532" y="1667" font-size="13">+ createId(): string</text>
+<text x="1532" y="1686" font-size="13">gebruikt door: DataStore,</text>
+<text x="1532" y="1705" font-size="13">RegistrationModel,</text>
+<text x="1532" y="1724" font-size="13">FormController</text>
 </g>
 <g>
-<rect x="1725" y="1553" width="195" height="127" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<path d="M1731,1553 H1914 A6,6 0 0 1 1920,1559 V1609 H1725 V1559 A6,6 0 0 1 1731,1553 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
-<text x="1822.5" y="1574" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
-<text x="1822.5" y="1597" text-anchor="middle" font-size="17" class="kop">icons.js</text>
-<text x="1737" y="1629" font-size="13">+ icon(name): string</text>
-<text x="1737" y="1648" font-size="13">gebruikt door:</text>
-<text x="1737" y="1667" font-size="13">RegistrationView</text>
+<rect x="1725" y="1591" width="195" height="127" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<path d="M1731,1591 H1914 A6,6 0 0 1 1920,1597 V1647 H1725 V1597 A6,6 0 0 1 1731,1591 Z" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8"/>
+<text x="1822.5" y="1612" text-anchor="middle" font-size="12.5" font-style="italic" class="sub">«module»</text>
+<text x="1822.5" y="1635" text-anchor="middle" font-size="17" class="kop">icons.js</text>
+<text x="1737" y="1667" font-size="13">+ icon(name): string</text>
+<text x="1737" y="1686" font-size="13">gebruikt door:</text>
+<text x="1737" y="1705" font-size="13">RegistrationView</text>
 </g>
 <!-- Legenda -->
-<rect x="40" y="1311" width="320" height="346" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
-<text x="58" y="1341" font-size="16" class="kop">Legenda</text>
-<path d="M58,1373 L128,1373" class="lijn" marker-end="url(#open)"/>
-<text x="140" y="1369" font-size="13">associatie: houdt een</text>
-<text x="140" y="1386" font-size="13">verwijzing vast (rolnaam, 1)</text>
-<path d="M58,1419 L128,1419" class="stip" marker-end="url(#open)"/>
-<text x="140" y="1415" font-size="13">afhankelijkheid «create»:</text>
-<text x="140" y="1432" font-size="13">main.js maakt het object</text>
-<path d="M58,1465 L128,1465" class="lijn" marker-start="url(#ruit)"/>
-<text x="140" y="1461" font-size="13">compositie: RegistrationApp</text>
-<text x="140" y="1478" font-size="13">maakt en bezit het onderdeel</text>
-<path d="M58,1511 L128,1511" class="lijn" marker-end="url(#erft)"/>
-<text x="140" y="1507" font-size="13">generalisatie: voert de</text>
-<text x="140" y="1524" font-size="13">interface uit (extends)</text>
-<text x="58" y="1561" font-size="13">+ openbaar   onderstreept = static</text>
-<text x="58" y="1585" font-size="13">«get» = getter (alleen lezen)</text>
-<text x="58" y="1609" font-size="13">«module» = bestand zonder class</text>
-<text x="58" y="1633" font-size="13" class="sub">Alleen een selectie van de methodes</text>
+<rect x="40" y="1330" width="320" height="346" rx="10" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1.2" class="box"/>
+<text x="58" y="1360" font-size="16" class="kop">Legenda</text>
+<path d="M58,1392 L128,1392" class="lijn" marker-end="url(#open)"/>
+<text x="140" y="1388" font-size="13">associatie: houdt een</text>
+<text x="140" y="1405" font-size="13">verwijzing vast (rolnaam, 1)</text>
+<path d="M58,1438 L128,1438" class="stip" marker-end="url(#open)"/>
+<text x="140" y="1434" font-size="13">afhankelijkheid «create»:</text>
+<text x="140" y="1451" font-size="13">main.js maakt het object</text>
+<path d="M58,1484 L128,1484" class="lijn" marker-start="url(#ruit)"/>
+<text x="140" y="1480" font-size="13">compositie: RegistrationApp</text>
+<text x="140" y="1497" font-size="13">maakt en bezit het onderdeel</text>
+<path d="M58,1530 L128,1530" class="lijn" marker-end="url(#erft)"/>
+<text x="140" y="1526" font-size="13">generalisatie: voert de</text>
+<text x="140" y="1543" font-size="13">interface uit (extends)</text>
+<text x="58" y="1580" font-size="13">+ openbaar   onderstreept = static</text>
+<text x="58" y="1604" font-size="13">«get» = getter (alleen lezen)</text>
+<text x="58" y="1628" font-size="13">«module» = bestand zonder class</text>
+<text x="58" y="1652" font-size="13" class="sub">Alleen een selectie van de methodes</text>
 </svg>

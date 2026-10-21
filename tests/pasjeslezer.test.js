@@ -13,7 +13,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { CsvExport } from "../assets/js/CsvExport.js";
-import { createModel, addEmployee, createRecordingView, createFakeElement, createDataStore, registration, asAdmin } from "./helpers.js";
+import { createModel, addEmployee, createRecordingView, createFakeElement, createDataStore, registration, asAdmin, disabledFridge } from "./helpers.js";
 
 const SETTINGS = { enabled: true, minLength: 6, maxKeyIntervalMs: 40, endDelayMs: 120 };
 
@@ -226,7 +226,8 @@ const createApp = () => {
   const clock = createClock();
   const reader = new BadgeReader(SETTINGS, clock);
   const demo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader));
+  // Zonder koelkast: deze tests gaan over het productvenster na een passcan (zie disabledFridge).
+  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader, undefined, disabledFridge()));
   const openModals = [];
   globalThis.document = {
     activeElement: null,

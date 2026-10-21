@@ -83,7 +83,9 @@
   --modal-shadow:0 25px 70px rgba(16,47,53,.22);
   /* Achtergrond van knoppen met witte tekst als je eroverheen gaat of er met Tab op staat. */
   --primary-hover:var(--green-dark);
-  --plus-hover:var(--blue)
+  --plus-hover:var(--blue);
+  /* Standby: de donkere huiskleur van de hero (--hero-start) bijna dekkend, zodat het scherm donker wordt. */
+  --standby-bg:rgba(20,77,91,.94)
 }
 /* Donker thema. Wordt gebruikt als <html data-theme="dark"> is gezet (door ThemeManager).
    De achtergrond wordt donker en de tekst krijgt de groene huiskleur, iets lichter
@@ -123,7 +125,9 @@
   /* --green-dark en --blue zijn hier licht; witte tekst daarop is slecht leesbaar. Daarom de
      donkergroene en donkere blauwgroene huiskleur, zodat de witte tekst goed leesbaar blijft. */
   --primary-hover:#087252;
-  --plus-hover:#12505f
+  --plus-hover:#12505f;
+  /* Standby in het donkere thema: de achtergrondkleur (--bg) bijna dekkend. */
+  --standby-bg:rgba(13,26,28,.94)
 }
 /* Algemene reset en basisopmaak voor tekst, knoppen en invoervelden. */
 * {
@@ -1998,6 +2002,76 @@ footer {
   color:var(--muted);
   font-size:12px
 }
+/* De korte scan na een tik op het standby-scherm (tik om te scannen): hetzelfde cameravenster, iets
+   smaller, zodat het niet opdringerig is. De knop heet hier "Stoppen". */
+.face-modal.is-wake {
+  max-width:460px
+}
+/* De vraag na een passcan: "Gezichtsherkenning nog niet ingesteld. Wil je dit?" met Nee en Ja, instellen. */
+.face-offer-modal {
+  max-width:540px
+}
+.face-offer-modal h2 {
+  padding-right:36px
+}
+.face-offer-actions button {
+  min-height:44px
+}
+/* Standby (StandbyController): een knop over het hele scherm die de pagina dimt in de donkere
+   huiskleur, met het TVB-logo en "Tik op het scherm om te beginnen". Ligt boven vensters en meldingen.
+   Verschijnt met een rustige fade, zonder beweging bij "minder beweging" (zie prefers-reduced-motion). */
+.standby-overlay {
+  position:fixed;
+  inset:0;
+  z-index:9;
+  width:100%;
+  height:100%;
+  display:grid;
+  place-items:center;
+  padding:24px 16px;
+  border:0;
+  border-radius:0;
+  background:var(--standby-bg);
+  color:#fff;
+  font:inherit;
+  text-align:center;
+  cursor:pointer;
+  animation:standby-in .6s ease-out
+}
+.standby-overlay:focus-visible {
+  outline:3px solid var(--toast-success);
+  outline-offset:-8px
+}
+.standby-card {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  max-width:520px
+}
+.standby-mark {
+  width:64px;
+  height:64px;
+  border-radius:18px;
+  font-size:18px
+}
+.standby-title {
+  font:600 clamp(24px,5vw,36px)/1.2 "Space Grotesk",sans-serif
+}
+.standby-hint {
+  max-width:440px;
+  color:rgba(255,255,255,.86);
+  font-size:16px;
+  line-height:1.5
+}
+.standby-hint:empty {
+  display:none
+}
+@keyframes standby-in {
+  from {
+    opacity:0
+  }
+}
 /* Slimme koelkast (demo): de knop op de beginpagina, het koelkastvenster en het tabblad Koelkast.
    Alleen bestaande kleuren, lettertypes en iconen. Tikdoelen zijn minstens 44 pixels hoog. */
 .fridge-start {
@@ -2247,6 +2321,15 @@ footer {
   min-height:44px;
   margin-top:6px;
   font-size:13px
+}
+/* Knop in de open koelkast om in plaats daarvan het productvenster te openen (brood, beleg). */
+.fridge-to-products {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:44px;
+  margin-top:4px;
+  text-align:left
 }
 /* De knop "Deur dicht" staat in dezelfde knopbalk als Registreren in het productvenster. */
 .fridge-actions .register-button.hidden {

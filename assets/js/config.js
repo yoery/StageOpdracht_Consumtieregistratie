@@ -15,7 +15,10 @@
  *   - EmployeeController: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS, na hoeveel tijd zonder
  *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt;
  *   - SmartFridge, FridgeController en RegistrationModel: SMART_FRIDGE, de instellingen van de
- *     simulatie van de slimme koelkast (slot en weegschalen per schap).
+ *     simulatie van de slimme koelkast (slot en weegschalen per schap);
+ *   - RecognitionController: RECOGNITION_TARGET, wat er opent na herkennen met de pas of de camera;
+ *   - StandbyController: STANDBY, wanneer het scherm in standby gaat;
+ *   - DataStore en RegistrationModel: FACE_DEMO.validityDays (verlopen van een gezichtsinstelling).
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -95,7 +98,42 @@ export const FACE_DEMO = {
   // Hoe sterk twee gezichten moeten lijken om als dezelfde persoon te tellen (lager = strenger).
   matchThreshold: 0.5,
   // Hoe lang er maximaal naar een bekend gezicht wordt gezocht, in milliseconden.
-  scanTimeoutMs: 20000
+  scanTimeoutMs: 20000,
+  // Hoe lang de korte scan na een tik op het standby-scherm duurt (tik om te scannen), in
+  // milliseconden. Daarna gaat de camera altijd uit, herkend of niet.
+  wakeScanMs: 10000,
+  // Na zo veel dagen verloopt een gezichtsinstelling: de kenmerken worden gewist en bij de volgende
+  // passcan komt de vraag "Je gezichtsherkenning is verlopen. Opnieuw instellen?" (mensen veranderen).
+  validityDays: 365,
+  // Vraag na een passcan "Gezichtsherkenning nog niet ingesteld. Wil je dit?" aan medewerkers zonder
+  // (geldige) gezichtsinstelling die nog niet "Nee" hebben gezegd. Alleen als de demo aan staat en de
+  // tablet een camera heeft. Zet op false om de vraag nooit te stellen.
+  offerAfterBadge: true,
+  // Zo lang (ms) blijft de vraag in beeld als niemand antwoordt. Daarna sluit hij zonder iets te
+  // onthouden, zodat hij niet open blijft staan op de gedeelde tablet.
+  offerIdleCloseMs: 60 * 1000
+};
+
+// Wat er opent nadat een medewerker is herkend, met de pas of met de camera (zie
+// RecognitionController.continueAfterRecognition). Eén instelling voor beide manieren van herkennen:
+//   - "fridge": de slimme koelkast gaat open voor deze medewerker (het slot eraf, de weegschalen
+//     tellen wat hij pakt), als SMART_FRIDGE.enabled aan staat en het consumptiepunt van de medewerker
+//     een schapindeling met producten heeft. Anders opent het productvenster. In het koelkastvenster
+//     staat een knop om in plaats daarvan het productvenster te openen (brood, beleg);
+//   - "products": altijd het productvenster, zoals vóór versie 3.17.
+export const RECOGNITION_TARGET = "fridge";
+
+// Standby van de tablet (zie StandbyController). Wordt de beginpagina zo lang niet gebruikt (geen tik,
+// toets, scroll of passcan, en geen venster open), dan wordt het scherm gedimd met de tekst "Tik op
+// het scherm om te beginnen". Eén tik of toets maakt de tablet wakker. Na een tik start de korte scan
+// van de demo gezichtsherkenning (FACE_DEMO.wakeScanMs), maar alleen als die demo aan staat, er een
+// camera is en minstens één actieve medewerker zijn gezicht heeft ingesteld. De camera gaat nooit
+// vanzelf aan, alleen na die bewuste tik. Een passcan in standby maakt de tablet wakker en wordt meteen
+// verwerkt. Zet enabled op false om de standby uit te zetten.
+//   - idleMs: na zo veel milliseconden zonder invoer gaat de tablet in standby (2 minuten).
+export const STANDBY = {
+  enabled: true,
+  idleMs: 2 * 60 * 1000
 };
 
 // Herkennen met de pas (zie BadgeReader.js). Een USB-NFC-lezer gedraagt zich als een toetsenbord:

@@ -524,6 +524,13 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
       { name: "prefers-reduced-motion", value: "reduce" }
     ]
   });
+  // Geen camera: op een laptop met webcam zou de headless browser anders een camera zien, en dan
+  // stelt de app na een passcan de vraag over gezichtsherkenning (demo). Zo werkt iedere test op
+  // iedere machine hetzelfde, zoals op een server zonder camera. Een test die een camera nodig heeft,
+  // zet daarna zelf een script met een nagebootste camera (zie de scenario's "vraag na een passcan").
+  await send("Page.addScriptToEvaluateOnNewDocument", {
+    source: "if (navigator.mediaDevices) navigator.mediaDevices.enumerateDevices = async () => [];"
+  });
   // Lokaal een trage server nabootsen (zie E2E_CPU_THROTTLE bovenaan).
   const throttle = Number(process.env.E2E_CPU_THROTTLE);
   if (throttle > 1) await send("Emulation.setCPUThrottlingRate", { rate: throttle });

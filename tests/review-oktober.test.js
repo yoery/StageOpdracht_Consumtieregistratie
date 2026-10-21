@@ -23,7 +23,8 @@ import {
   createRecordingView,
   createFakeElement,
   createDataStore,
-  asAdmin
+  asAdmin,
+  disabledFridge
 } from "./helpers.js";
 
 // Console-meldingen van DataStore horen bij deze tests; ze maken de uitvoer alleen onrustig.
@@ -110,7 +111,8 @@ const createApp = ({ model = createModel().model, faceDemo } = {}) => {
   const clock = createClock();
   const reader = new BadgeReader(SETTINGS, clock);
   const demo = faceDemo || new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader));
+  // Zonder koelkast: na herkenning opent het productvenster (zie disabledFridge in helpers.js).
+  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader, undefined, disabledFridge()));
   return { app, model, view, clock, reader, openModals, listeners, demo };
 };
 
@@ -301,8 +303,11 @@ test("D4: na een wijziging in een ander tabblad worden gezichten van verwijderde
   const { model } = createModel();
   addEmployee(model);
   const { app, demo } = createApp({ model });
-  demo.enroll("employee-1", [0.1]);
-  demo.enroll("employee-2", [0.2]);
+  // Vanaf 3.17 staan de gezichtsinstellingen in het model; het geheugen van de demo volgt het model.
+  model.saveFaceEnrollment("employee-1", new Array(128).fill(0.1));
+  model.saveFaceEnrollment("employee-2", new Array(128).fill(0.2));
+  app.loadSavedFaces();
+  assert.deepEqual(demo.enrolledIds(), ["employee-1", "employee-2"]);
   const otherTabState = { ...model.snapshot(), employees: model.employees.filter(({ id }) => id !== "employee-2") };
   model.store = { key: "tvb-test", loadProblem: null, load: () => otherTabState, save: () => true };
 

@@ -324,7 +324,7 @@ export class AdminController {
   wipeAllData() {
     // Alleen voor een ingelogde beheerder: wissen kan niet ongedaan worden gemaakt.
     if (!this.requireAdmin()) return;
-    const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, het logboek en de reservekopieën op deze tablet wissen?";
+    const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?";
     if (!window.confirm(firstQuestion)) return;
     if (!window.confirm("Weet je het zeker? Dit kan niet ongedaan worden gemaakt.")) return;
 
@@ -339,7 +339,8 @@ export class AdminController {
     // gegevens terugschrijven. Lukt opslaan niet, dan is wel alles gewist, maar staan de
     // demogegevens nog niet in de opslag; dat wordt dan eerlijk gemeld.
     const saved = this.model.save();
-    // Ingestelde gezichten (demo) horen ook bij de persoonsgegevens en worden vergeten.
+    // Ingestelde gezichten (demo) horen ook bij de persoonsgegevens en worden vergeten. De opgeslagen
+    // kenmerken en antwoorden zijn met wipeAll al uit de opslag gewist.
     this.faceDemo.enrolledIds().forEach((employeeId) => this.faceDemo.forget(employeeId));
     this.closeAdmin();
     this.view.renderAll();
@@ -382,6 +383,9 @@ export class AdminController {
       { action: "Medewerkerstatus gewijzigd", details: `${this.app.employeeLabel(employeeId)} is ${status} gezet` }
     );
     if (!saved) return;
+    // Het model heeft een opgeslagen gezichtsinstelling (demo) van deze medewerker gewist; het
+    // geheugen van de demo volgt (zie RegistrationModel.setEmployeeActive).
+    this.app.loadSavedFaces();
 
     // De knop krijgt na het tekenen de focus terug (de tekst wisselt tussen Deactiveren en Activeren).
     this.app.preserveFocus(() => {

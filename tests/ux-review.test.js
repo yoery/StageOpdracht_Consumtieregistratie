@@ -26,7 +26,7 @@ import { EmployeeController } from "../assets/js/controllers/EmployeeController.
 import { BadgeReader } from "../assets/js/BadgeReader.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS } from "../assets/js/config.js";
-import { createModel, addEmployee, createRecordingView, createFakeElement } from "./helpers.js";
+import { createModel, addEmployee, createRecordingView, createFakeElement, disabledFridge } from "./helpers.js";
 
 const SECOND = 1000;
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
@@ -67,7 +67,8 @@ const createApp = ({ badgeEnabled = true } = {}) => {
     now: () => 0, setTimeout: () => 0, clearTimeout: () => {}
   });
   const demo = new FaceRecognitionDemo({ enabled: false }, null);
-  const app = new RegistrationApp(model, view, undefined, demo, reader, clock);
+  // Zonder koelkast: deze tests gaan over het productvenster na een passcan (zie disabledFridge).
+  const app = new RegistrationApp(model, view, undefined, demo, reader, clock, disabledFridge());
   const openModals = [];
   globalThis.document = {
     activeElement: null,

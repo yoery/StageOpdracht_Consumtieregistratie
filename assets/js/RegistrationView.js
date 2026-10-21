@@ -713,6 +713,26 @@ export class RegistrationView {
     if (warning) warning.textContent = shown ? RegistrationView.IDLE_WARNING_TEXT : "";
   }
 
+  // Standby (StandbyController): toont of verbergt het gedimde scherm "Tik op het scherm om te
+  // beginnen" met daaronder `hint` (wat er na de tik gebeurt). In standby is de pagina eronder
+  // `inert`: niet te bereiken met Tab of een schermlezer, zodat alleen het standby-scherm de focus kan
+  // krijgen. Die focus gaat naar het standby-scherm zelf (een knop), zodat Enter of spatie ook wakker maakt.
+  showStandby(shown, { hint = "" } = {}) {
+    const overlay = this.$("#standbyOverlay");
+    if (!overlay) return;
+    const hintElement = this.$("#standbyHint");
+    if (hintElement && shown) hintElement.textContent = hint;
+    overlay.classList.toggle("hidden", !shown);
+    const page = this.$(".app-shell");
+    if (shown) {
+      page?.setAttribute("inert", "");
+      overlay.focus?.({ preventScroll: true });
+    } else {
+      page?.removeAttribute?.("inert");
+      if (globalThis.document?.activeElement === overlay) overlay.blur?.();
+    }
+  }
+
   // Vult de keuzelijsten bedrijf en consumptiepunt in het medewerkersformulier.
   populateEmployeeCompanySelects(companyId = "", pointId = "") {
     this.$("#newEmployeeCompany").innerHTML =

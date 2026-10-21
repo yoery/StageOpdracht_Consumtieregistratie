@@ -3,7 +3,8 @@ import {
   COLORS,
   DEFAULT_PRODUCTS,
   DEFAULT_COMPANIES,
-  SMART_FRIDGE
+  SMART_FRIDGE,
+  FACE_DEMO
 } from "./config.js";
 import { createId } from "./ids.js";
 
@@ -33,13 +34,24 @@ export const MAX_PRICE = 1000;
 // DataStore slaat een langere regel bij het laden over (zie logAdminAction).
 export const MAX_AUDIT_DETAILS = 500;
 
+// Demo gezichtsherkenning: een descriptor (de gezichtskenmerken) bestaat altijd uit precies 128
+// getallen, en face-api geeft waarden die ruim binnen -10 en 10 liggen. Gelijk aan
+// FACE_DESCRIPTOR_LENGTH en MAX_DESCRIPTOR_VALUE in DataStore.js: DataStore slaat bij het laden een
+// opgeslagen descriptor met een andere lengte of andere waarden over.
+export const FACE_DESCRIPTOR_LENGTH = 128;
+export const MAX_DESCRIPTOR_VALUE = 10;
+
+// Eén dag in milliseconden (voor het verlopen van een gezichtsinstelling na FACE_DEMO.validityDays).
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * RegistrationModel — de gegevens en alle regels van de applicatie (het "Model" in MVC).
  *
  * Verantwoordelijkheid:
  *   - bewaart de complete status: medewerkers, registraties, producten, bedrijven,
- *     consumptiepunten (met voorraad), het logboek en van de slimme koelkast (demo) de indeling van
- *     de schappen en de openingen;
+ *     consumptiepunten (met voorraad), het logboek, van de slimme koelkast (demo) de indeling van
+ *     de schappen en de openingen, en van de demo gezichtsherkenning de opgeslagen kenmerken met
+ *     hun datum en het antwoord op de vraag na een passcan;
  *   - bevat de regels, bijvoorbeeld: een registratie verlaagt de voorraad, een bedrijf met
  *     medewerkers mag niet worden verwijderd, de loonmaand is de maand na de consumptie.
  *
@@ -136,7 +148,9 @@ export class RegistrationModel {
       points: [demoPoint],
       auditLog: [],
       fridgeShelves: [],
-      fridgeOpenings: []
+      fridgeOpenings: [],
+      faceEnrollments: [],
+      faceOffers: []
     };
   }
 
@@ -151,7 +165,9 @@ export class RegistrationModel {
       points: [...this.state.points],
       auditLog: [...this.state.auditLog],
       fridgeShelves: [...this.fridgeShelves],
-      fridgeOpenings: [...this.fridgeOpenings]
+      fridgeOpenings: [...this.fridgeOpenings],
+      faceEnrollments: [...this.faceEnrollments],
+      faceOffers: [...this.faceOffers]
     };
   }
 
@@ -225,6 +241,18 @@ export class RegistrationModel {
   // De openingen van de slimme koelkast (demo). Ook leeg bij gegevens van vóór de slimme koelkast.
   get fridgeOpenings() {
     return this.state.fridgeOpenings ?? [];
+  }
+
+  // Demo gezichtsherkenning: de opgeslagen gezichtsinstellingen, per medewerker
+  // { id, employeeId, descriptor (128 getallen), enrolledAt }. Leeg bij gegevens van vóór versie 3.17.
+  get faceEnrollments() {
+    return this.state.faceEnrollments ?? [];
+  }
+
+  // Demo gezichtsherkenning: per medewerker het antwoord op de vraag na een passcan
+  // { id, employeeId, answer: "declined" (Nee gezegd) of "expired" (verlopen), answeredAt }.
+  get faceOffers() {
+    return this.state.faceOffers ?? [];
   }
 
   // ------------------------------------------------------------------
@@ -518,11 +546,15 @@ export class RegistrationModel {
   }
 
   // Zet een medewerker actief of inactief; historische registraties blijven behouden.
+  // Een opgeslagen gezichtsinstelling (demo) wordt daarbij gewist, in beide richtingen: na
+  // deactiveren mag niemand meer met dat gezicht worden herkend, en na opnieuw activeren stelt de
+  // medewerker het zelf opnieuw in (met toestemming), als hij dat wil.
   setEmployeeActive(employeeId, active) {
     this.state.employees = this.employees.map((employee) => {
       if (employee.id !== employeeId) return employee;
       return { ...employee, active };
     });
+    this.removeFaceEnrollment(employeeId);
   }
 
   // Heeft deze medewerker minstens één registratie (eigen keuze of correctie)?
@@ -544,6 +576,9 @@ export class RegistrationModel {
     if (!employee || employee.active || this.employeeHasRegistrations(employeeId)) return false;
 
     this.state.employees = this.employees.filter((employee) => employee.id !== employeeId);
+    // De gezichtsinstelling en het antwoord op de vraag (demo) horen bij deze medewerker en gaan mee weg.
+    this.removeFaceEnrollment(employeeId);
+    this.state.faceOffers = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
     return true;
   }
 
@@ -953,6 +988,101 @@ export class RegistrationModel {
       taken[productId] = (taken[productId] || 0) + count;
     }
     return taken;
+  }
+
+  // ------------------------------------------------------------------
+  // Demo gezichtsherkenning: opgeslagen kenmerken en het antwoord op de vraag
+  // ------------------------------------------------------------------
+  //
+  // Bewuste afwijking in de demo (vanaf versie 3.17, TO hoofdstuk 13 en bijlage B): de kenmerken
+  // van een gezicht (de descriptor, 128 getallen, geen foto) worden opgeslagen in de browser, zodat
+  // de instelling na herladen blijft werken en na FACE_DEMO.validityDays (een jaar) kan verlopen.
+  // Vóór 3.17 stonden ze alleen in het geheugen. Dat betekent voor de AVG: dit blijft een biometrisch
+  // gegeven (artikel 9) dat nu wel op de tablet wordt bewaard. Daarom staat het alleen in deze demo,
+  // alleen na toestemming van de medewerker zelf (vinkje), nooit in de CSV-export of het logboek, en
+  // wordt het gewist bij Uitzetten, bij verlopen, bij (de)activeren en verwijderen van de medewerker
+  // en bij Alle gegevens wissen. Voor productie blijft het advies de pas.
+
+  // De opgeslagen gezichtsinstelling van een medewerker, of undefined.
+  faceEnrollment(employeeId) {
+    return this.faceEnrollments.find((entry) => entry.employeeId === employeeId);
+  }
+
+  // Is deze gezichtsinstelling verlopen? Dat is zo als er `validityDays` dagen of meer zijn verstreken
+  // sinds `enrolledAt`. `now` is mee te geven, zodat dit met vaste datums te testen is.
+  isFaceEnrollmentExpired(entry, now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    return now.getTime() - Date.parse(entry.enrolledAt) >= validityDays * DAY_MS;
+  }
+
+  // Heeft deze medewerker een geldige gezichtsinstelling: hij is actief en de instelling is niet verlopen?
+  hasValidFaceEnrollment(employeeId, now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    const entry = this.faceEnrollment(employeeId);
+    return Boolean(entry) && Boolean(this.findEmployee(employeeId)?.active) && !this.isFaceEnrollmentExpired(entry, now, validityDays);
+  }
+
+  // De geldige gezichtsinstellingen (actieve medewerkers, niet verlopen). FaceController zet deze in
+  // het geheugen van FaceRecognitionDemo, dat er gezichten mee vergelijkt.
+  validFaceEnrollments(now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    return this.faceEnrollments.filter(({ employeeId }) => this.hasValidFaceEnrollment(employeeId, now, validityDays));
+  }
+
+  // Is dit een geldige descriptor: een lijst van precies FACE_DESCRIPTOR_LENGTH (128) eindige
+  // getallen tussen -MAX_DESCRIPTOR_VALUE en MAX_DESCRIPTOR_VALUE? Een Float32Array uit face-api telt ook.
+  isValidDescriptor(descriptor) {
+    if (!descriptor || typeof descriptor.length !== "number" || descriptor.length !== FACE_DESCRIPTOR_LENGTH) return false;
+    return Array.from(descriptor).every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE);
+  }
+
+  // Het antwoord van een medewerker op de vraag na een passcan: "declined" (Nee), "expired" (de
+  // instelling is verlopen en gewist) of null (nog nooit gevraagd, of daarna zelf ingesteld).
+  faceOfferAnswer(employeeId) {
+    return this.faceOffers.find((offer) => offer.employeeId === employeeId)?.answer ?? null;
+  }
+
+  // Zet het antwoord van een medewerker (vervangt een eerder antwoord).
+  setFaceOfferAnswer(employeeId, answer, answeredAt = new Date()) {
+    const others = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
+    this.state.faceOffers = [...others, { id: createId(), employeeId, answer, answeredAt: answeredAt.toISOString() }];
+  }
+
+  // Slaat de gezichtsinstelling van een (actieve) medewerker op, met de datum van vandaag. Een oude
+  // instelling wordt vervangen en een eerder "Nee" of "verlopen" vervalt (de medewerker heeft het nu
+  // zelf ingesteld). Alleen de getallen worden bewaard, als gewone lijst. Geeft false terug (en
+  // verandert niets) als de medewerker niet bestaat of niet actief is, of als de descriptor niet klopt.
+  saveFaceEnrollment(employeeId, descriptor, enrolledAt = new Date()) {
+    if (!this.findEmployee(employeeId)?.active || !this.isValidDescriptor(descriptor)) return false;
+
+    const entry = { id: createId(), employeeId, descriptor: Array.from(descriptor), enrolledAt: enrolledAt.toISOString() };
+    this.state.faceEnrollments = [...this.faceEnrollments.filter((item) => item.employeeId !== employeeId), entry];
+    this.state.faceOffers = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
+    return true;
+  }
+
+  // Wist de gezichtsinstelling van een medewerker (Uitzetten, (de)activeren, verwijderen). Bestaat die
+  // niet, dan verandert er niets (en is dat geen fout).
+  removeFaceEnrollment(employeeId) {
+    if (!this.faceEnrollment(employeeId)) return;
+    this.state.faceEnrollments = this.faceEnrollments.filter((entry) => entry.employeeId !== employeeId);
+  }
+
+  // Knop "Nee" bij de vraag: wordt onthouden, zodat de vraag niet meer komt. De medewerker kan het
+  // later zelf instellen via "Gezichtsherkenning instellen (demo)" in het productvenster.
+  declineFaceOffer(employeeId, answeredAt = new Date()) {
+    if (!this.findEmployee(employeeId)) return false;
+    this.setFaceOfferAnswer(employeeId, "declined", answeredAt);
+    return true;
+  }
+
+  // Wist alle verlopen gezichtsinstellingen (FACE_DEMO.validityDays) en onthoudt per medewerker dat
+  // zijn instelling is verlopen, zodat de vraag bij de volgende passcan "Je gezichtsherkenning is
+  // verlopen. Opnieuw instellen?" is. Geeft de id's van de medewerkers terug (leeg als er niets verliep).
+  expireFaceEnrollments(now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    const expired = this.faceEnrollments.filter((entry) => this.isFaceEnrollmentExpired(entry, now, validityDays));
+    for (const { employeeId } of expired) {
+      this.removeFaceEnrollment(employeeId);
+      this.setFaceOfferAnswer(employeeId, "expired", now);
+    }
+    return expired.map(({ employeeId }) => employeeId);
   }
 
   // ------------------------------------------------------------------

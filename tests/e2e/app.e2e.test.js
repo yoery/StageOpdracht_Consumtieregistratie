@@ -314,7 +314,14 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     await browser.click("#employeeSearch");
     await browser.scanBadge("04A1B2C3");
 
+    // Vanaf 3.17 opent de pas de koelkast voor Lotte (RECOGNITION_TARGET "fridge"). Er is geen camera,
+    // dus er komt geen vraag over gezichtsherkenning. Met de knop in de koelkast opent het productvenster.
+    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
+    assert.equal(await isHidden("#faceOfferModal"), true);
+    assert.match(await text("#fridgeBody"), /Lotte\. Je bent herkend met je pas\. Pak wat je wilt en sluit de deur\./);
+    await browser.click("[data-fridge-to-products]");
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    assert.equal(await isHidden("#fridgeModal"), true);
     assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
     assert.match(await text("#employeeWelcome"), /Lotte, welkom terug\. Je bent herkend met je pas\./);
     // Na herkenning met de pas staat de keuze van de vorige keer klaar om over te nemen.
@@ -479,10 +486,15 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
 
   // Koppelt een pas aan een demomedewerker zonder het beheer: na één registratie staan de gegevens in
   // localStorage. Daar komt het pasnummer bij, en daarna wordt de pagina opnieuw geladen.
-  const linkBadgeDirectly = async (name, badgeId) => {
+  // Met `fridge: false` krijgen alle consumptiepunten een koelkast met lege schappen. Dan opent de pas
+  // het productvenster (zoals vóór 3.17), want de koelkast kan niet open (RecognitionController).
+  const linkBadgeDirectly = async (name, badgeId, { fridge = true } = {}) => {
     await registerProduct("Daan Smit", "blikje", 1);
     await browser.evaluate(`(() => {
       const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      if (!${fridge}) {
+        data.fridgeShelves = data.points.flatMap((point, index) => [1, 2, 3].map((shelf) => ({ id: "e2e-" + index + "-" + shelf, pointId: point.id, shelf, productId: null, unitWeight: null })));
+      }
       data.employees.find((employee) => employee.name === ${JSON.stringify(name)}).badgeId = ${JSON.stringify(badgeId)};
       localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
       window.oudePagina = true;
@@ -531,7 +543,8 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   });
 
   scenario("UX 2: een pas vervangt het open productvenster van een collega en geeft een melding bij een ander venster", async () => {
-    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+    // Zonder schapindeling opent de pas het productvenster (zie linkBadgeDirectly).
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3", { fridge: false });
 
     // Mark kiest iets, maar registreert niet en loopt weg. Lotte houdt haar pas tegen de lezer.
     await browser.click(row("Mark Jansen"));
@@ -699,8 +712,9 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     // (EmployeeController.openEmployeeProducts). Eerder onthield de browser de scrollpositie van het
     // verborgen venster: stond de focus de vorige keer op Registreren onderaan, dan opende het venster
     // de volgende keer omlaag gescrold. Hier wordt dat nagebootst door het venster omlaag te scrollen
-    // en te sluiten, en het daarna opnieuw te openen.
-    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+    // en te sluiten, en het daarna opnieuw te openen. Zonder schapindeling opent de pas het
+    // productvenster en niet de koelkast (zie linkBadgeDirectly).
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3", { fridge: false });
     const scroller = `document.querySelector("#employeeProductsModal .modal")`;
     const header = () => browser.evaluate(`(() => {
       const top = (selector) => document.querySelector(selector).getBoundingClientRect().top;
@@ -988,5 +1002,135 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     await openFridgeForDemo("Mark Jansen");
     assert.match(await text("#fridgeBody"), /Mark\. Pak wat je wilt en sluit de deur\./);
     assert.equal(await text("#fridgeOwner"), "Alles wat je nu pakt, staat op naam van Mark Jansen.");
+  });
+
+  // ------------------------------------------------------------------
+  // Standby en de vraag over gezichtsherkenning na een passcan (TO versie 3.17)
+  // ------------------------------------------------------------------
+
+  // Nep-klok voor de pagina (zoals bij UX 1): Date.now() loopt window.klokVooruit milliseconden voor.
+  const FAKE_CLOCK = "(() => { const echt = Date.now.bind(Date); window.klokVooruit = 0; Date.now = () => echt() + window.klokVooruit; })()";
+  // Nagebootste camera: de app ziet een camera (enumerateDevices), maar aanzetten lukt niet. De camera
+  // zelf is headless niet te testen. Dit script komt na het standaardscript zonder camera (browser.js).
+  const FAKE_CAMERA = `if (navigator.mediaDevices) navigator.mediaDevices.enumerateDevices = async () => [{ kind: "videoinput", deviceId: "e2e", label: "", groupId: "" }];
+    if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => { throw new DOMException("Geen camera in de test", "NotAllowedError"); };`;
+  const withPageScripts = async (sources, action) => {
+    const identifiers = [];
+    for (const source of sources) identifiers.push((await browser.send("Page.addScriptToEvaluateOnNewDocument", { source })).identifier);
+    try {
+      await browser.openApp();
+      await action();
+    } finally {
+      for (const identifier of identifiers) await browser.send("Page.removeScriptToEvaluateOnNewDocument", { identifier });
+    }
+  };
+  const openModalIds = () => browser.evaluate(`[...document.querySelectorAll(".modal-backdrop:not(.hidden)")].map((modal) => modal.id)`);
+
+  scenario("standby: na 2 minuten dimt het scherm, een tik wekt zonder klik-door en zonder camera", async () => {
+    await withPageScripts([FAKE_CLOCK], async () => {
+      // Wat er onder het midden van het scherm ligt: daar valt straks de tik op het standby-scherm.
+      const under = await browser.evaluate(`document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest("button, [data-open-employee]")?.getAttribute("aria-label") ?? "geen knop"`);
+      assert.equal(await isHidden("#standbyOverlay"), true);
+
+      await browser.evaluate("window.klokVooruit = 100000");
+      await sleep(1500);
+      assert.equal(await isHidden("#standbyOverlay"), true, "vóór 2 minuten nog geen standby");
+      await browser.evaluate("window.klokVooruit = 121000");
+      await browser.waitFor(`!document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+      assert.equal(await text("#standbyTitle"), "Tik op het scherm om te beginnen");
+      assert.equal(await text("#standbyHint"), "Je kunt ook meteen je pas tegen de lezer houden.");
+      assert.equal(await browser.evaluate(`document.querySelector(".app-shell").inert`), true);
+      assert.equal(await browser.evaluate(`document.activeElement?.id`), "standbyOverlay");
+      assert.match(await browser.evaluate(`getComputedStyle(document.querySelector("#standbyOverlay")).backgroundColor`), /rgba\(20, 77, 91, 0\.94\)/);
+
+      // Eén tik maakt wakker. De tik drukt niets in wat eronder ligt en er gaat geen camera aan.
+      await browser.click("#standbyOverlay");
+      await browser.waitFor(`document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+      await sleep(700);
+      assert.deepEqual(await openModalIds(), [], `de tik ging door naar ${under}`);
+      assert.equal(await browser.evaluate(`document.querySelector(".app-shell").inert`), false);
+
+      // Daarna werkt de pagina gewoon.
+      await browser.click(row("Lotte van Dijk"));
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      await browser.press("Escape");
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+      // Opnieuw in standby: een gewone toets maakt ook wakker.
+      await browser.evaluate("window.klokVooruit = 121000 + 121000");
+      await browser.waitFor(`!document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+      await browser.press("a");
+      await browser.waitFor(`document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), []);
+    });
+  });
+
+  scenario("standby: een passcan in standby maakt wakker en opent meteen de koelkast", async () => {
+    await withPageScripts([FAKE_CLOCK], async () => {
+      await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+      await browser.evaluate("window.klokVooruit = 121000");
+      await browser.waitFor(`!document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+
+      await browser.scanBadge("04A1B2C3");
+
+      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
+      assert.equal(await isHidden("#standbyOverlay"), true);
+      assert.match(await text("#fridgeBody"), /Lotte\. Je bent herkend met je pas\./);
+      assert.deepEqual(await openModalIds(), ["fridgeModal"], "zonder camera geen vraag over gezichtsherkenning");
+    });
+  });
+
+  scenario("vraag na een passcan: Nee wordt onthouden en daarna gaat de koelkast open", async () => {
+    await withPageScripts([FAKE_CAMERA], async () => {
+      await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+      await browser.scanBadge("04A1B2C3");
+
+      await browser.waitFor(`!document.querySelector("#faceOfferModal").classList.contains("hidden")`);
+      assert.equal(await text("#faceOfferTitle"), "Gezichtsherkenning nog niet ingesteld. Wil je dit?");
+      assert.match(await text("#faceOfferGreeting"), /Lotte\. Je bent herkend met je pas\.$/);
+      assert.equal(await text("#faceOfferHelp"), "Het is vrijwillig, alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist, en je pas blijft altijd werken.");
+      assert.equal(await browser.evaluate(`document.activeElement?.id`), "faceOfferNoButton");
+      assert.equal(await isHidden("#fridgeModal"), true, "de koelkast opent pas na het antwoord");
+
+      await browser.click("#faceOfferNoButton");
+      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
+      assert.deepEqual(await openModalIds(), ["fridgeModal"]);
+      const stored = await browser.storedData();
+      const lotte = stored.employees.find(({ name }) => name === "Lotte van Dijk");
+      assert.deepEqual(stored.faceOffers.map(({ employeeId, answer }) => [employeeId, answer]), [[lotte.id, "declined"]]);
+      assert.deepEqual(stored.faceEnrollments, []);
+      assert.equal(stored.auditLog.length, 0, "Nee komt niet in het logboek");
+
+      // Deur dicht zonder iets te pakken, en opnieuw de pas: geen vraag meer.
+      await browser.press("Escape");
+      await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+      await sleep(600);
+      await browser.scanBadge("04A1B2C3");
+      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open" && !document.querySelector("#fridgeModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["fridgeModal"]);
+    });
+  });
+
+  scenario("vraag na een passcan: Ja opent het instelvenster met het vinkje, Annuleren gaat door naar de koelkast", async () => {
+    await withPageScripts([FAKE_CAMERA], async () => {
+      await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+      await browser.scanBadge("04A1B2C3");
+      await browser.waitFor(`!document.querySelector("#faceOfferModal").classList.contains("hidden")`);
+
+      await browser.click("#faceOfferYesButton");
+      await browser.waitFor(`!document.querySelector("#faceModal").classList.contains("hidden")`);
+      assert.equal(await isHidden("#faceOfferModal"), true);
+      assert.equal(await text("#faceTitle"), "Gezichtsherkenning instellen voor Lotte van Dijk");
+      assert.equal(await isHidden("#faceConsentLabel"), false);
+      assert.equal(await browser.evaluate(`document.querySelector("#faceConsent").checked`), false);
+      assert.equal(await browser.evaluate(`document.querySelector("#faceEnrollButton").disabled`), true);
+
+      await browser.click("#faceModal .employee-form-actions [data-close-face-modal]");
+      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open" && !document.querySelector("#fridgeModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["fridgeModal"]);
+      const stored = await browser.storedData();
+      assert.deepEqual(stored?.faceEnrollments ?? [], []);
+      assert.deepEqual(stored?.faceOffers ?? [], [], "Annuleren onthoudt niets");
+    });
   });
 });

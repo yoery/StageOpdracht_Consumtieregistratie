@@ -8,7 +8,8 @@
  *     daarna terugzetten, zodat er geen pasnummer in blijft staan;
  *   - een scan in het veld "Pasnummer" van het medewerkersformulier: het oude nummer vervangen
  *     door het nieuwe (fillBadgeFieldAfterScan);
- *   - na een scan de medewerker opzoeken en zijn productvenster openen, of een melding geven;
+ *   - na een scan de medewerker opzoeken en RecognitionController laten bepalen wat er opent
+ *     (de vraag over gezichtsherkenning, de koelkast of het productvenster), of een melding geven;
  *   - een scan terwijl het productvenster van een collega open is: dat venster vervangen door
  *     het venster van de gescande pas (replaceProductWindow).
  *
@@ -20,7 +21,8 @@
  *     van het bedrijfsfilter;
  *   - ModalManager (via RegistrationApp): topModal, want met een ander open venster dan het
  *     productvenster wordt er niemand herkend;
- *   - FridgeController (via RegistrationApp): krijgt de scan als het koelkastvenster open is.
+ *   - FridgeController (via RegistrationApp): krijgt de scan als het koelkastvenster open is;
+ *   - RecognitionController (via RegistrationApp): afterRecognition na een geldige scan op de beginpagina.
  */
 export class BadgeController {
   // Melding als er een pas wordt gescand terwijl een ander venster dan het productvenster open is.
@@ -128,8 +130,11 @@ export class BadgeController {
   //   - staat er een ander venster open dan het productvenster (beheer, een formulier, het
   //     cameravenster of "Registratie verwijderen"), dan wordt er niemand herkend en volgt de
   //     melding "Sluit eerst het open venster om je pas te gebruiken.";
-  //   - hoort de pas bij een actieve medewerker, dan opent zijn productvenster met de tekst
-  //     "Je bent herkend met je pas." (zie RegistrationView.renderEmployeeProducts);
+  //   - hoort de pas bij een actieve medewerker, dan gaat RecognitionController.afterRecognition verder:
+  //     heeft hij nog geen gezichtsherkenning (demo, met camera) en niet eerder Nee gezegd, dan eerst de
+  //     vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?". Daarna gaat de koelkast open voor
+  //     hem (RECOGNITION_TARGET "fridge" en zijn consumptiepunt heeft een schapindeling), of anders
+  //     opent zijn productvenster. Beide begroeten met "Je bent herkend met je pas.";
   //   - anders volgt een melding. Een onbekende pas en de pas van een inactieve medewerker
   //     krijgen dezelfde melding, zodat er niets over een andere medewerker uitlekt.
   // Staat het productvenster open (zie replaceProductWindow):
@@ -167,7 +172,9 @@ export class BadgeController {
     }
 
     if (productWindowOpen && this.replaceProductWindow(employee.id)) return;
-    this.app.openEmployeeProducts(employee.id, { recognizedBy: "badge" });
+    // Wat er opent, bepaalt RecognitionController: eerst eventueel de vraag over gezichtsherkenning
+    // (demo), daarna de koelkast (RECOGNITION_TARGET "fridge") of het productvenster.
+    this.app.afterRecognition(employee.id, "badge");
   }
 
   // Een pas wordt gescand terwijl het productvenster open is. Is het venster van dezelfde

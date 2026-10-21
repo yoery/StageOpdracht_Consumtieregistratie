@@ -54,7 +54,8 @@ export class FridgeView {
   // Tekent het koelkastvenster. `state` komt van FridgeController:
   //   { phase: "waiting" | "open" | "summary", employeeId, badgeReader (staat de lezer aan),
   //     shelves (bij "open": per schap { shelf, productId, onShelf, held }),
-  //     result (bij "summary": het resultaat van SmartFridge.finish), saveFailed }
+  //     result (bij "summary": het resultaat van SmartFridge.finish), saveFailed,
+  //     recognizedBy ("badge" of "face" als de koelkast opende na herkenning op de beginpagina, anders null) }
   renderFridgeWindow(state) {
     const body = this.$("#fridgeBody");
     if (!body) return;
@@ -118,9 +119,16 @@ export class FridgeView {
     }
     const heldText = Object.keys(held).length ? this.view.describeSelection(held) : "Nog niets";
     const firstFilled = state.shelves.find(({ productId }) => productId);
+    // Geopend na herkenning op de beginpagina: de begroeting zegt hoe (zoals in het productvenster).
+    const how = { face: " Je bent herkend met de camera.", badge: " Je bent herkend met je pas." }[state.recognizedBy] || "";
+    // Zolang er niets in de hand is, kan de medewerker in plaats daarvan het productvenster openen
+    // (brood, beleg en andere producten die niet in de koelkast liggen).
+    const toProducts = Object.keys(held).length === 0
+      ? `<button type="button" class="text-link fridge-to-products" data-fridge-to-products>${icon("package")} Liever brood of beleg? Open het productvenster</button>`
+      : "";
 
     return `
-      <p class="welcome-line">${this.escape(`${this.view.greeting(new Date())} ${firstName}. Pak wat je wilt en sluit de deur.`)}</p>
+      <p class="welcome-line">${this.escape(`${this.view.greeting(new Date())} ${firstName}.${how} Pak wat je wilt en sluit de deur.`)}</p>
       <p class="fridge-owner" id="fridgeOwner">Alles wat je nu pakt, staat op naam van <strong>${this.escape(employee?.name || "deze medewerker")}</strong>.</p>
       <p class="muted fridge-help">Tik op een schap om een product te pakken. Zet je iets terug, tik dan op Terugleggen.</p>
       <div class="fridge-cabinet is-open">
@@ -128,6 +136,7 @@ export class FridgeView {
         <div class="fridge-shelves">${state.shelves.map((shelf) => this.shelfHtml(shelf)).join("")}</div>
       </div>
       <p class="fridge-hand"><strong>In je hand:</strong> <span id="fridgeHandText">${this.escape(heldText)}</span></p>
+      ${toProducts}
       ${firstFilled ? `<button type="button" class="text-link fridge-foreign" data-fridge-foreign="${this.escape(firstFilled.shelf)}">Iets anders op schap ${this.escape(firstFilled.shelf)} leggen (demo)</button>` : ""}`;
   }
 

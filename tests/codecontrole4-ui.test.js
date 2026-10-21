@@ -230,7 +230,8 @@ test("J: tijdens het vastleggen blijft de knop uit en start een tweede klik niet
   view.$("#faceConsent").checked = true;
   let finishReading;
   let reads = 0;
-  demo.readFace = () => { reads += 1; return new Promise((resolve) => { finishReading = () => resolve([0.1, 0.2]); }); };
+  // Een echte descriptor heeft 128 getallen (vanaf 3.17 wordt die in het model opgeslagen en gecontroleerd).
+  demo.readFace = () => { reads += 1; return new Promise((resolve) => { finishReading = () => resolve(new Array(128).fill(0.1)); }); };
 
   const capturing = app.captureEnrollment();
   app.updateEnrollButton(); // het vinkje opnieuw aanzetten tijdens het vastleggen

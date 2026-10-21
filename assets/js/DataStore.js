@@ -64,6 +64,13 @@ const MAX_UNIT_WEIGHT = 5000;
 const MAX_SHELF_WEIGHT = 1000000;
 const MAX_TAKEN = 1000;
 
+// Demo gezichtsherkenning: een opgeslagen descriptor bestaat uit precies 128 getallen tussen -10 en
+// 10 (gelijk aan FACE_DESCRIPTOR_LENGTH en MAX_DESCRIPTOR_VALUE in RegistrationModel.js), en het
+// antwoord op de vraag na een passcan is "declined" of "expired".
+const FACE_DESCRIPTOR_LENGTH = 128;
+const MAX_DESCRIPTOR_VALUE = 10;
+const FACE_OFFER_ANSWERS = new Set(["declined", "expired"]);
+
 /**
  * DataStore — de opslaglaag: leest en schrijft alle gegevens in de browser (localStorage).
  *
@@ -86,7 +93,9 @@ export class DataStore {
   // lijst, dan zijn de gegevens beschadigd (zie migrate).
   // De twee lijsten van de slimme koelkast (fridgeShelves en fridgeOpenings) ontbreken in gegevens
   // van vóór de koelkast. Die krijgen dan een lege lijst (zie migrate).
-  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog", "fridgeShelves", "fridgeOpenings"];
+  // Hetzelfde geldt voor de twee lijsten van de demo gezichtsherkenning (faceEnrollments en faceOffers,
+  // vanaf versie 3.17).
+  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog", "fridgeShelves", "fridgeOpenings", "faceEnrollments", "faceOffers"];
 
   // De sleutel waaronder de gegevens in localStorage staan.
   // `loadProblem` zegt na load() of er iets mis was met de opgeslagen gegevens:
@@ -271,7 +280,9 @@ export class DataStore {
       companies: (company) => this.isValidCompany(company),
       points: (point) => this.isValidPoint(point),
       fridgeShelves: (shelf) => this.isValidFridgeShelf(shelf),
-      fridgeOpenings: (opening) => this.isValidFridgeOpening(opening, now)
+      fridgeOpenings: (opening) => this.isValidFridgeOpening(opening, now),
+      faceEnrollments: (entry) => this.isValidFaceEnrollment(entry, now),
+      faceOffers: (offer) => this.isValidFaceOffer(offer, now)
     };
   }
 
@@ -325,7 +336,24 @@ export class DataStore {
     cleaned.employees = this.withoutDuplicateBadges(cleaned.employees);
     if (Array.isArray(data.auditLog)) cleaned.auditLog = this.withoutDuplicateIds(data.auditLog);
 
+    // Demo gezichtsherkenning: een gezichtsinstelling hoort bij een bestaande, actieve medewerker en
+    // een antwoord op de vraag bij een bestaande medewerker, allebei hooguit één per medewerker. Een
+    // instelling van een inactieve of verwijderde medewerker had al gewist moeten zijn en valt af.
+    const employees = new Map(cleaned.employees.map((employee) => [employee.id, employee]));
+    cleaned.faceEnrollments = this.onePerEmployee(cleaned.faceEnrollments.filter(({ employeeId }) => employees.get(employeeId)?.active));
+    cleaned.faceOffers = this.onePerEmployee(cleaned.faceOffers.filter(({ employeeId }) => employees.has(employeeId)));
+
     return cleaned;
+  }
+
+  // Houdt per medewerker alleen de eerste regel (gezichtsinstelling of antwoord) over.
+  onePerEmployee(list) {
+    const seen = new Set();
+    return list.filter(({ employeeId }) => {
+      if (seen.has(employeeId)) return false;
+      seen.add(employeeId);
+      return true;
+    });
   }
 
   // Hoeveel regels uit de opgeslagen gegevens zijn er na het controleren afgevallen?
@@ -531,6 +559,34 @@ export class DataStore {
     );
   }
 
+  // Eén opgeslagen gezichtsinstelling (demo gezichtsherkenning): een veilige id en medewerker, een
+  // descriptor van precies FACE_DESCRIPTOR_LENGTH (128) eindige getallen tussen -MAX_DESCRIPTOR_VALUE
+  // en MAX_DESCRIPTOR_VALUE (alleen getallen, geen tekst, beelden of andere velden) en een geldige
+  // datum van instellen (`enrolledAt`, hooguit één dag na `now`). Een verlopen instelling is hier nog
+  // geldig: het model wist die na het laden en onthoudt dat ze is verlopen (expireFaceEnrollments).
+  isValidFaceEnrollment(entry, now = new Date()) {
+    return (
+      this.isSafeId(entry?.id) &&
+      this.isSafeId(entry.employeeId) &&
+      Array.isArray(entry.descriptor) &&
+      entry.descriptor.length === FACE_DESCRIPTOR_LENGTH &&
+      entry.descriptor.every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE) &&
+      this.isValidDateTime(entry.enrolledAt, now.getTime() + MAX_FUTURE_MS) &&
+      Object.keys(entry).every((key) => ["id", "employeeId", "descriptor", "enrolledAt"].includes(key))
+    );
+  }
+
+  // Eén antwoord op de vraag na een passcan: een veilige id en medewerker, "declined" of "expired" en
+  // een geldige datum.
+  isValidFaceOffer(offer, now = new Date()) {
+    return (
+      this.isSafeId(offer?.id) &&
+      this.isSafeId(offer.employeeId) &&
+      FACE_OFFER_ANSWERS.has(offer.answer) &&
+      this.isValidDateTime(offer.answeredAt, now.getTime() + MAX_FUTURE_MS)
+    );
+  }
+
   // Een product moet een veilige id, een naam en een geldige prijs hebben.
   isValidProduct(product) {
     return this.isSafeId(product?.id) && this.isText(product.name) && this.isValidPrice(product.price);
@@ -618,7 +674,11 @@ export class DataStore {
       // Slimme koelkast (demo): gegevens van vóór de koelkast hebben deze lijsten niet en krijgen een
       // lege lijst. De koelkast gebruikt dan de standaardindeling uit config.js.
       fridgeShelves: objects(data.fridgeShelves),
-      fridgeOpenings: objects(data.fridgeOpenings)
+      fridgeOpenings: objects(data.fridgeOpenings),
+      // Demo gezichtsherkenning (vanaf 3.17): oudere gegevens hebben geen opgeslagen gezichten en geen
+      // antwoorden. Toen stonden gezichten alleen in het geheugen; die zijn na herladen dus al weg.
+      faceEnrollments: objects(data.faceEnrollments),
+      faceOffers: objects(data.faceOffers)
     };
   }
 
