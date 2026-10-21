@@ -50,6 +50,13 @@ export class FridgeController {
   // Zo vaak (ms) kijkt de app of de deur te lang open staat of het venster te lang niet is gebruikt.
   static TICK_MS = 1000;
 
+  // Zo lang (ms) na een nieuwe stap in het venster (bijvoorbeeld van de open deur naar het overzicht)
+  // telt een klik op de achtergrond, de sluitknop of "Klaar" niet. Bij een dubbeltik op "Deur dicht"
+  // valt de tweede tik anders op het lagere overzicht of de achtergrond en sluit het overzicht meteen,
+  // zodat de medewerker niet ziet wat er is geregistreerd. Dezelfde tijd als
+  // EmployeeController.GHOST_CLICK_MS bij het productvenster.
+  static GHOST_CLICK_MS = 500;
+
   // Meldingen in de statusregel van het koelkastvenster.
   static MESSAGES = {
     opened: "De deur is open. Pak wat je wilt en sluit de deur.",
@@ -61,6 +68,13 @@ export class FridgeController {
     nothingTaken: "Je hebt niets gepakt. Er is niets geregistreerd.",
     saveFailed: "De registratie kon niet worden opgeslagen. Er is niets geregistreerd."
   };
+
+  // De melding als een collega zijn pas scant terwijl de deur open is op naam van een ander. Wat er
+  // nu wordt gepakt, komt op naam van degene die de koelkast opende. Daarom krijgt de opening de
+  // status "Controle nodig" (zie fridgeScan).
+  static otherBadgeMessage(name) {
+    return `De koelkast is al open op naam van ${name}. Sluit eerst de deur en open dan met je eigen pas. De beheerder kijkt naar deze opening.`;
+  }
 
   // `app` is de controller (RegistrationApp) waar deze class bij hoort. `clock` levert de tijd en de
   // timer (dezelfde klok als AdminController). `settings` zijn de instellingen uit config.js.
@@ -77,7 +91,25 @@ export class FridgeController {
     this.lastFridgeActivity = null;   // tijdstip (ms) van de laatste invoer in het venster
     this.fridgeTimer = null;          // timer die iedere seconde checkFridgeTimers aanroept
     this.doorWarningShown = false;    // staat "De deur staat al lang open." in beeld?
+    this.fridgePhaseChangedAt = -Infinity; // tijdstip (ms) van de laatste nieuwe stap (zie isFridgeGhostClick)
     if (this.smartFridge) this.smartFridge.onNotOpened = () => this.handleFridgeNotOpened();
+  }
+
+  // Zet het venster in een nieuwe stap en onthoudt wanneer dat gebeurde (voor isFridgeGhostClick).
+  setFridgePhase(phase) {
+    this.fridgePhase = phase;
+    this.fridgePhaseChangedAt = this.clock.now();
+  }
+
+  // Is deze klik (op de achtergrond, de sluitknop of "Klaar") een "spookklik"? Dat is zo als het de
+  // tweede klik van een dubbelklik of dubbeltik is (event.detail > 1), of als het venster minder dan
+  // GHOST_CLICK_MS (500 ms) geleden een nieuwe stap kreeg. Escape en Enter tellen nooit als
+  // spookklik: zonder event, of met event.detail 0 (een "klik" met het toetsenbord).
+  // `now` is mee te geven, zodat dit te testen is.
+  isFridgeGhostClick(event, now = this.clock.now()) {
+    if (!event || !(event.detail > 0)) return false;
+    if (event.detail > 1) return true;
+    return now - this.fridgePhaseChangedAt < FridgeController.GHOST_CLICK_MS;
   }
 
   // De echte klok van de browser (zoals AdminController).
@@ -115,13 +147,23 @@ export class FridgeController {
     if (!this.isFridgeAvailable() || this.fridgePhase !== "closed") return;
 
     this.app.openModal("#fridgeModal");
-    this.fridgePhase = "waiting";
+    this.setFridgePhase("waiting");
     this.view.setFridgeStatus("");
     this.view.announceFridge("");
     this.renderFridge();
     this.noteFridgeActivity();
     this.startFridgeTimer();
-    (this.view.$("[data-fridge-demo-open]") || this.view.$("#fridgeModal .modal-close"))?.focus({ preventScroll: true });
+    // De knop "Openen (demo)" staat pas aan als er een medewerker is gekozen. Tot die tijd krijgt de
+    // sluitknop de focus (niet de keuzelijst: een scan van de pas zou daar een naam kiezen).
+    (this.view.$("[data-fridge-demo-open]:not([disabled])") || this.view.$("#fridgeModal .modal-close"))?.focus({ preventScroll: true });
+  }
+
+  // Demo: de knop "Openen (demo)" staat alleen aan als er in de keuzelijst een medewerker is gekozen.
+  // De keuzelijst begint leeg ("Kies een medewerker"), zodat niemand de koelkast per ongeluk opent op
+  // naam van de collega die bovenaan de lijst staat.
+  updateFridgeDemoButton() {
+    const button = this.view.$("[data-fridge-demo-open]");
+    if (button) button.disabled = !this.view.$("#fridgeDemoEmployee")?.value;
   }
 
   // Tekent het venster opnieuw met de stap waarin het nu is.
@@ -150,7 +192,10 @@ export class FridgeController {
   // Sluitknop, klik op de achtergrond en Escape. Staat de deur open, dan gaat de deur dicht
   // (closeFridgeDoor met cancel: heeft de medewerker niets gepakt, dan sluit het venster meteen met een
   // korte melding, anders verschijnt het overzicht). Anders gaat het venster dicht.
-  closeFridgeWindow() {
+  // `event` is de klik op de achtergrond of de sluitknop (bij Escape ontbreekt het). Een spookklik
+  // vlak na een nieuwe stap wordt genegeerd (isFridgeGhostClick).
+  closeFridgeWindow(event) {
+    if (this.isFridgeGhostClick(event)) return;
     if (this.fridgePhase === "open") {
       this.closeFridgeDoor({ cancel: true });
       return;
@@ -164,7 +209,7 @@ export class FridgeController {
     if (this.fridgePhase === "closed") return;
     if (this.smartFridge?.isOpen()) this.smartFridge.abort();
 
-    this.fridgePhase = "closed";
+    this.setFridgePhase("closed");
     this.fridgeEmployeeId = null;
     this.fridgeLayoutNow = [];
     this.fridgeHeld = {};
@@ -188,13 +233,25 @@ export class FridgeController {
   // ------------------------------------------------------------------
 
   // Een pas is gescand terwijl het koelkastvenster open is (zie BadgeController.recognizeBadge).
-  //   - de deur staat al open: de scan telt niet, met de melding "De koelkast is al open.";
+  //   - de deur staat al open en het is de pas van een andere (actieve) medewerker: de scan opent niets,
+  //     want er kan maar één opening tegelijk zijn. Wat de collega nu pakt, komt op naam van degene die
+  //     de koelkast opende. Daarom krijgt de opening de status "Controle nodig" (SmartFridge.noteOtherBadge)
+  //     en zegt de melding op wiens naam de koelkast open is (otherBadgeMessage). De beheerder ziet de
+  //     opening bij de laatste openingen en in het logboek en kan zo nodig corrigeren;
+  //   - de deur staat al open en het is dezelfde pas (of een onbekende pas): de scan telt niet, met de
+  //     melding "De koelkast is al open. Sluit eerst de deur.";
   //   - een onbekende pas en de pas van een inactieve medewerker krijgen dezelfde melding, zoals bij
   //     het herkennen met de pas. Het slot blijft dicht;
   //   - anders gaat de koelkast open voor deze medewerker (ook vanuit het overzicht van de vorige).
   fridgeScan(code) {
     this.noteFridgeActivity();
     if (this.fridgePhase === "open") {
+      const other = this.model.findEmployeeByBadge(code);
+      if (other?.active && other.id !== this.fridgeEmployeeId) {
+        this.smartFridge.noteOtherBadge?.();
+        this.view.setFridgeStatus(FridgeController.otherBadgeMessage(this.app.employeeLabel(this.fridgeEmployeeId)), "error");
+        return false;
+      }
       this.view.setFridgeStatus(FridgeController.MESSAGES.alreadyOpen, "error");
       return false;
     }
@@ -234,13 +291,18 @@ export class FridgeController {
       return false;
     }
 
-    this.stockSimulatedShelves(employee.pointId, layout);
-    if (!this.smartFridge.start(employeeId, employee.pointId, layout)) return false;
+    // Per schap gaat ook mee hoeveel producten erop liggen (itemCount). Daarmee rekent SmartFridge met
+    // het gemeten gemiddelde gewicht van één stuk in plaats van alleen het ingestelde gewicht (zie
+    // SmartFridge.effectiveUnitWeight). In de demo is dat het aantal waarmee het schap net is gevuld.
+    // In productie weet de backend het uit de laatste vulbeurt en de registraties sindsdien.
+    const counts = this.stockSimulatedShelves(employee.pointId, layout);
+    const measuredLayout = layout.map((shelf) => (counts[shelf.shelf] > 0 ? { ...shelf, itemCount: counts[shelf.shelf] } : shelf));
+    if (!this.smartFridge.start(employeeId, employee.pointId, measuredLayout)) return false;
     // In de demo opent de medewerker de deur meteen nadat het slot opengaat. Bij een echte koelkast
     // meldt de deursensor dat; gaat de deur niet open, dan sluit het slot vanzelf (handleFridgeNotOpened).
     this.smartFridge.openDoor();
 
-    this.fridgePhase = "open";
+    this.setFridgePhase("open");
     this.fridgeEmployeeId = employeeId;
     this.fridgeLayoutNow = layout;
     this.fridgeHeld = {};
@@ -259,21 +321,25 @@ export class FridgeController {
 
   // Alleen voor de simulatie: legt op ieder nagebootst schap zoveel producten als er volgens de
   // voorraad van het consumptiepunt zijn (geen negatieve aantallen). Een echte weegschaal heeft geen
-  // fill(); dan wordt dit schap overgeslagen.
+  // fill(); dan wordt dit schap overgeslagen. Geeft per schapnummer terug hoeveel producten er nu op
+  // liggen, bijvoorbeeld { 1: 24, 2: 24, 3: 0 }.
   stockSimulatedShelves(pointId, layout) {
+    const counts = {};
     for (const { shelf, productId, unitWeight } of layout) {
       const scale = this.smartFridge.scale(shelf);
       if (typeof scale?.fill !== "function") continue;
       const stock = productId ? Number(this.model.stockEntry(pointId, productId)?.stock) || 0 : 0;
       scale.fill(Math.max(0, Math.floor(stock)), unitWeight ?? 0, this.settings.weightVariation);
+      counts[shelf] = scale.itemCount?.() ?? 0;
     }
+    return counts;
   }
 
   // Het slot is vanzelf dichtgegaan omdat de deur niet op tijd werd geopend (SmartFridge). Er is
   // niets gepakt en niets geregistreerd; het venster wacht weer op een pas.
   handleFridgeNotOpened() {
     if (this.fridgePhase !== "open") return;
-    this.fridgePhase = "waiting";
+    this.setFridgePhase("waiting");
     this.fridgeEmployeeId = null;
     this.fridgeHeld = {};
     this.view.setFridgeStatus(FridgeController.MESSAGES.notOpened, "error");
@@ -372,7 +438,7 @@ export class FridgeController {
     this.view.renderStats();
     this.fridgeResult = result;
     this.fridgeSaveFailed = !saved;
-    this.fridgePhase = "summary";
+    this.setFridgePhase("summary");
     this.noteFridgeActivity();
 
     if (cancel && saved && result.status === "nothing") {
@@ -400,6 +466,7 @@ export class FridgeController {
       .filter(({ flag }) => flag)
       .map((shelf) => SmartFridge.issueText(shelf, shelf.productId ? this.model.productName(shelf.productId) : null));
     if (result.longOpen) issues.push("deur stond lang open");
+    if (result.otherBadge) issues.push("pas van een collega gescand terwijl de deur open stond");
 
     const what = taken ? `${taken} geregistreerd` : "niets gepakt";
     const extra = issues.length ? `. Controle nodig: ${issues.join(", ")}` : "";
@@ -453,11 +520,13 @@ export class FridgeController {
   }
 
   // Toont of verbergt de waarschuwing; de view wordt alleen aangeroepen als er iets verandert, zodat
-  // een schermlezer de waarschuwing één keer voorleest.
+  // een schermlezer de waarschuwing één keer voorleest. De waarschuwing noemt ook op wiens naam de
+  // koelkast open is: wie de deur open ziet staan en iets pakt, weet dan dat het niet op zijn eigen
+  // naam komt.
   setFridgeDoorWarning(shown) {
     if (this.doorWarningShown === shown) return;
     this.doorWarningShown = shown;
-    this.view.setDoorWarning(shown);
+    this.view.setDoorWarning(shown, shown && this.fridgeEmployeeId ? this.app.employeeLabel(this.fridgeEmployeeId) : null);
   }
 
   // ------------------------------------------------------------------

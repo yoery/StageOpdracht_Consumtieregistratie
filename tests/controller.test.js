@@ -509,7 +509,8 @@ test("minimum en getelde voorraad: een negatief getal wordt geweigerd, 0 mag wel
 
   app.saveStockField(stockInput("blikje", "stock", "0"));
   assert.equal(model.findPoint(point.id).products.blikje.stock, 0);
-  assert.equal(model.auditLog.at(-1).details, "Blikje op TVB · Hoofdkantoor: 0");
+  // Sinds versie 3.16 staan bij een telling de verwachte voorraad, de getelde voorraad en het verschil in het logboek.
+  assert.equal(model.auditLog.at(-1).details, "Blikje op TVB · Hoofdkantoor: verwacht 24, geteld 0, verschil -24");
 });
 
 test("voorraad tellen: mislukt opslaan zet het veld terug op de opgeslagen waarde", () => {

@@ -571,9 +571,13 @@ main {
   border-radius:10px;
   transition:.18s
 }
-.employee-row:hover {
-  border-color:var(--hover-border);
-  background:var(--hover-bg)
+/* Hover alleen met een muis of pen (hover:hover). Op een aanraakscherm blijft de laatste tik anders
+   als "hover" staan: na registreren kreeg de rij die onder de vinger lag (een collega) dan een rand. */
+@media (hover:hover) {
+  .employee-row:hover {
+    border-color:var(--hover-border);
+    background:var(--hover-bg)
+  }
 }
 .employee-info {
   display:flex;
@@ -1011,17 +1015,25 @@ footer {
   background:var(--green);
   color:#fff
 }
-.personal-product-plus:hover,
 .personal-product-plus:focus-visible {
   background:var(--plus-hover)
+}
+@media (hover:hover) {
+  .personal-product-plus:hover {
+    background:var(--plus-hover)
+  }
 }
 .personal-product-minus {
   background:var(--mint);
   color:var(--green-dark)
 }
-.personal-product-minus:hover,
 .personal-product-minus:focus-visible {
   background:var(--mint-border)
+}
+@media (hover:hover) {
+  .personal-product-minus:hover {
+    background:var(--mint-border)
+  }
 }
 .personal-product-minus:disabled {
   opacity:.4;
@@ -1140,8 +1152,10 @@ footer {
 .employee-row-clickable {
   cursor:pointer
 }
-.employee-row-clickable:hover {
-  border-color:var(--green)
+@media (hover:hover) {
+  .employee-row-clickable:hover {
+    border-color:var(--green)
+  }
 }
 .employee-form-modal .employee-fields {
   display:grid;
@@ -1817,6 +1831,10 @@ footer {
   height:20px;
   color:var(--green)
 }
+/* "Zelfde als vorige keer": minstens 44 pixels hoog, net als de andere tikdoelen (UX-review 3.12). */
+.suggestion .secondary-button {
+  min-height:44px
+}
 /* Demo gezichtsherkenning: knop op de beginpagina en instellen in het productvenster. */
 /* De hint voor de pas en de demoknoppen ("Herken mij met de camera (demo)" en "Slimme koelkast (demo)")
    staan naast elkaar op één regel (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger
@@ -2113,6 +2131,14 @@ footer {
 .fridge-help {
   margin:6px 0 12px
 }
+/* Op wiens naam de open koelkast staat: gewone tekst, de naam vet (geen nieuwe kleur). */
+.fridge-owner {
+  margin:6px 0 0;
+  color:var(--ink)
+}
+.fridge-owner + .fridge-help {
+  margin-top:4px
+}
 /* De open koelkast: links de open deur, rechts de schappen. Ieder schap eindigt met een plank. */
 .fridge-shelves {
   display:grid
@@ -2162,9 +2188,15 @@ footer {
   cursor:pointer;
   transition:border-color .15s,background-color .15s,transform .1s
 }
-.fridge-shelf-take:hover,.fridge-shelf-take:focus-visible {
+.fridge-shelf-take:focus-visible {
   border-color:var(--green);
   background:var(--hover-bg)
+}
+@media (hover:hover) {
+  .fridge-shelf-take:hover {
+    border-color:var(--green);
+    background:var(--hover-bg)
+  }
 }
 .fridge-shelf-take:active:not(:disabled) {
   transform:scale(.98)

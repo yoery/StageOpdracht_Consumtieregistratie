@@ -99,13 +99,18 @@ export class DataStore {
   // `saveProblem` zegt na save() waarom opslaan niet lukte:
   //   null     = opslaan is gelukt;
   //   "full"   = de opslag van de browser is vol (QuotaExceededError);
-  //   "failed" = opslaan lukte om een andere reden niet (bijvoorbeeld geblokkeerde opslag).
+  //   "failed" = opslaan lukte om een andere reden niet (bijvoorbeeld geblokkeerde opslag);
+  //   "conflict" = een ander tabblad heeft intussen iets opgeslagen dat dit tabblad nog niet had
+  //                geladen (zie save). Er is niets overschreven.
   // `repairedBadges` telt bij het laden de ongeldige pasnummers die zijn leeggemaakt (zie migrateEmployee).
+  // `lastSeen` is de opgeslagen tekst zoals dit tabblad die het laatst heeft gelezen of geschreven
+  // (null = er stond niets). Zolang er nog niet is geladen, is het undefined: dan wordt niet vergeleken.
   constructor(key) {
     this.key = key;
     this.loadProblem = null;
     this.saveProblem = null;
     this.repairedBadges = 0;
+    this.lastSeen = undefined;
   }
 
   // ------------------------------------------------------------------
@@ -129,6 +134,7 @@ export class DataStore {
       this.loadProblem = "unavailable";
       return null;
     }
+    this.lastSeen = value;
     if (!value) return null;
 
     try {
@@ -187,6 +193,7 @@ export class DataStore {
     try {
       const keys = [this.key, ...this.backupKeys(), ...this.oldBackupKeys()];
       for (const key of keys) localStorage.removeItem(key);
+      this.lastSeen = null;
       return true;
     } catch (error) {
       console.error("De gegevens konden niet worden gewist.", error);
@@ -213,10 +220,23 @@ export class DataStore {
   // de browser vol is (zie isQuotaError), anders "failed". De controller toont bij een volle
   // opslag een eigen melding (zie RegistrationApp.persist). Er wordt niets automatisch
   // verwijderd: hoe lang registraties en het logboek bewaard blijven, is een besluit van TVB.
+  //
+  // Twee tabbladen (NFR-08): vóór het schrijven wordt gekeken of de opgeslagen tekst nog dezelfde is
+  // als wat dit tabblad het laatst heeft gelezen of geschreven (`lastSeen`). Heeft een ander tabblad
+  // intussen iets opgeslagen en heeft dit tabblad dat nog niet geladen (het storage-event is nog niet
+  // binnen), dan zou schrijven de wijziging van dat tabblad stil wissen. Dan wordt er niets
+  // geschreven, is `saveProblem` "conflict" en geeft save false terug. RegistrationApp.persist laadt
+  // dan de nieuwe gegevens en voert de wijziging daarop opnieuw uit.
   save(data) {
     this.saveProblem = null;
     try {
-      localStorage.setItem(this.key, JSON.stringify(data));
+      if (this.lastSeen !== undefined && localStorage.getItem(this.key) !== this.lastSeen) {
+        this.saveProblem = "conflict";
+        return false;
+      }
+      const value = JSON.stringify(data);
+      localStorage.setItem(this.key, value);
+      this.lastSeen = value;
       return true;
     } catch (error) {
       this.saveProblem = this.isQuotaError(error) ? "full" : "failed";
@@ -490,6 +510,7 @@ export class DataStore {
       Date.parse(opening.closedAt) >= Date.parse(opening.openedAt) &&
       FRIDGE_STATUSES.has(opening.status) &&
       (opening.longOpen === undefined || typeof opening.longOpen === "boolean") &&
+      (opening.otherBadge === undefined || typeof opening.otherBadge === "boolean") &&
       Array.isArray(opening.shelves) &&
       opening.shelves.length <= MAX_SHELF &&
       opening.shelves.every((shelf) => this.isValidOpeningShelf(shelf))

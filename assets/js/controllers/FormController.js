@@ -76,6 +76,34 @@ export class FormController {
     return /^\d+$/.test(String(value).trim());
   }
 
+  // Een prijs voor het logboek, bijvoorbeeld 0.65 wordt "€ 0,65".
+  static euroText(value) {
+    return `€ ${(Math.round(Number(value) * 100) / 100).toFixed(2).replace(".", ",")}`;
+  }
+
+  // Beschrijft voor het logboek welke van deze velden zijn veranderd, met de oude en de nieuwe waarde,
+  // bijvoorbeeld "looncode van 101 naar 102, werkgevernummer van leeg naar 4711". `fields` is een
+  // lijst met [veldnaam, omschrijving] en eventueel een functie die de waarde als tekst schrijft.
+  // Geeft "" terug als er niets is veranderd. Alleen voor velden die de loonadministratie gebruikt
+  // (prijs, looncode, personeelsnummer en werkgevernummer). Het pasnummer staat er bewust nooit bij:
+  // dat komt niet in het logboek (AVG, dataminimalisatie).
+  static changeText(before, after, fields) {
+    return fields
+      .filter(([key, , format = String]) => before && format(before[key] ?? "") !== format(after[key] ?? ""))
+      .map(([key, label, format = String]) => {
+        const text = (value) => (String(value ?? "").trim() === "" ? "leeg" : format(value));
+        return `${label} van ${text(before[key])} naar ${text(after[key])}`;
+      })
+      .join(", ");
+  }
+
+  // Logboektekst bij het wijzigen: de naam, en als een van de velden is veranderd, daarachter de
+  // oude en nieuwe waarde (zie changeText). Bij toevoegen alleen de naam.
+  static auditDetails(name, before, after, fields) {
+    const changes = FormController.changeText(before, after, fields);
+    return changes ? `${name}: ${changes}` : name;
+  }
+
   // Controleert velden die alleen cijfers mogen bevatten. Lege optionele velden zijn goed;
   // lege verplichte velden zijn al door validateRequiredFields gemeld.
   // Geeft true terug als alles klopt; anders krijgt het eerste foute veld de focus.
@@ -252,7 +280,8 @@ export class FormController {
   // Een personeelsnummer mag maar bij één medewerker horen, anders weet de loonadministratie
   // niet bij wie een registratie hoort. Twee medewerkers met dezelfde naam mag wel.
   // Hetzelfde geldt voor het pasnummer (zie validateBadgeField). Het pasnummer komt niet in het
-  // logboek; daar staat alleen de naam, net als bij andere wijzigingen van een medewerker.
+  // logboek. Daar staan de naam en, bij wijzigen, de oude en nieuwe looncode, personeelsnummer en
+  // werkgevernummer als die zijn veranderd (zie auditDetails).
   // Is de medewerker die gewijzigd wordt intussen verwijderd, dan wordt er niets opgeslagen.
   // Hetzelfde geldt als het gekozen bedrijf of consumptiepunt niet meer bestaat (zie
   // validateEmployeeAssignment).
@@ -295,12 +324,19 @@ export class FormController {
     if (!this.validateEmployeeAssignment(employeeData)) return;
 
     // Het model geeft false terug als er toch niets kon worden opgeslagen; persist meldt dat dan.
+    // Bij wijzigen komen een gewijzigde looncode, personeelsnummer of werkgevernummer met de oude en
+    // de nieuwe waarde in het logboek (die gaan naar de loonadministratie). Het pasnummer niet.
     const fullName = `${employeeData.firstName} ${employeeData.lastName}`;
+    const details = FormController.auditDetails(fullName, editingId ? this.model.findEmployee(editingId) : null, employeeData, [
+      ["payrollCode", "looncode"],
+      ["personnelNumber", "personeelsnummer"],
+      ["employerNumber", "werkgevernummer"]
+    ]);
     const saved = this.app.persist(
       () => (editingId
         ? this.model.updateEmployee(editingId, employeeData)
         : this.model.addEmployee(employeeData)),
-      { action: editingId ? "Medewerker gewijzigd" : "Medewerker toegevoegd", details: fullName }
+      { action: editingId ? "Medewerker gewijzigd" : "Medewerker toegevoegd", details }
     );
     if (!saved) return;
 
@@ -459,9 +495,13 @@ export class FormController {
       return;
     }
 
+    // Bij wijzigen komt een gewijzigde prijs met de oude en de nieuwe prijs in het logboek.
+    const details = FormController.auditDetails(productData.name, editingId ? this.model.findProduct(editingId) : null, productData, [
+      ["price", "prijs", FormController.euroText]
+    ]);
     const saved = this.app.persist(
       () => this.model.saveProduct(productData),
-      { action: editingId ? "Product gewijzigd" : "Product toegevoegd", details: productData.name }
+      { action: editingId ? "Product gewijzigd" : "Product toegevoegd", details }
     );
     if (!saved) return;
 
@@ -558,9 +598,13 @@ export class FormController {
       return;
     }
 
+    // Bij wijzigen komt een gewijzigd werkgevernummer met de oude en de nieuwe waarde in het logboek.
+    const details = FormController.auditDetails(name, editingId ? this.model.findCompany(editingId) : null, { employerNumber }, [
+      ["employerNumber", "werkgevernummer"]
+    ]);
     const saved = this.app.persist(
       () => this.model.saveCompany({ id: editingId, name, employerNumber }),
-      { action: editingId ? "Bedrijf gewijzigd" : "Bedrijf toegevoegd", details: name }
+      { action: editingId ? "Bedrijf gewijzigd" : "Bedrijf toegevoegd", details }
     );
     if (!saved) return;
 

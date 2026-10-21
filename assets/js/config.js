@@ -142,6 +142,11 @@ export const EMPLOYEE_IDLE_WARNING_MS = 10 * 1000;
 //     consumptiepunt niet aanbiedt, telt als leeg schap;
 //   - toleranceRatio: hoeveel het gewichtsverschil van een heel aantal producten mag afwijken, als
 //     deel van het gewicht van één product (0.15 = 15 procent, bij een blikje van 350 gram 52 gram);
+//   - measuredWeightRange: weet de koelkast hoeveel producten er op een schap liggen, dan rekent hij
+//     met het gemeten gemiddelde gewicht van één product (gewicht van het schap gedeeld door het
+//     aantal) in plaats van met unitWeight. Dat geldt zolang het gemiddelde niet meer dan dit deel
+//     (0.25 = 25 procent) afwijkt van unitWeight. Zo telt de koelkast ook goed als producten
+//     structureel zwaarder of lichter zijn dan ingesteld (bijvoorbeeld eieren van klasse L);
 //   - emptyShelfToleranceGrams: zo veel gram mag een leeg schap verschillen voordat het opvalt;
 //   - weightVariation: alleen voor de simulatie. Ieder product wijkt tot zo veel (0.02 = 2 procent)
 //     af van het opgegeven gewicht, zoals echte blikjes ook niet allemaal even zwaar zijn;
@@ -163,6 +168,7 @@ export const SMART_FRIDGE = {
     { productId: "ei", unitWeight: 60 }
   ],
   toleranceRatio: 0.15,
+  measuredWeightRange: 0.25,
   emptyShelfToleranceGrams: 25,
   weightVariation: 0.02,
   foreignWeightGrams: 120,

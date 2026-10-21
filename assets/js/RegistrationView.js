@@ -63,8 +63,8 @@ export class RegistrationView {
     this.fridge.announceFridge(text);
   }
 
-  setDoorWarning(shown) {
-    this.fridge.setDoorWarning(shown);
+  setDoorWarning(shown, name) {
+    this.fridge.setDoorWarning(shown, name);
   }
 
   renderFridgeAdmin() {

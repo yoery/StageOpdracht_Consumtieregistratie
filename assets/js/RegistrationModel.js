@@ -29,6 +29,10 @@ export const FRIDGE_STATUS = {
 // er nooit een prijs wordt opgeslagen die na herladen verdwijnt.
 export const MAX_PRICE = 1000;
 
+// Hoogste lengte van de omschrijving van een logboekregel. Gelijk aan MAX_AUDIT_TEXT in DataStore.js:
+// DataStore slaat een langere regel bij het laden over (zie logAdminAction).
+export const MAX_AUDIT_DETAILS = 500;
+
 /**
  * RegistrationModel — de gegevens en alle regels van de applicatie (het "Model" in MVC).
  *
@@ -900,7 +904,8 @@ export class RegistrationModel {
   // Schappen met een markering zijn al niet meegeteld in `taken` (zie SmartFridge.takenProducts).
   // Van de opening wordt alleen bewaard wat nodig is (TO bijlage B, AVG): wie, welk consumptiepunt,
   // wanneer de deur open- en dichtging, per schap het gewicht voor en na, het berekende aantal en een
-  // eventuele markering, en de status. Geen beelden of andere gegevens.
+  // eventuele markering, de status en of er een andere pas is gescand terwijl de deur open was
+  // (otherBadge, alleen als dat zo is). Geen beelden of andere gegevens.
   // Geeft de opgeslagen opening terug, of false als de medewerker of de status niet klopt (dan
   // verandert er niets en weigert persist de wijziging).
   addFridgeOpening(result) {
@@ -919,6 +924,8 @@ export class RegistrationModel {
         shelf, productId: productId ?? null, unitWeight: unitWeight ?? null, before, after, count, flag: flag ?? null
       }))
     };
+    // Scande een collega zijn pas terwijl de deur open was, dan wordt alleen dát onthouden (niet van wie).
+    if (result.otherBadge) opening.otherBadge = true;
 
     for (const [productId, amount] of Object.entries(result.taken)) {
       for (let count = 0; count < amount; count += 1) {
@@ -953,11 +960,15 @@ export class RegistrationModel {
   // ------------------------------------------------------------------
 
   // Bewaart een controleerbaar logboek van wijzigingen door de beheerder.
+  // De omschrijving is hooguit MAX_AUDIT_DETAILS tekens (gelijk aan MAX_AUDIT_TEXT in DataStore.js).
+  // Een langere omschrijving (bijvoorbeeld een lange naam met drie gewijzigde nummers) wordt ingekort
+  // met "…", anders zou DataStore de regel bij het volgende laden als beschadigd overslaan.
   logAdminAction(action, details) {
+    const text = String(details ?? "");
     const entry = {
       id: createId(),
       action,
-      details,
+      details: text.length > MAX_AUDIT_DETAILS ? `${text.slice(0, MAX_AUDIT_DETAILS - 1)}…` : text,
       createdAt: new Date().toISOString()
     };
 

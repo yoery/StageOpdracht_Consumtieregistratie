@@ -73,7 +73,10 @@ export class FridgeView {
     if (!open) this.setDoorWarning(false);
   }
 
-  // Deur dicht en op slot: de uitleg over de pas en, voor de demo, een medewerker kiezen.
+  // Deur dicht en op slot: de uitleg over de pas en, voor de demo, een medewerker kiezen. De keuzelijst
+  // begint met de lege keuze "Kies een medewerker" en de knop "Openen (demo)" staat pas aan na een
+  // keuze (FridgeController.updateFridgeDemoButton). Zo opent niemand de koelkast per ongeluk op naam
+  // van de collega die bovenaan de lijst staat.
   waitingHtml(state) {
     const employees = this.model.employees
       .filter(({ active }) => active)
@@ -95,15 +98,17 @@ export class FridgeView {
         <p class="muted">Kies een medewerker. In de demo werkt dat als het tonen van zijn pas.</p>
         <div class="fridge-demo-row">
           <label class="fridge-demo-label">Medewerker
-            <select id="fridgeDemoEmployee">${employees.map(({ id, name }) =>
+            <select id="fridgeDemoEmployee"><option value="" selected>Kies een medewerker</option>${employees.map(({ id, name }) =>
               `<option value="${this.escape(id)}">${this.escape(name)}</option>`).join("")}</select>
           </label>
-          <button type="button" class="secondary-button" data-fridge-demo-open ${employees.length ? "" : "disabled"}>${icon("unlock")} Openen (demo)</button>
+          <button type="button" class="secondary-button" data-fridge-demo-open disabled>${icon("unlock")} Openen (demo)</button>
         </div>
       </div>`;
   }
 
-  // Deur open: per schap het product, hoeveel er nog op liggen en tegels om te pakken.
+  // Deur open: per schap het product, hoeveel er nog op liggen en tegels om te pakken. Onder de
+  // begroeting staat op wiens naam alles komt wat er nu wordt gepakt (TO bijlage B, risico "Twee
+  // mensen tegelijk"): wie de deur open ziet staan, weet zo dat het niet op zijn eigen naam komt.
   openHtml(state) {
     const employee = this.model.findEmployee(state.employeeId);
     const firstName = employee?.firstName || employee?.name || "";
@@ -116,6 +121,7 @@ export class FridgeView {
 
     return `
       <p class="welcome-line">${this.escape(`${this.view.greeting(new Date())} ${firstName}. Pak wat je wilt en sluit de deur.`)}</p>
+      <p class="fridge-owner" id="fridgeOwner">Alles wat je nu pakt, staat op naam van <strong>${this.escape(employee?.name || "deze medewerker")}</strong>.</p>
       <p class="muted fridge-help">Tik op een schap om een product te pakken. Zet je iets terug, tik dan op Terugleggen.</p>
       <div class="fridge-cabinet is-open">
         <div class="fridge-door" aria-hidden="true"><span class="fridge-lock">${icon("unlock")} Open</span></div>
@@ -174,6 +180,7 @@ export class FridgeView {
       .filter(({ flag }) => flag)
       .map((shelf) => `Bij schap ${shelf.shelf} klopt het gewicht niet. Dat schap is niet geregistreerd.`);
     if (result?.longOpen) issues.push("De deur stond lang open.");
+    if (result?.otherBadge) issues.push("Er is een andere pas gescand terwijl de deur open stond.");
 
     const heading = anything ? `Je hebt gepakt: ${this.view.describeSelection(taken)}` : "Je hebt niets gepakt";
     const text = anything
@@ -206,9 +213,13 @@ export class FridgeView {
   }
 
   // Toont of verbergt de waarschuwing "De deur staat al lang open. Sluit de deur." in de knopbalk.
-  setDoorWarning(shown) {
+  // Met `name` zegt de waarschuwing ook op wiens naam de koelkast open is, bijvoorbeeld "… Wat er nu
+  // wordt gepakt, staat op naam van Lotte van Dijk."
+  setDoorWarning(shown, name = null) {
     const warning = this.$("#fridgeDoorWarning");
-    if (warning) warning.textContent = shown ? "De deur staat al lang open. Sluit de deur." : "";
+    if (!warning) return;
+    const owner = name ? ` Wat er nu wordt gepakt, staat op naam van ${name}.` : "";
+    warning.textContent = shown ? `De deur staat al lang open. Sluit de deur.${owner}` : "";
   }
 
   // ------------------------------------------------------------------
@@ -281,6 +292,7 @@ export class FridgeView {
           .filter(({ flag }) => flag)
           .map((shelf) => SmartFridge.issueText(shelf, shelf.productId ? this.model.productName(shelf.productId) : null));
         if (opening.longOpen) issues.push("deur stond lang open");
+        if (opening.otherBadge) issues.push("pas van een collega gescand terwijl de deur open stond");
         const status = FRIDGE_STATUS[opening.status] || opening.status;
 
         return `<tr>

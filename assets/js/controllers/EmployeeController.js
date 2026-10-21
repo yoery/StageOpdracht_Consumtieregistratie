@@ -88,8 +88,9 @@ export class EmployeeController {
   }
 
   // Maakt het zoekveld en het bedrijfsfilter leeg en zet de lijst weer bovenaan in beeld. Wordt
-  // gebruikt als een medewerker klaar is: na een geslaagde registratie, als het productvenster
-  // vanzelf sluit en als een pas het open venster van een collega vervangt. Zo begint de volgende
+  // gebruikt als een medewerker klaar is: na een geslaagde registratie, na sluiten zonder registreren
+  // (kruisje, achtergrond of Escape), als het productvenster vanzelf sluit en als een pas het open
+  // venster van een collega vervangt. Zo begint de volgende
   // gebruiker op de gedeelde tablet met de volledige lijst, en blijft de zoekterm van de vorige
   // gebruiker (een deel van zijn naam) niet staan.
   // Het filter krijgt weer "Alle bedrijven": de tekst, de gekozen waarde (dataset.value) en
@@ -287,6 +288,19 @@ export class EmployeeController {
     this.productWindowClosedAt = Date.now();
     this.lastProductActivity = null;
     this.setIdleWarning(false);
+  }
+
+  // Het kruisje, een tik op de achtergrond of Escape: het venster sluit zonder op te slaan. Net als
+  // na registreren en na automatisch sluiten worden het zoekveld en het bedrijfsfilter daarna
+  // leeggemaakt (resetEmployeeSearch). Op de gedeelde tablet ziet de volgende gebruiker dan niet naar
+  // wie er net is gezocht (FR-70, privacy). De focus gaat terug naar de rij van deze medewerker,
+  // zonder dat de pagina daarvoor scrolt (zie focusEmployeeRow).
+  dismissEmployeeProducts() {
+    const employeeId = this.app.selectedEmployeeId;
+    const opener = this.app.modalOpeners.get(this.view.$("#employeeProductsModal"));
+    this.closeEmployeeProducts();
+    this.resetEmployeeSearch();
+    if (employeeId) this.focusEmployeeRow(employeeId, opener);
   }
 
   // ------------------------------------------------------------------

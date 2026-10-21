@@ -28,6 +28,16 @@ export class StockController {
     this.lastDelivery = null; // laatst geboekte levering: { productId, time } (zie bookDelivery)
   }
 
+  // De tekst van een telling voor het logboek: verwacht (de voorraad in het systeem vlak voor de
+  // telling), geteld en het verschil (geteld min verwacht, met een + of - ervoor), bijvoorbeeld
+  // "verwacht 20, geteld 18, verschil -2". Altijd in deze vorm, zodat het verschil later uit het
+  // logboek te halen is.
+  static countText(expected, counted) {
+    const difference = counted - expected;
+    const sign = difference > 0 ? "+" : "";
+    return `verwacht ${expected}, geteld ${counted}, verschil ${sign}${difference}`;
+  }
+
   // Onderdelen van de app die deze class gebruikt (model, view). Die komen steeds
   // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
   get model() {
@@ -133,15 +143,18 @@ export class StockController {
       return;
     }
 
+    // Bij een telling komen de verwachte voorraad (wat het systeem had), de getelde voorraad en het
+    // verschil in het logboek, bijvoorbeeld "Blikje op TVB · Hoofdkantoor: verwacht 20, geteld 18,
+    // verschil -2". Zo blijft het verschil bewaard en is later te zien hoeveel er zonder registratie
+    // is verdwenen (derving, TO bijlage B).
+    const label = `${this.model.productName(productId)} op ${this.app.pointLabel(pointId)}`;
+    const details = isStock ? `${label}: ${StockController.countText(this.model.stockEntry(pointId, productId).stock, value)}` : `${label}: ${value}`;
     const saved = this.app.persist(
       () => {
         if (isStock) this.model.setStock(pointId, productId, value);
         else this.model.setMinimum(pointId, productId, value);
       },
-      {
-        action: isStock ? "Voorraad geteld" : "Minimum gewijzigd",
-        details: `${this.model.productName(productId)} op ${this.app.pointLabel(pointId)}: ${value}`
-      }
+      { action: isStock ? "Voorraad geteld" : "Minimum gewijzigd", details }
     );
     if (!saved) {
       resetInput();

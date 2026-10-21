@@ -103,6 +103,7 @@ CREATE TABLE point_products (
 );
 
 -- Producten die bijbesteld moeten worden (op of onder het minimum).
+-- De status gebruikt dezelfde woorden als de demo: "Leeg" (sinds versie 3.12, eerder "Op") en "Bijbestellen".
 CREATE OR REPLACE VIEW stock_alerts AS
 SELECT
     c.name AS company_name,
@@ -110,7 +111,7 @@ SELECT
     p.name AS product_name,
     pp.stock,
     pp.minimum,
-    CASE WHEN pp.stock <= 0 THEN 'Op' ELSE 'Bijbestellen' END AS status
+    CASE WHEN pp.stock <= 0 THEN 'Leeg' ELSE 'Bijbestellen' END AS status
 FROM point_products pp
 JOIN consumption_points cp ON cp.point_id = pp.point_id
 JOIN companies c ON c.company_id = cp.company_id
@@ -294,9 +295,14 @@ ON CONFLICT ((lower(name))) DO NOTHING;
 
 -- Maandoverzicht voor het admin-dashboard.
 -- De kosten gebruiken de prijs die bij de registratie is bewaard (r.price), niet de huidige productprijs.
+-- De maand wordt altijd in Nederlandse tijd bepaald (AT TIME ZONE 'Europe/Amsterdam'), los van de
+-- tijdzone van de databasesessie. Zonder die stap rekent date_trunc op een timestamptz in de tijdzone
+-- van de sessie. Draait de server in UTC, dan kwam een registratie op de 1e van de maand tussen 0:00
+-- en 1:00 (wintertijd) of 2:00 (zomertijd) Nederlandse tijd in de vorige maand terecht, dus in de
+-- verkeerde loonmaand. Iedere andere query die een maand of loonmaand bepaalt, doet hetzelfde.
 CREATE OR REPLACE VIEW monthly_employee_consumption AS
 SELECT
-    date_trunc('month', r.registered_at)::date AS month_start,
+    date_trunc('month', r.registered_at AT TIME ZONE 'Europe/Amsterdam')::date AS month_start,
     e.employee_id,
     e.first_name,
     e.last_name,
@@ -308,7 +314,7 @@ FROM registrations r
 JOIN employees e ON e.employee_id = r.employee_id
 LEFT JOIN companies c ON c.company_id = e.company_id
 GROUP BY
-    date_trunc('month', r.registered_at)::date,
+    date_trunc('month', r.registered_at AT TIME ZONE 'Europe/Amsterdam')::date,
     e.employee_id,
     e.first_name,
     e.last_name,
@@ -316,6 +322,8 @@ GROUP BY
     c.name;
 
 -- Voorbeeld: alle registraties binnen een periode.
+-- $1 en $2 zijn het begin van de periode en van de periode erna in Nederlandse tijd, bijvoorbeeld
+-- timestamptz '2026-11-01 00:00 Europe/Amsterdam', zodat de 1e van de maand na middernacht meetelt.
 -- SELECT e.first_name, e.last_name, c.name AS company_name,
 --        p.name AS product_name, r.amount, r.price, r.registered_at
 -- FROM registrations r

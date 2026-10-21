@@ -312,22 +312,47 @@ export class RegistrationApp {
   // (bijvoorbeeld removeProduct of savePoint, omdat de gegevens intussen in een ander tabblad
   // zijn veranderd). Dan komt er geen logboekregel, wordt er niet opgeslagen en krijgt de
   // gebruiker een melding. Geeft `change` niets terug (undefined), dan telt dat als gelukt.
+  //
+  // Twee tabbladen (NFR-08): heeft een ander tabblad intussen iets opgeslagen dat dit tabblad nog
+  // niet had geladen, dan weigert DataStore.save te schrijven (saveProblem "conflict"). Dan laadt
+  // persist eerst de nieuwe gegevens en voert dezelfde wijziging (met dezelfde logboekregel) daarop
+  // nog één keer uit. Zo blijven de wijzigingen van beide tabbladen bewaard. Het scherm wordt
+  // daarna opnieuw getekend zodra het storage-event van het andere tabblad binnenkomt
+  // (handleStorageChange). Lukt ook de tweede poging niet, dan wordt alles teruggedraaid met een melding.
   persist(change, audit = null) {
     const previousState = this.model.snapshot();
-    if (change() === false) {
+    if (!this.applyChange(change, audit)) {
       this.model.restore(previousState);
       this.view.showToast("Er is niets gewijzigd: de gegevens zijn intussen veranderd.", { tone: "error" });
       return false;
     }
-    if (audit) this.model.logAdminAction(audit.action, audit.details);
 
     if (this.model.save()) return true;
 
-    this.model.restore(previousState);
+    let fallbackState = previousState;
+    if (this.model.saveProblem === "conflict" && this.model.reload()) {
+      fallbackState = this.model.snapshot();
+      if (!this.applyChange(change, audit)) {
+        this.model.restore(fallbackState);
+        this.view.showToast("Er is niets gewijzigd: de gegevens zijn intussen veranderd.", { tone: "error" });
+        return false;
+      }
+      if (this.model.save()) return true;
+    }
+
+    this.model.restore(fallbackState);
     // Bij een volle opslag blijft de melding langer staan: die vraagt om actie van de beheerder.
     const options = this.model.saveProblem === "full" ? { tone: "error", duration: 8000 } : { tone: "error" };
     this.view.showToast(this.saveFailedMessage(), options);
     return false;
+  }
+
+  // Voert de wijziging uit en zet de logboekregel erbij. Geeft false terug als het model meldt dat
+  // er niets is gewijzigd (zie persist).
+  applyChange(change, audit) {
+    if (change() === false) return false;
+    if (audit) this.model.logAdminAction(audit.action, audit.details);
+    return true;
   }
 
   // De melding als opslaan mislukt. Is de opslag van de browser vol (zie DataStore.save), dan
@@ -393,7 +418,10 @@ export class RegistrationApp {
       ["[data-fridge-return]", (button) => this.returnToShelf(button.dataset.fridgeReturn)],
       ["[data-fridge-foreign]", (button) => this.addForeignWeight(button.dataset.fridgeForeign)],
       ["[data-fridge-demo-open]", () => this.openFridgeForDemo()],
-      ["[data-fridge-done]", () => this.finishFridgeWindow()]
+      ["[data-fridge-done]", () => {
+        // De tweede tik van een dubbeltik op "Deur dicht" kan op "Klaar" vallen.
+        if (!this.isFridgeGhostClick(event)) this.finishFridgeWindow();
+      }]
     ];
 
     for (const [selector, action] of actions) {
@@ -430,7 +458,9 @@ export class RegistrationApp {
   // Klikken in de lijsten en het productvenster van de medewerker.
   registerPageEvents() {
     document.addEventListener("click", (event) => this.handleClick(event));
-    this.registerModalClose("#employeeProductsModal", "[data-close-employee-products]", () => this.closeEmployeeProducts());
+    // Sluiten zonder registreren (kruisje, achtergrond of Escape) maakt ook het zoekveld en het
+    // bedrijfsfilter leeg (EmployeeController.dismissEmployeeProducts).
+    this.registerModalClose("#employeeProductsModal", "[data-close-employee-products]", () => this.dismissEmployeeProducts());
 
     // Iedere tik, klik, toets, aanraking of scroll in het productvenster begint de tijd tot het
     // automatisch sluiten opnieuw (EmployeeController.noteProductActivity). In de capture-fase,
@@ -447,16 +477,22 @@ export class RegistrationApp {
     this.view.$("#faceConsent").addEventListener("change", () => this.updateEnrollButton());
 
     // Slimme koelkast (demo): de knop op de beginpagina, het venster (sluitknop, achtergrond en Escape
-    // via closeFridgeWindow) en "Deur dicht". Iedere invoer in het venster telt als gebruik
-    // (FridgeController.noteFridgeActivity), net als bij het productvenster.
+    // via closeFridgeWindow) en "Deur dicht". Een klik op de achtergrond of de sluitknop krijgt het
+    // klikevent mee, zodat de tweede tik van een dubbeltik op "Deur dicht" het overzicht niet meteen
+    // sluit (FridgeController.isFridgeGhostClick). Iedere invoer in het venster telt als gebruik
+    // (FridgeController.noteFridgeActivity), net als bij het productvenster. Een keuze in de
+    // demokeuzelijst zet de knop "Openen (demo)" aan (updateFridgeDemoButton).
     const fridgeModal = this.view.$("#fridgeModal");
     if (fridgeModal) {
       this.onClick("#fridgeOpenButton", () => this.openFridgeWindow());
       this.onClick("#fridgeCloseDoorButton", () => this.closeFridgeDoor());
-      this.registerModalClose("#fridgeModal", "[data-close-fridge]", () => this.closeFridgeWindow());
+      this.registerModalClose("#fridgeModal", "[data-close-fridge]", (event) => this.closeFridgeWindow(event));
       for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
         fridgeModal.addEventListener(type, () => this.noteFridgeActivity(), { capture: true, passive: true });
       }
+      fridgeModal.addEventListener("change", (event) => {
+        if (event.target?.id === "fridgeDemoEmployee") this.updateFridgeDemoButton();
+      });
     }
   }
 
@@ -639,7 +675,7 @@ const DELEGATES = {
       "clearSearch", "resetEmployeeSearch", "onCompanyFilterInput", "filterCompanyOptions", "selectCompanyFilterOption",
       "setCompanyOptionsOpen", "closeCompanyOptions",
       "openEmployeeProducts", "renderProductWindow", "removeUnavailableSelections", "repeatLastSelection",
-      "incrementProduct", "decrementProduct", "selectionSummary", "closeEmployeeProducts",
+      "incrementProduct", "decrementProduct", "selectionSummary", "closeEmployeeProducts", "dismissEmployeeProducts",
       "startProductIdleWatch", "stopProductIdleWatch", "noteProductActivity", "closeProductWindowIfIdle", "setIdleWarning",
       "registerSelectedProducts", "focusEmployeeRow", "focusProductWindowAction",
       "isGhostRowClick", "handleEmployeeRowKey"
@@ -695,12 +731,13 @@ const DELEGATES = {
   fridge: {
     methods: [
       "isFridgeAvailable", "openFridgeWindow", "renderFridge", "openShelves", "closeFridgeWindow", "finishFridgeWindow", "abortFridge",
+      "setFridgePhase", "isFridgeGhostClick", "updateFridgeDemoButton",
       "fridgeScan", "openFridgeForDemo", "startFridgeOpening", "stockSimulatedShelves", "handleFridgeNotOpened",
       "takeFromShelf", "returnToShelf", "addForeignWeight", "handText", "closeFridgeDoor", "openingAudit",
       "startFridgeTimer", "stopFridgeTimer", "noteFridgeActivity", "checkFridgeTimers", "setFridgeDoorWarning",
       "renderFridgeAdmin", "saveFridgeShelves", "unitWeightError"
     ],
-    fields: ["fridgePhase", "fridgeEmployeeId", "fridgeHeld", "fridgeResult", "fridgeSaveFailed", "lastFridgeActivity", "fridgeTimer"]
+    fields: ["fridgePhase", "fridgeEmployeeId", "fridgeHeld", "fridgeResult", "fridgeSaveFailed", "lastFridgeActivity", "fridgeTimer", "fridgePhaseChangedAt"]
   }
 };
 

@@ -594,16 +594,21 @@ test("koelkastvenster: een bekende pas opent de koelkast met de voorraad op de s
   assert.equal(view.calls.some(([name, text]) => name === "announceFridge" && text === FridgeController.MESSAGES.opened), true);
 });
 
-test("koelkastvenster: een tweede scan terwijl de deur open is, wordt genegeerd met een melding", () => {
+test("koelkastvenster: een tweede scan terwijl de deur open is, opent niets en noemt op wiens naam de koelkast open is", () => {
   const { app, model, view } = createApp();
   addEmployee(model, { badgeId: "0499AABB", pointId: model.points[0].id, companyId: model.points[0].companyId });
   app.openFridgeWindow();
   app.fridgeScan("04A1B2C3");
 
-  app.fridgeScan("0499AABB");
-
-  assert.equal(app.fridgeEmployeeId, "employee-1");
+  // Dezelfde pas nog een keer: alleen de melding dat de koelkast al open is.
+  app.fridgeScan("04A1B2C3");
   assert.equal(fridgeStatuses(view).at(-1), "De koelkast is al open. Sluit eerst de deur.");
+
+  // De pas van een collega (sinds versie 3.16): de koelkast blijft op naam van de eerste, met een
+  // melding die dat zegt (de opening krijgt de status Controle nodig, zie tests/rollenspel-oktober.test.js).
+  app.fridgeScan("0499AABB");
+  assert.equal(app.fridgeEmployeeId, "employee-1");
+  assert.equal(fridgeStatuses(view).at(-1), "De koelkast is al open op naam van Test Medewerker. Sluit eerst de deur en open dan met je eigen pas. De beheerder kijkt naar deze opening.");
 });
 
 test("koelkastvenster: 2 blikjes pakken en de deur sluiten registreert 2 blikjes met één logboekregel", () => {
