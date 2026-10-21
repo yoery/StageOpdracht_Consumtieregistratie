@@ -714,3 +714,11 @@ test("14: de grootte van een registratie in het TO is gemeten met DataStore (243
   assert.match(to, /243 tekens/);
   assert.match(to, /219 tekens/);
 });
+
+// ------------------------------------------------------------------
+// 15. Logboek past in het beheervenster
+// ------------------------------------------------------------------
+
+test("15: in het logboek mag de kolom Details afbreken, zodat Datum & tijd zichtbaar blijft", () => {
+  assert.match(css, /#auditTab \.admin-table-wrap td:nth-child\(2\) \{\s*white-space:normal;/);
+});

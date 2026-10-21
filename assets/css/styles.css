@@ -953,6 +953,14 @@ footer {
 .admin-table-wrap tr:last-child td {
   border:0
 }
+/* Logboek: de kolom Details mag afbreken. De omschrijvingen zijn sinds versie 3.16 langer
+   (verwacht, geteld en verschil bij een telling, oude en nieuwe waarde bij een wijziging).
+   Zonder afbreken werd de tabel breder dan het beheervenster en viel de kolom Datum & tijd weg. */
+#auditTab .admin-table-wrap td:nth-child(2) {
+  white-space:normal;
+  overflow-wrap:anywhere;
+  min-width:18ch
+}
 .table-action {
   background:none;
   color:var(--danger);
