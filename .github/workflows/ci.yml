@@ -45,7 +45,11 @@ jobs:
   # Chrome staat al op de runner (ubuntu-latest). Deze job start pas als de unit tests geslaagd zijn.
   e2e:
     needs: test
-    runs-on: ubuntu-latest
+    # Vast op Ubuntu 24.04. Vanaf 19 oktober 2026 schuift ubuntu-latest geleidelijk door naar
+    # Ubuntu 26. Sinds 21 oktober faalden de browsertests daar ook bij een commit die alleen het TO
+    # veranderde, terwijl dezelfde code een kwartier eerder nog slaagde. Weer ubuntu-latest gebruiken
+    # zodra duidelijk is wat er op Ubuntu 26 anders is (Chrome-versie, sandbox of lettertypes).
+    runs-on: ubuntu-24.04
     # Ruim genomen: op een drukke runner duren de browsertests veel langer dan op een laptop.
     timeout-minutes: 15
     env:
