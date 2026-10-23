@@ -16,6 +16,9 @@
        productie als HTTP-header door de webserver worden meegestuurd, tegen inbedden in een frame. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-zz/zEeC1kqeUOjPPtpqyLYsRIlP0p6bd5ahtKxMgTFI=' 'sha256-IYfz7ReFAXixhlxwr+3wpzbp4NwCPYY4sLnUgTOlfZw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Consumptieregistratie | TVB</title>
+  <!-- Geen eigen pictogram voor het tabblad: een leeg pictogram, zodat de browser niet om
+       /favicon.ico vraagt. Anders staat er bij Live Server een foutmelding (404) in de console. -->
+  <link rel="icon" href="data:,">
   <!-- Zet het donkere thema al vóór het tekenen van de pagina, zodat die niet eerst licht oplicht.
        Bij "Auto" wordt het thema van het vorige bezoek gebruikt (tvb-theme-last). Daarna neemt
        ThemeManager (assets/js/ThemeManager.js) het over en past het thema zo nodig aan. -->

@@ -72,14 +72,30 @@ export class BadgeController {
   //     wist de bedrijfskeuze en opent de keuzelijst (zie EmployeeController.onCompanyFilterInput).
   // restoreSearchAfterScan en fillBadgeFieldAfterScan (focus in het veld "Pasnummer") zetten dat
   // na de scan goed.
+  // Staat de focus in een ander tekstveld (bijvoorbeeld het e-mailadres bij het inloggen, een zoekveld
+  // in het beheer of de naam in het medewerkersformulier), dan wordt ook dat veld met zijn inhoud
+  // onthouden (field en fieldValue), zodat restoreSearchAfterScan het pasnummer er weer uit haalt.
   rememberSearchBeforeScan() {
     const filter = this.view.$("#employeeCompanyFilter");
+    const focused = globalThis.document?.activeElement;
+    const field = BadgeController.isOtherTextField(focused) ? focused : null;
     this.scanStart = {
-      focusId: globalThis.document?.activeElement?.id || null,
+      focusId: focused?.id || null,
       search: this.view.$("#employeeSearch").value,
       filterText: filter?.value ?? "",
-      filterValue: filter?.dataset.value
+      filterValue: filter?.dataset.value,
+      field,
+      fieldValue: field ? field.value : null
     };
+  }
+
+  // Is dit een tekstveld waarin de lezer per ongeluk een pasnummer kan typen, anders dan het zoekveld,
+  // het bedrijfsfilter (die hebben hun eigen herstel) en het veld "Pasnummer" (daar hoort het nummer)?
+  // Vinkjes, keuzerondjes en knoppen tellen niet mee.
+  static isOtherTextField(element) {
+    if (!element || !["INPUT", "TEXTAREA"].includes(element.tagName)) return false;
+    if (["employeeSearch", "employeeCompanyFilter", "newEmployeeBadgeId"].includes(element.id)) return false;
+    return !["checkbox", "radio", "button", "submit", "reset", "file", "hidden"].includes(String(element.type || "").toLowerCase());
   }
 
   // Zet het zoekveld en het bedrijfsfilter terug zoals ze waren vóór de scan en tekent de
@@ -108,6 +124,20 @@ export class BadgeController {
     }
 
     if (changed) this.view.renderEmployees();
+    this.restoreOtherFieldAfterScan(start);
+  }
+
+  // Begon de scan in een ander tekstveld (zie rememberSearchBeforeScan), dan heeft de lezer het
+  // pasnummer daar ingetypt, bijvoorbeeld "04A1B2C3admin@tvb.nl" in het e-mailadres van het inloggen
+  // of "Lotte04A1B2C3" in de voornaam. Dan krijgt het veld de inhoud van vóór de scan terug. Daarna
+  // volgt een input-event, zodat een zoekveld in het beheer de lijst weer tekent met de oude inhoud.
+  restoreOtherFieldAfterScan(start) {
+    const field = start?.field;
+    if (!field || field.value === start.fieldValue) return;
+    field.value = start.fieldValue;
+    if (typeof field.dispatchEvent === "function" && typeof Event === "function") {
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    }
   }
 
   // Begon de scan in het veld "Pasnummer" van het medewerkersformulier, dan heeft de lezer zijn

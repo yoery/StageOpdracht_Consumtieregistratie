@@ -1133,4 +1133,43 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       assert.deepEqual(stored?.faceOffers ?? [], [], "Annuleren onthoudt niets");
     });
   });
+
+  scenario("generale repetitie: een pas in het inlogvenster of een zoekveld van het beheer laat geen pasnummer achter, en 'Aantal' past op een tablet", async () => {
+    // Pas in het e-mailveld van het inloggen: het e-mailadres blijft staan, er komt een melding.
+    await browser.click("#adminOpenButton");
+    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
+    await browser.scanBadge("04A1B2C3");
+    await waitForToast("Sluit eerst het open venster om je pas te gebruiken.");
+    assert.equal(await browser.evaluate(`document.querySelector("#loginEmail").value`), "admin@tvb.nl");
+
+    // Pas in het zoekveld van Medewerkers: het veld blijft leeg en de lijst blijft staan.
+    await browser.click("#loginPassword");
+    await browser.insertText("demo-wachtwoord");
+    await browser.click("#loginForm button[type=submit]");
+    await browser.waitFor(`!document.querySelector("#adminView").classList.contains("hidden")`);
+    await browser.click(`.tab[data-tab="employees"]`);
+    await browser.click("#employeeManagementSearch");
+    await browser.scanBadge("04A1B2C3");
+    await sleep(300);
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeManagementSearch").value`), "");
+    assert.equal(await browser.evaluate(`document.querySelectorAll("#adminEmployeeList [data-edit-employee]").length`), 8);
+
+    // Voorraad op een staande tablet: "Aantal" past in het leveringsveld (eerst stond er "Aanta").
+    try {
+      await browser.send("Emulation.setDeviceMetricsOverride", { width: 810, height: 1080, deviceScaleFactor: 1, mobile: false });
+      await browser.click(`.tab[data-tab="stock"]`);
+      await browser.waitFor(`!document.querySelector("#stockTab").classList.contains("hidden")`);
+      const room = await browser.evaluate(`(() => {
+        const field = document.querySelector("[data-delivery-amount]");
+        const style = getComputedStyle(field);
+        const context = document.createElement("canvas").getContext("2d");
+        context.font = style.font;
+        // Ruimte voor de tekst: binnenbreedte min de binnenruimte en de pijltjes van een getalveld (ongeveer 15 pixels).
+        return { text: context.measureText(field.placeholder).width, room: field.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 15 };
+      })()`);
+      assert.ok(room.text <= room.room, `"Aantal" is ${Math.round(room.text)} pixels breed, er is ${Math.round(room.room)} pixels ruimte`);
+    } finally {
+      await browser.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+    }
+  });
 });

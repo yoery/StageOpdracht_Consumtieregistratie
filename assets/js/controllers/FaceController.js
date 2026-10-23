@@ -34,6 +34,23 @@ export class FaceController {
     noCamera: "De camera kon niet starten. Kies je naam in de lijst of houd je pas tegen de lezer."
   };
 
+  // De melding in het cameravenster als de camera niet start, naar de reden die de browser geeft
+  // (error.name van getUserMedia). Zonder camera (NotFoundError) of met een camera die al door een
+  // ander programma wordt gebruikt (NotReadableError, bijvoorbeeld een videogesprek), helpt
+  // toestemming geven niet. Die krijgen daarom een eigen melding.
+  static CAMERA_ERRORS = {
+    denied: "Geen toegang tot de camera. Geef toestemming in de browser, of kies je naam in de lijst.",
+    notFound: "Geen camera gevonden. Kies je naam in de lijst.",
+    inUse: "De camera wordt al door een ander programma gebruikt. Sluit dat programma, of kies je naam in de lijst."
+  };
+
+  static cameraErrorMessage(error) {
+    const name = error?.name;
+    if (["NotFoundError", "DevicesNotFoundError", "OverconstrainedError"].includes(name)) return FaceController.CAMERA_ERRORS.notFound;
+    if (["NotReadableError", "TrackStartError"].includes(name)) return FaceController.CAMERA_ERRORS.inUse;
+    return FaceController.CAMERA_ERRORS.denied;
+  }
+
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
     this.app = app;
@@ -251,7 +268,7 @@ export class FaceController {
           this.endWakeScan(FaceController.WAKE_MESSAGES.noCamera);
           return;
         }
-        this.setFaceStatus("Geen toegang tot de camera. Geef toestemming in de browser, of kies je naam in de lijst.", "error");
+        this.setFaceStatus(FaceController.cameraErrorMessage(error), "error");
       }
       return;
     }

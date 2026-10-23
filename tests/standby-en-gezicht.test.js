@@ -606,7 +606,9 @@ test("verlopen: ook zonder expireFaces doet een verlopen gezicht niet mee (loadS
 
 test("verlopen: de standby-timer wist verlopen instellingen eens per minuut", () => {
   const { app, model, clock } = createApp();
-  model.saveFaceEnrollment("employee-1", face(0.1), new Date(Date.now() - 366 * DAY));
+  // Ten opzichte van de nep-klok (START), niet van de echte datum: met Date.now() slaagde deze test
+  // alleen op 21 oktober 2026 (de dag van START) en faalde hij vanaf de dag erna (generale repetitie).
+  model.saveFaceEnrollment("employee-1", face(0.1), new Date(clock.now() - 366 * DAY));
   app.startStandbyWatch();
 
   clock.advance(StandbyController.TICK_MS);

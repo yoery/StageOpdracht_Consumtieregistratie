@@ -1391,6 +1391,13 @@ footer {
   outline-color:var(--green);
   background:var(--paper)
 }
+/* De algemene regel .modal input (padding 12px) is sterker dan .stock-input. Daardoor paste op een
+   tablet (tekst van 14 pixels) "Aantal" in het leveringsveld niet meer ("Aanta"). De binnenruimte
+   van 8 pixels geldt daarom ook in het beheervenster. De hoogte van .modal input (43 pixels) blijft,
+   voor een tikdoel van ruim 40 pixels. */
+.stock-table .stock-input {
+  padding:0 8px
+}
 .stock-delivery {
   display:flex;
   gap:6px;

@@ -731,7 +731,7 @@ const DELEGATES = {
     fields: ["productWindowClosedAt", "lastProductActivity", "productIdleTimer", "idleCloseMs", "idleWarningMs", "idleWarningShown"]
   },
   badge: {
-    methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge", "replaceProductWindow"],
+    methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "restoreOtherFieldAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge", "replaceProductWindow"],
     fields: ["scanStart"]
   },
   face: {

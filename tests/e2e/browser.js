@@ -100,8 +100,9 @@ function startServer(root) {
   const server = http.createServer((request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
 
-    // Het project heeft geen favicon. De browser vraagt er wel om; zonder dit antwoord zou er een
-    // 404-melding in de console staan die niets met de app te maken heeft.
+    // Het project heeft geen favicon. Sinds versie 3.19 heeft index.html een leeg pictogram
+    // (<link rel="icon" href="data:,">), zodat de browser er niet meer om vraagt. Dit antwoord blijft
+    // als vangnet: zonder zou een andere pagina een 404-melding in de console geven.
     if (pathname === "/favicon.ico") {
       response.writeHead(204);
       response.end();
