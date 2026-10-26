@@ -34,6 +34,8 @@ const ICON_PATHS = {
   userSearch: '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 19a6.5 6.5 0 0 1 9-6"/><circle cx="17" cy="16" r="2.5"/><path d="M19 18l2 2"/>',
   inbox: '<path d="M4 13l2.5-7h11L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13h4.5l1.5 2h4l1.5-2H20"/>',
   location: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  // Een pas met de golven van een pasjeslezer (op het startscherm zonder gezichtsherkenning).
+  badge: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M6.5 10.5h6M6.5 14h4"/><path d="M18.5 9.5a3.5 3.5 0 0 1 0 5M20.5 7.5a6.5 6.5 0 0 1 0 9"/>',
   faceScan: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v.5M15 10v.5M9.5 15a3.5 3.5 0 0 0 5 0"/>',
   lock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   unlock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>',

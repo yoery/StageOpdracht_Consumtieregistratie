@@ -76,6 +76,8 @@ export class ModalManager {
   // (zie scrollModalToTop).
   openModal(modalSelector) {
     this.rememberOpener(modalSelector);
+    // Een venster ligt nooit onder het startscherm: staat dat in beeld, dan verdwijnt het (de camera gaat uit).
+    this.app.wakeFromStandby?.();
     this.show(modalSelector);
     this.scrollModalToTop(modalSelector);
   }

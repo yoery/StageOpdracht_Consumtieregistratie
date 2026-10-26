@@ -33,12 +33,12 @@ assets/
     suggestion.css          # Begroeting en aanbeveling in het productvenster
     directory-tools.css     # Pashint, demoknoppen en zoekveld en filter naast elkaar
     face.css                # Demo gezichtsherkenning
-    standby.css             # Standby-scherm
+    start-screen.css        # Startscherm (zwart, met het ovaal en Handmatig zoeken)
     fridge.css              # Slimme koelkast en het tabblad Koelkast
     responsive.css          # Mediaqueries voor telefoon en tablet (als laatste)
   js/
     main.js                 # Startpunt van de app
-    config.js               # Vaste waarden: standaardproducten, bedrijven en de tijden voor automatisch uitloggen en sluiten
+    config.js               # Vaste waarden: standaardproducten, bedrijven, tijden voor automatisch uitloggen en sluiten, startscherm en scanMode
     DataStore.js            # Opslag in localStorage
     RegistrationModel.js    # Gegevens en regels
     RegistrationView.js     # Weergave (HTML)
@@ -47,14 +47,15 @@ assets/
       ModalManager.js       # vensters openen en sluiten, focus
       EmployeeController.js # beginpagina, productvenster, registreren en automatisch sluiten van het productvenster
       BadgeController.js    # herkennen met de pas (koppelt BadgeReader aan de app)
-      FaceController.js     # cameravenster van de demo gezichtsherkenning, scan na een tik, opgeslagen gezichten en verlopen
+      FaceController.js     # cameravenster van de demo gezichtsherkenning, scan na een tik op het ovaal, opgeslagen gezichten en verlopen
       AdminController.js    # inloggen, dashboard, logboek, export, wissen, verwijderen
       CorrectionController.js # correcties + en − (registratie verwijderen)
       StockController.js    # voorraad, leveringen en minimum
       FormController.js     # formulieren medewerker, product, bedrijf en consumptiepunt
       FridgeController.js   # slimme koelkast (demo): koelkastvenster en tabblad Koelkast
       RecognitionController.js # na herkennen: koelkast of productvenster, en de vraag over gezichtsherkenning na een passcan
-      StandbyController.js  # standby van de tablet en wakker maken met een tik (tik om te scannen)
+      StandbyController.js  # het startscherm: bij openen, na afloop en na 2 minuten, en Handmatig zoeken
+      AutoScanController.js # automatisch scannen op het startscherm, de camera alleen op het startscherm
     fridge/                 # Slimme koelkast (demo, uit te zetten in config.js)
       SmartFridge.js        # weegt de schappen en rekent het gewichtsverschil om naar aantallen
       FridgeLock.js         # interface voor het slot (in productie via de backend)
@@ -67,6 +68,7 @@ assets/
     icons.js                # SVG-iconen (één bron, overal dezelfde stijl)
     ids.js                  # createId(): unieke id's, ook zonder https
     FaceRecognitionDemo.js  # Demo gezichtsherkenning (uit te zetten in config.js)
+    FaceIntent.js           # Intentie-drempel: alleen kenmerken van één gezicht dichtbij, in het ovaal en stil
     BadgeReader.js          # Herkennen met de pas via een USB-NFC-lezer (uit te zetten in config.js)
   fonts/                    # Lettertypes DM Sans en Space Grotesk (zelf gehost, SIL OFL, zie LICENSE.txt)
   vendor/
@@ -79,8 +81,8 @@ docs/
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests (ook readAllCss: alle CSS in de volgorde van index.html)
-  e2e/                      # 31 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 812 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie)
+  e2e/                      # 33 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
+  *.test.js                 # 846 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
@@ -115,7 +117,8 @@ archief/
 - Het productvenster sluit vanzelf zonder op te slaan als het 75 seconden niet wordt gebruikt, met in de laatste 10 seconden "Venster sluit zo. Tik om door te gaan." (`EMPLOYEE_IDLE_CLOSE_MS` in `config.js`). Een pas van een collega vervangt een open productvenster. Na registreren zijn het zoekveld en het bedrijfsfilter weer leeg.
 - Gemaakt voor een tablet: de knop `Registreren` blijft onderaan het productvenster in beeld (over de volle breedte), zonder keuze is hij uitgeschakeld met de uitleg "Kies eerst een product met +", een gekozen product krijgt een lichtgroene achtergrond en knoppen zijn minstens 44 pixels hoog. Een schermlezer hoort na zoeken alleen het aantal medewerkers en leest de meldingen voor. Zie de paragraaf "UX-review oktober 2026" in het TO (hoofdstuk 9).
 - Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`). Er worden geen foto's gemaakt. Sinds versie 3.17 worden alleen de kenmerken (128 getallen) met een datum op de tablet bewaard en na een jaar vanzelf gewist. Uit te zetten in `config.js`. Zie het TO (hoofdstuk 13 en bijlage B) voor de privacy-afweging. Voor productie is het advies de pas.
-- Standby en tik om te scannen (demo): na 2 minuten zonder gebruik dimt de tablet met "Tik op het scherm om te beginnen" (`STANDBY` in `config.js`). Na een tik kijkt de camera hooguit 10 seconden of iemand met een ingesteld gezicht er staat. De camera gaat alleen na een tik aan en scant nooit constant.
+- Startscherm (sinds versie 3.21, `STANDBY` in `config.js`): de website opent op een zwart scherm met het TVB-logo, een ovaal voor het gezicht en de knop `Handmatig zoeken`. Beginnen kan met de pas, het gezicht of `Handmatig zoeken` (de lijst). Het startscherm komt terug na een registratie of koelkastopening en na 2 minuten zonder gebruik. `Admin login` staat op de beginpagina na `Handmatig zoeken`.
+- Automatisch scannen met een intentie-drempel (demo, `FACE_DEMO.scanMode = "auto"`): zolang het startscherm in beeld is, zoekt de camera drie keer per seconde alleen naar gezichten (320 × 240, geen kenmerken). Pas als er één gezicht dichtbij in het ovaal een seconde stil staat, wordt het vergeleken. Herkend: begroeting en daarna de koelkast of het productvenster. Niet herkend: een melding en een korte pauze. De camera staat alleen aan op het startscherm. Met `scanMode = "tap"` werkt het zoals in versie 3.17: de camera gaat pas aan na een tik op het ovaal. De camera ziet in "auto" ook voorbijgangers. Zie het TO, bijlage B, voor de afweging. Voor productie blijft het advies de pas.
 - Vraag na een passcan (demo): wie met de pas wordt herkend en nog geen gezichtsherkenning heeft, krijgt "Gezichtsherkenning nog niet ingesteld. Wil je dit?" met `Ja, instellen` en `Nee`. `Nee` wordt onthouden.
 - Na herkennen met de pas of de camera opent standaard de slimme koelkast, met een knop naar het productvenster voor brood en beleg (`RECOGNITION_TARGET` in `config.js`, "fridge" of "products").
 - Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer. De beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig. Uit te zetten in `config.js`.

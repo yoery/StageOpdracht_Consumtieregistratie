@@ -17,7 +17,9 @@
  *   - SmartFridge, FridgeController en RegistrationModel: SMART_FRIDGE, de instellingen van de
  *     simulatie van de slimme koelkast (slot en weegschalen per schap);
  *   - RecognitionController: RECOGNITION_TARGET, wat er opent na herkennen met de pas of de camera;
- *   - StandbyController: STANDBY, wanneer het scherm in standby gaat;
+ *   - StandbyController: STANDBY, wanneer het startscherm (weer) verschijnt;
+ *   - AutoScanController en FaceIntent: FACE_DEMO.scanMode en FACE_DEMO.autoScan, het automatisch
+ *     scannen op het startscherm met de intentie-drempel;
  *   - DataStore en RegistrationModel: FACE_DEMO.validityDays (verlopen van een gezichtsinstelling).
  */
 
@@ -99,9 +101,45 @@ export const FACE_DEMO = {
   matchThreshold: 0.5,
   // Hoe lang er maximaal naar een bekend gezicht wordt gezocht, in milliseconden.
   scanTimeoutMs: 20000,
-  // Hoe lang de korte scan na een tik op het standby-scherm duurt (tik om te scannen), in
-  // milliseconden. Daarna gaat de camera altijd uit, herkend of niet.
+  // Hoe de camera op het startscherm begint (zie StandbyController en AutoScanController, en TO bijlage B):
+  //   - "auto" (standaard, de wens van de opdrachtgever sinds versie 3.21): zolang het startscherm in
+  //     beeld is, staat de camera aan en kijkt hij of er iemand dichtbij in het ovaal staat. Wie stil in
+  //     het ovaal kijkt, wordt zonder tik herkend. Kenmerken worden alleen berekend boven de
+  //     intentie-drempel (zie autoScan hieronder);
+  //   - "tap": de camera staat uit tot iemand op het ovaal tikt. Daarna kijkt hij hooguit wakeScanMs
+  //     in het venster "Even kijken wie je bent" (tik om te scannen, zoals in versie 3.17 tot en met 3.20).
+  scanMode: "auto",
+  // Hoe lang de korte scan na een tik op het ovaal duurt (scanMode "tap"), in milliseconden. Daarna
+  // gaat de camera altijd uit, herkend of niet.
   wakeScanMs: 10000,
+  // Het automatisch scannen op het startscherm (scanMode "auto", zie AutoScanController en FaceIntent).
+  // De camera staat alleen aan zolang het startscherm in beeld is, in een lage resolutie, en zoekt een
+  // paar keer per seconde alleen naar gezichten (waar en hoe groot), zonder kenmerken. De kenmerken (de
+  // descriptor van 128 getallen) worden pas berekend als er precies één gezicht dichtbij is, het midden
+  // ervan binnen het ovaal valt en het ongeveer een seconde stil staat: de intentie-drempel. Een gezicht
+  // op afstand of buiten het ovaal krijgt nooit kenmerken. Er worden geen beelden bewaard of verstuurd.
+  //   - detectIntervalMs: zo vaak (ms) zoekt de camera naar een gezicht (333 = 3 keer per seconde);
+  //   - minFaceWidth: zo breed moet een gezicht minstens zijn, als deel van de breedte van het ovaal
+  //     (0.45 = 45 procent). Smaller betekent te ver weg: dat gezicht telt niet;
+  //   - stillMs: zo lang (ms) moet het gezicht stil in het ovaal staan voordat de kenmerken worden berekend;
+  //   - maxMovement: zo veel mag het midden van het gezicht verschuiven, als deel van de breedte van het
+  //     ovaal (0.12 = 12 procent), en toch als stil tellen;
+  //   - attempts: zo vaak wordt een gezicht vergeleken voordat "Je bent niet herkend." verschijnt;
+  //   - retryPauseMs: zo lang (ms) wacht de camera na "Je bent niet herkend." voordat hij het opnieuw probeert;
+  //   - greetingMs: zo lang (ms) staat de begroeting in het ovaal voordat de koelkast of het productvenster opent;
+  //   - videoWidth en videoHeight: de gevraagde resolutie van de camera in pixels (laag, zodat de tablet
+  //     niet warm wordt).
+  autoScan: {
+    detectIntervalMs: 333,
+    minFaceWidth: 0.45,
+    stillMs: 1000,
+    maxMovement: 0.12,
+    attempts: 3,
+    retryPauseMs: 5000,
+    greetingMs: 1200,
+    videoWidth: 320,
+    videoHeight: 240
+  },
   // Na zo veel dagen verloopt een gezichtsinstelling: de kenmerken worden gewist en bij de volgende
   // passcan komt de vraag "Je gezichtsherkenning is verlopen. Opnieuw instellen?" (mensen veranderen).
   validityDays: 365,
@@ -123,14 +161,15 @@ export const FACE_DEMO = {
 //   - "products": altijd het productvenster, zoals vóór versie 3.17.
 export const RECOGNITION_TARGET = "fridge";
 
-// Standby van de tablet (zie StandbyController). Wordt de beginpagina zo lang niet gebruikt (geen tik,
-// toets, scroll of passcan, en geen venster open), dan wordt het scherm gedimd met de tekst "Tik op
-// het scherm om te beginnen". Eén tik of toets maakt de tablet wakker. Na een tik start de korte scan
-// van de demo gezichtsherkenning (FACE_DEMO.wakeScanMs), maar alleen als die demo aan staat, er een
-// camera is en minstens één actieve medewerker zijn gezicht heeft ingesteld. De camera gaat nooit
-// vanzelf aan, alleen na die bewuste tik. Een passcan in standby maakt de tablet wakker en wordt meteen
-// verwerkt. Zet enabled op false om de standby uit te zetten.
-//   - idleMs: na zo veel milliseconden zonder invoer gaat de tablet in standby (2 minuten).
+// Het startscherm van de tablet (zie StandbyController, sinds versie 3.21 in plaats van het gedimde
+// standby-scherm). Het startscherm is zwart, met het TVB-logo, een ovaal voor het gezicht en de knop
+// "Handmatig zoeken". Het verschijnt bij het openen van de website, na afloop van een registratie of
+// koelkastopening, en als de beginpagina zo lang niet is gebruikt (geen tik, toets, scroll of passcan, en
+// geen venster open). Er zijn drie manieren om te beginnen: de pas (werkt altijd, ook op het startscherm),
+// het gezicht (zie FACE_DEMO.scanMode) en "Handmatig zoeken" (de lijst met medewerkers). Zet enabled op
+// false om het startscherm uit te zetten: de website opent dan op de lijst met medewerkers, gaat niet meer
+// vanzelf terug naar het startscherm en de camera gaat nooit vanzelf aan.
+//   - idleMs: na zo veel milliseconden zonder invoer komt het startscherm terug (2 minuten).
 export const STANDBY = {
   enabled: true,
   idleMs: 2 * 60 * 1000

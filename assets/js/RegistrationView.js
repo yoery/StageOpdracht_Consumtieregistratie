@@ -713,24 +713,58 @@ export class RegistrationView {
     if (warning) warning.textContent = shown ? RegistrationView.IDLE_WARNING_TEXT : "";
   }
 
-  // Standby (StandbyController): toont of verbergt het gedimde scherm "Tik op het scherm om te
-  // beginnen" met daaronder `hint` (wat er na de tik gebeurt). In standby is de pagina eronder
-  // `inert`: niet te bereiken met Tab of een schermlezer, zodat alleen het standby-scherm de focus kan
-  // krijgen. Die focus gaat naar het standby-scherm zelf (een knop), zodat Enter of spatie ook wakker maakt.
-  showStandby(shown, { hint = "" } = {}) {
-    const overlay = this.$("#standbyOverlay");
-    if (!overlay) return;
-    const hintElement = this.$("#standbyHint");
-    if (hintElement && shown) hintElement.textContent = hint;
-    overlay.classList.toggle("hidden", !shown);
+  // Startscherm (StandbyController): toont of verbergt het zwarte startscherm. Zolang het in beeld is, is
+  // de pagina eronder `inert`: niet te bereiken met Tab of een schermlezer. De focus gaat naar de knop
+  // "Handmatig zoeken", zodat Enter of spatie de lijst opent. Bij verbergen gaat het camerabeeld weg.
+  showStartScreen(shown) {
+    const screen = this.$("#startScreen");
+    if (!screen) return;
+    screen.classList.toggle("hidden", !shown);
     const page = this.$(".app-shell");
     if (shown) {
       page?.setAttribute("inert", "");
-      overlay.focus?.({ preventScroll: true });
+      this.$("#startManualButton")?.focus?.({ preventScroll: true });
     } else {
       page?.removeAttribute?.("inert");
-      if (globalThis.document?.activeElement === overlay) overlay.blur?.();
+      if (screen.contains?.(globalThis.document?.activeElement)) globalThis.document.activeElement.blur?.();
+      this.setStartScreenCamera(false);
     }
+  }
+
+  // Tekent de teksten van het startscherm (zie StandbyController.startScreenTexts): `mode` is "auto" (de
+  // camera kijkt in het ovaal), "tap" (het ovaal is een knop) of "badge" (alleen de pas en "Handmatig
+  // zoeken", het ovaal toont een pas). `help` is de uitleg voor een schermlezer.
+  renderStartScreen({ mode = "badge", status = "", hint = "", privacy = "", help = "" } = {}) {
+    const screen = this.$("#startScreen");
+    if (!screen) return;
+    screen.dataset.mode = mode;
+    this.$("#startTapButton")?.classList.toggle("hidden", mode !== "tap");
+    const ovalIcon = this.$("#startOvalIcon");
+    if (ovalIcon) ovalIcon.innerHTML = icon(mode === "badge" ? "badge" : "faceScan");
+    this.setStartScreenState("idle", status);
+    const hintElement = this.$("#startHint");
+    if (hintElement) hintElement.textContent = hint;
+    const privacyText = this.$("#startPrivacyText");
+    if (privacyText) privacyText.textContent = privacy;
+    this.$("#startPrivacy")?.classList.toggle("hidden", !privacy);
+    const helpElement = this.$("#startHelp");
+    if (helpElement) helpElement.textContent = help;
+  }
+
+  // Toont in het ovaal en de tekst eronder wat het automatisch scannen ziet (AutoScanController):
+  // "idle" (wachten), "steady" (iemand staat goed, even stil blijven), "multiple" (meer dan één gezicht
+  // dichtbij), "recognized" (de begroeting) of "unknown" (niet herkend). De tekst staat in een live region
+  // (role="status"), zodat een schermlezer hem voorleest.
+  setStartScreenState(state, text) {
+    const oval = this.$("#startOval");
+    if (oval) oval.dataset.state = state;
+    const status = this.$("#startStatus");
+    if (status && text !== undefined) status.textContent = text;
+  }
+
+  // Toont het camerabeeld in het ovaal (`on`) of het icoon (camera uit).
+  setStartScreenCamera(on) {
+    this.$("#startScreen")?.classList.toggle("has-camera", Boolean(on));
   }
 
   // Vult de keuzelijsten bedrijf en consumptiepunt in het medewerkersformulier.

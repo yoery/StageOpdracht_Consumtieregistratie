@@ -430,17 +430,34 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
     await Promise.all(events.map((event) => send("Input.dispatchKeyEvent", event)));
   };
 
+  // Tikt op "Handmatig zoeken" op het startscherm (sinds versie 3.21) en wacht tot de lijst met
+  // medewerkers te gebruiken is. Staat het startscherm niet in beeld, dan gebeurt er niets.
+  // Een klik binnen 500 ms na het verbergen telt niet (StandbyController.isStandbyGhostClick). Een echte
+  // gebruiker is nooit zo snel; de test wacht daarom even voordat hij verdergaat.
+  const manualSearch = async () => {
+    await waitFor(`document.readyState === "complete"`);
+    if (await evaluate(`document.querySelector("#startScreen")?.classList.contains("hidden") ?? true`)) return false;
+    await click("#startManualButton");
+    await waitFor(`document.querySelector("#startScreen").classList.contains("hidden")`, { message: "Het startscherm verdween niet na Handmatig zoeken." });
+    await sleep(550);
+    return true;
+  };
+
   // Opent de pagina met lege opslag: localStorage van de site wordt eerst gewist, zodat iedere
   // test met de demogegevens begint. Daarna wordt gewacht tot de medewerkers op het scherm staan.
-  const openApp = async () => {
+  // Sinds versie 3.21 opent de website op het startscherm. Standaard tikt openApp daarna op
+  // "Handmatig zoeken", zodat de test op de lijst met medewerkers begint. Met `{ startScreen: true }`
+  // blijft het startscherm staan.
+  const openApp = async ({ startScreen = false } = {}) => {
     await send("Page.navigate", { url: "about:blank" });
     await send("Storage.clearDataForOrigin", { origin: baseUrl, storageTypes: "local_storage" });
     errors.length = 0;
     consoleLog.length = 0;
     await send("Page.navigate", { url: `${baseUrl}/index.html` });
-    await waitFor(`document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`, {
-      message: "De pagina laadde niet: er verschijnen geen medewerkers."
+    await waitFor(`document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0 && !document.querySelector("#startScreen").classList.contains("hidden")`, {
+      message: "De pagina laadde niet: er verschijnen geen medewerkers of geen startscherm."
     });
+    if (!startScreen) await manualSearch();
   };
 
   // Leest de opgeslagen gegevens van de app uit localStorage.
@@ -553,6 +570,7 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
     insertText,
     press,
     scanBadge,
+    manualSearch,
     openApp,
     storedData,
     allowDownloads,

@@ -1,7 +1,7 @@
 ﻿/* Slimme koelkast (demo): de knop op de beginpagina, het koelkastvenster (dicht en open, schappen,
    demo zonder pasjeslezer), het overzicht na het sluiten en het tabblad Koelkast in het beheer.
    De mobiele weergave staat in responsive.css.
-   Laadt na standby.css.
+   Laadt na start-screen.css.
    De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
 /* Slimme koelkast (demo): de knop op de beginpagina, het koelkastvenster en het tabblad Koelkast.
    Alleen bestaande kleuren, lettertypes en iconen. Tikdoelen zijn minstens 44 pixels hoog. */
