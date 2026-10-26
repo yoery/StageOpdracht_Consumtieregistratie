@@ -30,6 +30,61 @@ test("removeLastRegistration zonder product verwijdert de laatste registratie", 
   assert.deepEqual(model.registrations.map(({ productId }) => productId), ["blikje"]);
 });
 
+// Correctie "−": de beheerder kiest de registratie
+
+test("registrationsFor geeft de registraties van één medewerker en product, nieuwste datum bovenaan", () => {
+  const { model } = createModel();
+  addEmployee(model);
+  model.state.registrations = [
+    registration("r1", "employee-1", "blikje", "2026-10-02T08:00:00.000Z"),
+    registration("r2", "employee-1", "blikje", "2026-09-14T10:00:00.000Z"),
+    registration("r3", "employee-1", "ei", "2026-10-05T08:00:00.000Z"),
+    registration("r4", "employee-2", "blikje", "2026-10-06T08:00:00.000Z"),
+    registration("r5", "employee-1", "blikje", "2026-10-02T08:00:00.000Z")
+  ];
+
+  // r1 en r5 hebben hetzelfde tijdstip: de laatst ingevoerde (r5) staat dan bovenaan.
+  assert.deepEqual(model.registrationsFor("employee-1", "blikje").map(({ id }) => id), ["r5", "r1", "r2"]);
+  assert.deepEqual(model.registrationsFor("employee-1", "boter"), []);
+});
+
+test("removeRegistration verwijdert precies de gekozen registratie en zet de voorraad terug", () => {
+  const { model, point } = createModel();
+  model.addRegistration("employee-1", "blikje");
+  model.addRegistration("employee-1", "blikje");
+  const [first, second] = model.registrations;
+
+  assert.equal(model.removeRegistration(first.id), true);
+
+  assert.deepEqual(model.registrations.map(({ id }) => id), [second.id]);
+  assert.equal(model.findPoint(point.id).products.blikje.stock, 23);
+  assert.equal(model.findRegistration(first.id), undefined);
+  assert.equal(model.findRegistration(second.id), second);
+});
+
+test("removeRegistration met een onbekend id verandert niets en geeft false", () => {
+  const { model, point } = createModel();
+  model.addRegistration("employee-1", "blikje");
+
+  assert.equal(model.removeRegistration("bestaat-niet"), false);
+
+  assert.equal(model.registrations.length, 1);
+  assert.equal(model.findPoint(point.id).products.blikje.stock, 23);
+});
+
+test("removeRegistration van een registratie van vóór de laatste telling laat de telling staan", () => {
+  const { model, point } = createModel();
+  model.addRegistration("employee-1", "blikje", { createdAt: new Date("2026-10-01T10:00:00.000Z") });
+  const entry = model.findPoint(point.id).products.blikje;
+  entry.stock = 20;
+  entry.countedAt = "2026-10-02T10:00:00.000Z";
+
+  model.removeRegistration(model.registrations[0].id);
+
+  assert.equal(model.registrations.length, 0);
+  assert.equal(entry.stock, 20);
+});
+
 test("registratie zonder consumptiepunt verandert geen voorraad", () => {
   const { model, point } = createModel();
   addEmployee(model);

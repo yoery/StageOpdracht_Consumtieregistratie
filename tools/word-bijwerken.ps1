@@ -6,17 +6,24 @@
 # Sla -Docx en -Pdf op in een tijdelijke map (niet in een OneDrive-map: daar bleef Word hangen bij
 # het opslaan) en kopieer de bestanden daarna naar docs/. Een volledig voorbeeld staat bovenin
 # tools/md-to-docx.cjs.
-param([string]$Map, [string]$Docx, [string]$Pdf)
+param(
+  [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Map,
+  [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Docx,
+  [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Pdf
+)
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $tmp = "$Docx.tmp.docx"
-if (Test-Path $tmp) { Remove-Item $tmp -Force }
+# -LiteralPath: tekens als * en [ ] in een pad worden niet als jokerteken gelezen.
+if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
 [System.IO.Compression.ZipFile]::CreateFromDirectory($Map, $tmp)
 
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false
 $word.DisplayAlerts = 0
+# Macro's altijd uit (3 = msoAutomationSecurityForceDisable): via COM staan ze anders standaard aan.
+$word.AutomationSecurity = 3
 try {
   $doc = $word.Documents.Open($tmp, $false, $false)
   foreach ($toc in $doc.TablesOfContents) { $toc.Update() }
@@ -44,7 +51,7 @@ try {
     }
   }
   foreach ($toc in $doc.TablesOfContents) { $toc.UpdatePageNumbers() }
-  if (Test-Path $Docx) { Remove-Item $Docx -Force }
+  if (Test-Path -LiteralPath $Docx) { Remove-Item -LiteralPath $Docx -Force }
   $doc.SaveAs2($Docx, 16)          # 16 = wdFormatDocumentDefault (.docx)
   $doc.ExportAsFixedFormat($Pdf, 17) # 17 = wdExportFormatPDF
   $pages = $doc.ComputeStatistics(2) # 2 = wdStatisticPages
@@ -53,5 +60,5 @@ try {
 } finally {
   $word.Quit()
   [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
-  Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
 }

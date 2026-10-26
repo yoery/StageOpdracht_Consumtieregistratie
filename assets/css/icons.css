@@ -1,0 +1,74 @@
+﻿/* SVG-iconen (assets/js/icons.js): lijndikte, kleur en maat per plek, iconen naast tekst in knoppen,
+   en de aanpassingen voor een aanraakscherm (geen sneltoets-hint, grotere − en +).
+   Laadt na motion.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* SVG-iconen (assets/js/icons.js): overal dezelfde lijndikte en de kleur van de tekst. */
+.icon {
+  width:1em;
+  height:1em;
+  flex:none;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  vertical-align:-.15em
+}
+/* Knoppen met een icoon en tekst: icoon en tekst netjes op één lijn. */
+.primary-button,.secondary-button,.table-action {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px
+}
+.search-box span,.tip-icon {
+  display:inline-flex
+}
+.search-box span {
+  font-size:20px
+}
+/* Het recycle-icoon in de banner: groter getekend, met een iets dunnere lijn. */
+.hero-shape .icon {
+  width:1.2em;
+  height:1.2em;
+  stroke-width:1.6
+}
+.modal-close .icon {
+  width:20px;
+  height:20px
+}
+.company-combobox-toggle {
+  top:50%;
+  height:40px;
+  transform:translateY(-50%)
+}
+.company-combobox-toggle .icon {
+  width:18px;
+  height:18px
+}
+.correction-button,.personal-product-step {
+  display:inline-grid;
+  place-items:center
+}
+.correction-button .icon {
+  width:16px;
+  height:16px
+}
+.personal-product-step .icon {
+  width:20px;
+  height:20px
+}
+/* Op een aanraakscherm is er geen toetsenbord, dus de sneltoets-hint is daar niet nodig. */
+@media (hover:none) {
+  .search-box kbd {
+    display:none
+  }
+}
+/* Aanraakscherm (vinger in plaats van muis): − en + in het productvenster worden 52 pixels, met
+   dezelfde tussenruimte. Zo zijn ze ook met een snelle tik bij de koelkast goed te raken. */
+@media (pointer:coarse) {
+  .personal-product-step {
+    width:52px;
+    height:52px
+  }
+}

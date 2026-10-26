@@ -1,0 +1,129 @@
+﻿/* Beheer: zoeken en corrigeren van registraties (+ en −), het venster "Registratie verwijderen"
+   en de knop boven het tabblad Producten.
+   Laadt na toast.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Zoek- en correctiecomponenten binnen het admin-dashboard. */
+.admin-search {
+  display:grid;
+  gap:7px;
+  color:var(--ink);
+  font-weight:600;
+  font-size:12px;
+  margin:20px 0 10px
+}
+.admin-search input {
+  height:43px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 12px;
+  outline-color:var(--green)
+}
+.admin-correction-list {
+  display:grid;
+  gap:8px;
+  margin-bottom:20px
+}
+.admin-correction-item {
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:0;
+  overflow:hidden
+}
+.admin-correction-item summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  cursor:pointer;
+  list-style-position:inside
+}
+.admin-correction-item summary strong {
+  font-size:13px
+}
+.correction-count {
+  color:var(--muted);
+  font-size:11px;
+  margin-left:auto;
+  margin-right:15px
+}
+.correction-actions {
+  display:flex;
+  align-items:center;
+  gap:8px
+}
+.correction-product-list {
+  display:grid;
+  gap:6px;
+  padding:0 12px 12px 32px
+}
+.correction-product-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 0;
+  border-top:1px solid var(--line)
+}
+.correction-product-row > span {
+  font-size:12px
+}
+.correction-button {
+  width:44px;
+  height:44px;
+  border-radius:7px;
+  font-size:19px;
+  font-weight:700
+}
+.correction-plus {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.correction-minus {
+  background:var(--error-bg);
+  color:var(--error-text)
+}
+.correction-amount {
+  min-width:24px;
+  text-align:center;
+  transform:translateY(2px);
+  color:var(--green-dark)
+}
+/* Venster "Registratie verwijderen" (correctie "−"): één kader met per registratie een rij,
+   gescheiden door een lijn, net als de correctielijst. Bij veel registraties scrolt de lijst. */
+.remove-registration-modal {
+  max-width:520px
+}
+.remove-registration-list {
+  list-style:none;
+  margin:18px 0 12px;
+  padding:0;
+  border:1px solid var(--line);
+  border-radius:10px;
+  max-height:min(360px,50vh);
+  overflow:auto
+}
+.remove-registration-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px
+}
+.remove-registration-item + .remove-registration-item {
+  border-top:1px solid var(--line)
+}
+.remove-registration-info {
+  display:grid;
+  gap:2px;
+  min-width:0;
+  color:var(--ink);
+  font-size:12px
+}
+.remove-registration-info strong {
+  font-size:13px
+}
+.remove-registration-item .secondary-button {
+  flex-shrink:0
+}
+#productsTab > .primary-button {
+  margin-bottom:14px
+}

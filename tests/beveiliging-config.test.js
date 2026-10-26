@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import crypto from "node:crypto";
+import { cssFiles, readAllCss } from "./helpers.js";
 
 const read = (relative) => fs.readFileSync(new URL(relative, import.meta.url), "utf8");
 const exists = (relative) => fs.existsSync(new URL(relative, import.meta.url));
@@ -29,9 +30,22 @@ test("index.html laadt niets van externe servers (geen Google Fonts of CDN)", ()
   assert.deepEqual(externalUrls(indexHtml()), []);
 });
 
-test("config.js en styles.css verwijzen niet naar externe servers", () => {
+test("config.js en de stylesheets verwijzen niet naar externe servers", () => {
   assert.deepEqual(externalUrls(read("../assets/js/config.js")), []);
-  assert.deepEqual(externalUrls(read("../assets/css/styles.css")), []);
+  assert.deepEqual(externalUrls(readAllCss()), []);
+});
+
+test("index.html laadt iedere stylesheet uit assets/css precies één keer, van de eigen server en zonder @import", () => {
+  const linked = cssFiles();
+  const onDisk = fs.readdirSync(new URL("../assets/css/", import.meta.url)).filter((file) => file.endsWith(".css"));
+  assert.deepEqual([...linked].sort(), onDisk.map((file) => `assets/css/${file}`).sort());
+  assert.equal(new Set(linked).size, linked.length);
+  // base.css (kleuren en reset) eerst en responsive.css (mediaqueries) als laatste: de volgorde is de cascade.
+  assert.equal(linked[0], "assets/css/base.css");
+  assert.equal(linked.at(-1), "assets/css/responsive.css");
+  assert.doesNotMatch(readAllCss(), /@import/);
+  // De CSP staat stylesheets van de eigen server toe (style-src 'self').
+  assert.match(cspContent(indexHtml()), /style-src 'self'/);
 });
 
 test("index.html stuurt geen referrer mee", () => {
@@ -74,7 +88,7 @@ test("de script-hashes in de CSP horen precies bij de inline scripts van index.h
 });
 
 test("alle lettertypes uit @font-face bestaan en zijn echte woff2-bestanden", () => {
-  const css = read("../assets/css/styles.css");
+  const css = readAllCss();
   const fontFaces = css.match(/@font-face\s*\{[^}]*\}/g) || [];
   assert.ok(fontFaces.length >= 2, "verwacht @font-face-regels voor DM Sans en Space Grotesk");
 

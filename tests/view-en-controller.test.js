@@ -4,12 +4,12 @@ import assert from "node:assert/strict";
 
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
-import { createModel } from "./helpers.js";
+import { createModel, asAdmin } from "./helpers.js";
 
 // Nep-view: onthoudt meldingen, en iedere render-methode doet niets.
 // `$` geeft een nep-element terug, zodat classList-aanroepen werken.
 const createFakeView = () => {
-  const fakeElement = { classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, dataset: {}, value: "", focus() {}, setAttribute() {} };
+  const fakeElement = { classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, dataset: {}, value: "", focus() {}, setAttribute() {}, querySelectorAll: () => [] };
   const target = { toasts: [], $: () => fakeElement };
   target.showToast = (message) => target.toasts.push(message);
 
@@ -18,10 +18,11 @@ const createFakeView = () => {
   });
 };
 
+// Controller met het testmodel, een nep-view en een ingelogde beheerder.
 const createApp = (storeOptions) => {
   const { model, point } = createModel(storeOptions);
   const view = createFakeView();
-  return { app: new RegistrationApp(model, view), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view)), model, view, point };
 };
 
 // RegistrationView
@@ -82,15 +83,19 @@ test("gekozen producten worden in één keer als losse registraties opgeslagen",
   assert.deepEqual(view.toasts, ["Test Medewerker: 2× Blikje, 1× Boter geregistreerd"]);
 });
 
-test("registreren zonder gekozen product slaat niets op", () => {
+test("registreren zonder gekozen product slaat niets op en geeft geen foutmelding", () => {
   const { app, model, view } = createApp();
   app.selectedEmployeeId = "employee-1";
   app.selectedProducts = { blikje: 0 };
+  let emphasized = 0;
+  view.emphasizeRegisterHint = () => { emphasized += 1; };
 
   app.registerSelectedProducts();
 
   assert.equal(model.registrations.length, 0);
-  assert.deepEqual(view.toasts, ["Kies eerst minimaal één product"]);
+  // Geen toast meer: de regel "Kies eerst een product met +" bij de knop wordt benadrukt (UX-review, punt 12).
+  assert.deepEqual(view.toasts, []);
+  assert.equal(emphasized, 1);
 });
 
 test("correctie van de beheerder komt in het logboek met product- en medewerkernaam", () => {

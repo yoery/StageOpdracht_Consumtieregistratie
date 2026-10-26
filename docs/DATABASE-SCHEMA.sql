@@ -4,6 +4,15 @@
 -- De backend/API hoort de enige laag te zijn die rechtstreeks met deze
 -- database communiceert. Gebruik nooit databasegegevens in de browser.
 
+-- pgcrypto levert gen_random_uuid() voor de primaire sleutels (sinds PostgreSQL 13 zit die
+-- functie ook in PostgreSQL zelf; de extensie staat er voor oudere versies). pgcrypto wordt in
+-- dit schema NIET gebruikt om kolommen te versleutelen. Personeelsnummer, looncode en de andere
+-- persoonsgegevens staan als gewone tekst in de tabellen; ze worden beschermd door versleuteling
+-- van de schijf of de database (encryption at rest, bijvoorbeeld TDE of versleutelde opslag bij
+-- de hostingpartij), versleutelde back-ups, TLS en databaserollen met zo weinig rechten als nodig.
+-- Kolomversleuteling van personnel_number zou de UNIQUE-regel en het zoeken op nummer breken;
+-- daarvoor is dan een extra kolom met een blind index (een HMAC van het nummer) nodig.
+-- Zie TO hoofdstuk 13, Verplicht vóór productie.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE companies (
@@ -94,6 +103,7 @@ CREATE TABLE point_products (
 );
 
 -- Producten die bijbesteld moeten worden (op of onder het minimum).
+-- De status gebruikt dezelfde woorden als de demo: "Leeg" (sinds versie 3.12, eerder "Op") en "Bijbestellen".
 CREATE OR REPLACE VIEW stock_alerts AS
 SELECT
     c.name AS company_name,
@@ -101,7 +111,7 @@ SELECT
     p.name AS product_name,
     pp.stock,
     pp.minimum,
-    CASE WHEN pp.stock <= 0 THEN 'Op' ELSE 'Bijbestellen' END AS status
+    CASE WHEN pp.stock <= 0 THEN 'Leeg' ELSE 'Bijbestellen' END AS status
 FROM point_products pp
 JOIN consumption_points cp ON cp.point_id = pp.point_id
 JOIN companies c ON c.company_id = cp.company_id
@@ -172,13 +182,18 @@ CREATE INDEX registrations_product_date_idx
 CREATE INDEX registrations_date_idx
     ON registrations (registered_at DESC);
 
+-- Het logboek is alleen-toevoegen (append-only): een regel wordt nooit gewijzigd of verwijderd.
+-- Daarom hebben admin_id, employee_id, product_id en registration_id hier bewust geen vreemde
+-- sleutel. Met ON DELETE SET NULL zou de database bij het verwijderen van bijvoorbeeld een
+-- medewerker de logregels zelf aanpassen, en dan is het spoor weg. Het id blijft dus staan, ook
+-- als het gegeven later wordt verwijderd. Zet de naam van dat moment in metadata als die nodig is.
 CREATE TABLE audit_log (
     audit_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id uuid REFERENCES admins(admin_id) ON DELETE SET NULL,
+    admin_id uuid,
     action varchar(100) NOT NULL,
-    employee_id uuid REFERENCES employees(employee_id) ON DELETE SET NULL,
-    product_id uuid REFERENCES products(product_id) ON DELETE SET NULL,
-    registration_id uuid REFERENCES registrations(registration_id) ON DELETE SET NULL,
+    employee_id uuid,
+    product_id uuid,
+    registration_id uuid,
     details text,
     metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -190,6 +205,31 @@ CREATE INDEX audit_log_created_at_idx
 
 CREATE INDEX audit_log_employee_idx
     ON audit_log (employee_id, created_at DESC);
+
+-- Weigert iedere wijziging of verwijdering van een logregel, ook voor een rol met UPDATE- of
+-- DELETE-rechten. Alleen INSERT en SELECT werken nog. Opschonen na de bewaartermijn (AVG) doet
+-- alleen de eigenaar van de tabel in een gepland onderhoudsscript: die zet deze triggers daarvoor
+-- tijdelijk uit (ALTER TABLE audit_log DISABLE TRIGGER ...) en legt dat zelf vast.
+CREATE OR REPLACE FUNCTION audit_log_append_only()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_log is alleen-toevoegen: % is niet toegestaan', TG_OP
+        USING ERRCODE = 'insufficient_privilege';
+END;
+$$;
+
+CREATE TRIGGER audit_log_no_update_or_delete
+    BEFORE UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION audit_log_append_only();
+
+CREATE TRIGGER audit_log_no_truncate
+    BEFORE TRUNCATE ON audit_log
+    FOR EACH STATEMENT EXECUTE FUNCTION audit_log_append_only();
+
+-- Niemand krijgt via PUBLIC rechten om het logboek te wijzigen of te legen.
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS trigger
@@ -255,9 +295,14 @@ ON CONFLICT ((lower(name))) DO NOTHING;
 
 -- Maandoverzicht voor het admin-dashboard.
 -- De kosten gebruiken de prijs die bij de registratie is bewaard (r.price), niet de huidige productprijs.
+-- De maand wordt altijd in Nederlandse tijd bepaald (AT TIME ZONE 'Europe/Amsterdam'), los van de
+-- tijdzone van de databasesessie. Zonder die stap rekent date_trunc op een timestamptz in de tijdzone
+-- van de sessie. Draait de server in UTC, dan kwam een registratie op de 1e van de maand tussen 0:00
+-- en 1:00 (wintertijd) of 2:00 (zomertijd) Nederlandse tijd in de vorige maand terecht, dus in de
+-- verkeerde loonmaand. Iedere andere query die een maand of loonmaand bepaalt, doet hetzelfde.
 CREATE OR REPLACE VIEW monthly_employee_consumption AS
 SELECT
-    date_trunc('month', r.registered_at)::date AS month_start,
+    date_trunc('month', r.registered_at AT TIME ZONE 'Europe/Amsterdam')::date AS month_start,
     e.employee_id,
     e.first_name,
     e.last_name,
@@ -269,7 +314,7 @@ FROM registrations r
 JOIN employees e ON e.employee_id = r.employee_id
 LEFT JOIN companies c ON c.company_id = e.company_id
 GROUP BY
-    date_trunc('month', r.registered_at)::date,
+    date_trunc('month', r.registered_at AT TIME ZONE 'Europe/Amsterdam')::date,
     e.employee_id,
     e.first_name,
     e.last_name,
@@ -277,6 +322,8 @@ GROUP BY
     c.name;
 
 -- Voorbeeld: alle registraties binnen een periode.
+-- $1 en $2 zijn het begin van de periode en van de periode erna in Nederlandse tijd, bijvoorbeeld
+-- timestamptz '2026-11-01 00:00 Europe/Amsterdam', zodat de 1e van de maand na middernacht meetelt.
 -- SELECT e.first_name, e.last_name, c.name AS company_name,
 --        p.name AS product_name, r.amount, r.price, r.registered_at
 -- FROM registrations r
@@ -302,10 +349,11 @@ GROUP BY
 -- GRANT SELECT, INSERT, UPDATE ON admins TO blikjes_app;
 -- GRANT SELECT ON stock_alerts, monthly_employee_consumption TO blikjes_app;
 --
--- Het logboek is alleen-toevoegen (append-only): de applicatie mag regels lezen en
--- toevoegen, maar niet wijzigen of verwijderen. Zo blijft het logboek controleerbaar.
+-- Het logboek is alleen-toevoegen (append-only): de applicatie krijgt alleen het recht om
+-- regels te lezen en toe te voegen, niet om ze te wijzigen of te verwijderen. De triggers
+-- audit_log_no_update_or_delete en audit_log_no_truncate (bij de tabel audit_log) weigeren
+-- dat bovendien voor iedere rol, ook als er per ongeluk te veel rechten zijn gegeven.
 -- GRANT SELECT, INSERT ON audit_log TO blikjes_app;
--- REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM blikjes_app;
 --
 -- Een aparte rol met alleen leesrechten, bijvoorbeeld voor rapportages.
 -- CREATE ROLE blikjes_rapportage LOGIN PASSWORD '...';

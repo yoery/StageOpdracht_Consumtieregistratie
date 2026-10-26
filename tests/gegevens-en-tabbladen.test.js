@@ -16,7 +16,8 @@ import {
   createFakeElement,
   createDataStore,
   fakeLocalStorageWithKeys,
-  addEmployee
+  addEmployee,
+  asAdmin
 } from "./helpers.js";
 
 // Alle formulieren en vensters die closeStaleForms en handleStorageCleared opzoeken.
@@ -29,11 +30,12 @@ const FORM_SELECTORS = [
 
 // Controller met een strenge nep-view die alleen de opgegeven selectors kent.
 // Zonder `model` wordt het testmodel gebruikt (employee-1 op Hoofdkantoor van TVB).
+// De beheerder is ingelogd.
 const createApp = (selectors, { model = createModel().model } = {}) => {
   globalThis.document = { activeElement: null };
   const view = createStrictView(selectors);
   const demo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, demo), model, view };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, demo)), model, view };
 };
 
 // Een "submit"-event van een formulier.
@@ -49,6 +51,9 @@ const otherTabStore = (state, loadProblem = null) => ({
 
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
 const calledNames = (view) => view.calls.map(([name]) => name);
+
+// Het zoekveld en het bedrijfsfilter, die na registreren worden leeggemaakt (resetEmployeeSearch).
+const SEARCH_SELECTORS = ["#employeeSearch", "#employeeCompanyFilter", "#companyFilterOptions", "[data-toggle-company-filter]"];
 
 // ------------------------------------------------------------------
 // Bug 1: prijs boven 1000 euro
@@ -123,7 +128,7 @@ test("voorraad tellen bij een verdwenen consumptiepunt slaat niets op en zet nie
   app.saveStockField(input);
 
   assert.equal(model.auditLog.length, 0);
-  assert.deepEqual(toastTexts(view), ["Dit consumptiepunt of product bestaat niet meer; er is niets opgeslagen."]);
+  assert.deepEqual(toastTexts(view), ["Dit consumptiepunt of product bestaat niet meer. Er is niets opgeslagen."]);
   assert.equal(view.toasts[0].tone, "error");
   assert.equal(input.value, "");
   assert.equal(calledNames(view).includes("updateStockStatus"), false);
@@ -148,7 +153,7 @@ test("na registreren gaat het venster eerst dicht en krijgt de nieuwe rij van de
   const { model, point } = createModel();
   const employee = addEmployee(model, { id: 'mede"werker', companyId: point.companyId, pointId: point.id });
   const rowSelector = '[data-open-employee="mede\\"werker"]';
-  const { app, view } = createApp(["#employeeProductsModal", rowSelector], { model });
+  const { app, view } = createApp(["#employeeProductsModal", rowSelector, ...SEARCH_SELECTORS], { model });
 
   const oldRow = createFakeElement({ isConnected: true });
   globalThis.document = { activeElement: oldRow };
@@ -171,7 +176,7 @@ test("na registreren gaat het venster eerst dicht en krijgt de nieuwe rij van de
 
 test("staat de knop waarmee het venster werd geopend er nog, dan houdt die de focus na registreren", () => {
   const rowSelector = '[data-open-employee="employee-1"]';
-  const { app, view } = createApp(["#employeeProductsModal", rowSelector]);
+  const { app, view } = createApp(["#employeeProductsModal", rowSelector, ...SEARCH_SELECTORS]);
   const faceButton = createFakeElement({ isConnected: true });
   globalThis.document = { activeElement: faceButton };
   app.openEmployeeProducts("employee-1");
@@ -237,7 +242,8 @@ test("persist weigert een medewerker die naar een verwijderd bedrijf wijst", () 
 const EMPLOYEE_SELECTORS = [
   "#employeeForm", "#employeeFormModal",
   "#newEmployeeFirstName", "#newEmployeeLastName", "#newEmployeePayrollCode",
-  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber", "#newEmployeeCompany", "#newEmployeePoint"
+  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber", "#newEmployeeCompany", "#newEmployeePoint",
+  "#newEmployeeBadgeId"
 ];
 
 // Vult het medewerkersformulier met een nieuwe medewerker bij het gekozen bedrijf en punt.
@@ -341,7 +347,7 @@ const STORAGE_SELECTORS = [...FORM_SELECTORS, "#pointFormTitle", "#pointName", "
   "#employeeFormTitle", "#employeeFormHelp", "#employeeSaveContinueButton",
   '#employeeForm [data-save-mode="close"]',
   "#newEmployeeFirstName", "#newEmployeeLastName", "#newEmployeePayrollCode",
-  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber"];
+  "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber", "#newEmployeeBadgeId"];
 
 test("het aanbod van een punt dat in een ander tabblad is gewijzigd, sluit het open formulier", () => {
   const { app, model, view } = createApp(STORAGE_SELECTORS);
@@ -392,7 +398,7 @@ test("een medewerker die in een ander tabblad is gewijzigd, sluit het open medew
 // Bug 7: de opslag is in een ander tabblad helemaal gewist
 // ------------------------------------------------------------------
 
-const WIPE_SELECTORS = [...FORM_SELECTORS, "#faceModal", "#faceVideo", "#employeeProductsModal", "#adminModal", "#loginPassword"];
+const WIPE_SELECTORS = [...FORM_SELECTORS, "#faceModal", "#faceVideo", "#employeeProductsModal", "#adminModal", "#adminView", "#loginPassword"];
 
 test("is de opslag in een ander venster gewist, dan wist dit tabblad ook alles en sluit wat open staat", () => {
   const { app, model, view } = createApp(WIPE_SELECTORS);

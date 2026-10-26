@@ -1,5 +1,6 @@
 // Zet een Markdown-document om naar een Word-bestand (.docx) in de TVB-huisstijl.
-// Basis is het TVB-sjabloon (docs/tvbsjabloon.docx): voorblad, stijlen (Verdana, turquoise koppen),
+// Basis is het TVB-sjabloon (tvbsjabloon.docx; dat staat niet in de repository, vraag het op bij TVB):
+// voorblad, stijlen (Verdana, turquoise koppen),
 // kop- en voetteksten ("Pagina X van Y"), zeshoek-opsommingstekens en de inhoudsopgave.
 //
 // Gebruik: node md-to-docx.cjs <uitgepakt-sjabloon-map> <invoer.md> <uitvoer-map> "<titel>" "<ondertitel>"
@@ -9,7 +10,7 @@
 // Voorbeeld voor het TO (PowerShell, vanuit de projectmap; $w is een tijdelijke map buiten OneDrive):
 //   $w = "$env:TEMP\tvb-docs"; New-Item -ItemType Directory -Force $w
 //   Add-Type -AssemblyName System.IO.Compression.FileSystem
-//   [System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD\docs\tvbsjabloon.docx", "$w\sjabloon")
+//   [System.IO.Compression.ZipFile]::ExtractToDirectory("<pad naar>\tvbsjabloon.docx", "$w\sjabloon")
 //   node tools\md-to-docx.cjs "$w\sjabloon" docs\TO-BLIKJESREGISTRATIE.md "$w\to" "Technisch ontwerp" "Blikjesregistratie TVB"
 //   & .\tools\word-bijwerken.ps1 -Map "$w\to" -Docx "$w\TO-BLIKJESREGISTRATIE.docx" -Pdf "$w\TO-BLIKJESREGISTRATIE.pdf"
 //   Copy-Item "$w\TO-BLIKJESREGISTRATIE.*" docs\
@@ -19,7 +20,17 @@ const fs = require("fs");
 const path = require("path");
 
 const [templateDir, input, outDir, coverTitle, coverSubtitle] = process.argv.slice(2);
-const mdDir = path.dirname(input);
+if (!templateDir || !input || !outDir || !coverTitle || !coverSubtitle) {
+  throw new Error('Gebruik: node md-to-docx.cjs <sjabloon-map> <invoer.md> <uitvoer-map> "<titel>" "<ondertitel>"');
+}
+const mdDir = path.resolve(path.dirname(input));
+// De uitvoermap wordt eerst leeggemaakt. Weiger daarom een map waarin de bron (of het sjabloon) staat,
+// zodat bijvoorbeeld docs/ nooit per ongeluk wordt gewist als de argumenten zijn verwisseld.
+const resolvedOut = path.resolve(outDir);
+const inside = (child, parent) => child === parent || child.startsWith(parent + path.sep);
+if (inside(mdDir, resolvedOut) || inside(path.resolve(templateDir), resolvedOut)) {
+  throw new Error(`Uitvoermap ${outDir} bevat de bron of het sjabloon; kies een aparte (tijdelijke) map.`);
+}
 const md = fs.readFileSync(input, "utf8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
 
 // ---------------------------------------------------------------- hulpfuncties
@@ -66,15 +77,18 @@ function imageSize(file) {
 const media = new Map(); // bronpad → { rel, name }
 let drawingId = 1;
 function imageParagraph(src, alt) {
-  const file = path.join(mdDir, src);
+  // Alleen PNG- en JPEG-bestanden uit de map van het document (of een submap daarvan), zodat een
+  // pad als ../../geheim.png geen bestand van elders in het Word-bestand kan zetten.
+  const file = path.resolve(mdDir, src);
+  if (!inside(file, mdDir) || !/\.(png|jpe?g)$/i.test(file)) throw new Error(`Afbeelding niet toegestaan: ${src}`);
   if (!fs.existsSync(file)) throw new Error(`Afbeelding ontbreekt: ${src}`);
+  const { w, h } = imageSize(file); // eerst controleren dat het echt een afbeelding is
   if (!media.has(file)) {
     const name = `img${media.size + 1}${path.extname(file).toLowerCase()}`;
     fs.copyFileSync(file, path.join(outDir, "word", "media", name));
     media.set(file, { rel: addRel("image", `media/${name}`), name });
   }
   const { rel, name } = media.get(file);
-  const { w, h } = imageSize(file);
   // Zo breed mogelijk (17 cm), maar niet hoger dan 13 cm, zodat er tekst bij op de pagina past.
   const maxW = 6120000, maxH = 4680000;
   let cx = maxW, cy = Math.round((maxW * h) / w);
@@ -127,6 +141,10 @@ function link(label, target, f) {
     if (!name) return runs(label, f);
     return `<w:hyperlink w:anchor="${name}" w:history="1">${runs(label, { ...f, link: true })}</w:hyperlink>`;
   }
+  // Alleen webadressen en e-mail worden een link. Een verwijzing naar een bestand (zoals
+  // ./DATABASE-SCHEMA.sql) wordt gewone tekst: Word maakte er anders bij het opslaan een lokaal
+  // pad van (file:///C:\Users\…), en dat werkt bij de lezer niet en verraadt de mappen.
+  if (!/^(https?:|mailto:)/i.test(target)) return runs(label, f);
   return `<w:hyperlink r:id="${addRel("hyperlink", target, true)}" w:history="1">${runs(label, { ...f, link: true })}</w:hyperlink>`;
 }
 
@@ -229,10 +247,10 @@ for (const line of lines) {
   if (h && !bookmarks.has(slug(h[2]))) bookmarks.set(slug(h[2]), `k${bookmarks.size + 1}`);
 }
 
-// Gegevens voor het voorblad: de regels **Versie:** en **Datum:** bovenaan het document.
+// Gegevens voor het voorblad: de regels **Auteur:**, **Versie:** en **Datum:** bovenaan het document.
 const meta = {};
 for (const line of lines.slice(0, 15)) {
-  const m = line.match(/^\*\*(Versie|Datum):\*\*\s*(.+)$/);
+  const m = line.match(/^\*\*(Auteur|Versie|Datum):\*\*\s*(.+)$/);
   if (m) meta[m[1]] = m[2].trim();
 }
 
@@ -242,7 +260,7 @@ let skipSection = false; // de Markdown-inhoudsopgave vervalt; Word maakt er een
 let introOpen = false;
 for (let i = 0; i < lines.length; ) {
   const line = lines[i];
-  if (/^# /.test(line) || /^\*\*(Versie|Datum):\*\*/.test(line) || /^<!--/.test(line)) { i++; continue; }
+  if (/^# /.test(line) || /^\*\*(Auteur|Versie|Datum):\*\*/.test(line) || /^<!--/.test(line)) { i++; continue; }
 
   const h = line.match(/^(#{2,4}) (.+)$/);
   if (h) {
@@ -312,9 +330,13 @@ cover = cover.replace("<w:t>TEKST</w:t>", `<w:t>${esc(coverTitle.toUpperCase())}
   .replace(/<w:t xml:space="preserve">SUBTITEL <\/w:t>/, `<w:t xml:space="preserve">${esc(coverSubtitle.toUpperCase())}</w:t>`);
 // Na de ondertitel staan in het sjabloon alleen lege alinea's die het voorblad opvullen. Die
 // vallen weg (het logo staat in de koptekst van de eerste pagina); anders kunnen ze doorlopen
-// naar een lege tweede pagina. Daarna versie en datum (wit, kleiner), als het document die noemt.
+// naar een lege tweede pagina. Daarna de auteur (wit, vet) en versie en datum (wit, kleiner),
+// als het document die bovenaan noemt.
 const subtitleEnd = cover.indexOf("</w:p>", cover.indexOf(esc(coverSubtitle.toUpperCase()))) + "</w:p>".length;
 cover = cover.slice(0, subtitleEnd);
+if (meta.Auteur) {
+  cover += `<w:p><w:pPr><w:spacing w:before="120" w:line="360" w:lineRule="auto"/></w:pPr>${run(meta.Auteur, { color: "FFFFFF", sz: 28, b: true })}</w:p>`;
+}
 if (meta.Versie || meta.Datum) {
   const metaText = [meta.Versie && `Versie ${meta.Versie}`, meta.Datum].filter(Boolean).join("  ·  ");
   cover += `<w:p><w:pPr><w:spacing w:before="120" w:line="360" w:lineRule="auto"/></w:pPr>${run(metaText, { color: "FFFFFF", sz: 24 })}</w:p>`;
@@ -329,6 +351,16 @@ const sectPr = templateXml.slice(templateXml.lastIndexOf("<w:sectPr"), templateX
 const documentXml = templateXml.slice(0, bodyStart) + cover + tocHeading + toc + body.join("") + sectPr + templateXml.slice(templateXml.indexOf("</w:body>"));
 fs.writeFileSync(path.join(outDir, "word", "document.xml"), documentXml);
 fs.writeFileSync(relsPath, rels);
+
+// Het sjabloon verwijst naar het interne bedrijfssjabloon op SharePoint (attachedTemplate). Die
+// verwijzing is niet nodig (alle stijlen zitten al in het document) en hoort niet in een document
+// dat buiten TVB wordt gedeeld; daarom gaat hij eruit.
+const settingsPath = path.join(outDir, "word", "settings.xml");
+fs.writeFileSync(settingsPath, fs.readFileSync(settingsPath, "utf8").replace(/<w:attachedTemplate [^>]*\/>/g, ""));
+const settingsRelsPath = path.join(outDir, "word", "_rels", "settings.xml.rels");
+if (fs.existsSync(settingsRelsPath)) {
+  fs.writeFileSync(settingsRelsPath, fs.readFileSync(settingsRelsPath, "utf8").replace(/<Relationship [^>]*attachedTemplate[^>]*\/>/g, ""));
+}
 
 // Afbeeldingstypes aanmelden en de titel in de documenteigenschappen zetten.
 const ctPath = path.join(outDir, "[Content_Types].xml");

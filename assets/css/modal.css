@@ -1,0 +1,129 @@
+﻿/* Vensters (modals): de achtergrond, het venster zelf, de sluitknop (×), labels en invoervelden
+   in een venster, de productkeuze en de algemene knoppen (.primary-button en .secondary-button) en
+   de foutregel onder een formulier. Het productvenster, het beheer, de koelkast en het cameravenster
+   bouwen hierop voort.
+   Laadt na home.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Beheerder-modal met login en dashboard. */
+/* Modal, admin-dashboard, tabellen, meldingen en mobiele weergave. */
+.modal-backdrop {
+  position:fixed;
+  inset:0;
+  background:var(--overlay);
+  display:grid;
+  place-items:center;
+  padding:20px;
+  z-index:5
+}
+.modal {
+  background:var(--paper);
+  border-radius:16px;
+  width:min(760px,100%);
+  max-height:90vh;
+  overflow:auto;
+  padding:31px;
+  position:relative;
+  box-shadow:var(--modal-shadow)
+}
+/* Sluitknop (×) met een aanraakvlak van 44 × 44 pixels. */
+.modal-close {
+  position:absolute;
+  right:8px;
+  top:6px;
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:none;
+  font-size:26px;
+  color:var(--muted);
+  z-index:1
+}
+.modal-close:hover,.modal-close:focus-visible {
+  background:var(--paper-soft)
+}
+.modal-icon {
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:var(--blue-soft);
+  color:var(--blue);
+  display:grid;
+  place-items:center;
+  margin-bottom:20px
+}
+.modal-icon svg {
+  width:23px;
+  height:23px;
+  fill:none;
+  stroke:currentColor;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:1.8
+}
+.muted,.login-hint {
+  color:var(--muted);
+  font-size:13px
+}
+.modal form {
+  margin-top:24px
+}
+.modal label,.filter-row label {
+  display:grid;
+  gap:7px;
+  color:var(--ink);
+  font-weight:600;
+  font-size:12px;
+  margin-bottom:15px
+}
+.modal input,.filter-row select,.add-employee-form input {
+  height:43px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 12px;
+  outline-color:var(--green);
+  background:var(--paper)
+}
+/* Productkeuze op het openbare registratiescherm. */
+.product-select {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:12px 0 18px;
+  color:var(--muted);
+  font-size:12px
+}
+.product-select select {
+  min-width:190px;
+  height:38px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 10px;
+  background:var(--paper)
+}
+.primary-button,.secondary-button {
+  border-radius:8px;
+  padding:11px 15px;
+  font-weight:700;
+  font-size:12px
+}
+.primary-button {
+  color:#fff;
+  background:var(--green)
+}
+.primary-button:hover {
+  background:var(--primary-hover)
+}
+.secondary-button {
+  color:var(--blue);
+  background:var(--blue-soft)
+}
+.full-width {
+  width:100%;
+  margin-top:5px
+}
+.form-error {
+  color:var(--danger);
+  font-size:12px
+}

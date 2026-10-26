@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1075" viewBox="0 0 1500 1075" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1085" viewBox="0 0 2000 1085" role="img" aria-labelledby="title desc">
   <title id="title">Architectuur van de demo</title>
-  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp), model (RegistrationModel, CsvExport, FaceRecognitionDemo), opslag (DataStore) en localStorage. main.js maakt alle objecten aan en koppelt ze.</desc>
+  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp met ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController, FormController en FridgeController), model (RegistrationModel, CsvExport, FaceRecognitionDemo, BadgeReader, SmartFridge), opslag (DataStore) en localStorage, met de camera, de pasjeslezer en de nagebootste slimme koelkast. main.js maakt alle objecten aan en koppelt ze.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -19,28 +19,28 @@
       <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
     </marker>
   </defs>
-  <rect width="1500" height="1075" fill="#ffffff"/>
+  <rect width="2000" height="1085" fill="#ffffff"/>
 <text x="40" y="50" font-size="28" class="kop">Architectuur van de demo</text>
 <text x="40" y="78" font-size="15" class="sub">MVC-lagen in de browser en hoe main.js alle onderdelen aan elkaar koppelt</text>
 <!-- Lagen -->
-<rect x="30" y="100" width="1140" height="70" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="100" width="1640" height="70" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="140" font-size="16" class="kop">Gebruiker</text>
-<rect x="30" y="184" width="1140" height="100" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="184" width="1640" height="100" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="231" font-size="16" class="kop">Pagina</text>
 <text x="48" y="250" font-size="13" class="sub">HTML en CSS</text>
-<rect x="30" y="298" width="1140" height="128" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="298" width="1640" height="128" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="359" font-size="16" class="kop">View</text>
 <text x="48" y="378" font-size="13" class="sub">weergave</text>
-<rect x="30" y="440" width="1140" height="128" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="440" width="1640" height="128" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="501" font-size="16" class="kop">Controller</text>
 <text x="48" y="520" font-size="13" class="sub">besturing</text>
-<rect x="30" y="582" width="1140" height="136" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="582" width="1640" height="136" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="647" font-size="16" class="kop">Model</text>
 <text x="48" y="666" font-size="13" class="sub">gegevens en regels</text>
-<rect x="30" y="732" width="1140" height="104" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="732" width="1640" height="104" rx="12" fill="#f7faf9" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="781" font-size="16" class="kop">Opslag</text>
 <text x="48" y="800" font-size="13" class="sub">opslaglaag</text>
-<rect x="30" y="850" width="1140" height="150" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
+<rect x="30" y="850" width="1640" height="150" rx="12" fill="#f8fbfa" stroke="#e2e9e8" stroke-width="1"/>
 <text x="48" y="921" font-size="16" class="kop">Browser en</text>
 <text x="48" y="941" font-size="16" class="kop">buitenwereld</text>
 <!-- Onderdelen -->
@@ -52,16 +52,17 @@
 <text x="715" y="247" text-anchor="middle" font-size="13.5">knoppen, formulieren, lijsten en vensters (DOM)</text>
 <rect x="230" y="312" width="430" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="445" y="342" text-anchor="middle" font-size="17" class="kop">RegistrationView</text>
-<text x="445" y="364" text-anchor="middle" font-size="13.5">tekent lijsten, tabellen, vensters en meldingen;</text>
-<text x="445" y="383" text-anchor="middle" font-size="13.5">leest het model, verandert zelf niets (icons.js)</text>
+<text x="445" y="364" text-anchor="middle" font-size="13.5">tekent lijsten, tabellen, vensters en meldingen,</text>
+<text x="445" y="383" text-anchor="middle" font-size="13.5">leest het model en verandert zelf niets (icons.js)</text>
 <rect x="860" y="312" width="290" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="1005" y="342" text-anchor="middle" font-size="17" class="kop">ThemeManager</text>
-<text x="1005" y="364" text-anchor="middle" font-size="13.5">licht, donker, auto of systeem;</text>
-<text x="1005" y="383" text-anchor="middle" font-size="13.5">staat los, bewaart keuze (tvb-theme)</text>
-<rect x="230" y="454" width="920" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
-<text x="690" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller)</text>
-<text x="690" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren, controleert invoer en stuurt model, view, export en camerademo aan;</text>
-<text x="690" y="525" text-anchor="middle" font-size="13.5">persist(): wijziging en logboekregel in één keer opslaan, anders allebei terugdraaien</text>
+<text x="1005" y="364" text-anchor="middle" font-size="13.5">licht, donker, auto of systeem,</text>
+<text x="1005" y="383" text-anchor="middle" font-size="13.5">staat los en bewaart de keuze (tvb-theme)</text>
+<rect x="230" y="454" width="1430" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="945" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller) met elf onderdelen</text>
+<text x="945" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren en slaat op met persist(): wijziging en logboekregel samen, anders allebei terugdraaien.</text>
+<text x="945" y="525" text-anchor="middle" font-size="13.5">onderdelen: ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController,</text>
+<text x="945" y="544" text-anchor="middle" font-size="13.5">FormController, FridgeController, RecognitionController (na herkennen: koelkast of productvenster) en StandbyController (standby, tik om te scannen)</text>
 <rect x="230" y="596" width="330" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="395" y="626" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
 <text x="395" y="648" text-anchor="middle" font-size="13.5">registraties, medewerkers, producten,</text>
@@ -74,6 +75,16 @@
 <text x="1035" y="626" text-anchor="middle" font-size="16" class="kop">FaceRecognitionDemo</text>
 <text x="1035" y="648" text-anchor="middle" font-size="13.5">demo, uit te zetten</text>
 <text x="1035" y="667" text-anchor="middle" font-size="13.5">in config.js (FACE_DEMO)</text>
+<rect x="1190" y="596" width="200" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="1290" y="624" text-anchor="middle" font-size="17" class="kop">BadgeReader</text>
+<text x="1290" y="646" text-anchor="middle" font-size="13.5">herkent een pas aan</text>
+<text x="1290" y="665" text-anchor="middle" font-size="13.5">de snelheid van de toetsen</text>
+<text x="1290" y="684" text-anchor="middle" font-size="13.5">(BADGE_READER)</text>
+<rect x="1450" y="596" width="210" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
+<text x="1555" y="624" text-anchor="middle" font-size="17" class="kop">SmartFridge</text>
+<text x="1555" y="646" text-anchor="middle" font-size="13.5">slot en weegschalen</text>
+<text x="1555" y="665" text-anchor="middle" font-size="13.5">per schap, omrekenen</text>
+<text x="1555" y="684" text-anchor="middle" font-size="13.5">(SMART_FRIDGE)</text>
 <rect x="230" y="746" width="330" height="76" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="395" y="775" text-anchor="middle" font-size="17" class="kop">DataStore</text>
 <text x="395" y="797" text-anchor="middle" font-size="13.5">laden, controleren, omzetten, opslaan</text>
@@ -82,8 +93,9 @@
     <ellipse cx="395" cy="874" rx="165" ry="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
   </g>
 <text x="395" y="916" text-anchor="middle" font-size="17" class="kop">localStorage</text>
-<text x="395" y="938" text-anchor="middle" font-size="13.5">tvb-blikjesregistratie (gegevens)</text>
-<text x="395" y="957" text-anchor="middle" font-size="13.5">tvb-theme (gekozen thema)</text>
+<text x="395" y="938" text-anchor="middle" font-size="13.5">tvb-blikjesregistratie (gegevens, ook</text>
+<text x="395" y="957" text-anchor="middle" font-size="13.5">gezichtskenmerken in de demo)</text>
+<text x="395" y="976" text-anchor="middle" font-size="13.5">tvb-theme (gekozen thema)</text>
 <rect x="640" y="862" width="240" height="126" rx="12" fill="#fdf1e7" stroke="#a55a16" stroke-width="1.8" class="box"/>
 <text x="760" y="896" text-anchor="middle" font-size="17" class="kop">CSV-bestand</text>
 <text x="760" y="918" text-anchor="middle" font-size="13.5">openen in Excel en</text>
@@ -91,9 +103,19 @@
 <text x="760" y="956" text-anchor="middle" font-size="13.5">loonadministratie</text>
 <rect x="920" y="862" width="230" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
 <text x="1035" y="896" text-anchor="middle" font-size="16" class="kop">Camera + face-api</text>
-<text x="1035" y="918" text-anchor="middle" font-size="13.5">modellen uit</text>
-<text x="1035" y="937" text-anchor="middle" font-size="13.5">assets/vendor/face-api/;</text>
-<text x="1035" y="956" text-anchor="middle" font-size="13.5">beeld alleen in geheugen</text>
+<text x="1035" y="918" text-anchor="middle" font-size="13.5">alleen na een tik aan,</text>
+<text x="1035" y="937" text-anchor="middle" font-size="13.5">modellen uit het project,</text>
+<text x="1035" y="956" text-anchor="middle" font-size="13.5">geen beeld bewaard</text>
+<rect x="1450" y="862" width="210" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="1555" y="896" text-anchor="middle" font-size="16" class="kop">Koelkast (demo)</text>
+<text x="1555" y="918" text-anchor="middle" font-size="13.5">nagebootst slot en</text>
+<text x="1555" y="937" text-anchor="middle" font-size="13.5">nagebootste weegschalen,</text>
+<text x="1555" y="956" text-anchor="middle" font-size="13.5">in productie via de backend</text>
+<rect x="1190" y="862" width="200" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="1290" y="896" text-anchor="middle" font-size="16" class="kop">Pasjeslezer</text>
+<text x="1290" y="918" text-anchor="middle" font-size="13.5">USB-NFC-lezer die zich</text>
+<text x="1290" y="937" text-anchor="middle" font-size="13.5">als toetsenbord gedraagt</text>
+<text x="1290" y="956" text-anchor="middle" font-size="13.5">(optioneel)</text>
 <!-- Verbindingen -->
 <path d="M710,160 L710,194" class="lijn" marker-end="url(#pijl)"/>
 <text x="722" y="182" class="lbl">klikt en tikt</text>
@@ -125,43 +147,61 @@
 <path d="M1035,704 L1035,860" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
 <text x="1047" y="778" class="lbl">laadt modellen,</text>
 <text x="1047" y="795" class="lbl">leest camerabeeld</text>
+<path d="M1250,554 L1250,594" class="lijn" marker-end="url(#pijl)"/>
+<text x="1238" y="578" text-anchor="end" class="lbl">handleKey()</text>
+<path d="M1322,594 L1322,556" class="lijn" marker-end="url(#pijl)"/>
+<text x="1334" y="578" class="lbl">onScan()</text>
+<path d="M1290,988 V1008 H1688 V234 H1052" class="lijn" marker-end="url(#pijl)"/>
+<text x="1681" y="760" text-anchor="middle" class="lbl" transform="rotate(-90 1681 760)">typt het pasnummer (als toetsenbord)</text>
 <path d="M560,960 H620 V556" class="stip" marker-end="url(#pijl)"/>
+<path d="M1555,554 L1555,594" class="lijn" marker-end="url(#pijl)"/>
+<text x="1567" y="578" class="lbl">start(), finish()</text>
+<path d="M1555,704 L1555,860" class="lijn" marker-start="url(#pijl)" marker-end="url(#pijl)"/>
+<text x="1543" y="778" text-anchor="end" class="lbl">slot open en dicht,</text>
+<text x="1543" y="795" text-anchor="end" class="lbl">gewicht per schap</text>
 <text x="614" y="760" text-anchor="middle" class="lbl" transform="rotate(-90 614 760)">storage-event (ander tabblad)</text>
 <!-- main.js en modules zonder class -->
-<rect x="1230" y="298" width="250" height="424" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
-<text x="1355" y="332" text-anchor="middle" font-size="19" class="kop">main.js</text>
-<text x="1355" y="354" text-anchor="middle" font-size="13" class="sub">startpunt: maakt alle</text>
-<text x="1355" y="372" text-anchor="middle" font-size="13" class="sub">objecten aan en koppelt ze</text>
-<text x="1250" y="410" font-size="13" font-weight="700" fill="#176b8b">1</text>
-<text x="1268" y="410" font-size="13">new ThemeManager()</text>
-<text x="1284" y="428" font-size="13">.initialize()</text>
-<text x="1250" y="462" font-size="13" font-weight="700" fill="#176b8b">2</text>
-<text x="1268" y="462" font-size="13">new DataStore(STORAGE_KEY)</text>
-<text x="1250" y="496" font-size="13" font-weight="700" fill="#176b8b">3</text>
-<text x="1268" y="496" font-size="13">new RegistrationModel(store)</text>
-<text x="1250" y="530" font-size="13" font-weight="700" fill="#176b8b">4</text>
-<text x="1268" y="530" font-size="13">new RegistrationView(model)</text>
-<text x="1250" y="564" font-size="13" font-weight="700" fill="#176b8b">5</text>
-<text x="1268" y="564" font-size="13">new CsvExport(model)</text>
-<text x="1250" y="598" font-size="13" font-weight="700" fill="#176b8b">6</text>
-<text x="1268" y="598" font-size="13">new FaceRecognitionDemo()</text>
-<text x="1250" y="632" font-size="13" font-weight="700" fill="#176b8b">7</text>
-<text x="1268" y="632" font-size="13">new RegistrationApp(model,</text>
-<text x="1284" y="650" font-size="13">view, csvExport, faceDemo)</text>
-<text x="1250" y="684" font-size="13" font-weight="700" fill="#176b8b">8</text>
-<text x="1268" y="684" font-size="13">app.initialize()</text>
-<path d="M1176,312 H1192 V822 H1176" class="stip"/>
-<path d="M1228,560 L1194,560" class="stip" marker-end="url(#open)"/>
-<rect x="1230" y="862" width="250" height="126" rx="12" fill="#f8fbfa" stroke="#71858a" stroke-width="1.4" class="box"/>
-<text x="1355" y="892" text-anchor="middle" font-size="14" class="kop">config.js · ids.js · icons.js</text>
-<text x="1355" y="915" text-anchor="middle" font-size="13">vaste waarden, createId()</text>
-<text x="1355" y="934" text-anchor="middle" font-size="13">en SVG-iconen; gebruikt</text>
-<text x="1355" y="953" text-anchor="middle" font-size="13">door de classes</text>
+<rect x="1720" y="298" width="250" height="512" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
+<text x="1845" y="332" text-anchor="middle" font-size="19" class="kop">main.js</text>
+<text x="1845" y="354" text-anchor="middle" font-size="13" class="sub">startpunt: maakt alle</text>
+<text x="1845" y="372" text-anchor="middle" font-size="13" class="sub">objecten aan en koppelt ze</text>
+<text x="1740" y="410" font-size="13" font-weight="700" fill="#176b8b">1</text>
+<text x="1762" y="410" font-size="13">new ThemeManager()</text>
+<text x="1778" y="428" font-size="13">.initialize()</text>
+<text x="1740" y="459" font-size="13" font-weight="700" fill="#176b8b">2</text>
+<text x="1762" y="459" font-size="13">new DataStore(STORAGE_KEY)</text>
+<text x="1740" y="490" font-size="13" font-weight="700" fill="#176b8b">3</text>
+<text x="1762" y="490" font-size="13">new RegistrationModel(store)</text>
+<text x="1740" y="521" font-size="13" font-weight="700" fill="#176b8b">4</text>
+<text x="1762" y="521" font-size="13">new RegistrationView(model)</text>
+<text x="1740" y="552" font-size="13" font-weight="700" fill="#176b8b">5</text>
+<text x="1762" y="552" font-size="13">new CsvExport(model)</text>
+<text x="1740" y="583" font-size="13" font-weight="700" fill="#176b8b">6</text>
+<text x="1762" y="583" font-size="13">new FaceRecognitionDemo()</text>
+<text x="1740" y="614" font-size="13" font-weight="700" fill="#176b8b">7</text>
+<text x="1762" y="614" font-size="13">new BadgeReader()</text>
+<text x="1740" y="645" font-size="13" font-weight="700" fill="#176b8b">8</text>
+<text x="1762" y="645" font-size="13">SmartFridge</text>
+<text x="1778" y="663" font-size="13">.createSimulated()</text>
+<text x="1740" y="694" font-size="13" font-weight="700" fill="#176b8b">9</text>
+<text x="1762" y="694" font-size="13">new RegistrationApp(model,</text>
+<text x="1778" y="712" font-size="13">view, csvExport, faceDemo,</text>
+<text x="1778" y="730" font-size="13">badgeReader, clock,</text>
+<text x="1778" y="748" font-size="13">smartFridge)</text>
+<text x="1740" y="779" font-size="13" font-weight="700" fill="#176b8b">10</text>
+<text x="1762" y="779" font-size="13">app.initialize()</text>
+<path d="M1676,312 H1704 V822 H1676" class="stip"/>
+<path d="M1718,560 L1706,560" class="stip" marker-end="url(#open)"/>
+<rect x="1720" y="862" width="250" height="126" rx="12" fill="#f8fbfa" stroke="#71858a" stroke-width="1.4" class="box"/>
+<text x="1845" y="892" text-anchor="middle" font-size="14" class="kop">config.js · ids.js · icons.js</text>
+<text x="1845" y="915" text-anchor="middle" font-size="13">vaste waarden, createId()</text>
+<text x="1845" y="934" text-anchor="middle" font-size="13">en SVG-iconen, gebruikt</text>
+<text x="1845" y="953" text-anchor="middle" font-size="13">door de classes</text>
 <!-- Legenda -->
-<path d="M40,1040 L90,1040" class="lijn" marker-end="url(#pijl)"/>
-<text x="100" y="1045" font-size="13.5">roept aan of geeft gegevens door</text>
-<path d="M340,1040 L390,1040" class="stip" marker-end="url(#pijl)"/>
-<text x="400" y="1045" font-size="13.5">gebeurtenis uit de browser</text>
-<path d="M620,1040 L670,1040" class="stip" marker-end="url(#open)"/>
-<text x="680" y="1045" font-size="13.5">maakt het object aan (bij het opstarten)</text>
+<path d="M40,1052 L90,1052" class="lijn" marker-end="url(#pijl)"/>
+<text x="100" y="1057" font-size="13.5">roept aan of geeft gegevens door</text>
+<path d="M340,1052 L390,1052" class="stip" marker-end="url(#pijl)"/>
+<text x="400" y="1057" font-size="13.5">gebeurtenis uit de browser</text>
+<path d="M620,1052 L670,1052" class="stip" marker-end="url(#open)"/>
+<text x="680" y="1057" font-size="13.5">maakt het object aan (bij het opstarten)</text>
 </svg>

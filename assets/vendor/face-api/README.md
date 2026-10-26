@@ -7,6 +7,17 @@ gebruik geen code of gegevens van een externe server haalt (zie TO, hoofdstuk 13
 - Pakket: `@vladmandic/face-api`, versie **1.7.15** (MIT-licentie, zie `LICENSE`)
 - Bron: https://www.npmjs.com/package/@vladmandic/face-api/v/1.7.15 (map `dist/` en `model/`)
 - Alleen de drie modellen die de demo gebruikt: tiny face detector, face landmark 68 tiny en face recognition.
+- `face-api.esm.js` bevat ook een ingebouwde kopie van **TensorFlow.js 4.22.0** van Google
+  (Apache-licentie 2.0, zie `LICENSE-TENSORFLOWJS`). Die licentie vraagt dat de licentietekst en
+  de copyright bij het verspreiden worden meegeleverd.
+
+## Onderhoud
+
+De GitHub-repository van face-api (`vladmandic/face-api`) is gearchiveerd: er komen geen nieuwe
+versies of beveiligingsupdates meer. Versie 1.7.15 is de laatste. Op het moment van opnemen
+waren er geen bekende kwetsbaarheden voor deze versie of voor de ingebouwde TensorFlow.js.
+De bibliotheek is alleen bedoeld voor de demo gezichtsherkenning. Kies voor productie een
+bibliotheek die nog wordt onderhouden (zie TO, hoofdstuk 13 en 16).
 
 ## Controlegetallen (SHA-256)
 
@@ -24,3 +35,4 @@ Werk je de bibliotheek bij, pas dan ook deze lijst aan.
 | `face_recognition_model-weights_manifest.json` | `cbaffa501b0b9275a12b63357a6843e7e30c054e1c9151e1a5f879b26e32986b` |
 | `face_recognition_model.bin` | `b413e420d6840b2775fba32008db6f3cddb07d485967fb42cfcf379c16a8c589` |
 | `LICENSE` | `9a3442b79acaf4fbc7c2e07b7e2d8f84af9bb3871bf08a69d80304ab00640e9a` |
+| `LICENSE-TENSORFLOWJS` | `2f859b1ef1d3df1b2718ee8fc6b9dd972b0ca2849d790cdd01fbb0bd0a46b99d` |

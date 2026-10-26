@@ -4,23 +4,29 @@ import { FACE_DEMO } from "./config.js";
  * FaceRecognitionDemo — een demo van gezichtsherkenning met de camera van de tablet of laptop.
  *
  * Belangrijk (privacy): een gezicht is een biometrisch gegeven (AVG artikel 9). Daarom is dit
- * alleen een demo, en zo gebouwd dat er niets wordt bewaard of verstuurd:
+ * alleen een demo, en zo gebouwd dat er niets wordt verstuurd en zo weinig mogelijk wordt bewaard:
  *   - de herkenning gebeurt volledig in de browser (de bibliotheek face-api draait lokaal);
  *   - er worden geen foto's gemaakt of opgeslagen;
- *   - van een gezicht wordt alleen een reeks van 128 getallen (een "descriptor") onthouden,
- *     en die staat alleen in het geheugen: na het sluiten of herladen van de pagina is alles weg;
+ *   - van een gezicht wordt alleen een reeks van 128 getallen (een "descriptor") onthouden;
  *   - iedere medewerker zet het zelf aan, met een vinkje voor vrijwillige deelname;
  *   - met FACE_DEMO.enabled = false in config.js staat de demo helemaal uit.
+ * Vanaf versie 3.17 bewaart het model (RegistrationModel.faceEnrollments) de descriptor met de datum
+ * van instellen in de browser, zodat de instelling na herladen blijft werken en na een jaar verloopt.
+ * Dat is een bewuste afwijking van "alleen in het geheugen" (zie RegistrationModel en TO hoofdstuk 13).
+ * Deze class houdt de geldige descriptors in het geheugen om mee te vergelijken; FaceController zet
+ * ze er na het laden in (loadFaces) en haalt verlopen of gewiste gezichten eruit.
  *
  * Verantwoordelijkheid:
  *   - de bibliotheek en modellen laden (pas als iemand de demo gebruikt);
+ *   - nagaan of de tablet een camera heeft (detectCamera), zonder die aan te zetten;
  *   - de camera starten en stoppen;
  *   - van het camerabeeld een descriptor maken;
- *   - gezichten van medewerkers onthouden (in het geheugen) en een gezicht herkennen.
+ *   - gezichten van medewerkers in het geheugen houden en een gezicht herkennen.
  *
  * Verbonden met:
  *   - config.js: FACE_DEMO (adres van de bibliotheek en modellen, drempelwaarde, tijdslimiet);
- *   - RegistrationApp: stuurt de demo aan (instellen, herkennen, venster openen en sluiten);
+ *   - FaceController (onderdeel van de controller RegistrationApp): stuurt de demo aan
+ *     (instellen, herkennen, venster openen en sluiten);
  *   - index.html: het venster #faceModal met het videobeeld #faceVideo.
  */
 export class FaceRecognitionDemo {
@@ -34,11 +40,38 @@ export class FaceRecognitionDemo {
     this.knownFaces = new Map();  // employeeId -> descriptor (alleen in het geheugen)
     this.lastCandidate = null;    // voor confirm(): wie het laatst is gevonden
     this.streak = 0;              // voor confirm(): hoe vaak achter elkaar
+    this.hasCamera = null;        // heeft de tablet een camera? null = nog niet bekend (zie detectCamera)
   }
 
   // Staat de demo aan en heeft deze browser een camera-functie?
   isAvailable() {
     return Boolean(this.settings.enabled && this.mediaDevices?.getUserMedia);
+  }
+
+  // Kijkt of er een camera is aangesloten, zonder de camera aan te zetten: enumerateDevices noemt de
+  // soorten apparaten (ook zonder toestemming, dan zonder naam). Het resultaat staat daarna in
+  // `hasCamera` (true of false). Lukt het niet of kent de browser dit niet, dan blijft het null.
+  async detectCamera() {
+    if (!this.isAvailable() || typeof this.mediaDevices.enumerateDevices !== "function") return this.hasCamera;
+    try {
+      const devices = await this.mediaDevices.enumerateDevices();
+      this.hasCamera = devices.some((device) => device.kind === "videoinput");
+    } catch (error) {
+      this.hasCamera = null;
+    }
+    return this.hasCamera;
+  }
+
+  // Is er zeker een camera (detectCamera gaf true)? Alleen dan stelt de app na een passcan de vraag
+  // "Gezichtsherkenning nog niet ingesteld. Wil je dit?": zonder camera kan niemand het instellen.
+  hasCameraDevice() {
+    return this.isAvailable() && this.hasCamera === true;
+  }
+
+  // Kan er misschien een camera zijn (niet zeker dat er geen is)? Dan mag de scan na een tik op het
+  // standby-scherm het proberen. Mislukt het starten, dan gaat de scan netjes dicht.
+  mayHaveCamera() {
+    return this.isAvailable() && this.hasCamera !== false;
   }
 
   // ------------------------------------------------------------------
@@ -130,11 +163,17 @@ export class FaceRecognitionDemo {
   }
 
   // ------------------------------------------------------------------
-  // Gezichten onthouden en herkennen (alleen in het geheugen)
+  // Gezichten in het geheugen en herkennen
   // ------------------------------------------------------------------
 
   enroll(employeeId, descriptor) {
     this.knownFaces.set(employeeId, descriptor);
+  }
+
+  // Vervangt alle gezichten in het geheugen door deze opgeslagen gezichtsinstellingen
+  // ({ employeeId, descriptor }), bijvoorbeeld na het laden, na verlopen of na wissen.
+  loadFaces(entries) {
+    this.knownFaces = new Map(entries.map(({ employeeId, descriptor }) => [employeeId, descriptor]));
   }
 
   forget(employeeId) {
@@ -165,11 +204,17 @@ export class FaceRecognitionDemo {
 
   // Zoekt de bekende medewerker die het meest lijkt op dit gezicht.
   // Geeft de employeeId terug, of null als niemand dichtbij genoeg is (onder de drempel).
-  findMatch(descriptor) {
+  // `allowedIds` (optioneel) zijn de medewerkers die mogen worden herkend, bijvoorbeeld alleen de
+  // actieve medewerkers die nog bestaan. Gezichten van andere medewerkers tellen dan niet mee.
+  // Zonder deze lijst zou het gezicht van een inactieve of verwijderde collega dat toevallig iets
+  // dichterbij ligt, winnen, en zou de actieve medewerker niet meer worden herkend.
+  findMatch(descriptor, allowedIds = null) {
+    const allowed = allowedIds ? new Set(allowedIds) : null;
     let bestId = null;
     let bestDistance = Infinity;
 
     for (const [employeeId, known] of this.knownFaces) {
+      if (allowed && !allowed.has(employeeId)) continue;
       const distance = this.distance(descriptor, known);
       if (distance < bestDistance) {
         bestDistance = distance;

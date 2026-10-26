@@ -7,14 +7,15 @@ import fs from "node:fs";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { createModel, createRecordingView, createFakeElement, addEmployee } from "./helpers.js";
+import { createModel, createRecordingView, createFakeElement, addEmployee, asAdmin } from "./helpers.js";
 
-// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB) en een nep-view.
+// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een
+// ingelogde beheerder.
 const createApp = ({ faceDemo } = {}) => {
   const { model, point } = createModel();
   const view = createRecordingView();
   const demo = faceDemo || new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, demo), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, demo)), model, view, point };
 };
 
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
@@ -79,14 +80,15 @@ test("C: correctie '+' voor een medewerker die niet meer bestaat, slaat niets op
 // ------------------------------------------------------------------
 
 test("D: na een correctie '+' of '−' wordt het tabblad Voorraad opnieuw getekend", () => {
-  const { app, view } = createApp();
+  const { app, model, view } = createApp();
 
   app.addCorrection("employee-1", "blikje");
   assert.ok(calledNames(view).includes("renderStock"), "addCorrection");
 
   view.calls.length = 0;
   app.removeCorrection("employee-1", "blikje");
-  assert.ok(calledNames(view).includes("renderStock"), "removeCorrection");
+  app.removeChosenRegistration(model.registrations[0].id);
+  assert.ok(calledNames(view).includes("renderStock"), "removeChosenRegistration");
 });
 
 // ------------------------------------------------------------------
@@ -138,8 +140,11 @@ test("I: na '+' of '−' in de correctielijst krijgt dezelfde knop de focus teru
   app.addCorrection("employee-1", "blikje");
   assert.equal(view.$(plusSelector).focused, true);
 
+  // Bij "−" kiest de beheerder eerst de registratie in een venster. Na het verwijderen sluit dat
+  // venster en krijgt de knop "−" de focus terug.
   globalThis.document = { activeElement: createFakeElement({ dataset: { correctionMinus: "employee-1", correctionProduct: "blikje" } }) };
   app.removeCorrection("employee-1", "blikje");
+  app.removeChosenRegistration(model.registrations[0].id);
   assert.equal(view.$(minusSelector).focused, true);
   assert.equal(model.registrations.length, 0);
 });
@@ -225,7 +230,8 @@ test("J: tijdens het vastleggen blijft de knop uit en start een tweede klik niet
   view.$("#faceConsent").checked = true;
   let finishReading;
   let reads = 0;
-  demo.readFace = () => { reads += 1; return new Promise((resolve) => { finishReading = () => resolve([0.1, 0.2]); }); };
+  // Een echte descriptor heeft 128 getallen (vanaf 3.17 wordt die in het model opgeslagen en gecontroleerd).
+  demo.readFace = () => { reads += 1; return new Promise((resolve) => { finishReading = () => resolve(new Array(128).fill(0.1)); }); };
 
   const capturing = app.captureEnrollment();
   app.updateEnrollButton(); // het vinkje opnieuw aanzetten tijdens het vastleggen
@@ -408,7 +414,7 @@ test("P: 'Verwijderen' staat alleen bij inactieve medewerkers zonder registratie
 
 test("Q: sluiten van het admin-venster (ook met Escape of de achtergrond) logt de beheerder uit", () => {
   const { app, view } = createApp();
-  globalThis.document = { querySelectorAll: () => [] };
+  globalThis.document = { querySelectorAll: () => [], addEventListener() {} };
   app.registerAdminEvents();
   view.$("#loginEmail").value = "admin@tvb.nl";
   view.$("#loginPassword").value = "geheim";

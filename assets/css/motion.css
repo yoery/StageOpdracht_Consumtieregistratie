@@ -1,0 +1,70 @@
+﻿/* Beweging en reactie: overgangen bij hover en indrukken, het openen van vensters en het wisselen
+   van tabblad. Wie op het apparaat "minder beweging" heeft ingesteld, krijgt geen animaties
+   (prefers-reduced-motion).
+   Laadt na admin-corrections.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Tabletlayout: de koelkasttablet gebruikt grotere aanraakvlakken en één kolom. */
+/* Beweging en reactie: korte, subtiele effecten zodat de gebruiker ziet dat een tik of klik
+   is aangekomen. Alleen klikbare elementen reageren; alles duurt hooguit een kwart seconde. */
+.primary-button,.secondary-button,.correction-button,.personal-product-step,
+.admin-employee-item .table-action,.stock-table .table-action,.tab,.theme-modes button {
+  transition:background-color .15s,color .15s,border-color .15s,transform .1s
+}
+/* Indrukken: knoppen worden heel even iets kleiner. */
+.primary-button:active,.secondary-button:active,.correction-button:active,
+.personal-product-step:active:not(:disabled),
+.admin-employee-item .table-action:active,.stock-table .table-action:active {
+  transform:scale(.95)
+}
+.primary-button[aria-disabled="true"]:active {
+  transform:none
+}
+/* Medewerkerrij: op een tablet (geen hover) is dit de reactie op een tik. */
+.employee-row-clickable:active {
+  transform:scale(.985);
+  background:var(--mint)
+}
+.admin-employee-item .table-action:hover,.stock-table .table-action:hover {
+  border-color:var(--hover-border);
+  background:var(--hover-bg)
+}
+.tab:hover {
+  color:var(--ink)
+}
+/* Vensters openen met een zachte fade en schuiven iets omhoog. */
+.modal-backdrop:not(.hidden) {
+  animation:backdrop-in .2s ease-out
+}
+.modal-backdrop:not(.hidden) > .modal {
+  animation:modal-in .22s ease-out
+}
+/* Wisselen van tabblad of van login naar dashboard: de nieuwe inhoud fadet in. */
+#loginView:not(.hidden),#adminView:not(.hidden),
+#registrationsTab:not(.hidden),#employeesTab:not(.hidden),#productsTab:not(.hidden),
+#companiesTab:not(.hidden),#stockTab:not(.hidden),#auditTab:not(.hidden) {
+  animation:fade-in .2s ease-out
+}
+@keyframes backdrop-in {
+  from {
+    opacity:0
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity:0;
+    transform:translateY(12px) scale(.98)
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity:0
+  }
+}
+/* Wie op het apparaat "minder beweging" heeft ingesteld, krijgt geen animaties. */
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important
+  }
+}

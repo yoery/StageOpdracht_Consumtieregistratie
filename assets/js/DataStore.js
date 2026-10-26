@@ -22,8 +22,28 @@ const MAX_TEXT = 200;
 const MAX_CODE = 64;
 const MAX_AUDIT_TEXT = 500;
 
+// Een pasnummer (van de NFC-pas, zie BadgeReader.js) bestaat alleen uit hoofdletters en cijfers,
+// hooguit 64 tekens. Leeg ("") betekent: geen pas gekoppeld.
+const SAFE_BADGE_ID = /^[A-Z0-9]{0,64}$/;
+
 // Een kleur moet een hexcode met zes tekens zijn, bijvoorbeeld #d8f1e8.
 const SAFE_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+// Een code (looncode, personeelsnummer, werkgevernummer) is tekst van hooguit 64 tekens zonder
+// stuurtekens (zoals tab, enter of het nul-teken). Stuurtekens horen niet in een code en kunnen
+// in de CSV-export een veld of regel openbreken. De formulieren laten alleen cijfers toe; oude
+// gegevens kunnen ook letters bevatten (bijvoorbeeld "LC01"), die blijven daarom geldig.
+const SAFE_CODE = /^[^\u0000-\u001F\u007F]{0,64}$/;
+
+// Een tijdstip moet in ISO-vorm staan, zoals toISOString() het maakt ("2026-10-09T08:30:00.000Z").
+// Seconden, milliseconden en de tijdzone mogen ontbreken (dan geldt de lokale tijd). Andere vormen,
+// zoals "1" of "10/9/2026", worden door Date.parse heel verschillend gelezen en zijn daarom ongeldig.
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?$/;
+
+// Het vroegste tijdstip dat als geldig telt: 1 januari 2000. Dezelfde ondergrens geldt voor de
+// datum bij een correctie "+" (CorrectionController.readCorrectionDate). Een eerder tijdstip is
+// vrijwel zeker geknoeid en geeft rare maandnamen en bestandsnamen in de export.
+const MIN_DATE_MS = Date.UTC(2000, 0, 1);
 
 // De hoogste prijs die we als geldig accepteren. Een hogere prijs is vrijwel zeker een
 // typefout of geknoeide gegevens.
@@ -33,6 +53,23 @@ const MAX_PRICE = 1000;
 // één dag (in milliseconden). Een klein verschil kan ontstaan doordat de klok van een tablet
 // iets afwijkt; een registratie die meer dan een dag later ligt, is vrijwel zeker geknoeid.
 const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+
+// Slimme koelkast (demo): de geldige statussen van een opening (gelijk aan FRIDGE_STATUS in
+// RegistrationModel.js), de markeringen per schap (zie SmartFridge.countShelf) en grenzen voor de
+// getallen. Een hoger schapnummer, gewicht of aantal is vrijwel zeker geknoeid.
+const FRIDGE_STATUSES = new Set(["registered", "nothing", "check"]);
+const FRIDGE_FLAGS = new Set(["added", "mismatch", "unknown"]);
+const MAX_SHELF = 20;
+const MAX_UNIT_WEIGHT = 5000;
+const MAX_SHELF_WEIGHT = 1000000;
+const MAX_TAKEN = 1000;
+
+// Demo gezichtsherkenning: een opgeslagen descriptor bestaat uit precies 128 getallen tussen -10 en
+// 10 (gelijk aan FACE_DESCRIPTOR_LENGTH en MAX_DESCRIPTOR_VALUE in RegistrationModel.js), en het
+// antwoord op de vraag na een passcan is "declined" of "expired".
+const FACE_DESCRIPTOR_LENGTH = 128;
+const MAX_DESCRIPTOR_VALUE = 10;
+const FACE_OFFER_ANSWERS = new Set(["declined", "expired"]);
 
 /**
  * DataStore — de opslaglaag: leest en schrijft alle gegevens in de browser (localStorage).
@@ -52,6 +89,14 @@ const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
  * van de applicatie hoeft dan niet te veranderen.
  */
 export class DataStore {
+  // De lijsten in de opgeslagen gegevens. Staat er bij een van deze namen iets anders dan een
+  // lijst, dan zijn de gegevens beschadigd (zie migrate).
+  // De twee lijsten van de slimme koelkast (fridgeShelves en fridgeOpenings) ontbreken in gegevens
+  // van vóór de koelkast. Die krijgen dan een lege lijst (zie migrate).
+  // Hetzelfde geldt voor de twee lijsten van de demo gezichtsherkenning (faceEnrollments en faceOffers,
+  // vanaf versie 3.17).
+  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog", "fridgeShelves", "fridgeOpenings", "faceEnrollments", "faceOffers"];
+
   // De sleutel waaronder de gegevens in localStorage staan.
   // `loadProblem` zegt na load() of er iets mis was met de opgeslagen gegevens:
   //   null         = alles goed;
@@ -60,9 +105,21 @@ export class DataStore {
   //   "unavailable" = de browseropslag kon niet worden gelezen (bijvoorbeeld geblokkeerd). Dan is
   //                   niet bekend of er gegevens zijn; er mag dus ook niets als "leeg" worden behandeld.
   // In beide gevallen staat er een reservekopie van de oorspronkelijke gegevens in localStorage.
+  // `saveProblem` zegt na save() waarom opslaan niet lukte:
+  //   null     = opslaan is gelukt;
+  //   "full"   = de opslag van de browser is vol (QuotaExceededError);
+  //   "failed" = opslaan lukte om een andere reden niet (bijvoorbeeld geblokkeerde opslag);
+  //   "conflict" = een ander tabblad heeft intussen iets opgeslagen dat dit tabblad nog niet had
+  //                geladen (zie save). Er is niets overschreven.
+  // `repairedBadges` telt bij het laden de ongeldige pasnummers die zijn leeggemaakt (zie migrateEmployee).
+  // `lastSeen` is de opgeslagen tekst zoals dit tabblad die het laatst heeft gelezen of geschreven
+  // (null = er stond niets). Zolang er nog niet is geladen, is het undefined: dan wordt niet vergeleken.
   constructor(key) {
     this.key = key;
     this.loadProblem = null;
+    this.saveProblem = null;
+    this.repairedBadges = 0;
+    this.lastSeen = undefined;
   }
 
   // ------------------------------------------------------------------
@@ -86,6 +143,7 @@ export class DataStore {
       this.loadProblem = "unavailable";
       return null;
     }
+    this.lastSeen = value;
     if (!value) return null;
 
     try {
@@ -94,7 +152,8 @@ export class DataStore {
 
       const migrated = this.migrate(parsed, now);
       const data = this.removeInvalidItems(migrated, now);
-      const skipped = this.countSkipped(parsed, data);
+      // Overgeslagen regels plus pasnummers die bij het omzetten zijn leeggemaakt (zie migrateEmployee).
+      const skipped = this.countSkipped(parsed, data) + this.repairedBadges;
 
       if (skipped > 0) {
         this.keepBackup(value);
@@ -143,6 +202,7 @@ export class DataStore {
     try {
       const keys = [this.key, ...this.backupKeys(), ...this.oldBackupKeys()];
       for (const key of keys) localStorage.removeItem(key);
+      this.lastSeen = null;
       return true;
     } catch (error) {
       console.error("De gegevens konden niet worden gewist.", error);
@@ -165,15 +225,45 @@ export class DataStore {
   }
 
   // Schrijft de volledige applicatiestatus naar de browseropslag.
-  // Geeft false terug als dat niet lukt, bijvoorbeeld omdat de opslag vol is.
+  // Geeft false terug als dat niet lukt. `saveProblem` zegt dan waarom: "full" als de opslag van
+  // de browser vol is (zie isQuotaError), anders "failed". De controller toont bij een volle
+  // opslag een eigen melding (zie RegistrationApp.persist). Er wordt niets automatisch
+  // verwijderd: hoe lang registraties en het logboek bewaard blijven, is een besluit van TVB.
+  //
+  // Twee tabbladen (NFR-08): vóór het schrijven wordt gekeken of de opgeslagen tekst nog dezelfde is
+  // als wat dit tabblad het laatst heeft gelezen of geschreven (`lastSeen`). Heeft een ander tabblad
+  // intussen iets opgeslagen en heeft dit tabblad dat nog niet geladen (het storage-event is nog niet
+  // binnen), dan zou schrijven de wijziging van dat tabblad stil wissen. Dan wordt er niets
+  // geschreven, is `saveProblem` "conflict" en geeft save false terug. RegistrationApp.persist laadt
+  // dan de nieuwe gegevens en voert de wijziging daarop opnieuw uit.
   save(data) {
+    this.saveProblem = null;
     try {
-      localStorage.setItem(this.key, JSON.stringify(data));
+      if (this.lastSeen !== undefined && localStorage.getItem(this.key) !== this.lastSeen) {
+        this.saveProblem = "conflict";
+        return false;
+      }
+      const value = JSON.stringify(data);
+      localStorage.setItem(this.key, value);
+      this.lastSeen = value;
       return true;
     } catch (error) {
+      this.saveProblem = this.isQuotaError(error) ? "full" : "failed";
       console.error("De gegevens konden niet worden opgeslagen.", error);
       return false;
     }
+  }
+
+  // Is dit de fout die de browser geeft als de opslag vol is? Chrome, Edge en Safari gebruiken de
+  // naam "QuotaExceededError" (code 22), oudere versies van Firefox "NS_ERROR_DOM_QUOTA_REACHED"
+  // (code 1014). Een andere fout, zoals geblokkeerde opslag, telt niet als "vol".
+  isQuotaError(error) {
+    return (
+      error?.name === "QuotaExceededError" ||
+      error?.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      error?.code === 22 ||
+      error?.code === 1014
+    );
   }
 
   // ------------------------------------------------------------------
@@ -188,7 +278,11 @@ export class DataStore {
       registrations: (registration) => this.isValidRegistration(registration, now),
       products: (product) => this.isValidProduct(product),
       companies: (company) => this.isValidCompany(company),
-      points: (point) => this.isValidPoint(point)
+      points: (point) => this.isValidPoint(point),
+      fridgeShelves: (shelf) => this.isValidFridgeShelf(shelf),
+      fridgeOpenings: (opening) => this.isValidFridgeOpening(opening, now),
+      faceEnrollments: (entry) => this.isValidFaceEnrollment(entry, now),
+      faceOffers: (offer) => this.isValidFaceOffer(offer, now)
     };
   }
 
@@ -230,15 +324,36 @@ export class DataStore {
   // regels met een id die al eerder in dezelfde lijst stond (zie withoutDuplicateIds).
   // Ook het logboek wordt zo opgeschoond. De afgevallen regels tellen in countSkipped mee, zodat
   // load() een reservekopie maakt en loadProblem op "skipped" zet (de controller toont dan een melding).
+  // Pas daarna wordt gekeken of een pasnummer twee keer voorkomt (withoutDuplicateBadges). Zo kan
+  // een medewerker die toch afvalt (ongeldig, of een tweede regel met dezelfde id) de pas niet
+  // "claimen" en verliest een geldige medewerker zijn pas niet.
   removeInvalidItems(data, now = new Date()) {
     const cleaned = { ...data };
 
     for (const [name, check] of Object.entries(this.validators(now))) {
       cleaned[name] = this.withoutDuplicateIds(data[name].filter(check));
     }
+    cleaned.employees = this.withoutDuplicateBadges(cleaned.employees);
     if (Array.isArray(data.auditLog)) cleaned.auditLog = this.withoutDuplicateIds(data.auditLog);
 
+    // Demo gezichtsherkenning: een gezichtsinstelling hoort bij een bestaande, actieve medewerker en
+    // een antwoord op de vraag bij een bestaande medewerker, allebei hooguit één per medewerker. Een
+    // instelling van een inactieve of verwijderde medewerker had al gewist moeten zijn en valt af.
+    const employees = new Map(cleaned.employees.map((employee) => [employee.id, employee]));
+    cleaned.faceEnrollments = this.onePerEmployee(cleaned.faceEnrollments.filter(({ employeeId }) => employees.get(employeeId)?.active));
+    cleaned.faceOffers = this.onePerEmployee(cleaned.faceOffers.filter(({ employeeId }) => employees.has(employeeId)));
+
     return cleaned;
+  }
+
+  // Houdt per medewerker alleen de eerste regel (gezichtsinstelling of antwoord) over.
+  onePerEmployee(list) {
+    const seen = new Set();
+    return list.filter(({ employeeId }) => {
+      if (seen.has(employeeId)) return false;
+      seen.add(employeeId);
+      return true;
+    });
   }
 
   // Hoeveel regels uit de opgeslagen gegevens zijn er na het controleren afgevallen?
@@ -267,16 +382,57 @@ export class DataStore {
   }
 
   // Is dit tekst van hooguit `maxLength` tekens? Met `required` mag de tekst niet leeg zijn.
-  // Codes (looncode, personeelsnummer) kunnen in oude gegevens ook een getal zijn; daarom wordt
-  // de lengte van de tekstvorm gecontroleerd.
   isText(value, maxLength = MAX_TEXT, { required = false } = {}) {
     if (typeof value !== "string") return false;
     if (required && value.trim() === "") return false;
     return value.length <= maxLength;
   }
 
+  // Is dit een geldige code (looncode, personeelsnummer, werkgevernummer)? Alleen tekst van hooguit
+  // MAX_CODE tekens zonder stuurtekens (zie SAFE_CODE). Leeg (null of undefined) is ook goed: dan
+  // is er geen code. Een getal uit oude gegevens is bij het laden al omgezet naar tekst (zie
+  // codeText). Andere soorten waarden, zoals een object of een lijst, zijn ongeldig: die zouden in
+  // de export als "[object Object]" of als formule terechtkomen.
   isShortCode(value) {
-    return String(value ?? "").length <= MAX_CODE;
+    if (value === null || value === undefined) return true;
+    return typeof value === "string" && value.length <= MAX_CODE && SAFE_CODE.test(value);
+  }
+
+  // Zet een code uit oude gegevens om naar tekst: een heel getal van 0 of hoger (zoals 100) wordt
+  // "100". Andere waarden blijven zoals ze zijn, zodat isShortCode ze daarna beoordeelt.
+  codeText(value) {
+    return Number.isSafeInteger(value) && value >= 0 ? String(value) : value;
+  }
+
+  // Is dit een geldig tijdstip? Het moet tekst in ISO-vorm zijn (zie ISO_DATE_TIME), een bestaande
+  // datum opleveren, en tussen 1 januari 2000 (MIN_DATE_MS) en `latest` (een tijdstip in
+  // milliseconden) liggen. Wordt gebruikt voor registraties, logboekregels en tellingen.
+  // Date.parse schuift een datum die niet bestaat door, zoals "2026-02-31" (wordt 3 maart) of
+  // "T24:00" (wordt middernacht van de volgende dag). Daarom moeten de datum- en tijddelen na het
+  // omrekenen hetzelfde blijven (zie existsAsWritten), net als bij de correctiedatum
+  // (CorrectionController.readCorrectionDate).
+  isValidDateTime(value, latest) {
+    if (typeof value !== "string" || !ISO_DATE_TIME.test(value) || !this.existsAsWritten(value)) return false;
+
+    const time = Date.parse(value);
+    return !Number.isNaN(time) && time >= MIN_DATE_MS && time <= latest;
+  }
+
+  // Bestaan de datum en de tijd zoals ze er staan? De delen (jaar, maand, dag, uur, minuut,
+  // seconde) worden in UTC omgerekend en weer uitgelezen. Een niet-bestaande datum of tijd
+  // (31 februari, uur 24, minuut 60) komt dan anders terug. UTC zorgt dat zomertijd geen rol speelt.
+  existsAsWritten(value) {
+    const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(value);
+    const [year, month, day, hour, minute, second] = parts.slice(1).map((part) => Number(part ?? 0));
+    const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+    return (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day &&
+      date.getUTCHours() === hour &&
+      date.getUTCMinutes() === minute &&
+      date.getUTCSeconds() === second
+    );
   }
 
   // Een verwijzing die ook leeg (null) mag zijn, bijvoorbeeld een medewerker zonder bedrijf.
@@ -291,6 +447,12 @@ export class DataStore {
     return typeof value === "string" && SAFE_COLOR.test(value);
   }
 
+  // Is dit een geldig pasnummer: tekst met alleen hoofdletters en cijfers, hooguit 64 tekens
+  // (zie SAFE_BADGE_ID)? Een lege tekst is ook goed: dan is er geen pas gekoppeld.
+  isSafeBadgeId(value) {
+    return typeof value === "string" && SAFE_BADGE_ID.test(value);
+  }
+
   // Is dit een geldige prijs: een echt getal van 0 tot en met MAX_PRICE?
   isValidPrice(value) {
     return Number.isFinite(value) && value >= 0 && value <= MAX_PRICE;
@@ -298,9 +460,12 @@ export class DataStore {
 
   // Een medewerker moet een veilige id, een naam, een geldige kleur en een status hebben.
   // Bedrijf en consumptiepunt mogen leeg zijn, maar als ze er staan moeten het veilige id's zijn.
+  // Het pasnummer is optioneel; als het er staat, moet het een geldig pasnummer zijn. Een ongeldig
+  // pasnummer is bij het laden al leeggemaakt (zie migrateEmployee), zodat de medewerker blijft bestaan.
   isValidEmployee(employee) {
     return (
       this.isSafeId(employee?.id) &&
+      (employee.badgeId === undefined || this.isSafeBadgeId(employee.badgeId)) &&
       this.isText(employee.name, MAX_TEXT * 2 + 1, { required: true }) &&
       this.isText(employee.firstName ?? "") &&
       this.isText(employee.lastName ?? "") &&
@@ -317,10 +482,13 @@ export class DataStore {
   // Een registratie moet een veilige id, medewerker, product en geldige datum hebben.
   // De prijs is optioneel (oude registraties hebben er nog geen), maar als die er staat,
   // moet het een geldige prijs zijn; anders zou de CSV-export een verkeerd bedrag tonen.
+  // Een registratie van de slimme koelkast heeft `source: "fridge"` en de id van de opening
+  // (`openingId`). Beide zijn optioneel; een andere bron dan "fridge" is ongeldig.
   // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
   // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
-  // Het tijdstip (`createdAt`) mag hooguit één dag na `now` (het moment van laden) liggen
-  // (zie MAX_FUTURE_MS). Een registratie ver in de toekomst is geknoeid en zou anders in een
+  // Het tijdstip (`createdAt`) moet een ISO-tijdstip vanaf 1 januari 2000 zijn en mag hooguit
+  // één dag na `now` (het moment van laden) liggen (zie isValidDateTime en MAX_FUTURE_MS). Een
+  // registratie ver in de toekomst of ver in het verleden is geknoeid en zou anders in een
   // verkeerde loonmaand in de CSV-export terechtkomen.
   isValidRegistration(registration, now = new Date()) {
     const hasValidPrice = registration?.price === undefined || this.isValidPrice(registration.price);
@@ -333,11 +501,89 @@ export class DataStore {
       this.isSafeId(registration.employeeId) &&
       this.isSafeId(registration.productId) &&
       this.isSafeOptionalId(registration.pointId) &&
-      typeof registration.createdAt === "string" &&
-      !Number.isNaN(Date.parse(registration.createdAt)) &&
-      Date.parse(registration.createdAt) - now.getTime() <= MAX_FUTURE_MS &&
+      this.isValidDateTime(registration.createdAt, now.getTime() + MAX_FUTURE_MS) &&
       hasValidPrice &&
-      hasValidEmployerNumber
+      hasValidEmployerNumber &&
+      (registration.source === undefined || registration.source === "fridge") &&
+      (registration.openingId === undefined || this.isSafeId(registration.openingId))
+    );
+  }
+
+  // Is dit een heel getal van `min` tot en met `max`?
+  isWholeNumber(value, min, max) {
+    return Number.isInteger(value) && value >= min && value <= max;
+  }
+
+  // Eén schap van de indeling van de slimme koelkast: een veilige id, een consumptiepunt (veilige id),
+  // een schapnummer van 1 tot en met MAX_SHELF, en een product met het gewicht van één
+  // stuk (1 tot en met MAX_UNIT_WEIGHT gram), of een leeg schap (product en gewicht allebei null).
+  isValidFridgeShelf(shelf) {
+    if (!this.isSafeId(shelf?.id) || !this.isSafeId(shelf.pointId) || !this.isWholeNumber(shelf.shelf, 1, MAX_SHELF)) return false;
+    if (shelf.productId === null) return shelf.unitWeight === null;
+    return this.isSafeId(shelf.productId) && this.isWholeNumber(shelf.unitWeight, 1, MAX_UNIT_WEIGHT);
+  }
+
+  // Eén opening van de slimme koelkast: een veilige id, medewerker en (optioneel) consumptiepunt, een
+  // geldig tijdstip van openen en sluiten (sluiten niet vóór openen en hooguit één dag na `now`), een
+  // bekende status en per schap het gewicht voor en na, het berekende aantal en een eventuele markering.
+  // Een opening die halverwege is afgebroken (bijvoorbeeld door herladen) wordt nooit opgeslagen.
+  isValidFridgeOpening(opening, now = new Date()) {
+    const latest = now.getTime() + MAX_FUTURE_MS;
+    return (
+      this.isSafeId(opening?.id) &&
+      this.isSafeId(opening.employeeId) &&
+      this.isSafeOptionalId(opening.pointId) &&
+      this.isValidDateTime(opening.openedAt, latest) &&
+      this.isValidDateTime(opening.closedAt, latest) &&
+      Date.parse(opening.closedAt) >= Date.parse(opening.openedAt) &&
+      FRIDGE_STATUSES.has(opening.status) &&
+      (opening.longOpen === undefined || typeof opening.longOpen === "boolean") &&
+      (opening.otherBadge === undefined || typeof opening.otherBadge === "boolean") &&
+      Array.isArray(opening.shelves) &&
+      opening.shelves.length <= MAX_SHELF &&
+      opening.shelves.every((shelf) => this.isValidOpeningShelf(shelf))
+    );
+  }
+
+  // Eén schap in een opening (zie isValidFridgeOpening).
+  isValidOpeningShelf(shelf) {
+    return (
+      this.isObject(shelf) &&
+      this.isWholeNumber(shelf.shelf, 1, MAX_SHELF) &&
+      this.isSafeOptionalId(shelf.productId) &&
+      (shelf.unitWeight === null || this.isWholeNumber(shelf.unitWeight, 1, MAX_UNIT_WEIGHT)) &&
+      this.isWholeNumber(shelf.before, 0, MAX_SHELF_WEIGHT) &&
+      this.isWholeNumber(shelf.after, 0, MAX_SHELF_WEIGHT) &&
+      this.isWholeNumber(shelf.count, 0, MAX_TAKEN) &&
+      (shelf.flag === null || FRIDGE_FLAGS.has(shelf.flag))
+    );
+  }
+
+  // Eén opgeslagen gezichtsinstelling (demo gezichtsherkenning): een veilige id en medewerker, een
+  // descriptor van precies FACE_DESCRIPTOR_LENGTH (128) eindige getallen tussen -MAX_DESCRIPTOR_VALUE
+  // en MAX_DESCRIPTOR_VALUE (alleen getallen, geen tekst, beelden of andere velden) en een geldige
+  // datum van instellen (`enrolledAt`, hooguit één dag na `now`). Een verlopen instelling is hier nog
+  // geldig: het model wist die na het laden en onthoudt dat ze is verlopen (expireFaceEnrollments).
+  isValidFaceEnrollment(entry, now = new Date()) {
+    return (
+      this.isSafeId(entry?.id) &&
+      this.isSafeId(entry.employeeId) &&
+      Array.isArray(entry.descriptor) &&
+      entry.descriptor.length === FACE_DESCRIPTOR_LENGTH &&
+      entry.descriptor.every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE) &&
+      this.isValidDateTime(entry.enrolledAt, now.getTime() + MAX_FUTURE_MS) &&
+      Object.keys(entry).every((key) => ["id", "employeeId", "descriptor", "enrolledAt"].includes(key))
+    );
+  }
+
+  // Eén antwoord op de vraag na een passcan: een veilige id en medewerker, "declined" of "expired" en
+  // een geldige datum.
+  isValidFaceOffer(offer, now = new Date()) {
+    return (
+      this.isSafeId(offer?.id) &&
+      this.isSafeId(offer.employeeId) &&
+      FACE_OFFER_ANSWERS.has(offer.answer) &&
+      this.isValidDateTime(offer.answeredAt, now.getTime() + MAX_FUTURE_MS)
     );
   }
 
@@ -352,13 +598,27 @@ export class DataStore {
   }
 
   // Een consumptiepunt moet een veilige id, een naam, een bedrijf en een voorraadlijst hebben.
+  // De voorraadlijst is een object met een product-id als sleutel. Iedere sleutel moet een veilige
+  // id zijn (zie hasSafeStockKeys), zodat een sleutel als "__proto__" of "constructor" de werking
+  // van het object niet kan veranderen.
   isValidPoint(point) {
     return (
       this.isSafeId(point?.id) &&
       this.isText(point.name) &&
       this.isSafeId(point.companyId) &&
-      point.products !== null &&
-      typeof point.products === "object"
+      this.isObject(point.products) &&
+      this.hasSafeStockKeys(point.products)
+    );
+  }
+
+  // Heeft deze voorraadlijst alleen eigen sleutels die veilige id's zijn, en is het een gewoon
+  // object (het prototype is Object.prototype)? Een object uit JSON.parse met de sleutel
+  // "__proto__" heeft die als eigen sleutel; wordt zo'n object gekopieerd, dan kan de kopie een
+  // ander prototype krijgen. Daarom telt zo'n lijst als ongeldig.
+  hasSafeStockKeys(products) {
+    return (
+      Object.getPrototypeOf(products) === Object.prototype &&
+      Object.keys(products).every((productId) => this.isSafeId(productId))
     );
   }
 
@@ -369,27 +629,39 @@ export class DataStore {
   // Zet opgeslagen gegevens om naar de huidige opbouw. Ontbrekende velden krijgen een
   // standaardwaarde, zodat ook gegevens uit een oudere versie blijven werken.
   // Waarden in een lijst die geen object zijn (bijvoorbeeld null), worden overgeslagen.
-  // Staat er bij `companies` iets anders dan een lijst, dan zijn de gegevens beschadigd. Dan
-  // gooit deze methode een fout, zodat load() de gegevens als onleesbaar behandelt en er een
-  // reservekopie komt. Anders zouden alle consumptiepunten (en hun voorraad) worden vervangen.
+  // Staat er bij een van de lijsten (medewerkers, registraties, producten, bedrijven,
+  // consumptiepunten of logboek) wel iets, maar geen lijst (bijvoorbeeld een object of null), dan
+  // zijn de gegevens beschadigd. Dan gooit deze methode een fout, zodat load() de gegevens als
+  // onleesbaar behandelt, er een reservekopie komt en de gebruiker een melding krijgt. Anders zou
+  // die lijst stil leeg worden (of de standaardproducten krijgen) en zou de volgende keer opslaan
+  // alle oorspronkelijke gegevens overschrijven. Alleen een lijst die helemaal ontbreekt (gegevens
+  // uit een oudere versie) krijgt een standaardwaarde.
   // `now` is het moment van laden; completePointStock gebruikt het om een telling in de
-  // toekomst weg te laten.
+  // toekomst weg te laten, en isValidAuditEntry om een logboekregel in de toekomst over te slaan.
+  // De voorraadlijsten van de consumptiepunten worden alleen opgebouwd voor producten die de
+  // controle doorstaan (isValidProduct). Een geknoeid product met een id als "constructor" krijgt
+  // zo nergens een voorraadregel, ook al valt het product zelf pas later (in removeInvalidItems) af.
   migrate(data, now = new Date()) {
     const objects = (list) => (Array.isArray(list) ? list.filter((item) => this.isObject(item)) : []);
 
-    if (data.companies !== undefined && !Array.isArray(data.companies)) {
-      throw new Error("De bedrijvenlijst is beschadigd");
+    for (const name of DataStore.LISTS) {
+      if (data[name] !== undefined && !Array.isArray(data[name])) {
+        throw new Error(`De lijst "${name}" is beschadigd`);
+      }
     }
 
+    this.repairedBadges = 0;
     const products = this.migrateProducts(data.products);
+    const validProducts = products.filter((product) => this.isValidProduct(product));
+    // Dubbele pasnummers worden pas na het opschonen weggehaald (zie removeInvalidItems).
     let employees = objects(data.employees).map((employee, index) => this.migrateEmployee(employee, index));
-    let companies = objects(data.companies);
+    let companies = objects(data.companies).map((company) => this.migrateCompany(company));
     let points = objects(data.points);
 
     // Oude gegevens hebben nog geen bedrijven en consumptiepunten (het veld ontbreekt):
     // die worden hier aangemaakt.
     if (data.companies === undefined) {
-      ({ companies, points, employees } = this.migrateCompanies(employees, products));
+      ({ companies, points, employees } = this.migrateCompanies(employees, validProducts));
     }
 
     return {
@@ -397,13 +669,29 @@ export class DataStore {
       registrations: objects(data.registrations).map((registration) => this.migrateRegistration(registration)),
       products,
       companies,
-      points: points.map((point) => this.completePointStock(point, products, now)),
-      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry)) : []
+      points: points.map((point) => this.completePointStock(point, validProducts, now)),
+      auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry, now)) : [],
+      // Slimme koelkast (demo): gegevens van vóór de koelkast hebben deze lijsten niet en krijgen een
+      // lege lijst. De koelkast gebruikt dan de standaardindeling uit config.js.
+      fridgeShelves: objects(data.fridgeShelves),
+      fridgeOpenings: objects(data.fridgeOpenings),
+      // Demo gezichtsherkenning (vanaf 3.17): oudere gegevens hebben geen opgeslagen gezichten en geen
+      // antwoorden. Toen stonden gezichten alleen in het geheugen; die zijn na herladen dus al weg.
+      faceEnrollments: objects(data.faceEnrollments),
+      faceOffers: objects(data.faceOffers)
     };
   }
 
+  // Een werkgevernummer dat als getal is opgeslagen (oude gegevens), wordt tekst (zie codeText).
+  // Een bedrijf zonder werkgevernummer blijft zoals het is.
+  migrateCompany(company) {
+    if (company.employerNumber === undefined) return company;
+    return { ...company, employerNumber: this.codeText(company.employerNumber) };
+  }
+
   // Opgeslagen producten gaan voor, zodat gewijzigde prijzen en verwijderde producten bewaard
-  // blijven. Alleen oude gegevens zonder productlijst krijgen de standaardproducten.
+  // blijven. Alleen oude gegevens zonder productlijst krijgen de standaardproducten. (Staat er
+  // wel iets, maar geen lijst, dan heeft migrate de gegevens al als onleesbaar afgekeurd.)
   // Een lege lijst blijft leeg: dan heeft de beheerder alle producten zelf verwijderd.
   // De prijs wordt omgezet met toNumber: een lege of ontbrekende prijs wordt dan NaN, zodat
   // isValidProduct het product overslaat (met Number(null) = 0 zou het gratis worden).
@@ -438,12 +726,17 @@ export class DataStore {
 
   // Zet de oude product-id's in de voorraadlijst van een consumptiepunt om naar de nieuwe.
   // Staat de nieuwe id er al, dan gaat die voor en vervalt de oude regel.
+  // De nieuwe lijst is een object zonder prototype (Object.create(null)). Een sleutel als
+  // "__proto__" of "constructor" is daarin een gewone sleutel en kan het object niet veranderen.
+  // Sleutels die geen veilige id zijn (zie isSafeId), worden bovendien overgeslagen.
   renameStockKeys(stock) {
-    const renamed = {};
+    const renamed = Object.create(null);
+    if (!this.isObject(stock)) return renamed;
 
-    for (const [productId, entry] of Object.entries(stock || {})) {
+    for (const [productId, entry] of Object.entries(stock)) {
+      if (!this.isSafeId(productId)) continue;
       const newId = this.renameProductId(productId);
-      if (newId !== productId && stock[newId]) continue;
+      if (newId !== productId && Object.hasOwn(stock, newId)) continue;
       renamed[newId] = entry;
     }
 
@@ -455,6 +748,8 @@ export class DataStore {
   // ("Anna") wordt alleen de voornaam; de achternaam blijft dan leeg.
   // Een ontbrekende of ongeldige kleur (geen #rrggbb) wordt vervangen door een kleur uit COLORS.
   // De medewerker zelf blijft dus bewaard; alleen de kleur verandert.
+  // Het pasnummer wordt eerst gelijk gemaakt zoals de pasjeslezer en het formulier dat doen (zie
+  // migrateBadgeId), zodat "04a1b2c3" of "04:A1:B2:C3" gewoon "04A1B2C3" wordt.
   migrateEmployee(employee, index) {
     const nameParts = String(employee.name || "").trim().split(/\s+/);
     const hasLastName = nameParts.length > 1;
@@ -465,20 +760,56 @@ export class DataStore {
       name: fullName,
       firstName: employee.firstName || (hasLastName ? nameParts.slice(0, -1).join(" ") : nameParts[0]) || "",
       lastName: employee.lastName || (hasLastName ? nameParts.at(-1) : ""),
-      payrollCode: employee.payrollCode || "",
-      personnelNumber: employee.personnelNumber || "",
-      employerNumber: employee.employerNumber ? String(employee.employerNumber) : "",
+      payrollCode: this.codeText(employee.payrollCode || ""),
+      personnelNumber: this.codeText(employee.personnelNumber || ""),
+      employerNumber: this.codeText(employee.employerNumber || ""),
       companyId: employee.companyId || null,
       pointId: employee.pointId || null,
       active: employee.active !== false,
-      color: this.isSafeColor(employee.color) ? employee.color : COLORS[index % COLORS.length]
+      color: this.isSafeColor(employee.color) ? employee.color : COLORS[index % COLORS.length],
+      badgeId: this.migrateBadgeId(employee.badgeId)
     };
   }
 
+  // Zet een opgeslagen pasnummer om:
+  //   - geen pasnummer (ontbreekt, null of leeg, zoals in oude gegevens): "" (geen pas);
+  //   - tekst: spaties, ":" en "-" weg en alles in hoofdletters, net als BadgeReader.normalize;
+  //   - is het daarna nog steeds geen geldig pasnummer (geen tekst, andere tekens dan A-Z en 0-9,
+  //     of langer dan 64 tekens), dan wordt het "" en telt het mee in `repairedBadges`. De
+  //     medewerker blijft bestaan, maar load() maakt een reservekopie en de gebruiker krijgt de
+  //     melding dat een deel van de gegevens is overgeslagen.
+  migrateBadgeId(badgeId) {
+    if (badgeId === undefined || badgeId === null || badgeId === "") return "";
+
+    const normalized = typeof badgeId === "string" ? badgeId.replace(/[\s:-]/g, "").toUpperCase() : null;
+    if (normalized !== null && this.isSafeBadgeId(normalized)) return normalized;
+
+    this.repairedBadges += 1;
+    return "";
+  }
+
+  // Een pas mag maar bij één medewerker horen; anders weet de pasjeslezer niet wie er staat.
+  // Komt een pasnummer (door geknoeide gegevens) toch twee keer voor, dan houdt de eerste
+  // medewerker de pas en wordt het pasnummer bij de latere medewerkers leeggemaakt.
+  withoutDuplicateBadges(employees) {
+    const seen = new Set();
+
+    return employees.map((employee) => {
+      if (!employee.badgeId) return employee;
+      if (seen.has(employee.badgeId)) return { ...employee, badgeId: "" };
+      seen.add(employee.badgeId);
+      return employee;
+    });
+  }
+
   // Zet oude product-id's om; een registratie zonder product wordt een blikje.
+  // Een werkgevernummer dat als getal is opgeslagen, wordt tekst (zie codeText), net als bij een
+  // medewerker en een bedrijf. Een registratie zonder werkgevernummer blijft zonder.
   migrateRegistration(registration) {
     const productId = this.renameProductId(registration.productId) || "blikje";
-    return { ...registration, productId };
+    const migrated = { ...registration, productId };
+    if (registration.employerNumber !== undefined) migrated.employerNumber = this.codeText(registration.employerNumber);
+    return migrated;
   }
 
   // Ieder consumptiepunt krijgt een voorraadregel voor ieder product; nieuwe producten staan uit.
@@ -486,16 +817,23 @@ export class DataStore {
   // anders "51" worden in plaats van 6). De voorraad mag negatief zijn (er is dan meer
   // geregistreerd dan geteld), het minimum niet: een negatief minimum wordt 0.
   // Het tijdstip van de laatste telling (`countedAt`) blijft bewaard als het een geldige datum is
-  // die niet na `now` (het moment van laden) ligt. addRegistration en removeLastRegistration
+  // die niet na `now` (het moment van laden) ligt. addRegistration en removeRegistration
   // gebruiken dat om te bepalen of de voorraad verandert. Een telling in de toekomst wordt
   // weggelaten (de voorraad telt dan als "niet geteld"): anders zou iedere nieuwe registratie
-  // vóór die telling liggen en zou de voorraad nooit meer veranderen.
+  // vóór die telling liggen en zou de voorraad nooit meer veranderen. Ook een tijdstip dat geen
+  // geldig ISO-tijdstip vanaf 2000 is, wordt weggelaten (zie isValidDateTime).
+  // Alleen producten met een veilige id krijgen een regel (migrate geeft alleen geldige producten
+  // mee). De regels worden opgezocht met Object.hasOwn, zodat een naam als "toString" niet iets
+  // van het object zelf vindt. De nieuwe voorraadlijst is een gewoon object met alleen die regels.
   completePointStock(point, products, now = new Date()) {
     const stock = this.renameStockKeys(point.products);
     const completedProducts = {};
 
     for (const product of products) {
-      const entry = this.isObject(stock[product.id]) ? stock[product.id] : {};
+      if (!this.isSafeId(product.id)) continue;
+
+      const stored = Object.hasOwn(stock, product.id) ? stock[product.id] : null;
+      const entry = this.isObject(stored) ? stored : {};
       const amount = this.toNumber(entry.stock);
       const minimum = this.toNumber(entry.minimum);
 
@@ -505,25 +843,26 @@ export class DataStore {
         minimum: Number.isFinite(minimum) ? Math.max(0, minimum) : 0
       };
 
-      const countedTime = typeof entry.countedAt === "string" ? Date.parse(entry.countedAt) : NaN;
-      const hasValidCount = !Number.isNaN(countedTime) && countedTime <= now.getTime();
-      if (hasValidCount) completedProducts[product.id].countedAt = entry.countedAt;
+      if (this.isValidDateTime(entry.countedAt, now.getTime())) {
+        completedProducts[product.id].countedAt = entry.countedAt;
+      }
     }
 
     return { ...point, products: completedProducts };
   }
 
-  // Een logboekregel moet een actie, details en een geldige datum hebben. Ongeldige regels
+  // Een logboekregel moet een actie, details en een geldig tijdstip hebben. Ongeldige regels
   // worden bij het laden overgeslagen, zodat één beschadigde regel het logboek niet laat vastlopen.
   // De id is optioneel (heel oude regels hebben er geen), maar als die er staat moet het een
   // veilige id zijn, net als bij de andere gegevens.
-  isValidAuditEntry(entry) {
+  // Voor het tijdstip gelden dezelfde regels als bij een registratie: een ISO-tijdstip vanaf
+  // 1 januari 2000 en hooguit één dag na `now` (het moment van laden, zie MAX_FUTURE_MS).
+  isValidAuditEntry(entry, now = new Date()) {
     return (
       this.isSafeOptionalId(entry?.id) &&
       this.isText(entry?.action, MAX_AUDIT_TEXT) &&
       this.isText(entry.details, MAX_AUDIT_TEXT) &&
-      typeof entry.createdAt === "string" &&
-      !Number.isNaN(Date.parse(entry.createdAt))
+      this.isValidDateTime(entry.createdAt, now.getTime() + MAX_FUTURE_MS)
     );
   }
 

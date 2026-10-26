@@ -16,6 +16,9 @@
        productie als HTTP-header door de webserver worden meegestuurd, tegen inbedden in een frame. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-zz/zEeC1kqeUOjPPtpqyLYsRIlP0p6bd5ahtKxMgTFI=' 'sha256-IYfz7ReFAXixhlxwr+3wpzbp4NwCPYY4sLnUgTOlfZw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Consumptieregistratie | TVB</title>
+  <!-- Geen eigen pictogram voor het tabblad: een leeg pictogram, zodat de browser niet om
+       /favicon.ico vraagt. Anders staat er bij Live Server een foutmelding (404) in de console. -->
+  <link rel="icon" href="data:,">
   <!-- Zet het donkere thema al vóór het tekenen van de pagina, zodat die niet eerst licht oplicht.
        Bij "Auto" wordt het thema van het vorige bezoek gebruikt (tvb-theme-last). Daarna neemt
        ThemeManager (assets/js/ThemeManager.js) het over en past het thema zo nodig aan. -->
@@ -31,8 +34,27 @@
       // Geen toegang tot de opslag: de pagina start licht en ThemeManager regelt de rest.
     }
   </script>
-  <!-- Externe stylesheet met alle kleuren, layouts en componentstijlen. -->
-  <link rel="stylesheet" href="assets/css/styles.css">
+  <!-- Stylesheets per onderdeel (assets/css/). De volgorde hieronder is de volgorde van de cascade:
+       een latere regel wint van een eerdere met dezelfde sterkte. base.css (lettertypes, kleuren
+       en reset) staat daarom bovenaan en responsive.css (mediaqueries) onderaan. Niet omwisselen. -->
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/topbar.css">
+  <link rel="stylesheet" href="assets/css/home.css">
+  <link rel="stylesheet" href="assets/css/modal.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <link rel="stylesheet" href="assets/css/product-window.css">
+  <link rel="stylesheet" href="assets/css/admin-forms.css">
+  <link rel="stylesheet" href="assets/css/toast.css">
+  <link rel="stylesheet" href="assets/css/admin-corrections.css">
+  <link rel="stylesheet" href="assets/css/motion.css">
+  <link rel="stylesheet" href="assets/css/icons.css">
+  <link rel="stylesheet" href="assets/css/feedback.css">
+  <link rel="stylesheet" href="assets/css/suggestion.css">
+  <link rel="stylesheet" href="assets/css/directory-tools.css">
+  <link rel="stylesheet" href="assets/css/face.css">
+  <link rel="stylesheet" href="assets/css/standby.css">
+  <link rel="stylesheet" href="assets/css/fridge.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
   <!-- Startpunt van de applicatie. Modules werken alleen via een webserver (bijv. Live Server), niet via file://. -->
   <script type="module" src="assets/js/main.js"></script>
 </head>
@@ -84,34 +106,56 @@
       <!-- Hoofdgebied met de medewerkerlijst en de statistiekkaarten. -->
       <section class="content-grid">
         <div class="directory-card card">
-          <!-- Koptekst en dynamische teller van het aantal medewerkers. -->
+          <!-- Koptekst, één keer de uitleg "Tik op je naam" (verborgen als er geen medewerker wordt gevonden)
+               en de dynamische teller van het aantal medewerkers. -->
           <div class="card-heading">
             <div>
               <p class="section-kicker">Medewerkers</p>
               <h2>Registreer je consumptie</h2>
             </div>
-            <span class="count-badge" id="employeeCount"></span>
-          </div>
-          <!-- Demo gezichtsherkenning (FaceRecognitionDemo.js). Alleen zichtbaar als de demo aan staat. -->
-          <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
-            <span data-icon="faceScan"></span> Herken mij met de camera (demo)
-          </button>
-          <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
-          <label class="search-box">
-            <span aria-hidden="true" data-icon="search"></span>
-            <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
-            <kbd>Ctrl K</kbd>
-          </label>
-          <label class="company-filter">
-            <span>Bedrijf</span>
-            <div class="company-combobox">
-              <input id="employeeCompanyFilter" placeholder="Alle bedrijven" autocomplete="off" aria-label="Filter medewerkers op bedrijf">
-              <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen" data-icon="chevron"></button>
-              <div class="company-options hidden" id="companyFilterOptions" role="listbox"></div>
+            <div class="card-heading-meta">
+              <p class="list-hint" id="employeeListHint">Tik op je naam</p>
+              <span class="count-badge" id="employeeCount"></span>
             </div>
-          </label>
-          <!-- JavaScript plaatst hier de actieve medewerkers, gegroepeerd per bedrijf. Een klik opent het productvenster. -->
-          <div class="employee-list" id="employeeList" aria-live="polite"></div>
+          </div>
+          <!-- Hint voor de pas (alleen als de pasjeslezer aan staat, zie RegistrationApp.initialize) en de
+               knop van de demo gezichtsherkenning (FaceRecognitionDemo.js, alleen als de demo aan staat).
+               Naast elkaar op één regel, zodat de medewerkerlijst hoger op het scherm begint. -->
+          <div class="directory-tools">
+            <p class="badge-hint hidden" id="badgeHint"><span aria-hidden="true" data-icon="userSearch"></span> Houd je pas tegen de lezer, of zoek je naam</p>
+            <div class="directory-actions">
+              <button type="button" class="secondary-button face-start hidden" id="faceRecognizeButton">
+                <span data-icon="faceScan"></span> Herken mij met de camera (demo)
+              </button>
+              <!-- Slimme koelkast (demo, SMART_FRIDGE in config.js): opent het koelkastvenster (#fridgeModal). -->
+              <button type="button" class="secondary-button fridge-start hidden" id="fridgeOpenButton" aria-haspopup="dialog">
+                <span data-icon="fridge"></span> Slimme koelkast (demo)
+              </button>
+            </div>
+          </div>
+          <!-- Zoekveld en bedrijfsfilter. Op een tablet en groter staan ze naast elkaar op één regel. -->
+          <div class="directory-filters">
+            <!-- Zoekveld dat JavaScript gebruikt om medewerkers te filteren. -->
+            <label class="search-box">
+              <span aria-hidden="true" data-icon="search"></span>
+              <input type="search" id="employeeSearch" placeholder="Zoek op voor- of achternaam..." autocomplete="off">
+              <kbd>Ctrl K</kbd>
+            </label>
+            <label class="company-filter">
+              <span>Bedrijf</span>
+              <div class="company-combobox">
+                <!-- Combobox: aria-expanded zegt of de keuzelijst open is (EmployeeController.setCompanyOptionsOpen). Escape sluit de lijst. -->
+                <input id="employeeCompanyFilter" placeholder="Alle bedrijven" autocomplete="off" aria-label="Filter medewerkers op bedrijf" role="combobox" aria-autocomplete="list" aria-controls="companyFilterOptions" aria-expanded="false">
+                <button type="button" class="company-combobox-toggle" data-toggle-company-filter aria-label="Bedrijven openen" aria-controls="companyFilterOptions" aria-expanded="false" data-icon="chevron"></button>
+                <div class="company-options hidden" id="companyFilterOptions" role="listbox" aria-label="Bedrijven"></div>
+              </div>
+            </label>
+          </div>
+          <!-- JavaScript plaatst hier de actieve medewerkers, gegroepeerd per bedrijf. Een klik opent het productvenster.
+               Geen aria-live: een schermlezer zou dan de hele lijst voorlezen. Het aantal staat in #employeeResultsStatus. -->
+          <div class="employee-list" id="employeeList"></div>
+          <!-- Vaste statusregel, alleen voor schermlezers: "3 medewerkers gevonden" of "Geen medewerker gevonden". -->
+          <p class="visually-hidden" id="employeeResultsStatus" role="status"></p>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
           <div class="empty-state hidden" id="emptyState">
             <span aria-hidden="true" data-icon="userSearch"></span>
@@ -159,6 +203,18 @@
     </footer>
   </div>
 
+  <!-- Standby (StandbyController, STANDBY in config.js): na een tijd zonder invoer op de beginpagina
+       dimt dit scherm de pagina. Het is één knop over het hele scherm: een tik (of Enter of spatie)
+       maakt de tablet wakker en start, als dat kan, de korte scan van de demo gezichtsherkenning. De tik
+       valt op deze knop en niet op een knop eronder. #standbyHint zegt vooraf wat er na de tik gebeurt. -->
+  <button type="button" class="standby-overlay hidden" id="standbyOverlay" aria-labelledby="standbyTitle" aria-describedby="standbyHint">
+    <span class="standby-card">
+      <span class="brand-mark standby-mark" aria-hidden="true">TVB</span>
+      <strong class="standby-title" id="standbyTitle">Tik op het scherm om te beginnen</strong>
+      <span class="standby-hint" id="standbyHint"></span>
+    </span>
+  </button>
+
   <!-- Modal voor admin-login en het beheerdashboard. -->
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal">
@@ -198,15 +254,17 @@
           <button class="secondary-button" id="logoutButton">Uitloggen</button>
         </div>
         <!-- Tabs waarmee tussen registratiebeheer en medewerkersbeheer wordt gewisseld. -->
-        <nav class="admin-tabs" aria-label="Beheerderssecties">
-          <button class="tab active" data-tab="registrations">Registraties</button>
-          <button class="tab" data-tab="employees">Medewerkers</button>
-          <button class="tab" data-tab="products">Producten</button>
-          <button class="tab" data-tab="companies">Bedrijven</button>
-          <button class="tab" data-tab="stock">Voorraad</button>
-          <button class="tab" data-tab="audit">Logboek</button>
-        </nav>
-        <div id="registrationsTab">
+        <!-- role="tablist" en role="tab": een schermlezer noemt dit tabbladen. AdminController.switchTab werkt aria-selected bij. -->
+        <div class="admin-tabs" role="tablist" aria-label="Beheerderssecties">
+          <button class="tab active" type="button" role="tab" id="tab-registrations" aria-controls="registrationsTab" aria-selected="true" data-tab="registrations">Registraties</button>
+          <button class="tab" type="button" role="tab" id="tab-employees" aria-controls="employeesTab" aria-selected="false" data-tab="employees">Medewerkers</button>
+          <button class="tab" type="button" role="tab" id="tab-products" aria-controls="productsTab" aria-selected="false" data-tab="products">Producten</button>
+          <button class="tab" type="button" role="tab" id="tab-companies" aria-controls="companiesTab" aria-selected="false" data-tab="companies">Bedrijven</button>
+          <button class="tab" type="button" role="tab" id="tab-stock" aria-controls="stockTab" aria-selected="false" data-tab="stock">Voorraad</button>
+          <button class="tab hidden" type="button" role="tab" id="tab-fridge" aria-controls="fridgeTab" aria-selected="false" data-tab="fridge">Koelkast</button>
+          <button class="tab" type="button" role="tab" id="tab-audit" aria-controls="auditTab" aria-selected="false" data-tab="audit">Logboek</button>
+        </div>
+        <div id="registrationsTab" role="tabpanel" aria-labelledby="tab-registrations">
           <!-- Filters bepalen welke registraties in de tabel en export verschijnen. -->
           <div class="filter-row">
             <label>Medewerker
@@ -237,7 +295,7 @@
             </table>
           </div>
         </div>
-        <div id="employeesTab" class="hidden">
+        <div id="employeesTab" class="hidden" role="tabpanel" aria-labelledby="tab-employees">
           <button class="primary-button" id="addEmployeeButton" type="button"><span data-icon="plus"></span> Medewerker toevoegen</button>
           <!-- Zoekveld om de juiste medewerker te vinden om te wijzigen, (de)activeren of verwijderen. -->
           <label class="admin-search employee-management-search">
@@ -247,17 +305,17 @@
           <!-- JavaScript plaatst hier de gevonden medewerkers met de knoppen Deactiveren/Activeren, Wijzigen en (bij inactieve medewerkers) Verwijderen. -->
           <div id="adminEmployeeList" class="admin-employee-list"></div>
         </div>
-        <div id="productsTab" class="hidden">
+        <div id="productsTab" class="hidden" role="tabpanel" aria-labelledby="tab-products">
           <button class="primary-button" id="addProductButton" type="button"><span data-icon="plus"></span> Product toevoegen</button>
           <div id="adminProductList" class="admin-employee-list"></div>
         </div>
         <!-- Bedrijven met hun consumptiepunten; per punt wordt het aanbod ingesteld. -->
-        <div id="companiesTab" class="hidden">
+        <div id="companiesTab" class="hidden" role="tabpanel" aria-labelledby="tab-companies">
           <button class="primary-button" id="addCompanyButton" type="button"><span data-icon="plus"></span> Bedrijf toevoegen</button>
           <div id="adminCompanyList" class="admin-company-list"></div>
         </div>
         <!-- Voorraad per consumptiepunt, met bovenaan alles wat bijbesteld moet worden. -->
-        <div id="stockTab" class="hidden">
+        <div id="stockTab" class="hidden" role="tabpanel" aria-labelledby="tab-stock">
           <div id="stockAlerts" class="stock-alerts"></div>
           <div class="filter-row">
             <label>Consumptiepunt
@@ -271,7 +329,28 @@
             </table>
           </div>
         </div>
-        <div id="auditTab" class="hidden">
+        <!-- Slimme koelkast (demo): welk product op welk schap ligt en de laatste openingen (FridgeView). -->
+        <div id="fridgeTab" class="hidden" role="tabpanel" aria-labelledby="tab-fridge">
+          <h3 class="fridge-admin-heading">Indeling van de schappen</h3>
+          <p class="muted">Op ieder schap ligt één soort product. Met het gewicht van één stuk rekent de koelkast uit hoeveel er is gepakt.</p>
+          <form id="fridgeShelfForm" class="fridge-shelf-form" novalidate>
+            <div class="filter-row">
+              <label>Consumptiepunt
+                <select id="fridgePointSelect"></select>
+              </label>
+            </div>
+            <div id="fridgeShelfFields" class="fridge-shelf-fields"></div>
+            <button class="primary-button" id="fridgeShelfSaveButton" type="submit">Indeling opslaan</button>
+          </form>
+          <h3 class="fridge-admin-heading">Laatste openingen</h3>
+          <div class="admin-table-wrap">
+            <table>
+              <thead><tr><th>Datum & tijd</th><th>Medewerker</th><th>Gepakt</th><th>Status</th></tr></thead>
+              <tbody id="fridgeOpeningsBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="auditTab" class="hidden" role="tabpanel" aria-labelledby="tab-audit">
           <div class="admin-table-wrap">
             <table>
               <thead><tr><th>Actie</th><th>Details</th><th>Datum & tijd</th></tr></thead>
@@ -318,12 +397,47 @@
       <!-- Persoonlijke begroeting en de keuze van de vorige keer. -->
       <p class="welcome-line" id="employeeWelcome"></p>
       <div class="suggestion hidden" id="employeeSuggestion"></div>
-      <p class="muted">Gebruik de plusknoppen om producten te kiezen. Klik daarna op registreren om alles tegelijk op te slaan.</p>
+      <p class="muted" id="employeeProductsHelp">Tik op + bij wat je pakt. Tik daarna op Registreren.</p>
       <div id="employeeProductList" class="personal-product-list"></div>
-      <div class="employee-products-actions">
-        <div class="face-enroll hidden" id="faceEnrollArea"></div>
-        <button class="primary-button" id="registerSelectedProductsButton" type="button">Registreren</button>
+      <!-- Vaste live region: na "+" of "−" komt hier het nieuwe aantal, bijvoorbeeld "Blikje: 2" (alleen voor schermlezers). -->
+      <p class="visually-hidden" id="productLiveStatus" aria-live="polite"></p>
+      <!-- Demo gezichtsherkenning instellen of uitzetten: een eigen regel boven de knopbalk. -->
+      <div class="face-enroll hidden" id="faceEnrollArea"></div>
+      <!-- Knopbalk die onderaan in beeld blijft als het venster scrolt (position: sticky). Daarin de
+           waarschuwing vlak voor het automatisch sluiten (vaste statusregel, leeg als er niets aan de hand is),
+           de uitleg bij een uitgeschakelde knop en de knop Registreren over de volle breedte. Zonder producten
+           op het consumptiepunt krijgt de balk de klasse is-empty: dan staan er geen knop, geen lijn en geen
+           lege strook, alleen nog de waarschuwing als het venster bijna sluit. -->
+      <div class="employee-products-actions" id="employeeProductsActions">
+        <p class="idle-warning" id="productIdleWarning" role="status"></p>
+        <p class="register-hint" id="registerHint">Kies eerst een product met +</p>
+        <button class="primary-button register-button" id="registerSelectedProductsButton" type="button" aria-disabled="true" aria-describedby="registerHint">Registreren</button>
       </div>
+      <!-- Korte uitleg wat er met een registratie gebeurt (informatieplicht AVG, zie TO hoofdstuk 13). -->
+      <p class="muted privacy-note" id="employeePrivacyNote">Wat je registreert, wordt maandelijks ingehouden op je loon. Meer informatie staat in de privacyverklaring voor medewerkers.</p>
+    </div>
+  </div>
+
+  <!-- Slimme koelkast (demo, zie FridgeController en TO bijlage B): eerst de pas tegen de lezer houden,
+       dan gaat het nagebootste slot open en pakt de medewerker van de schappen. Na "Deur dicht" volgt het
+       overzicht van wat er is geregistreerd. #fridgeBody wordt per stap opnieuw getekend (FridgeView). De
+       statusregel (#fridgeStatus) en de live region (#fridgeLiveStatus) staan vast in de pagina, zodat
+       een schermlezer ze voorleest. De knopbalk met "Deur dicht" blijft onderaan in beeld (zoals bij het
+       productvenster) en is er alleen als de deur open is. -->
+  <div class="modal-backdrop hidden" id="fridgeModal" role="dialog" aria-modal="true" aria-labelledby="fridgeTitle">
+    <div class="modal employee-products-modal fridge-modal">
+      <button class="modal-close" data-close-fridge aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Slimme koelkast (demo)</p>
+      <h2 id="fridgeTitle">Koelkast openen</h2>
+      <p class="fridge-status" id="fridgeStatus" role="status"></p>
+      <div id="fridgeBody" class="fridge-body"></div>
+      <p class="visually-hidden" id="fridgeLiveStatus" aria-live="polite"></p>
+      <div class="employee-products-actions fridge-actions is-empty" id="fridgeActions">
+        <p class="idle-warning" id="fridgeDoorWarning" role="alert"></p>
+        <button class="primary-button register-button hidden" id="fridgeCloseDoorButton" type="button">Deur dicht</button>
+      </div>
+      <!-- Wat de koelkast vastlegt (informatieplicht AVG, zie TO bijlage B). -->
+      <p class="muted privacy-note">De koelkast legt alleen vast wie hem opent, wanneer, en hoeveel gewicht er van ieder schap verdwijnt. Er worden geen beelden gemaakt. Wat je pakt, wordt maandelijks ingehouden op je loon.</p>
     </div>
   </div>
 
@@ -341,11 +455,13 @@
         <label>Achternaam
           <input id="newEmployeeLastName" maxlength="100" required>
         </label>
+        <!-- Cijfervelden zijn tekstvelden met een cijfertoetsenbord (inputmode="numeric"). Een veld met
+             type="number" zou "12a" stil als "12" doorgeven; nu meldt het formulier "Gebruik alleen cijfers." -->
         <label>Looncode
-          <input id="newEmployeePayrollCode" type="number" required>
+          <input id="newEmployeePayrollCode" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="64" autocomplete="off" required>
         </label>
         <label>Personeelsnummer
-          <input id="newEmployeePersonnelNumber" type="number" required>
+          <input id="newEmployeePersonnelNumber" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="64" autocomplete="off" required>
         </label>
         <label>Bedrijf
           <select id="newEmployeeCompany" required></select>
@@ -354,9 +470,14 @@
           <select id="newEmployeePoint"></select>
         </label>
         <label>Afwijkend werkgevernummer (optioneel)
-          <input id="newEmployeeEmployerNumber" type="number" aria-describedby="employerNumberHint">
+          <input id="newEmployeeEmployerNumber" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="64" autocomplete="off" aria-describedby="employerNumberHint">
         </label>
         <p class="field-hint" id="employerNumberHint">Leeg laten = werkgevernummer van het bedrijf.</p>
+        <!-- Pas koppelen (BadgeReader.js): de USB-NFC-lezer typt het pasnummer in dit veld. -->
+        <label>Pasnummer
+          <input id="newEmployeeBadgeId" maxlength="100" autocomplete="off" spellcheck="false" aria-describedby="badgeIdHint">
+        </label>
+        <p class="field-hint" id="badgeIdHint">Klik in dit veld en houd de pas tegen de lezer. Leeg laten = geen pas.</p>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-employee-modal>Annuleren</button>
           <button class="secondary-button" type="submit" data-save-mode="close">Opslaan</button>
@@ -378,7 +499,7 @@
           <input id="companyName" maxlength="100" required>
         </label>
         <label>Werkgevernummer
-          <input id="companyEmployerNumber" type="number">
+          <input id="companyEmployerNumber" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="64" autocomplete="off">
         </label>
         <div class="employee-form-actions">
           <button class="secondary-button" type="button" data-close-company-modal>Annuleren</button>
@@ -414,8 +535,43 @@
     </div>
   </div>
 
+  <!-- Correctie "−": de beheerder kiest welke registratie (datum en tijd) wordt verwijderd.
+       Staat na de andere beheervensters, zodat het boven het beheervenster ligt (zie topModal). -->
+  <div class="modal-backdrop hidden" id="removeRegistrationModal" role="dialog" aria-modal="true" aria-labelledby="removeRegistrationTitle" aria-describedby="removeRegistrationHelp">
+    <div class="modal remove-registration-modal">
+      <button class="modal-close" data-close-remove-registration aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Correctie</p>
+      <h2 id="removeRegistrationTitle">Registratie verwijderen</h2>
+      <p class="muted" id="removeRegistrationHelp"></p>
+      <ul class="remove-registration-list" id="removeRegistrationList"></ul>
+      <div class="employee-form-actions">
+        <button class="secondary-button" type="button" data-close-remove-registration>Annuleren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo gezichtsherkenning: de vraag na een passcan (RecognitionController) aan een medewerker zonder
+       (geldige) gezichtsinstelling. Staat vóór het cameravenster, zodat het instelvenster erboven ligt.
+       "Nee" wordt onthouden. Het kruisje, de achtergrond en Escape onthouden niets. Daarna gaat de koelkast
+       of het productvenster open. -->
+  <div class="modal-backdrop hidden" id="faceOfferModal" role="dialog" aria-modal="true" aria-labelledby="faceOfferTitle" aria-describedby="faceOfferHelp">
+    <div class="modal face-offer-modal">
+      <button class="modal-close" data-close-face-offer aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Demo gezichtsherkenning</p>
+      <h2 id="faceOfferTitle">Gezichtsherkenning nog niet ingesteld. Wil je dit?</h2>
+      <p class="welcome-line" id="faceOfferGreeting"></p>
+      <p class="muted" id="faceOfferHelp"></p>
+      <div class="employee-form-actions face-offer-actions">
+        <button class="secondary-button" type="button" id="faceOfferNoButton">Nee</button>
+        <button class="primary-button" type="button" id="faceOfferYesButton"><span data-icon="faceScan"></span> Ja, instellen</button>
+      </div>
+      <p class="face-privacy"><span data-icon="lock"></span> Er worden geen foto's gemaakt of bewaard. Alles gebeurt op dit apparaat.</p>
+    </div>
+  </div>
+
   <!-- Demo gezichtsherkenning: camerabeeld met een kader voor het gezicht.
-       Wordt gebruikt om een gezicht in te stellen (per medewerker) en om iemand te herkennen. -->
+       Wordt gebruikt om een gezicht in te stellen (per medewerker), om iemand te herkennen met
+       "Herken mij" en voor de korte scan na een tik op het standby-scherm (klasse is-wake). -->
   <div class="modal-backdrop hidden" id="faceModal" role="dialog" aria-modal="true" aria-labelledby="faceTitle">
     <div class="modal face-modal">
       <button class="modal-close" data-close-face-modal aria-label="Sluiten" data-icon="close"></button>
@@ -429,7 +585,7 @@
       <p class="face-status" id="faceStatus" role="status"></p>
       <label class="face-consent hidden" id="faceConsentLabel">
         <input type="checkbox" id="faceConsent">
-        <span>Ik doe vrijwillig mee aan deze demo. Mijn gezicht wordt alleen in deze browser verwerkt en niet opgeslagen of verstuurd. Na het herladen van de pagina is alles weg.</span>
+        <span>Ik doe vrijwillig mee aan deze demo. Alleen kenmerken van mijn gezicht (getallen, geen foto) worden op deze tablet bewaard en nooit verstuurd. Na een jaar worden ze vanzelf gewist en ik kan het altijd uitzetten.</span>
       </label>
       <div class="employee-form-actions">
         <button class="secondary-button" type="button" data-close-face-modal>Annuleren</button>
@@ -439,8 +595,11 @@
     </div>
   </div>
 
-  <!-- Tijdelijke statusmelding na acties zoals opslaan of verwijderen. -->
+  <!-- Tijdelijke meldingen na acties zoals opslaan of verwijderen. Twee vaste regio's die altijd op de
+       pagina blijven, zodat een schermlezer ze voorleest: #toast voor gewone meldingen (role="status")
+       en #toastAlert voor foutmeldingen (role="alert"). Zie RegistrationView.showToast. -->
   <div class="toast hidden" id="toast" role="status"></div>
+  <div class="toast hidden" id="toastAlert" role="alert"></div>
   <!-- Browsers blokkeren JavaScript-modules via file://; dan zou de pagina leeg blijven zonder uitleg. -->
   <script>
     if (location.protocol === "file:") {

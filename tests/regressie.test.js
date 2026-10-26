@@ -8,21 +8,22 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { ThemeManager } from "../assets/js/ThemeManager.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import { DataStore } from "../assets/js/DataStore.js";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import {
-  createModel, createDataStore, createRecordingView, createFakeElement, fakeLocalStorage, registration
+  createModel, createDataStore, createRecordingView, createFakeElement, fakeLocalStorage, registration, asAdmin, readAllCss
 } from "./helpers.js";
 
 console.warn = () => {};
 
+// Controller met het testmodel, een nep-view en een ingelogde beheerder.
 const createApp = ({ storeOptions } = {}) => {
   const { model, point } = createModel(storeOptions);
   const view = createRecordingView();
   const faceDemo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, faceDemo), model, view, point, faceDemo };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, faceDemo)), model, view, point, faceDemo };
 };
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
 
@@ -246,7 +247,7 @@ test("bug 11: het statuslabel van één product wordt bijgewerkt", () => {
   view.updateStockStatus(point.id, "blikje");
 
   assert.equal(badge.className, "stock-badge stock-out");
-  assert.equal(badge.textContent, "Op");
+  assert.equal(badge.textContent, "Leeg");
 });
 
 // Bug 12 (Ctrl + K achter een venster) staat in controller.test.js bij de toetsenbordtests.
@@ -434,19 +435,20 @@ test("controle 2, punt 2: na alleen een correctie van de beheerder staat er geen
   assert.equal(model.hasOwnRegistration("employee-1"), false);
 });
 
-test("controle 2, punt 2: na een eigen registratie staat er wel 'welkom terug'", () => {
+test("controle 2, punt 2: na een eigen registratie staat er wel 'welkom terug' (herkend met de pas)", () => {
   const { model } = createModel();
   model.addRegistration("employee-1", "blikje");
   const view = createProductWindowView(model);
 
-  view.renderEmployeeProducts("employee-1");
+  // Sinds versie 3.10 alleen na herkenning met de pas of de camera (zie welkom-en-gezichtsherkenning.test.js).
+  view.renderEmployeeProducts("employee-1", {}, { recognizedByBadge: true });
 
-  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test, welkom terug."));
+  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test, welkom terug. Je bent herkend met je pas."));
   assert.equal(model.hasOwnRegistration("employee-1"), true);
 });
 
 test("controle 2, punt 3: het zoekveld krijgt een zichtbare focus", () => {
-  const css = fs.readFileSync(new URL("../assets/css/styles.css", import.meta.url), "utf8");
+  const css = readAllCss();
 
   assert.match(css, /\.search-box:focus-within\s*\{\s*border-color\s*:\s*var\(--green\)/);
 });
@@ -654,7 +656,8 @@ test("kan de browseropslag niet worden gelezen, dan krijgt de gebruiker een waar
 test("controle 3, punt 3: na 'Zelfde als vorige keer' gaat de focus naar 'Registreren'", () => {
   const { app, model, view } = createApp();
   model.state.registrations = [registration("1", "employee-1", "blikje", "2026-09-02T12:00:00")];
-  app.openEmployeeProducts("employee-1");
+  // De knop staat er alleen na herkenning met de pas of de camera.
+  app.openEmployeeProducts("employee-1", { recognizedBy: "badge" });
 
   app.repeatLastSelection();
 

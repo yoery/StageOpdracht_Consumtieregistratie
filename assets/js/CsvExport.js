@@ -9,8 +9,8 @@
  * Verbonden met:
  *   - RegistrationModel: levert registraties, medewerkers, de prijs per registratie
  *     (registrationPrice), het werkgevernummer en de loonmaand (payrollPeriod).
- *   - RegistrationApp: roept download() aan als de beheerder op "CSV exporteren" klikt,
- *     en toont een melding als er niets te exporteren is.
+ *   - AdminController (onderdeel van de controller RegistrationApp): roept download() aan als
+ *     de beheerder op "CSV exporteren" klikt, en toont een melding als er niets te exporteren is.
  *
  * Deze class weet niets van de HTML-pagina; alleen download() gebruikt de browser om
  * het bestand op te slaan.
@@ -27,6 +27,16 @@ export class CsvExport {
     "Totaal",
     "Prijs"
   ];
+
+  // De kolommen met een getal (jaar, maand, aantal en bedrag). Een getal dat met "-" begint, zoals
+  // een negatief bedrag "-0,65" van een latere correctieregel, krijgt geen apostrof: dat is geen
+  // formule. Alleen een waarde die echt een getal is (NUMBER_VALUE) wordt zo doorgelaten. Iedere
+  // andere waarde, en iedere waarde in een tekstkolom, krijgt de gewone controle (zie escapeField).
+  static NUMERIC_COLUMNS = new Set(["Jaar", "Maand", "Totaal", "Prijs"]);
+
+  // Een geheel getal of een bedrag met een komma of punt, eventueel met een minteken ervoor: "12",
+  // "-3", "1,30" of "-0,65". Een spatie, een letter of een ander teken past niet.
+  static NUMBER_VALUE = /^-?\d+([.,]\d+)?$/;
 
   constructor(model) {
     this.model = model;
@@ -105,8 +115,11 @@ export class CsvExport {
   // soms over, waardoor " =1+1" of een enter gevolgd door "=cmd" toch een formule wordt.
   // Een veld dat met een tab, "\r" of "\n" begint, krijgt altijd een apostrof, ook als er geen
   // formuleteken volgt: zo blijft het begin van het veld zichtbaar en kan Excel het niet wegpoetsen.
-  escapeField(value) {
+  // Met `numeric: true` (een getalkolom, zie NUMERIC_COLUMNS) blijft een echt getal zoals "-0,65"
+  // ongewijzigd. Is de waarde geen getal, dan geldt ook daar de gewone controle.
+  escapeField(value, { numeric = false } = {}) {
     let text = String(value ?? "");
+    if (numeric && CsvExport.NUMBER_VALUE.test(text)) return text;
 
     const startsAsFormula = /^[ \t\r\n]*[=+\-@]/.test(text);
     if (startsAsFormula || /^[\t\r\n]/.test(text)) text = `'${text}`;
@@ -123,8 +136,11 @@ export class CsvExport {
       lines.push(CsvExport.COLUMNS.map((column) => row[column]));
     }
 
+    // De kopregel is tekst. In de regels daaronder krijgen de getalkolommen numeric: true.
     return lines
-      .map((fields) => fields.map((field) => this.escapeField(field)).join(";"))
+      .map((fields, line) => fields.map((field, index) =>
+        this.escapeField(field, { numeric: line > 0 && CsvExport.NUMERIC_COLUMNS.has(CsvExport.COLUMNS[index]) })
+      ).join(";"))
       .join("\r\n");
   }
 

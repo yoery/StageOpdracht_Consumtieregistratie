@@ -1,0 +1,463 @@
+﻿/* Beginpagina: de inhoudsbreedte (main), de banner (hero), de kaarten met de medewerkerlijst,
+   het zoekveld en het bedrijfsfilter, de medewerkerrijen, de statistiekkaarten en de tip rechts,
+   recente activiteit, de lege toestand (.empty-state), de hulpklassen .hidden en .visually-hidden en
+   de footer. De extra regel met pashint en demoknoppen staat in directory-tools.css, de mobiele
+   weergave in responsive.css.
+   Laadt na topbar.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Centrale inhoudsbreedte en introductiebanner. */
+main {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  max-width:var(--page-width);
+  margin:0 auto;
+  padding:0 var(--gutter) var(--gutter)
+}
+.hero {
+  min-height:255px;
+  padding:54px 54px;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(120deg,var(--hero-start),var(--hero-end));
+  color:#fff
+}
+.hero:before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 80% 15%,rgba(81,202,162,.28),transparent 35%),linear-gradient(115deg,transparent 70%,rgba(255,255,255,.05) 70%)
+}
+.eyebrow,.section-kicker {
+  margin:0 0 8px;
+  text-transform:uppercase;
+  letter-spacing:1.6px;
+  font-size:10px;
+  font-weight:700;
+  color:#8edac2
+}
+.hero h1 {
+  margin:0;
+  position:relative;
+  font:600 clamp(30px,4vw,46px)/1.06 "Space Grotesk"
+}
+.hero h1 em {
+  color:#70d9ad;
+  font-style:normal
+}
+.hero-copy {
+  position:relative;
+  max-width:390px;
+  color:#c6e0e2;
+  line-height:1.6;
+  margin:17px 0 0
+}
+.hero-shape {
+  position:absolute;
+  right:9%;
+  top:24px;
+  width:205px;
+  height:205px;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  transform:rotate(-12deg)
+}
+.hero-shape:before,.hero-shape:after {
+  content:"";
+  position:absolute;
+  border:1px solid rgba(112,217,173,.4);
+  border-radius:50%
+}
+.hero-shape:before {
+  inset:22px
+}
+.hero-shape:after {
+  inset:45px
+}
+.hero-shape span {
+  font-size:74px;
+  color:#70d9ad;
+  transform:rotate(12deg)
+}
+/* Kaartlayout voor medewerkers en samenvattende statistieken. */
+/* flex:1 laat dit gedeelte de vrije hoogte opvullen; de medewerkerskaart rekt dan mee tot
+   vlak boven de footer. De kaarten rechts (summary-column) blijven hun eigen hoogte houden. */
+.content-grid {
+  flex:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 300px;
+  gap:26px;
+  margin-top:26px
+}
+.card,.stat-card,.tip-card {
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--shadow)
+}
+.directory-card {
+  padding:27px
+}
+.card-heading,.section-heading,.admin-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start
+}
+.card-heading h2,.section-heading h2,.modal h2 {
+  margin:0;
+  font:600 22px "Space Grotesk"
+}
+/* Kleine kopjes boven een titel in de donkergroene huiskleur: op wit 5,9:1 (met --green was dat
+   3,56:1, te weinig voor kleine tekst). In het donkere thema is --green-dark de lichte groene tint. */
+.section-kicker {
+  color:var(--green-dark);
+  margin-bottom:6px
+}
+.count-badge {
+  background:var(--mint);
+  color:var(--green-dark);
+  padding:6px 10px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:700
+}
+.search-box {
+  display:flex;
+  align-items:center;
+  border:1px solid var(--line);
+  border-radius:10px;
+  height:46px;
+  margin:23px 0 15px;
+  padding:0 13px;
+  color:var(--muted)
+}
+/* Zichtbare focus: het invoerveld zelf heeft geen rand, dus de hele zoekbalk krijgt de groene
+   rand, net als het bedrijfsfilter. Zo zie je ook met het toetsenbord waar je bent. */
+.search-box:focus-within {
+  border-color:var(--green)
+}
+.search-box span {
+  font-size:23px;
+  line-height:0;
+  margin-right:8px
+}
+.search-box input {
+  width:100%;
+  border:0;
+  outline:0;
+  color:var(--ink);
+  background:none
+}
+.search-box kbd {
+  font-size:10px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:3px 6px;
+  color:var(--muted);
+  white-space:nowrap
+}
+.company-filter {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 15px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:600
+}
+.company-combobox {
+  position:relative;
+  display:flex;
+  flex:1;
+  min-height:44px;
+  background:var(--paper)
+}
+.company-combobox input {
+  width:100%;
+  flex:1;
+  min-width:0;
+  min-height:44px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 48px 0 10px !important;
+  color:var(--ink);
+  background:var(--paper);
+  outline:none
+}
+.company-combobox:focus-within {
+  border-color:transparent
+}
+.company-combobox:focus-within input {
+  border-color:var(--green)
+}
+.company-combobox-toggle {
+  position:absolute;
+  right:4px;
+  top:4px;
+  width:40px;
+  height:10px;
+  margin:0;
+  border-radius:8px;
+  background:var(--paper) !important;
+  color:var(--muted);
+  font-size:25px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  opacity:1;
+  z-index:2;
+  box-shadow:none
+}
+.company-combobox-toggle:hover,
+.company-combobox-toggle:focus-visible {
+  border-color:var(--green) !important;
+  background:var(--paper) !important;
+  color:var(--green-dark)
+}
+.company-options {
+  position:absolute;
+  top:calc(100% - 1px);
+  left:0;
+  right:0;
+  z-index:10;
+  display:grid;
+  max-height:min(264px,50vh);
+  overflow:auto;
+  padding:7px 3px 3px;
+  border:1px solid;
+  border-radius:0px 0px 8px 8px;
+  background:var(--paper);
+  box-shadow:var(--shadow)
+}
+.company-options button {
+  min-height:44px;
+  padding:5px 8px;
+  border-radius:5px;
+  background:var(--paper);
+  color:var(--ink);
+  text-align:left;
+  font-size:12px
+}
+.company-options button:hover,
+.company-options button:focus-visible {
+  background:var(--mint)
+}
+.form-company-combobox {
+  min-width:0
+}
+.company-group {
+  margin-top:18px
+}
+.company-group:first-child {
+  margin-top:0
+}
+.company-group h3 {
+  margin:0 0 8px;
+  color:var(--green-dark);
+  font:600 15px "Space Grotesk"
+}
+/* Medewerkerregels, avatars en registratieknoppen. */
+.employee-list {
+  display:grid;
+  gap:8px
+}
+.employee-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 13px;
+  border:1px solid transparent;
+  border-radius:10px;
+  transition:.18s
+}
+/* Hover alleen met een muis of pen (hover:hover). Op een aanraakscherm blijft de laatste tik anders
+   als "hover" staan: na registreren kreeg de rij die onder de vinger lag (een collega) dan een rand. */
+@media (hover:hover) {
+  .employee-row:hover {
+    border-color:var(--hover-border);
+    background:var(--hover-bg)
+  }
+}
+.employee-info {
+  display:flex;
+  align-items:center;
+  gap:11px
+}
+.person-avatar {
+  width:37px;
+  height:37px;
+  border-radius:11px;
+  display:grid;
+  place-items:center;
+  font-weight:700;
+  font-size:12px;
+  /* De avatarkleuren zijn altijd lichte pasteltinten, dus de letters blijven donker (ook in dark mode). */
+  color:#163540
+}
+.employee-name {
+  font-weight:600;
+  font-size:14px
+}
+.employee-total {
+  color:var(--muted);
+  font-size:11px;
+  margin-top:2px
+}
+.plus-button {
+  width:35px;
+  height:35px;
+  border-radius:9px;
+  background:var(--mint);
+  color:var(--green-dark);
+  font-size:23px;
+  line-height:1;
+  transition:.15s
+}
+.plus-button:hover {
+  background:var(--green);
+  color:#fff;
+  transform:scale(1.06)
+}
+/* Statistiekkaarten en informatieve tip aan de rechterzijde. */
+.summary-column {
+  display:flex;
+  flex-direction:column;
+  gap:12px
+}
+.stat-card {
+  padding:19px;
+  display:flex;
+  gap:14px;
+  align-items:center
+}
+.stat-icon {
+  width:40px;
+  height:40px;
+  border-radius:11px;
+  display:grid;
+  place-items:center;
+  font-size:20px
+}
+.stat-green .stat-icon {
+  background:var(--mint);
+  color:var(--green)
+}
+.stat-blue .stat-icon {
+  background:var(--blue-soft);
+  color:var(--blue)
+}
+.stat-card span,.stat-card small {
+  display:block;
+  color:var(--muted);
+  font-size:11px
+}
+.stat-card strong {
+  font:700 27px "Space Grotesk";
+  display:inline-block;
+  margin:3px 5px 0 0
+}
+.stat-card small {
+  display:inline
+}
+.tip-card {
+  display:flex;
+  gap:11px;
+  padding:17px;
+  background:var(--mint);
+  border-color:var(--mint-border)
+}
+.tip-icon {
+  color:var(--green);
+  font-size:20px
+}
+.tip-card strong {
+  font-size:13px
+}
+.tip-card p {
+  margin:5px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45
+}
+.recent-section {
+  margin:47px 0 60px
+}
+.text-button {
+  background:none;
+  color:var(--green-dark);
+  font-size:13px;
+  font-weight:700
+}
+.text-button span {
+  font-size:18px;
+  margin-left:6px
+}
+.activity-card {
+  margin-top:15px;
+  overflow:hidden
+}
+.activity-row {
+  padding:14px 20px;
+  display:grid;
+  grid-template-columns:1fr 115px 100px;
+  align-items:center;
+  border-bottom:1px solid var(--line);
+  font-size:13px
+}
+.activity-row:last-child {
+  border:0
+}
+.activity-date {
+  color:var(--muted);
+  font-size:11px
+}
+.activity-amount {
+  color:var(--green-dark);
+  font-weight:700
+}
+.empty-state {
+  text-align:center;
+  padding:30px;
+  color:var(--muted)
+}
+.empty-state span {
+  font-size:30px;
+  color:var(--green)
+}
+.empty-state strong {
+  display:block;
+  color:var(--ink);
+  margin-top:8px
+}
+.empty-state p {
+  font-size:12px
+}
+/* Algemene zichtbaarheid en voettekst. */
+.hidden {
+  display:none!important
+}
+/* Alleen voor schermlezers: onzichtbaar, maar wel voorgelezen (bijvoorbeeld #productLiveStatus). */
+.visually-hidden {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0
+}
+footer {
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:11px;
+  padding:22px max(var(--gutter),calc((100% - var(--page-width)) / 2 + var(--gutter)));
+  border-top:1px solid var(--line)
+}

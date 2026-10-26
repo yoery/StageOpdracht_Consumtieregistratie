@@ -2,29 +2,56 @@ import {
   SEED_EMPLOYEES,
   COLORS,
   DEFAULT_PRODUCTS,
-  DEFAULT_COMPANIES
+  DEFAULT_COMPANIES,
+  SMART_FRIDGE,
+  FACE_DEMO
 } from "./config.js";
 import { createId } from "./ids.js";
 
 // Voorraadstatus van één product op een consumptiepunt, met de tekst die op het scherm staat.
+// "Leeg" (eerder "Op"): "Op" leek te veel op "Op voorraad" en werd daardoor verkeerd gelezen.
 export const STOCK_STATUS = {
-  out: "Op",
+  out: "Leeg",
   low: "Bijbestellen",
   ok: "Op voorraad"
 };
 
+// Status van een opening van de slimme koelkast (demo), met de tekst die in het beheer staat.
+// SmartFridge.statusOf bepaalt de status. DataStore kent dezelfde drie waarden (FRIDGE_STATUSES).
+export const FRIDGE_STATUS = {
+  registered: "Geregistreerd",
+  nothing: "Niets gepakt",
+  check: "Controle nodig"
+};
+
 // Hoogste prijs (in euro) die een product mag hebben. Deze waarde moet gelijk zijn aan MAX_PRICE
 // in DataStore.js: DataStore gooit bij het laden producten en registraties met een hogere prijs
-// weg. Het model en het productformulier (RegistrationApp) gebruiken deze ene constante, zodat
+// weg. Het model en het productformulier (FormController) gebruiken deze ene constante, zodat
 // er nooit een prijs wordt opgeslagen die na herladen verdwijnt.
 export const MAX_PRICE = 1000;
+
+// Hoogste lengte van de omschrijving van een logboekregel. Gelijk aan MAX_AUDIT_TEXT in DataStore.js:
+// DataStore slaat een langere regel bij het laden over (zie logAdminAction).
+export const MAX_AUDIT_DETAILS = 500;
+
+// Demo gezichtsherkenning: een descriptor (de gezichtskenmerken) bestaat altijd uit precies 128
+// getallen, en face-api geeft waarden die ruim binnen -10 en 10 liggen. Gelijk aan
+// FACE_DESCRIPTOR_LENGTH en MAX_DESCRIPTOR_VALUE in DataStore.js: DataStore slaat bij het laden een
+// opgeslagen descriptor met een andere lengte of andere waarden over.
+export const FACE_DESCRIPTOR_LENGTH = 128;
+export const MAX_DESCRIPTOR_VALUE = 10;
+
+// Eén dag in milliseconden (voor het verlopen van een gezichtsinstelling na FACE_DEMO.validityDays).
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * RegistrationModel — de gegevens en alle regels van de applicatie (het "Model" in MVC).
  *
  * Verantwoordelijkheid:
  *   - bewaart de complete status: medewerkers, registraties, producten, bedrijven,
- *     consumptiepunten (met voorraad) en het logboek;
+ *     consumptiepunten (met voorraad), het logboek, van de slimme koelkast (demo) de indeling van
+ *     de schappen en de openingen, en van de demo gezichtsherkenning de opgeslagen kenmerken met
+ *     hun datum en het antwoord op de vraag na een passcan;
  *   - bevat de regels, bijvoorbeeld: een registratie verlaagt de voorraad, een bedrijf met
  *     medewerkers mag niet worden verwijderd, de loonmaand is de maand na de consumptie.
  *
@@ -108,7 +135,8 @@ export class RegistrationModel {
         companyId: demoPoint.companyId,
         pointId: demoPoint.id,
         active: true,
-        color: COLORS[index % COLORS.length]
+        color: COLORS[index % COLORS.length],
+        badgeId: ""
       };
     });
 
@@ -118,7 +146,11 @@ export class RegistrationModel {
       products: DEFAULT_PRODUCTS.map((product) => ({ ...product })),
       companies,
       points: [demoPoint],
-      auditLog: []
+      auditLog: [],
+      fridgeShelves: [],
+      fridgeOpenings: [],
+      faceEnrollments: [],
+      faceOffers: []
     };
   }
 
@@ -131,7 +163,11 @@ export class RegistrationModel {
       products: [...this.state.products],
       companies: [...this.state.companies],
       points: [...this.state.points],
-      auditLog: [...this.state.auditLog]
+      auditLog: [...this.state.auditLog],
+      fridgeShelves: [...this.fridgeShelves],
+      fridgeOpenings: [...this.fridgeOpenings],
+      faceEnrollments: [...this.faceEnrollments],
+      faceOffers: [...this.faceOffers]
     };
   }
 
@@ -142,11 +178,17 @@ export class RegistrationModel {
   // Met `clearStore: false` wordt alleen het geheugen leeggemaakt en blijft de opslag met rust.
   // Dat gebruikt RegistrationApp.handleStorageCleared als een ander tabblad al heeft gewist en
   // daarna zelf de nieuwe demogegevens opslaat: die mogen hier niet opnieuw worden gewist.
+  // Geeft true terug als het wissen is gelukt. Lukt het wissen van de opslag niet (clearAll geeft
+  // false), dan blijven de gegevens in het geheugen staan en geeft deze methode false terug, zodat
+  // de controller niet meldt dat alles is gewist.
   wipeAll({ clearStore = true } = {}) {
-    if (clearStore && typeof this.store.clearAll === "function") this.store.clearAll();
+    if (clearStore && typeof this.store.clearAll === "function" && this.store.clearAll() === false) {
+      return false;
+    }
 
     this.state = this.createSeedState();
     this.loadProblem = null;
+    return true;
   }
 
   // Herstelt de vorige status wanneer opslaan niet lukt.
@@ -157,6 +199,12 @@ export class RegistrationModel {
   // Geeft de volledige status aan de opslaglaag. Geeft true terug als dat lukte.
   save() {
     return this.store.save(this.state);
+  }
+
+  // Waarom lukte de laatste keer opslaan niet? "full" als de opslag van de browser vol is,
+  // "failed" bij een andere fout, of null (gelukt, of de opslag zegt het niet). Zie DataStore.save.
+  get saveProblem() {
+    return this.store.saveProblem ?? null;
   }
 
   // Getters: andere classes lezen de gegevens via deze namen, niet via this.state.
@@ -184,6 +232,29 @@ export class RegistrationModel {
     return this.state.points;
   }
 
+  // De indeling van de schappen van de slimme koelkast (demo), zoals de beheerder die heeft ingesteld.
+  // Gegevens van vóór de slimme koelkast hebben deze lijst niet; dan is hij leeg.
+  get fridgeShelves() {
+    return this.state.fridgeShelves ?? [];
+  }
+
+  // De openingen van de slimme koelkast (demo). Ook leeg bij gegevens van vóór de slimme koelkast.
+  get fridgeOpenings() {
+    return this.state.fridgeOpenings ?? [];
+  }
+
+  // Demo gezichtsherkenning: de opgeslagen gezichtsinstellingen, per medewerker
+  // { id, employeeId, descriptor (128 getallen), enrolledAt }. Leeg bij gegevens van vóór versie 3.17.
+  get faceEnrollments() {
+    return this.state.faceEnrollments ?? [];
+  }
+
+  // Demo gezichtsherkenning: per medewerker het antwoord op de vraag na een passcan
+  // { id, employeeId, answer: "declined" (Nee gezegd) of "expired" (verlopen), answeredAt }.
+  get faceOffers() {
+    return this.state.faceOffers ?? [];
+  }
+
   // ------------------------------------------------------------------
   // Registraties
   // ------------------------------------------------------------------
@@ -193,21 +264,24 @@ export class RegistrationModel {
   //   - `createdAt` is het tijdstip van de registratie: standaard nu. Bij een correctie "+" kan
   //     de beheerder een eerdere datum kiezen, bijvoorbeeld voor een vergeten blikje van vorige maand.
   //   - `pointId` in de registratie is het consumptiepunt dat het product aanbood (anders null).
-  //     Zo weet removeLastRegistration later naar welk punt het product terug moet.
+  //     Zo weet removeRegistration (correctie "−") later naar welk punt het product terug moet.
   //   - Er gaat alleen voorraad af als het punt het product aanbiedt én de registratie niet vóór
   //     de laatste telling (`countedAt`) ligt. Ligt het tijdstip vóór die telling, dan zat het
   //     product al niet meer in de getelde voorraad; dan verandert de voorraad niet (net als bij
-  //     removeLastRegistration, dat dan ook niets terugzet). `pointId` wordt dan wel bewaard.
+  //     removeRegistration, dat dan ook niets terugzet). `pointId` wordt dan wel bewaard.
   //   - `correction: true` betekent dat de beheerder de registratie heeft toegevoegd. Die telt
   //     niet mee als "vorige keer" in het productvenster van de medewerker.
   //   - `price` is de prijs op het moment van registreren. Verandert de prijs later, dan
   //     blijft een oude maand in de CSV-export hetzelfde bedrag houden.
   //   - `employerNumber` is om dezelfde reden het werkgevernummer op het moment van registreren
   //     (zie registrationEmployerNumber). Is er dan nog geen nummer, dan wordt het niet bewaard.
-  addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date() } = {}) {
+  //   - `source: "fridge"` en `openingId` betekenen dat de registratie automatisch is gemaakt door
+  //     de slimme koelkast (demo), bij de opening met die id (zie addFridgeOpening). Zo'n registratie
+  //     telt verder mee zoals iedere andere (totalen, export, voorraad).
+  addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date(), source = null, openingId = null } = {}) {
     const employee = this.findEmployee(employeeId);
     const point = this.findPoint(employee?.pointId);
-    const offered = Boolean(point?.products[productId]?.offered);
+    const offered = Boolean(this.pointProduct(point, productId)?.offered);
     const employerNumber = this.employerNumberFor(employee);
 
     const registration = {
@@ -220,6 +294,10 @@ export class RegistrationModel {
     };
     if (employerNumber) registration.employerNumber = employerNumber;
     if (correction) registration.correction = true;
+    if (source === "fridge") {
+      registration.source = "fridge";
+      if (openingId) registration.openingId = openingId;
+    }
     this.state.registrations = [...this.registrations, registration];
 
     const entry = this.stockEntry(point?.id, productId);
@@ -230,9 +308,9 @@ export class RegistrationModel {
   // Zoekt de laatst ingevoerde registratie van deze medewerker (en van dit product, als dat is
   // meegegeven). "Laatst ingevoerd" gaat op de volgorde van invoer (de volgorde in de lijst),
   // niet op de datum: een correctie "+" met een eerdere datum die als laatste is toegevoegd,
-  // is dus de laatste registratie. Dit is precies de registratie die removeLastRegistration zou
-  // verwijderen (correctie "−"), zodat de controller vooraf kan vragen of een oude loonmaand
-  // mag worden aangepast (confirmOldMonthRemoval).
+  // is dus de laatste registratie. Dit is de registratie die removeLastRegistration verwijdert.
+  // De correctie "−" in het beheer gebruikt dit niet meer: daar kiest de beheerder zelf welke
+  // registratie weg moet (registrationsFor en removeRegistration).
   // Geeft undefined terug als er geen registratie is.
   lastRegistration(employeeId, productId) {
     const newestFirst = [...this.registrations].reverse();
@@ -244,10 +322,33 @@ export class RegistrationModel {
     });
   }
 
+  // Alle registraties van deze medewerker en dit product, met de nieuwste datum bovenaan (net als
+  // de tabel in het beheer). Bij dezelfde datum en tijd staat de laatst ingevoerde bovenaan.
+  // Dit is de keuzelijst van de correctie "−": de beheerder kiest daaruit welke registratie weg moet.
+  registrationsFor(employeeId, productId) {
+    return [...this.registrations]
+      .reverse()
+      .filter((item) => item.employeeId === employeeId && item.productId === productId)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }
+
+  // Zoekt een registratie op id. Geeft undefined terug als die niet (meer) bestaat.
+  findRegistration(registrationId) {
+    return this.registrations.find((item) => item.id === registrationId);
+  }
+
   // Verwijdert de laatst ingevoerde registratie van deze medewerker (en van dit product,
   // als dat is meegegeven; zie lastRegistration). Geeft false terug als er niets te verwijderen was.
   removeLastRegistration(employeeId, productId) {
     const registration = this.lastRegistration(employeeId, productId);
+    return registration ? this.removeRegistration(registration.id) : false;
+  }
+
+  // Verwijdert precies deze ene registratie (correctie "−", de beheerder heeft hem gekozen).
+  // Geeft false terug als de registratie niet (meer) bestaat, bijvoorbeeld omdat hij in een
+  // ander tabblad al is verwijderd.
+  removeRegistration(registrationId) {
+    const registration = this.findRegistration(registrationId);
     if (!registration) return false;
 
     this.state.registrations = this.registrations.filter((item) => item.id !== registration.id);
@@ -365,6 +466,22 @@ export class RegistrationModel {
     return this.employees.find((employee) => employee.id === employeeId);
   }
 
+  // Zoekt de medewerker bij wie dit pasnummer hoort (herkennen met de pas, zie BadgeReader).
+  // Het pasnummer moet al genormaliseerd zijn (BadgeReader.normalize). Een leeg pasnummer hoort
+  // bij niemand. Of de medewerker actief is, controleert de controller.
+  findEmployeeByBadge(badgeId) {
+    if (!badgeId) return undefined;
+    return this.employees.find((employee) => employee.badgeId === badgeId);
+  }
+
+  // Hoort dit pasnummer al bij een andere medewerker? De medewerker die nu wordt gewijzigd
+  // (`exceptEmployeeId`) telt niet mee: die mag zijn eigen pas houden. Een leeg pasnummer
+  // (geen pas) is nooit bezet.
+  isBadgeTaken(badgeId, exceptEmployeeId = null) {
+    const owner = this.findEmployeeByBadge(badgeId);
+    return Boolean(owner) && owner.id !== exceptEmployeeId;
+  }
+
   // Mag een medewerker aan dit bedrijf en dit consumptiepunt worden gekoppeld?
   //   - geen bedrijf (null of leeg) mag; een opgegeven bedrijf moet nog bestaan;
   //   - geen consumptiepunt mag; een opgegeven punt moet nog bestaan én bij dat bedrijf horen.
@@ -429,11 +546,15 @@ export class RegistrationModel {
   }
 
   // Zet een medewerker actief of inactief; historische registraties blijven behouden.
+  // Een opgeslagen gezichtsinstelling (demo) wordt daarbij gewist, in beide richtingen: na
+  // deactiveren mag niemand meer met dat gezicht worden herkend, en na opnieuw activeren stelt de
+  // medewerker het zelf opnieuw in (met toestemming), als hij dat wil.
   setEmployeeActive(employeeId, active) {
     this.state.employees = this.employees.map((employee) => {
       if (employee.id !== employeeId) return employee;
       return { ...employee, active };
     });
+    this.removeFaceEnrollment(employeeId);
   }
 
   // Heeft deze medewerker minstens één registratie (eigen keuze of correctie)?
@@ -455,6 +576,9 @@ export class RegistrationModel {
     if (!employee || employee.active || this.employeeHasRegistrations(employeeId)) return false;
 
     this.state.employees = this.employees.filter((employee) => employee.id !== employeeId);
+    // De gezichtsinstelling en het antwoord op de vraag (demo) horen bij deze medewerker en gaan mee weg.
+    this.removeFaceEnrollment(employeeId);
+    this.state.faceOffers = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
     return true;
   }
 
@@ -566,7 +690,7 @@ export class RegistrationModel {
 
   // Heeft een ander bedrijf dan `exceptCompanyId` al dit werkgevernummer? Een leeg nummer telt
   // niet: meerdere bedrijven mogen (nog) geen nummer hebben. Spaties voor en achter tellen niet mee.
-  // Wordt gebruikt door saveCompany (hieronder) en door het bedrijfsformulier in RegistrationApp.
+  // Wordt gebruikt door saveCompany (hieronder) en door het bedrijfsformulier in FormController.
   // Past bij de UNIQUE-regel op companies.employer_number in docs/DATABASE-SCHEMA.sql.
   isEmployerNumberTaken(employerNumber, exceptCompanyId = null) {
     const number = String(employerNumber ?? "").trim();
@@ -637,7 +761,7 @@ export class RegistrationModel {
       products: {}
     };
     for (const product of this.products) {
-      const oldEntry = existing?.products[product.id] || { stock: 0, minimum: 0 };
+      const oldEntry = this.pointProduct(existing, product.id) || { stock: 0, minimum: 0 };
       point.products[product.id] = { ...oldEntry, offered: offeredProductIds.includes(product.id) };
     }
 
@@ -650,12 +774,16 @@ export class RegistrationModel {
   }
 
   // Verwijdert een consumptiepunt alleen als er geen medewerkers meer aan gekoppeld zijn.
-  // Oude registraties blijven bewaard.
+  // Oude registraties en koelkastopeningen blijven bewaard. De indeling van de koelkast van dit punt
+  // verdwijnt mee.
   removePoint(pointId) {
     const hasEmployees = this.employees.some((employee) => employee.pointId === pointId);
     if (hasEmployees) return false;
 
     this.state.points = this.points.filter((point) => point.id !== pointId);
+    if (this.fridgeShelves.some((shelf) => shelf.pointId === pointId)) {
+      this.state.fridgeShelves = this.fridgeShelves.filter((shelf) => shelf.pointId !== pointId);
+    }
     return true;
   }
 
@@ -664,7 +792,16 @@ export class RegistrationModel {
     const point = this.findPoint(pointId);
     if (!point) return [];
 
-    return this.products.filter((product) => point.products[product.id]?.offered);
+    return this.products.filter((product) => this.pointProduct(point, product.id)?.offered);
+  }
+
+  // De voorraadregel van één product binnen een consumptiepunt, of undefined als die er niet is.
+  // De voorraadlijst is een object met de product-id als sleutel. Object.hasOwn zorgt dat alleen
+  // echte regels worden gevonden: een product-id als "toString" of "constructor" (bijvoorbeeld uit
+  // een aangepaste knop op de pagina) vindt dan niet per ongeluk een functie van het object zelf.
+  pointProduct(point, productId) {
+    if (!point?.products || !Object.hasOwn(point.products, productId)) return undefined;
+    return point.products[productId];
   }
 
   // De producten die een medewerker kan kiezen: het aanbod van het eigen consumptiepunt.
@@ -678,11 +815,13 @@ export class RegistrationModel {
 
   // Wijzigt de voorraadregel van één product op één punt zonder bestaande objecten aan te passen,
   // zodat snapshot/restore blijft werken. `change` krijgt een kopie en geeft de nieuwe regel terug.
+  // Bestaat de regel niet (zie pointProduct), dan verandert er niets.
   updateStockEntry(pointId, productId, change) {
     this.state.points = this.points.map((point) => {
-      if (point.id !== pointId || !point.products[productId]) return point;
+      const current = point.id === pointId ? this.pointProduct(point, productId) : undefined;
+      if (!current) return point;
 
-      const newEntry = change({ ...point.products[productId] });
+      const newEntry = change({ ...current });
       return {
         ...point,
         products: { ...point.products, [productId]: newEntry }
@@ -697,11 +836,11 @@ export class RegistrationModel {
 
   // De voorraadregel van één product op één punt, of undefined als die niet bestaat.
   stockEntry(pointId, productId) {
-    return this.findPoint(pointId)?.products[productId];
+    return this.pointProduct(this.findPoint(pointId), productId);
   }
 
   // Vervangt de voorraad door een getelde hoeveelheid en onthoudt wanneer er is geteld
-  // (`countedAt`). Zo weet removeLastRegistration of een registratie al in de telling zat.
+  // (`countedAt`). Zo weet removeRegistration of een registratie al in de telling zat.
   setStock(pointId, productId, stock) {
     const countedAt = new Date().toISOString();
     this.updateStockEntry(pointId, productId, (entry) => ({ ...entry, stock, countedAt }));
@@ -726,7 +865,7 @@ export class RegistrationModel {
 
     for (const point of this.points) {
       for (const product of this.offeredProducts(point.id)) {
-        const entry = point.products[product.id];
+        const entry = this.pointProduct(point, product.id);
         const status = this.stockStatus(entry);
 
         if (status !== "ok") alerts.push({ point, product, entry, status });
@@ -737,15 +876,229 @@ export class RegistrationModel {
   }
 
   // ------------------------------------------------------------------
+  // Slimme koelkast (demo)
+  // ------------------------------------------------------------------
+
+  // De indeling van de koelkast van een consumptiepunt: voor ieder schap (1 tot en met
+  // SMART_FRIDGE.shelfCount) { shelf, productId, unitWeight }. Heeft de beheerder voor dit punt nog
+  // niets ingesteld, dan geldt SMART_FRIDGE.defaultShelves uit config.js. Een product dat het punt
+  // niet (meer) aanbiedt of dat niet meer bestaat, telt als leeg schap (productId en unitWeight null):
+  // de koelkast mag geen product registreren dat de medewerker in het productvenster niet kan kiezen.
+  // Een onbekend consumptiepunt heeft geen koelkast (lege lijst).
+  fridgeLayout(pointId, settings = SMART_FRIDGE) {
+    const point = this.findPoint(pointId);
+    if (!point) return [];
+
+    const stored = this.fridgeShelves.filter((shelf) => shelf.pointId === pointId);
+    const source = stored.length > 0
+      ? stored
+      : settings.defaultShelves.map((shelf, index) => ({ shelf: index + 1, ...shelf }));
+
+    return Array.from({ length: settings.shelfCount }, (_, index) => {
+      const row = source.find((shelf) => shelf.shelf === index + 1);
+      const usable = Boolean(row?.productId) && Boolean(this.findProduct(row.productId)) &&
+        Boolean(this.pointProduct(point, row.productId)?.offered) && row.unitWeight > 0;
+      return {
+        shelf: index + 1,
+        productId: usable ? row.productId : null,
+        unitWeight: usable ? row.unitWeight : null
+      };
+    });
+  }
+
+  // Slaat de indeling van de koelkast van een consumptiepunt op (alleen de beheerder). `shelves` is
+  // een lijst met { shelf, productId, unitWeight }; productId null of "" is een leeg schap. Geeft false
+  // terug (en verandert niets) als het punt niet bestaat, een schapnummer niet klopt, een product niet
+  // door het punt wordt aangeboden of een gewicht geen heel getal van 1 tot en met
+  // SMART_FRIDGE.maxUnitWeight gram is. Anders true.
+  saveFridgeShelves(pointId, shelves, settings = SMART_FRIDGE) {
+    const point = this.findPoint(pointId);
+    if (!point || !Array.isArray(shelves)) return false;
+
+    const rows = [];
+    for (const { shelf, productId, unitWeight } of shelves) {
+      if (!Number.isInteger(shelf) || shelf < 1 || shelf > settings.shelfCount) return false;
+      if (rows.some((row) => row.shelf === shelf)) return false;
+      if (!productId) {
+        rows.push({ id: createId(), pointId, shelf, productId: null, unitWeight: null });
+        continue;
+      }
+      const offered = Boolean(this.findProduct(productId)) && Boolean(this.pointProduct(point, productId)?.offered);
+      const weightAllowed = Number.isInteger(unitWeight) && unitWeight >= 1 && unitWeight <= settings.maxUnitWeight;
+      if (!offered || !weightAllowed) return false;
+      rows.push({ id: createId(), pointId, shelf, productId, unitWeight });
+    }
+
+    this.state.fridgeShelves = [...this.fridgeShelves.filter((row) => row.pointId !== pointId), ...rows];
+    return true;
+  }
+
+  // Slaat het resultaat van een koelkastopening op (SmartFridge.finish) en registreert wat er is
+  // gepakt. Iedere gepakte stuk wordt een gewone registratie (addRegistration) met source "fridge" en
+  // de id van de opening, op het tijdstip waarop de deur dichtging. De voorraad gaat zo ook omlaag.
+  // Schappen met een markering zijn al niet meegeteld in `taken` (zie SmartFridge.takenProducts).
+  // Van de opening wordt alleen bewaard wat nodig is (TO bijlage B, AVG): wie, welk consumptiepunt,
+  // wanneer de deur open- en dichtging, per schap het gewicht voor en na, het berekende aantal en een
+  // eventuele markering, de status en of er een andere pas is gescand terwijl de deur open was
+  // (otherBadge, alleen als dat zo is). Geen beelden of andere gegevens.
+  // Geeft de opgeslagen opening terug, of false als de medewerker of de status niet klopt (dan
+  // verandert er niets en weigert persist de wijziging).
+  addFridgeOpening(result) {
+    if (!this.findEmployee(result?.employeeId) || !Object.hasOwn(FRIDGE_STATUS, result.status)) return false;
+
+    const closedAt = new Date(result.closedAt);
+    const opening = {
+      id: createId(),
+      employeeId: result.employeeId,
+      pointId: this.findPoint(result.pointId) ? result.pointId : null,
+      openedAt: new Date(result.openedAt).toISOString(),
+      closedAt: closedAt.toISOString(),
+      status: result.status,
+      longOpen: Boolean(result.longOpen),
+      shelves: result.shelves.map(({ shelf, productId, unitWeight, before, after, count, flag }) => ({
+        shelf, productId: productId ?? null, unitWeight: unitWeight ?? null, before, after, count, flag: flag ?? null
+      }))
+    };
+    // Scande een collega zijn pas terwijl de deur open was, dan wordt alleen dát onthouden (niet van wie).
+    if (result.otherBadge) opening.otherBadge = true;
+
+    for (const [productId, amount] of Object.entries(result.taken)) {
+      for (let count = 0; count < amount; count += 1) {
+        this.addRegistration(result.employeeId, productId, { createdAt: closedAt, source: "fridge", openingId: opening.id });
+      }
+    }
+
+    this.state.fridgeOpenings = [...this.fridgeOpenings, opening];
+    return opening;
+  }
+
+  // De laatste openingen van de koelkast, nieuwste bovenaan (voor het beheer).
+  recentFridgeOpenings(limit = SMART_FRIDGE.recentOpenings) {
+    return [...this.fridgeOpenings]
+      .sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt))
+      .slice(0, limit);
+  }
+
+  // Wat er bij een opening is gepakt, als { productId: aantal } (schappen met een markering tellen
+  // niet mee, zie SmartFridge.takenProducts).
+  fridgeOpeningTaken(opening) {
+    const taken = {};
+    for (const { productId, count, flag } of opening.shelves) {
+      if (!productId || flag || !(count > 0)) continue;
+      taken[productId] = (taken[productId] || 0) + count;
+    }
+    return taken;
+  }
+
+  // ------------------------------------------------------------------
+  // Demo gezichtsherkenning: opgeslagen kenmerken en het antwoord op de vraag
+  // ------------------------------------------------------------------
+  //
+  // Bewuste afwijking in de demo (vanaf versie 3.17, TO hoofdstuk 13 en bijlage B): de kenmerken
+  // van een gezicht (de descriptor, 128 getallen, geen foto) worden opgeslagen in de browser, zodat
+  // de instelling na herladen blijft werken en na FACE_DEMO.validityDays (een jaar) kan verlopen.
+  // Vóór 3.17 stonden ze alleen in het geheugen. Dat betekent voor de AVG: dit blijft een biometrisch
+  // gegeven (artikel 9) dat nu wel op de tablet wordt bewaard. Daarom staat het alleen in deze demo,
+  // alleen na toestemming van de medewerker zelf (vinkje), nooit in de CSV-export of het logboek, en
+  // wordt het gewist bij Uitzetten, bij verlopen, bij (de)activeren en verwijderen van de medewerker
+  // en bij Alle gegevens wissen. Voor productie blijft het advies de pas.
+
+  // De opgeslagen gezichtsinstelling van een medewerker, of undefined.
+  faceEnrollment(employeeId) {
+    return this.faceEnrollments.find((entry) => entry.employeeId === employeeId);
+  }
+
+  // Is deze gezichtsinstelling verlopen? Dat is zo als er `validityDays` dagen of meer zijn verstreken
+  // sinds `enrolledAt`. `now` is mee te geven, zodat dit met vaste datums te testen is.
+  isFaceEnrollmentExpired(entry, now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    return now.getTime() - Date.parse(entry.enrolledAt) >= validityDays * DAY_MS;
+  }
+
+  // Heeft deze medewerker een geldige gezichtsinstelling: hij is actief en de instelling is niet verlopen?
+  hasValidFaceEnrollment(employeeId, now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    const entry = this.faceEnrollment(employeeId);
+    return Boolean(entry) && Boolean(this.findEmployee(employeeId)?.active) && !this.isFaceEnrollmentExpired(entry, now, validityDays);
+  }
+
+  // De geldige gezichtsinstellingen (actieve medewerkers, niet verlopen). FaceController zet deze in
+  // het geheugen van FaceRecognitionDemo, dat er gezichten mee vergelijkt.
+  validFaceEnrollments(now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    return this.faceEnrollments.filter(({ employeeId }) => this.hasValidFaceEnrollment(employeeId, now, validityDays));
+  }
+
+  // Is dit een geldige descriptor: een lijst van precies FACE_DESCRIPTOR_LENGTH (128) eindige
+  // getallen tussen -MAX_DESCRIPTOR_VALUE en MAX_DESCRIPTOR_VALUE? Een Float32Array uit face-api telt ook.
+  isValidDescriptor(descriptor) {
+    if (!descriptor || typeof descriptor.length !== "number" || descriptor.length !== FACE_DESCRIPTOR_LENGTH) return false;
+    return Array.from(descriptor).every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE);
+  }
+
+  // Het antwoord van een medewerker op de vraag na een passcan: "declined" (Nee), "expired" (de
+  // instelling is verlopen en gewist) of null (nog nooit gevraagd, of daarna zelf ingesteld).
+  faceOfferAnswer(employeeId) {
+    return this.faceOffers.find((offer) => offer.employeeId === employeeId)?.answer ?? null;
+  }
+
+  // Zet het antwoord van een medewerker (vervangt een eerder antwoord).
+  setFaceOfferAnswer(employeeId, answer, answeredAt = new Date()) {
+    const others = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
+    this.state.faceOffers = [...others, { id: createId(), employeeId, answer, answeredAt: answeredAt.toISOString() }];
+  }
+
+  // Slaat de gezichtsinstelling van een (actieve) medewerker op, met de datum van vandaag. Een oude
+  // instelling wordt vervangen en een eerder "Nee" of "verlopen" vervalt (de medewerker heeft het nu
+  // zelf ingesteld). Alleen de getallen worden bewaard, als gewone lijst. Geeft false terug (en
+  // verandert niets) als de medewerker niet bestaat of niet actief is, of als de descriptor niet klopt.
+  saveFaceEnrollment(employeeId, descriptor, enrolledAt = new Date()) {
+    if (!this.findEmployee(employeeId)?.active || !this.isValidDescriptor(descriptor)) return false;
+
+    const entry = { id: createId(), employeeId, descriptor: Array.from(descriptor), enrolledAt: enrolledAt.toISOString() };
+    this.state.faceEnrollments = [...this.faceEnrollments.filter((item) => item.employeeId !== employeeId), entry];
+    this.state.faceOffers = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
+    return true;
+  }
+
+  // Wist de gezichtsinstelling van een medewerker (Uitzetten, (de)activeren, verwijderen). Bestaat die
+  // niet, dan verandert er niets (en is dat geen fout).
+  removeFaceEnrollment(employeeId) {
+    if (!this.faceEnrollment(employeeId)) return;
+    this.state.faceEnrollments = this.faceEnrollments.filter((entry) => entry.employeeId !== employeeId);
+  }
+
+  // Knop "Nee" bij de vraag: wordt onthouden, zodat de vraag niet meer komt. De medewerker kan het
+  // later zelf instellen via "Gezichtsherkenning instellen (demo)" in het productvenster.
+  declineFaceOffer(employeeId, answeredAt = new Date()) {
+    if (!this.findEmployee(employeeId)) return false;
+    this.setFaceOfferAnswer(employeeId, "declined", answeredAt);
+    return true;
+  }
+
+  // Wist alle verlopen gezichtsinstellingen (FACE_DEMO.validityDays) en onthoudt per medewerker dat
+  // zijn instelling is verlopen, zodat de vraag bij de volgende passcan "Je gezichtsherkenning is
+  // verlopen. Opnieuw instellen?" is. Geeft de id's van de medewerkers terug (leeg als er niets verliep).
+  expireFaceEnrollments(now = new Date(), validityDays = FACE_DEMO.validityDays) {
+    const expired = this.faceEnrollments.filter((entry) => this.isFaceEnrollmentExpired(entry, now, validityDays));
+    for (const { employeeId } of expired) {
+      this.removeFaceEnrollment(employeeId);
+      this.setFaceOfferAnswer(employeeId, "expired", now);
+    }
+    return expired.map(({ employeeId }) => employeeId);
+  }
+
+  // ------------------------------------------------------------------
   // Logboek
   // ------------------------------------------------------------------
 
   // Bewaart een controleerbaar logboek van wijzigingen door de beheerder.
+  // De omschrijving is hooguit MAX_AUDIT_DETAILS tekens (gelijk aan MAX_AUDIT_TEXT in DataStore.js).
+  // Een langere omschrijving (bijvoorbeeld een lange naam met drie gewijzigde nummers) wordt ingekort
+  // met "…", anders zou DataStore de regel bij het volgende laden als beschadigd overslaan.
   logAdminAction(action, details) {
+    const text = String(details ?? "");
     const entry = {
       id: createId(),
       action,
-      details,
+      details: text.length > MAX_AUDIT_DETAILS ? `${text.slice(0, MAX_AUDIT_DETAILS - 1)}…` : text,
       createdAt: new Date().toISOString()
     };
 

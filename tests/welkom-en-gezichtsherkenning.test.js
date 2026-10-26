@@ -8,7 +8,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { createModel, registration } from "./helpers.js";
 
-// Nep-view die alles negeert (zie ook view-app.test.js).
+// Nep-view die alles negeert (zie ook view-en-controller.test.js).
 const createFakeView = () => new Proxy({ toasts: [], $: () => ({ classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, focus() {}, setAttribute() {} }) }, {
   get: (object, property) => (property in object ? object[property] : () => {})
 });
@@ -54,12 +54,113 @@ test("'Zelfde als vorige keer' zet de keuze klaar, maar registreert nog niets", 
   const { model } = createModel();
   model.state.registrations = [registration("1", "employee-1", "blikje", "2026-09-02T12:00:00")];
   const app = new RegistrationApp(model, createFakeView(), undefined, createDemo());
-  app.openEmployeeProducts("employee-1");
+  app.openEmployeeProducts("employee-1", { recognizedBy: "badge" });
 
   app.repeatLastSelection();
 
   assert.deepEqual(app.selectedProducts, { blikje: 1 });
   assert.equal(model.registrations.length, 1);
+});
+
+test("'Zelfde als vorige keer' doet niets als de medewerker op naam is gekozen", () => {
+  const { model } = createModel();
+  model.state.registrations = [registration("1", "employee-1", "blikje", "2026-09-02T12:00:00")];
+  const app = new RegistrationApp(model, createFakeView(), undefined, createDemo());
+  app.openEmployeeProducts("employee-1");
+
+  app.repeatLastSelection();
+
+  assert.deepEqual(app.selectedProducts, {});
+});
+
+// Privacy: "welkom terug" en de keuze van de vorige keer alleen na herkenning met pas of camera.
+// Iedereen kan op de naam van een collega tikken; dan mag niet zichtbaar worden of die collega
+// al eens iets registreerde en wat hij de vorige keer nam.
+
+// Nep-pagina voor renderEmployeeProducts: per selector altijd hetzelfde nep-element.
+const createWindowView = (model) => {
+  const view = new RegistrationView(model);
+  const elements = new Map();
+  view.$ = (selector) => {
+    if (!elements.has(selector)) {
+      const classes = new Set();
+      const attributes = {};
+      elements.set(selector, {
+        textContent: "",
+        innerHTML: "",
+        attributes,
+        setAttribute: (name, value) => { attributes[name] = String(value); },
+        removeAttribute: (name) => { delete attributes[name]; },
+        getAttribute: (name) => attributes[name] ?? null,
+        classList: {
+          add: (name) => classes.add(name),
+          remove: (name) => classes.delete(name),
+          toggle: (name, force) => ((force ?? !classes.has(name)) ? classes.add(name) : classes.delete(name)),
+          contains: (name) => classes.has(name)
+        }
+      });
+    }
+    return elements.get(selector);
+  };
+  return view;
+};
+
+test("op naam gekozen: geen 'welkom terug' en geen keuze van de vorige keer", () => {
+  const { model } = createModel();
+  model.addRegistration("employee-1", "blikje");
+  model.addRegistration("employee-1", "ei");
+  const view = createWindowView(model);
+
+  view.renderEmployeeProducts("employee-1");
+
+  assert.equal(view.$("#employeeWelcome").textContent.includes("welkom terug"), false);
+  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test."));
+  assert.equal(view.$("#employeeSuggestion").classList.contains("hidden"), true);
+  assert.equal(view.$("#employeeSuggestion").innerHTML, "");
+});
+
+test("herkend met de pas: 'welkom terug' en de keuze van de vorige keer", () => {
+  const { model } = createModel();
+  model.addRegistration("employee-1", "blikje");
+  model.addRegistration("employee-1", "ei");
+  const view = createWindowView(model);
+
+  view.renderEmployeeProducts("employee-1", {}, { recognizedByBadge: true });
+
+  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test, welkom terug. Je bent herkend met je pas."));
+  assert.equal(view.$("#employeeSuggestion").classList.contains("hidden"), false);
+  assert.match(view.$("#employeeSuggestion").innerHTML, /Vorige keer koos je 1× Blikje en 1× Ei\./);
+  assert.match(view.$("#employeeSuggestion").innerHTML, /data-repeat-last/);
+});
+
+test("herkend met de camera: 'welkom terug' en de keuze van de vorige keer", () => {
+  const { model } = createModel();
+  model.addRegistration("employee-1", "blikje");
+  const view = createWindowView(model);
+
+  view.renderEmployeeProducts("employee-1", {}, { recognized: true });
+
+  assert.ok(view.$("#employeeWelcome").textContent.endsWith("Test, welkom terug. Je bent herkend met de camera."));
+  assert.equal(view.$("#employeeSuggestion").classList.contains("hidden"), false);
+});
+
+test("de controller geeft door hoe de medewerker is herkend (op naam, pas of camera)", () => {
+  const { model } = createModel();
+  const calls = [];
+  const view = new Proxy({ $: () => null, renderEmployeeProducts: (...args) => calls.push(args[2]) }, {
+    get: (object, property) => (property in object ? object[property] : () => {})
+  });
+  const app = new RegistrationApp(model, view, undefined, createDemo());
+
+  app.openEmployeeProducts("employee-1");
+  app.openEmployeeProducts("employee-1", { recognizedBy: "badge" });
+  app.openEmployeeProducts("employee-1", { recognized: true });
+
+  assert.deepEqual(calls.map(({ recognized, recognizedByBadge }) => [recognized, recognizedByBadge]), [
+    [false, false],
+    [false, true],
+    [true, false]
+  ]);
 });
 
 // Welkom

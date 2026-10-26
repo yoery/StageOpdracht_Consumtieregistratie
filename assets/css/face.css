@@ -1,0 +1,103 @@
+﻿/* Demo gezichtsherkenning: instellen in het productvenster, het cameravenster met het ovale kader,
+   de toestemming, de korte scan na het standby-scherm en de vraag na een passcan.
+   Laadt na directory-tools.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+.face-enroll {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:13px
+}
+/* De link staat op een eigen regel en krijgt een aanraakvlak van 44 pixels hoog. */
+.face-enroll .text-link {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:44px
+}
+.face-enrolled {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--green-dark);
+  font-weight:600
+}
+/* Het cameravenster: het beeld gespiegeld (zoals een spiegel) met een ovaal kader voor het gezicht. */
+.face-modal {
+  max-width:560px
+}
+.face-frame {
+  position:relative;
+  margin-top:18px;
+  aspect-ratio:4 / 3;
+  border-radius:14px;
+  overflow:hidden;
+  background:var(--hero-start)
+}
+.face-frame video {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scaleX(-1)
+}
+.face-guide {
+  position:absolute;
+  inset:12% 28%;
+  border:3px dashed rgba(255,255,255,.85);
+  border-radius:50%;
+  box-shadow:0 0 0 999px rgba(16,47,53,.35);
+  pointer-events:none
+}
+.face-status {
+  min-height:22px;
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:14px
+}
+.face-status[data-tone="error"] {
+  color:var(--error-text);
+  font-weight:600
+}
+.modal .face-consent {
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin:12px 0 0;
+  font-weight:500;
+  font-size:13px;
+  line-height:1.5;
+  cursor:pointer
+}
+.modal .face-consent input {
+  flex:none;
+  width:18px;
+  min-width:0;
+  height:18px;
+  margin-top:2px;
+  padding:0;
+  accent-color:var(--green)
+}
+.face-privacy {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:14px 0 0;
+  color:var(--muted);
+  font-size:12px
+}
+/* De korte scan na een tik op het standby-scherm (tik om te scannen): hetzelfde cameravenster, iets
+   smaller, zodat het niet opdringerig is. De knop heet hier "Stoppen". */
+.face-modal.is-wake {
+  max-width:460px
+}
+/* De vraag na een passcan: "Gezichtsherkenning nog niet ingesteld. Wil je dit?" met Nee en Ja, instellen. */
+.face-offer-modal {
+  max-width:540px
+}
+.face-offer-modal h2 {
+  padding-right:36px
+}
+.face-offer-actions button {
+  min-height:44px
+}

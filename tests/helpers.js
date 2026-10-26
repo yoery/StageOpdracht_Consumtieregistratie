@@ -1,6 +1,14 @@
 // Gedeelde hulpfuncties voor de unit tests.
+import fs from "node:fs";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { DataStore } from "../assets/js/DataStore.js";
+import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
+import { SMART_FRIDGE } from "../assets/js/config.js";
+
+// Een slimme koelkast die uit staat. Vanaf versie 3.17 opent herkennen met de pas of de camera de
+// koelkast (RECOGNITION_TARGET "fridge"). Tests die over het productvenster na herkenning gaan, geven
+// deze koelkast mee: zonder koelkast opent het productvenster, zoals vóór 3.17.
+export const disabledFridge = () => SmartFridge.createSimulated({ ...SMART_FRIDGE, enabled: false });
 
 // Nep-opslag die alles in het geheugen bewaart. Met `failSave` mislukt opslaan.
 export const createStore = (state = null, { failSave = false } = {}) => ({
@@ -150,6 +158,30 @@ export const createStrictView = (selectors = []) => {
   view.$ = (selector) => elements.get(selector) ?? null;
   return view;
 };
+
+// Zet de beheerder op ingelogd en geeft de controller terug. Beheeracties (formulieren,
+// correcties, voorraad, export) doen niets zonder ingelogde beheerder (RegistrationApp.requireAdmin).
+// De meeste controllertests gaan over zo'n beheeractie; daarom maken hun createApp-functies de
+// controller met deze hulpfunctie. Tests over inloggen zelf zetten adminLoggedIn weer op false.
+export const asAdmin = (app) => {
+  app.adminLoggedIn = true;
+  return app;
+};
+
+// De stylesheets in de volgorde waarin index.html ze laadt (de <link rel="stylesheet">-regels).
+// Sinds versie 3.20 is de opmaak verdeeld over losse bestanden in assets/css/. De volgorde is de
+// cascade: een latere regel wint van een eerdere met dezelfde sterkte.
+export const cssFiles = () => {
+  const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  return [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((match) => match[1]);
+};
+
+// Alle CSS achter elkaar, in de laadvolgorde van index.html. Zo controleren de tests dezelfde regels
+// als toen alles nog in één bestand (styles.css) stond. Het BOM-teken aan het begin van ieder bestand
+// valt weg.
+export const readAllCss = () => cssFiles()
+  .map((file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8").replace(/^﻿/, ""))
+  .join("");
 
 // Een registratie met een vaste datum (lokale tijd), voor tests met maanden.
 export const registration = (id, employeeId, productId, createdAt) => ({

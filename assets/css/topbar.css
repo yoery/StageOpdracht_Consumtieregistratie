@@ -1,0 +1,144 @@
+﻿/* Bovenbalk: merk (TVB-logo en naam), de thema-schakelaar (slider en de keuzes Systeem en
+   Auto, zie ThemeManager), de statusmelding en de knop "Admin login".
+   Laadt na base.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Navigatiebalk met merkidentiteit en admin-ingang. */
+.topbar {
+  height:76px;
+  padding:0 max(var(--gutter),calc((100% - var(--page-width)) / 2 + var(--gutter)));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--paper);
+  border-bottom:1px solid var(--line)
+}
+.brand {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  color:var(--ink);
+  text-decoration:none
+}
+.brand-mark {
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  background:var(--green);
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font:bold 12px "Space Grotesk"
+}
+.brand strong {
+  display:block;
+  font:600 15px "Space Grotesk"
+}
+.brand small {
+  color:var(--muted);
+  font-size:11px
+}
+.topbar-actions,.avatar-button {
+  display:flex;
+  align-items:center;
+  gap:12px
+}
+/* Thema-schakelaar in de bovenbalk: slider licht/donker en de keuzes Systeem en Auto. */
+.theme-control {
+  display:flex;
+  align-items:center;
+  gap:8px
+}
+.theme-switch {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:44px;
+  padding:0 6px;
+  background:none;
+  color:var(--muted);
+  font-size:14px
+}
+.theme-switch-track {
+  position:relative;
+  width:40px;
+  height:22px;
+  border-radius:999px;
+  background:var(--line);
+  transition:background .2s
+}
+.theme-switch-knob {
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transition:transform .2s
+}
+.theme-switch[aria-checked="true"] .theme-switch-track {
+  background:var(--green)
+}
+.theme-switch[aria-checked="true"] .theme-switch-knob {
+  transform:translateX(18px)
+}
+.theme-switch:focus-visible,.theme-modes button:focus-visible {
+  outline:2px solid var(--green);
+  outline-offset:2px;
+  border-radius:999px
+}
+.theme-modes {
+  display:flex;
+  border:1px solid var(--line);
+  border-radius:999px;
+  overflow:hidden
+}
+.theme-modes button {
+  min-height:44px;
+  padding:0 12px;
+  background:var(--paper);
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600
+}
+.theme-modes button[aria-pressed="true"] {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.status-pill {
+  color:var(--green-dark);
+  font-size:12px;
+  font-weight:600
+}
+.status-pill i {
+  display:inline-block;
+  width:7px;
+  height:7px;
+  background:#36c985;
+  border-radius:50%;
+  margin-right:5px
+}
+/* Knop "Admin login": minstens 44 pixels hoog, groot genoeg om met een vinger te raken. */
+.avatar-button {
+  min-height:44px;
+  min-width:44px;
+  justify-content:center;
+  background:none;
+  color:var(--ink);
+  font-size:13px
+}
+.avatar {
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:var(--blue-soft);
+  color:var(--blue);
+  font-weight:700
+}
+.chevron {
+  font-size:18px;
+  color:var(--muted)
+}

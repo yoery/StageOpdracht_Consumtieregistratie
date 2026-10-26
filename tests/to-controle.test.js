@@ -21,21 +21,22 @@ import fs from "node:fs";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { RegistrationView } from "../assets/js/RegistrationView.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import {
-  createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee
+  createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee, asAdmin, readAllCss
 } from "./helpers.js";
 
 // Console-waarschuwingen van DataStore horen bij deze tests; ze maken de uitvoer alleen onrustig.
 console.warn = () => {};
 
-// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB) en een nep-view.
+// Controller met het testmodel (employee-1 op Hoofdkantoor van TVB), een nep-view en een
+// ingelogde beheerder.
 const createApp = ({ storeOptions, view = createRecordingView() } = {}) => {
   globalThis.document = { activeElement: null, querySelectorAll: () => [] };
   const { model, point } = createModel(storeOptions);
   const faceDemo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  return { app: new RegistrationApp(model, view, undefined, faceDemo), model, view, point };
+  return { app: asAdmin(new RegistrationApp(model, view, undefined, faceDemo)), model, view, point };
 };
 
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
@@ -147,7 +148,7 @@ test("punt 3: correctie '+' voor een verwijderde medewerker geeft de gewone 'bes
   assert.equal(app.addCorrection("weg", "blikje"), false);
 
   assert.equal(model.registrations.length, 0);
-  assert.deepEqual(view.toasts, [{ message: "Deze medewerker bestaat niet meer; er is niets opgeslagen.", tone: "error" }]);
+  assert.deepEqual(view.toasts, [{ message: "Deze medewerker bestaat niet meer. Er is niets opgeslagen.", tone: "error" }]);
 });
 
 // ------------------------------------------------------------------
@@ -509,7 +510,7 @@ test("punt 10: bij wijzigen is 'Opslaan' de enige en dus primaire knop", () => {
 });
 
 test("punt 10: op een smal scherm krijgen de filters de hele breedte en kunnen ze krimpen", () => {
-  const css = fs.readFileSync(new URL("../assets/css/styles.css", import.meta.url), "utf8");
+  const css = readAllCss();
   const mobile = css.slice(css.indexOf("@media(max-width:720px)"));
 
   assert.match(mobile, /\.filter-row label \{\s*flex:1 1 100%;\s*min-width:0\s*\}/);
@@ -655,7 +656,7 @@ test("punt 11 (FR-29): de publieke medewerkerlijst toont geen bedragen en geen p
   assert.equal(html.includes("€"), false); // geen bedrag
   assert.equal(html.includes("&euro;"), false);
   assert.doesNotMatch(visibleText, /\d/); // geen aantal (4 registraties) en geen totaalbedrag (€ 2,45)
-  assert.match(html, /<div class="employee-total">Klik om een product te kiezen<\/div>/);
+  assert.match(html, /<div class="employee-total">Tik om te kiezen<\/div>/);
 });
 
 // ------------------------------------------------------------------

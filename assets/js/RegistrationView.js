@@ -1,5 +1,6 @@
 import { STOCK_STATUS } from "./RegistrationModel.js";
 import { icon } from "./icons.js";
+import { FridgeView } from "./FridgeView.js";
 
 // Maakt een waarde veilig om tussen aanhalingstekens in een CSS-selector te zetten, zoals
 // `[data-stock-status="${cssAttributeValue(id)}"]`. Zonder deze stap breekt een id met een " of \
@@ -26,13 +27,48 @@ export function cssAttributeValue(value) {
  *   - index.html: de view vult de elementen met een id, zoals #employeeList en #stockTableBody.
  *   - RegistrationApp: bepaalt wanneer er opnieuw getekend moet worden en roept dan de
  *     render-methodes aan. De view weet zelf niets van de controller.
+ *   - FridgeView: tekent het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo). Deze
+ *     view maakt FridgeView en geeft de methodes daarvan door (renderFridgeWindow en verder).
  */
 export class RegistrationView {
+  // De waarschuwing in het productvenster vlak voordat het vanzelf sluit (zie showIdleWarning).
+  static IDLE_WARNING_TEXT = "Venster sluit zo. Tik om door te gaan.";
+
+  // Hoe lang (in milliseconden) een meldingsregio eerst leeg zichtbaar is voordat de tekst erin komt
+  // (zie showToast).
+  static TOAST_TEXT_DELAY_MS = 60;
+
   // De view ontvangt het model om gegevens te kunnen tonen.
   // `$` is een korte schrijfwijze om één element op de pagina te zoeken.
   constructor(model) {
     this.model = model;
     this.$ = (selector) => document.querySelector(selector);
+    // Het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo) staan in een eigen class.
+    this.fridge = new FridgeView(this);
+  }
+
+  // ------------------------------------------------------------------
+  // Slimme koelkast (demo): doorgegeven aan FridgeView
+  // ------------------------------------------------------------------
+
+  renderFridgeWindow(state) {
+    this.fridge.renderFridgeWindow(state);
+  }
+
+  setFridgeStatus(text, tone) {
+    this.fridge.setFridgeStatus(text, tone);
+  }
+
+  announceFridge(text) {
+    this.fridge.announceFridge(text);
+  }
+
+  setDoorWarning(shown, name) {
+    this.fridge.setDoorWarning(shown, name);
+  }
+
+  renderFridgeAdmin() {
+    this.fridge.renderFridgeAdmin();
   }
 
   // Escapet tekst voordat die in innerHTML wordt geplaatst. Dit geldt voor namen, maar ook
@@ -166,6 +202,14 @@ export class RegistrationView {
 
     this.$("#employeeCount").textContent = `${employees.length} totaal`;
     this.$("#emptyState").classList.toggle("hidden", employees.length > 0);
+    // "Tik op je naam" staat één keer boven de lijst, en alleen als er namen in de lijst staan.
+    this.$("#employeeListHint")?.classList.toggle("hidden", employees.length === 0);
+    // Een schermlezer hoort na het zoeken of filteren alleen het aantal, bijvoorbeeld
+    // "3 medewerkers gevonden", en niet de hele lijst. Daarom heeft #employeeList geen aria-live
+    // meer, maar is er een vaste, onzichtbare statusregel (#employeeResultsStatus in index.html).
+    // Verandert het aantal niet, dan blijft de tekst gelijk en wordt er niets voorgelezen.
+    const status = this.$("#employeeResultsStatus");
+    if (status) status.textContent = this.employeeResultsText(employees.length);
 
     const groups = employees.reduce((grouped, employee) => {
       const key = this.companyGroupKey(employee.companyId);
@@ -196,7 +240,7 @@ export class RegistrationView {
                 </span>
                 <div>
                   <div class="employee-name">${this.escapeHtml(employee.name)}</div>
-                  <div class="employee-total">Klik om een product te kiezen</div>
+                  <div class="employee-total">Tik om te kiezen</div>
                 </div>
               </div>
             </div>`
@@ -204,6 +248,22 @@ export class RegistrationView {
         </section>`
       )
       .join("");
+  }
+
+  // De tekst voor schermlezers na zoeken of filteren: "Geen medewerker gevonden",
+  // "1 medewerker gevonden" of "3 medewerkers gevonden" (zie employeeCountText).
+  employeeResultsText(count) {
+    return count === 0 ? "Geen medewerker gevonden" : `${this.employeeCountText(count)} gevonden`;
+  }
+
+  // Zet de medewerkerslijst weer bovenaan in beeld (na registreren of na het automatisch sluiten
+  // van het productvenster, zie EmployeeController.resetEmployeeSearch). Alleen als de bovenkant van
+  // de medewerkerskaart boven het scherm is weggescrold. Staat de kaart al in beeld, dan blijft de
+  // pagina staan. Zonder animatie: de pagina springt direct naar de juiste plek.
+  scrollEmployeeListToTop() {
+    const card = this.$(".directory-card");
+    if (!card?.getBoundingClientRect) return;
+    if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start" });
   }
 
   // Vult de bedrijfsfilter met de bedrijven waar actieve medewerkers aan gekoppeld zijn.
@@ -231,12 +291,14 @@ export class RegistrationView {
       filter.value = selectedValue === "all" ? "" : this.model.companyName(selectedValue === "unknown" ? null : selectedValue);
     }
 
+    // Iedere keuze is een optie in de keuzelijst (role="option"); de gekozen optie heeft
+    // aria-selected="true", zodat een schermlezer weet welk bedrijf er is gekozen.
+    const option = (value, label) =>
+      `<button type="button" role="option" aria-selected="${value === selectedValue}" data-company-value="${this.escapeHtml(value)}">${this.escapeHtml(label)}</button>`;
     this.$("#companyFilterOptions").innerHTML = [
-      `<button type="button" data-company-value="all">Alle bedrijven</button>`,
-      ...companies.map(({ id, name }) =>
-        `<button type="button" data-company-value="${this.escapeHtml(id)}">${this.escapeHtml(name)}</button>`
-      ),
-      hasUnknown ? `<button type="button" data-company-value="unknown">Onbekend bedrijf</button>` : ""
+      option("all", "Alle bedrijven"),
+      ...companies.map(({ id, name }) => option(id, name)),
+      hasUnknown ? option("unknown", "Onbekend bedrijf") : ""
     ].join("");
   }
 
@@ -247,7 +309,8 @@ export class RegistrationView {
     this.$("#monthTotal").textContent = this.model.countForMonth(now);
   }
 
-  // Rendert de gefilterde registratietabel in het admin-dashboard.
+  // Rendert de gefilterde registratietabel in het admin-dashboard. Een registratie die de slimme
+  // koelkast (demo) automatisch heeft gemaakt, krijgt het label "Koelkast" achter de productnaam.
   renderAdmin() {
     const monthFilter = this.$("#filterMonth").value;
     const employeeFilter = this.$("#filterEmployee").value;
@@ -267,7 +330,7 @@ export class RegistrationView {
         return `
           <tr>
             <td>${employee ? this.escapeHtml(employee.name) : "Verwijderd"}</td>
-            <td>${this.escapeHtml(this.model.productName(registration.productId))}</td>
+            <td>${this.escapeHtml(this.model.productName(registration.productId))}${registration.source === "fridge" ? ` <span class="badge-linked">Koelkast</span>` : ""}</td>
             <td>+1</td>
             <td>${this.formatDate(registration.createdAt)}</td>
           </tr>`;
@@ -310,7 +373,8 @@ export class RegistrationView {
                         data-correction-minus="${this.escapeHtml(employee.id)}"
                         data-correction-product="${this.escapeHtml(id)}"
                         title="${this.escapeHtml(name)} verminderen"
-                        aria-label="${this.escapeHtml(name)} verminderen">${icon("minus")}</button>
+                        aria-label="${this.escapeHtml(name)} verminderen"
+                        aria-haspopup="dialog">${icon("minus")}</button>
 
                 <strong class="correction-amount">${count}</strong>
 
@@ -338,6 +402,35 @@ export class RegistrationView {
           </details>`;
       }).join("") ||
       this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm." });
+  }
+
+  // Vult het venster "Registratie verwijderen" (correctie "−"). Per registratie van dit product
+  // bij deze medewerker staan de datum en tijd, het product en het aantal, met een eigen knop
+  // "Verwijderen". De nieuwste datum staat bovenaan, net als in de tabel. Een registratie die de
+  // beheerder zelf met "+" heeft toegevoegd, is te herkennen aan "toegevoegd door beheerder".
+  renderRemoveRegistrationList(employeeId, productId) {
+    const productName = this.model.productName(productId);
+    const employeeName = this.model.findEmployee(employeeId)?.name || "Verwijderd";
+
+    this.$("#removeRegistrationHelp").textContent =
+      `${productName} van ${employeeName}. Kies welke registratie weg moet. De nieuwste staat bovenaan.`;
+
+    this.$("#removeRegistrationList").innerHTML = this.model.registrationsFor(employeeId, productId)
+      .map((registration) => {
+        const when = this.formatDate(registration.createdAt);
+        const addedByAdmin = registration.correction ? " · toegevoegd door beheerder" : "";
+
+        return `
+          <li class="remove-registration-item">
+            <span class="remove-registration-info">
+              <strong>${this.escapeHtml(when)}</strong>
+              <span>${this.escapeHtml(productName)} · aantal 1${addedByAdmin}</span>
+            </span>
+            <button type="button" class="secondary-button danger-action"
+                    data-remove-registration="${this.escapeHtml(registration.id)}"
+                    aria-label="${this.escapeHtml(`${productName} van ${when} verwijderen`)}">Verwijderen</button>
+          </li>`;
+      }).join("");
   }
 
   // Telt de registraties per medewerker en product. Geeft een Map terug met als sleutel
@@ -408,6 +501,8 @@ export class RegistrationView {
   // Rendert de medewerkerslijst in het beheertabblad, met knoppen om te wijzigen,
   // (de)activeren en verwijderen. Verwijderen kan alleen bij inactieve medewerkers zonder
   // registraties; registraties zijn nodig voor de loonadministratie, dus dan is deactiveren genoeg.
+  // Medewerkers met een gekoppelde pas krijgen het label "Pas gekoppeld". Het pasnummer zelf
+  // staat niet in de lijst; dat is alleen in het formulier "Wijzigen" te zien.
   renderAdminEmployees() {
     const query = this.$("#employeeManagementSearch").value.toLowerCase().trim();
 
@@ -419,7 +514,7 @@ export class RegistrationView {
       employees.map((employee) =>
         `<div class="admin-employee-item">
           <span>
-            <strong>${this.escapeHtml(employee.name)}</strong>
+            <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}</strong>
             <small>
               ${employee.active ? "Actief" : "Inactief"} ·
               ${this.escapeHtml(this.model.companyName(employee.companyId))} ·
@@ -471,6 +566,10 @@ export class RegistrationView {
   // Opent het productvenster van een medewerker. `selectedProducts` komt van de controller
   // en bevat per product-id hoe vaak het al is gekozen, bijvoorbeeld { blikje: 2 }.
   // `face` beschrijft de demo gezichtsherkenning: { available, enrolled, recognized }.
+  // `face.recognizedByBadge` is true als de medewerker net met de pas is herkend (BadgeReader);
+  // de begroeting krijgt dan "Je bent herkend met je pas." op dezelfde plek als bij de camera.
+  // Zonder herkenning (naam aangeklikt) zijn beide false: dan geen "welkom terug" en geen
+  // keuze van de vorige keer.
   renderEmployeeProducts(employeeId, selectedProducts = {}, face = {}) {
     const employee = this.model.findEmployee(employeeId);
     if (!employee) return;
@@ -479,13 +578,21 @@ export class RegistrationView {
       `Product kiezen voor ${employee.name}`;
 
     // Persoonlijke begroeting, bijvoorbeeld "Goedemiddag Lotte, welkom terug."
-    const lastSelection = this.model.lastSelection(employeeId);
-    const returning = this.model.hasOwnRegistration(employeeId);
+    // "Welkom terug" en de keuze van de vorige keer verschijnen alleen als de medewerker is
+    // herkend met de pas of de camera. Iedereen kan op de tablet op de naam van een collega
+    // tikken; zonder deze regel zou je dan zien of die collega al eens iets heeft geregistreerd
+    // en wat hij de vorige keer nam (privacy, zie TO hoofdstuk 13). Bij kiezen op naam staat er
+    // daarom alleen een gewone begroeting.
+    const recognized = Boolean(face.recognized || face.recognizedByBadge);
+    const lastSelection = recognized ? this.model.lastSelection(employeeId) : {};
+    const returning = recognized && this.model.hasOwnRegistration(employeeId);
     let welcome = `${this.greeting(new Date())} ${employee.firstName || employee.name}${returning ? ", welkom terug." : "."}`;
     if (face.recognized) welcome += " Je bent herkend met de camera.";
+    else if (face.recognizedByBadge) welcome += " Je bent herkend met je pas.";
     this.$("#employeeWelcome").textContent = welcome;
 
-    // Aanbeveling op basis van de vorige keer, met één knop om dezelfde keuze te maken.
+    // Aanbeveling op basis van de vorige keer, met één knop om dezelfde keuze te maken
+    // (alleen na herkenning met de pas of de camera, zie hierboven).
     const suggestion = this.$("#employeeSuggestion");
     const hasSuggestion = Object.keys(lastSelection).length > 0;
     suggestion.classList.toggle("hidden", !hasSuggestion);
@@ -514,14 +621,39 @@ export class RegistrationView {
     const totalSelected = Object.values(selectedProducts).reduce((sum, amount) => sum + amount, 0);
     registerButton.textContent = totalSelected > 0 ? `Registreren (${totalSelected})` : "Registreren";
 
+    // Zonder keuze is de knop uitgeschakeld met aria-disabled (niet met disabled): zo blijft hij met
+    // Tab bereikbaar en leest een schermlezer de uitleg "Kies eerst een product met +" voor (de regel
+    // #registerHint, gekoppeld met aria-describedby). Een tik op de knop benadrukt die regel
+    // (zie emphasizeRegisterHint). Is er een keuze, dan verdwijnen de regel en de koppeling.
+    const hasChoice = totalSelected > 0;
+    registerButton.setAttribute("aria-disabled", String(!hasChoice));
+    if (hasChoice) registerButton.removeAttribute?.("aria-describedby");
+    else registerButton.setAttribute("aria-describedby", "registerHint");
+    const hint = this.$("#registerHint");
+    hint?.classList.toggle("hidden", hasChoice || products.length === 0);
+    hint?.classList.remove("register-hint-emphasis");
+
+    // Zonder producten op het consumptiepunt valt er niets te kiezen en niets te registreren. Dan
+    // vervalt alles wat over kiezen en registreren gaat: de uitleg "Tik op + ...", de knopbalk
+    // (klasse is-empty: geen lijn en geen lege strook, zie product-window.css) en de regel over de inhouding
+    // op het loon. Zo staat alleen de melding "Geen producten op jouw consumptiepunt." in het venster,
+    // zonder dubbele scheidingslijnen eronder. De waarschuwing vlak voor het automatisch sluiten
+    // staat in de knopbalk en blijft daardoor wel zichtbaar.
+    const noProducts = products.length === 0;
+    this.$("#employeeProductsHelp")?.classList.toggle("hidden", noProducts);
+    this.$("#employeeProductsActions")?.classList.toggle("is-empty", noProducts);
+    this.$("#employeePrivacyNote")?.classList.toggle("hidden", noProducts);
+
     // Per product: naam en prijs, en een teller met − en + (de − kan niet onder 0).
+    // Een product met een keuze (aantal 1 of meer) krijgt een lichtgroene achtergrond en een groene
+    // rand (klasse is-selected), zodat in één oogopslag te zien is wat er is gekozen.
     this.$("#employeeProductList").innerHTML = products.length === 0
       ? this.emptyState({ iconName: "location", title: "Geen producten op jouw consumptiepunt.", text: "Neem contact op met de beheerder als dit niet klopt." })
       : products.map(({ id, name, price }) => {
         const selectedAmount = selectedProducts[id] || 0;
 
         return `
-          <div class="personal-product-item">
+          <div class="personal-product-item${selectedAmount > 0 ? " is-selected" : ""}">
             <span>
               <strong>${this.escapeHtml(name)}</strong>
               <small>€ ${price.toFixed(2).replace(".", ",")}</small>
@@ -535,7 +667,7 @@ export class RegistrationView {
               ${icon("minus")}
             </button>
 
-            <strong class="personal-product-amount" aria-live="polite">
+            <strong class="personal-product-amount">
               ${selectedAmount}
             </strong>
 
@@ -549,6 +681,56 @@ export class RegistrationView {
       }).join("");
 
     this.$("#employeeProductsModal").classList.remove("hidden");
+  }
+
+  // Zet een korte tekst in de vaste live region van het productvenster (#productLiveStatus),
+  // bijvoorbeeld "Blikje: 2" na een klik op "+". Een schermlezer leest die tekst voor. De live
+  // region staat vast in index.html en wordt niet opnieuw getekend: een live region die steeds
+  // via innerHTML opnieuw wordt gemaakt, leest een schermlezer vaak niet (of dubbel) voor.
+  announce(text) {
+    const status = this.$("#productLiveStatus");
+    if (status) status.textContent = text;
+  }
+
+  // Tik op "Registreren" zonder gekozen product (zie EmployeeController.registerSelectedProducts):
+  // de regel "Kies eerst een product met +" bij de knop wordt vet en rood (bestaande foutkleur),
+  // zonder animatie. Een schermlezer leest de regel voor via de live region van het productvenster.
+  emphasizeRegisterHint() {
+    const hint = this.$("#registerHint");
+    if (!hint) return;
+    hint.classList.remove("hidden");
+    hint.classList.add("register-hint-emphasis");
+    this.announce(hint.textContent);
+  }
+
+  // Toont of verbergt in het productvenster de regel "Venster sluit zo. Tik om door te gaan."
+  // (zie EmployeeController.closeProductWindowIfIdle). #productIdleWarning is een vaste statusregel
+  // (role="status") die altijd op de pagina staat. Is hij leeg, dan neemt hij geen ruimte in (zie
+  // .idle-warning:empty in product-window.css). Omdat alleen de tekst verandert, leest een schermlezer de
+  // waarschuwing voor zodra die verschijnt.
+  showIdleWarning(shown) {
+    const warning = this.$("#productIdleWarning");
+    if (warning) warning.textContent = shown ? RegistrationView.IDLE_WARNING_TEXT : "";
+  }
+
+  // Standby (StandbyController): toont of verbergt het gedimde scherm "Tik op het scherm om te
+  // beginnen" met daaronder `hint` (wat er na de tik gebeurt). In standby is de pagina eronder
+  // `inert`: niet te bereiken met Tab of een schermlezer, zodat alleen het standby-scherm de focus kan
+  // krijgen. Die focus gaat naar het standby-scherm zelf (een knop), zodat Enter of spatie ook wakker maakt.
+  showStandby(shown, { hint = "" } = {}) {
+    const overlay = this.$("#standbyOverlay");
+    if (!overlay) return;
+    const hintElement = this.$("#standbyHint");
+    if (hintElement && shown) hintElement.textContent = hint;
+    overlay.classList.toggle("hidden", !shown);
+    const page = this.$(".app-shell");
+    if (shown) {
+      page?.setAttribute("inert", "");
+      overlay.focus?.({ preventScroll: true });
+    } else {
+      page?.removeAttribute?.("inert");
+      if (globalThis.document?.activeElement === overlay) overlay.blur?.();
+    }
   }
 
   // Vult de keuzelijsten bedrijf en consumptiepunt in het medewerkersformulier.
@@ -650,7 +832,7 @@ export class RegistrationView {
 
     this.$("#pointProductList").innerHTML = this.model.products.map(({ id, name }) =>
       `<label class="offer-item">
-        <input type="checkbox" name="offeredProduct" value="${this.escapeHtml(id)}" ${point?.products[id]?.offered ? "checked" : ""}>
+        <input type="checkbox" name="offeredProduct" value="${this.escapeHtml(id)}" ${this.model.pointProduct(point, id)?.offered ? "checked" : ""}>
         <span>${this.escapeHtml(name)}</span>
       </label>`
     ).join("");
@@ -706,7 +888,7 @@ export class RegistrationView {
       : products.length === 0
         ? this.emptyTableRow(5, { iconName: "package", title: "Dit consumptiepunt biedt nog geen producten aan.", text: "Zet producten aan via Bedrijven en dan Aanbod wijzigen.", action: this.goToTabButton("companies", "Naar Bedrijven") })
         : products.map(({ id, name }) => {
-          const entry = point.products[id];
+          const entry = this.model.pointProduct(point, id);
           const status = this.model.stockStatus(entry);
 
           return `<tr>
@@ -728,7 +910,7 @@ export class RegistrationView {
   // Werkt alleen het statuslabel van één product in de voorraadtabel bij (na het aanpassen van
   // voorraad of minimum), zodat de invoervelden en de focus blijven staan.
   updateStockStatus(pointId, productId) {
-    const entry = this.model.findPoint(pointId)?.products[productId];
+    const entry = this.model.stockEntry(pointId, productId);
     // De product-id wordt met cssAttributeValue veilig gemaakt voor de selector.
     const badge = document.querySelector(`[data-stock-status="${cssAttributeValue(productId)}"]`);
     if (!entry || !badge) return;
@@ -802,20 +984,52 @@ export class RegistrationView {
   // Toont een korte melding onderaan het scherm.
   //   tone: "success" (met vinkje), "error" (met waarschuwingsteken en rode rand) of "info";
   //   duration: hoe lang de melding zichtbaar blijft, in milliseconden (standaard 2,5 seconde).
+  // Er zijn twee vaste meldingsregio's in index.html die altijd op de pagina blijven: #toast
+  // (role="status", voor gewone meldingen) en #toastAlert (role="alert", voor foutmeldingen). Een
+  // schermlezer leest een live region alleen voor als die al bestond voordat de tekst veranderde.
+  // Daarom wordt de regio eerst leeg zichtbaar gemaakt en komt de tekst er pas daarna in (na
+  // TOAST_TEXT_DELAY_MS). Zolang de regio leeg is, is hij doorzichtig (.toast:empty in toast.css),
+  // dus op het scherm ziet de melding er hetzelfde uit als vroeger. Er staat steeds maar één
+  // melding in beeld: de andere regio wordt verborgen.
   showToast(message, { tone = "info", duration = 2500 } = {}) {
-    const toast = this.$("#toast");
+    const toast = this.$(tone === "error" ? "#toastAlert" : "#toast");
+    const other = this.$(tone === "error" ? "#toast" : "#toastAlert");
     const toneIcons = { success: "check", error: "alert" };
 
-    toast.innerHTML = `${toneIcons[tone] ? icon(toneIcons[tone]) : ""}<span></span>`;
-    toast.querySelector("span").textContent = message;
-    // Klassen opnieuw zetten; offsetWidth lezen zorgt dat de in-animatie opnieuw start.
-    toast.className = `toast toast-${tone}`;
-    void toast.offsetWidth;
-    toast.classList.add("show");
-    toast.setAttribute("role", tone === "error" ? "alert" : "status");
-
-    // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
+    clearTimeout(this.toastTextTimer);
+    if (other) {
+      other.classList.add("hidden");
+      other.textContent = "";
+    }
+
+    // Stap 1: de regio leeg zichtbaar maken.
+    toast.textContent = "";
+    toast.className = `toast toast-${tone}`;
+
+    // Stap 2: daarna de tekst erin zetten. offsetWidth lezen zorgt dat de in-animatie opnieuw start.
+    this.toastTextTimer = setTimeout(() => {
+      toast.innerHTML = `${toneIcons[tone] ? icon(toneIcons[tone]) : ""}<span></span>`;
+      toast.querySelector("span").textContent = message;
+      void toast.offsetWidth;
+      toast.classList.add("show");
+
+      // Een nieuwe melding start de timer opnieuw, zodat die niet te vroeg verdwijnt.
+      this.toastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
+    }, RegistrationView.TOAST_TEXT_DELAY_MS);
+  }
+
+  // Verbergt een melding die nog in beeld is. Wordt gebruikt als een productvenster opengaat: de
+  // melding van de vorige gebruiker (bijvoorbeeld "… geregistreerd") staat dan niet over de knop
+  // Registreren van de volgende gebruiker.
+  hideToast() {
+    clearTimeout(this.toastTimer);
+    clearTimeout(this.toastTextTimer);
+    for (const selector of ["#toast", "#toastAlert"]) {
+      const toast = this.$(selector);
+      if (!toast) continue;
+      toast.classList.add("hidden");
+      toast.textContent = "";
+    }
   }
 }

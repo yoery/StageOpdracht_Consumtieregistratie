@@ -1,0 +1,172 @@
+﻿/* Basis: de lettertypes (DM Sans en Space Grotesk uit assets/fonts/), de kleurvariabelen
+   voor het lichte en het donkere thema (:root en :root[data-theme="dark"], gezet door ThemeManager),
+   de algemene reset en de pagina-opbouw (.app-shell). Alle andere stylesheets gebruiken deze variabelen.
+   Laadt als eerste.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Lettertypes (DM Sans en Space Grotesk) staan zelf in assets/fonts/ in plaats van bij Google Fonts.
+   Zo stuurt de browser geen IP-adres van medewerkers naar Google (AVG) en werken de letters ook offline.
+   Het zijn variabele lettertypes: één bestand per tekenset bevat alle gewichten (DM Sans 400–700,
+   Space Grotesk 500–700). "latin" dekt gewone tekst, "latin-ext" tekens als ł, ş en ő in namen.
+   Licentie: SIL Open Font License 1.1, zie assets/fonts/LICENSE.txt. */
+/* latin-ext */
+@font-face {
+  font-family:"DM Sans";
+  font-style:normal;
+  font-weight:400 700;
+  font-display:swap;
+  src:url("../fonts/dm-sans-latin-ext.woff2") format("woff2");
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family:"DM Sans";
+  font-style:normal;
+  font-weight:400 700;
+  font-display:swap;
+  src:url("../fonts/dm-sans-latin.woff2") format("woff2");
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family:"Space Grotesk";
+  font-style:normal;
+  font-weight:500 700;
+  font-display:swap;
+  src:url("../fonts/space-grotesk-latin-ext.woff2") format("woff2");
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family:"Space Grotesk";
+  font-style:normal;
+  font-weight:500 700;
+  font-display:swap;
+  src:url("../fonts/space-grotesk-latin.woff2") format("woff2");
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Centrale kleuren, letterstijlen en schaduwen die de rest van de website hergebruikt. */
+/* Licht thema (standaard). Alle kleuren van de website komen uit deze variabelen,
+   zodat het donkere thema hieronder alleen de variabelen hoeft te vervangen. */
+:root {
+  /* Paginabreedte en zijmarge: gedeeld door bovenbalk, inhoud en footer, zodat alles gelijk uitlijnt. */
+  --page-width:1120px;
+  --gutter:28px;
+  color-scheme:light;
+  --ink:#163540;
+  /* Uitleg- en bijschrifttekst. Dezelfde grijsgroene tint als eerst (#71858a), iets donkerder
+     gemaakt zodat hij op alle lichte achtergronden de WCAG-norm haalt (minimaal 4,5:1):
+     5,5:1 op wit en 4,6:1 op de lichtste gekleurde vlakken (--error-bg, --mint). */
+  --muted:#5a6c71;
+  --green:#159a72;
+  --green-dark:#087252;
+  --mint:#e8f5ee;
+  --mint-border:#d7ede1;
+  --blue:#176b8b;
+  --blue-soft:#e8f2f6;
+  --line:#e2e9e8;
+  --paper:#fff;
+  --paper-soft:#f8fbfa;
+  --bg:#f7faf9;
+  --hover-bg:#fbfefc;
+  --hover-border:#cce8db;
+  --danger:#c44949;
+  --error-bg:#fbe7e7;
+  --error-text:#b23b3b;
+  --warning-bg:#fdf1e7;
+  --warning-soft:#fdf6ef;
+  --warning-border:#f0cfb3;
+  --warning-text:#a55a16;
+  --overlay:rgba(16,47,53,.48);
+  --toast-bg:#163540;
+  --toast-text:#fff;
+  --hero-start:#144d5b;
+  --hero-end:#176a80;
+  --shadow:0 18px 45px rgba(29,68,67,.08);
+  --toast-success:#70d9ad;
+  --toast-error:#f29a9a;
+  --modal-shadow:0 25px 70px rgba(16,47,53,.22);
+  /* Achtergrond van knoppen met witte tekst als je eroverheen gaat of er met Tab op staat. */
+  --primary-hover:var(--green-dark);
+  --plus-hover:var(--blue);
+  /* Standby: de donkere huiskleur van de hero (--hero-start) bijna dekkend, zodat het scherm donker wordt. */
+  --standby-bg:rgba(20,77,91,.94)
+}
+/* Donker thema. Wordt gebruikt als <html data-theme="dark"> is gezet (door ThemeManager).
+   De achtergrond wordt donker en de tekst krijgt de groene huiskleur, iets lichter
+   gemaakt zodat hij goed leesbaar blijft op de donkere achtergrond. */
+:root[data-theme="dark"] {
+  color-scheme:dark;
+  --ink:#1fbf8c;
+  --muted:#8fb3a8;
+  --green:#159a72;
+  --green-dark:#2fd29b;
+  --mint:#173a30;
+  --mint-border:#22503f;
+  --blue:#6cc0de;
+  --blue-soft:#17343f;
+  --line:#24403f;
+  --paper:#142628;
+  --paper-soft:#1a3033;
+  --bg:#0d1a1c;
+  --hover-bg:#183231;
+  --hover-border:#2a5a4a;
+  --danger:#f08a8a;
+  --error-bg:#3d1f1f;
+  --error-text:#f29a9a;
+  --warning-bg:#3a2a17;
+  --warning-soft:#2c2116;
+  --warning-border:#6b4a24;
+  --warning-text:#f0b36b;
+  --overlay:rgba(0,0,0,.6);
+  --toast-bg:#d6f5e8;
+  --toast-text:#0d1a1c;
+  --hero-start:#0f3640;
+  --hero-end:#12505f;
+  --shadow:0 18px 45px rgba(0,0,0,.35);
+  --toast-success:#087252;
+  --toast-error:#b23b3b;
+  --modal-shadow:0 25px 70px rgba(0,0,0,.55);
+  /* --green-dark en --blue zijn hier licht; witte tekst daarop is slecht leesbaar. Daarom de
+     donkergroene en donkere blauwgroene huiskleur, zodat de witte tekst goed leesbaar blijft. */
+  --primary-hover:#087252;
+  --plus-hover:#12505f;
+  /* Standby in het donkere thema: de achtergrondkleur (--bg) bijna dekkend. */
+  --standby-bg:rgba(13,26,28,.94)
+}
+/* Algemene reset en basisopmaak voor tekst, knoppen en invoervelden. */
+* {
+  box-sizing:border-box
+}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:15px "DM Sans",sans-serif;
+  transition:background-color .2s,color .2s
+}
+button,input,select {
+  font:inherit
+}
+/* Placeholdertekst in het donkere thema, zoals "Alle bedrijven" in het bedrijfsfilter en
+   "Zoek op voor- of achternaam...". De browser tekent die standaard grijs (#757575), ook in het
+   donkere thema. Op de donkere velden (--paper) is dat maar 3,4:1, te weinig voor gewone tekst
+   (WCAG: minimaal 4,5:1). --muted haalt daar 6,9:1. In het lichte thema blijft de grijze kleur
+   van de browser staan (4,6:1). opacity:1, omdat Firefox placeholders anders half doorzichtig maakt. */
+:root[data-theme="dark"] ::placeholder {
+  color:var(--muted);
+  opacity:1
+}
+button {
+  cursor:pointer;
+  border:0
+}
+/* De pagina is altijd minstens schermhoog, met de footer onderaan. Staat er weinig op het
+   scherm (bijv. op een staande tablet), dan groeit de inhoud mee in plaats van dat er onder
+   de footer een leeg vlak ontstaat. 100dvh houdt rekening met de adresbalk op tablets. */
+.app-shell {
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column
+}

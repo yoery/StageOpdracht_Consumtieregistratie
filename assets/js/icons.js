@@ -4,7 +4,7 @@
  * Eerder waren de iconen teksttekens (zoals een vinkje of een pijltje). Die zien er per
  * apparaat en lettertype anders uit. Deze SVG-iconen zijn overal gelijk en scherp.
  * Alle iconen zijn getekend op een raster van 24 x 24 met dezelfde lijndikte (zie .icon in
- * styles.css) en nemen de tekstkleur over, dus ze werken in het lichte en donkere thema.
+ * assets/css/icons.css) en nemen de tekstkleur over, dus ze werken in het lichte en donkere thema.
  *
  * Dit bestand bevat alleen tekeningen en één hulpfunctie, daarom is het geen class.
  *
@@ -36,6 +36,8 @@ const ICON_PATHS = {
   location: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   faceScan: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 10v.5M15 10v.5M9.5 15a3.5 3.5 0 0 0 5 0"/>',
   lock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  unlock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>',
+  fridge: '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/>',
   repeat: '<path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5"/>'
 };
 

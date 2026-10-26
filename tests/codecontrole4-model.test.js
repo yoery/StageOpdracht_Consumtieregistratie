@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createId } from "../assets/js/ids.js";
-import { CsvExport } from "../assets/js/csvExport.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { createModel, createDataStore, registration } from "./helpers.js";

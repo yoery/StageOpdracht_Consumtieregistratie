@@ -25,10 +25,12 @@ jobs:
           # Bewaar het GitHub-token niet in de map; de tests hebben het niet nodig.
           persist-credentials: false
 
+      # Node.js 24 is een LTS-versie die nog wordt onderhouden. Node.js 20 kreeg op 30 april 2026
+      # zijn laatste update (end-of-life). Houd dit gelijk aan "engines" in package.json.
       - name: Node.js instellen
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Controleer Node versie
         run: |
@@ -37,3 +39,53 @@ jobs:
 
       - name: Unit tests uitvoeren
         run: npm test
+
+  # Browsertests (end-to-end): de echte pagina in headless Google Chrome, aangestuurd via het
+  # Chrome DevTools Protocol (zie tests/e2e/browser.js). Er worden geen npm-pakketten geïnstalleerd;
+  # Chrome staat al op de runner (ubuntu-latest). Deze job start pas als de unit tests geslaagd zijn.
+  e2e:
+    needs: test
+    # Vast op Ubuntu 24.04. Vanaf 19 oktober 2026 schuift ubuntu-latest geleidelijk door naar
+    # Ubuntu 26. Sinds 21 oktober faalden de browsertests daar ook bij een commit die alleen het TO
+    # veranderde, terwijl dezelfde code een kwartier eerder nog slaagde. Weer ubuntu-latest gebruiken
+    # zodra duidelijk is wat er op Ubuntu 26 anders is (Chrome-versie, sandbox of lettertypes).
+    runs-on: ubuntu-24.04
+    # Ruim genomen: op een drukke runner duren de browsertests veel langer dan op een laptop.
+    timeout-minutes: 15
+    env:
+      # Vast pad naar de browser die op de runner staat.
+      BROWSER_PATH: /usr/bin/google-chrome
+      # De tests zetten de tijdzone van de browser zelf op Europe/Amsterdam. Node krijgt dezelfde
+      # tijdzone, zodat de uitkomst niet afhangt van de tijdzone van de runner (UTC).
+      TZ: Europe/Amsterdam
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Node.js instellen
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Controleer Node- en Chrome-versie
+        run: |
+          node -v
+          "$BROWSER_PATH" --version
+
+      - name: Browsertests uitvoeren
+        run: npm run test:e2e
+
+      # Mislukt een browsertest, dan maakt tests/e2e/browser.js per scenario een schermafdruk in
+      # test-results/e2e. Die map wordt alleen bij een fout als artifact bewaard (7 dagen), te
+      # downloaden onder "Artifacts" op de pagina van de run. De foutuitvoer van de tests zelf noemt
+      # het scenario, de toestand van de pagina en de laatste meldingen uit de console.
+      - name: Schermafdrukken bewaren bij een fout
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-schermafdrukken
+          path: test-results/e2e/
+          if-no-files-found: ignore
+          retention-days: 7
