@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1085" viewBox="0 0 2000 1085" role="img" aria-labelledby="title desc">
   <title id="title">Architectuur van de demo</title>
-  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp met ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController, FormController en FridgeController), model (RegistrationModel, CsvExport, FaceRecognitionDemo, BadgeReader, SmartFridge), opslag (DataStore) en localStorage, met de camera, de pasjeslezer en de nagebootste slimme koelkast. main.js maakt alle objecten aan en koppelt ze.</desc>
+  <desc id="desc">Lagen van de demo: pagina, view (RegistrationView, ThemeManager), controller (RegistrationApp met ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController, FormController, FridgeController, RecognitionController, StandbyController en AutoScanController), model (RegistrationModel, CsvExport, FaceRecognitionDemo, BadgeReader, SmartFridge), opslag (DataStore) en localStorage, met de camera, de pasjeslezer en de nagebootste slimme koelkast. main.js maakt alle objecten aan en koppelt ze.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -59,10 +59,10 @@
 <text x="1005" y="364" text-anchor="middle" font-size="13.5">licht, donker, auto of systeem,</text>
 <text x="1005" y="383" text-anchor="middle" font-size="13.5">staat los en bewaart de keuze (tvb-theme)</text>
 <rect x="230" y="454" width="1430" height="100" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
-<text x="945" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller) met elf onderdelen</text>
+<text x="945" y="484" text-anchor="middle" font-size="17" class="kop">RegistrationApp (controller) met twaalf onderdelen</text>
 <text x="945" y="506" text-anchor="middle" font-size="13.5">verwerkt klikken, toetsen en formulieren en slaat op met persist(): wijziging en logboekregel samen, anders allebei terugdraaien.</text>
 <text x="945" y="525" text-anchor="middle" font-size="13.5">onderdelen: ModalManager, EmployeeController, BadgeController, FaceController, AdminController, CorrectionController, StockController,</text>
-<text x="945" y="544" text-anchor="middle" font-size="13.5">FormController, FridgeController, RecognitionController (na herkennen: koelkast of productvenster) en StandbyController (standby, tik om te scannen)</text>
+<text x="945" y="544" text-anchor="middle" font-size="13.5">FormController, FridgeController, RecognitionController (na herkennen: koelkast of productvenster), StandbyController (startscherm) en AutoScanController (camera op het startscherm)</text>
 <rect x="230" y="596" width="330" height="108" rx="12" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8" class="box"/>
 <text x="395" y="626" text-anchor="middle" font-size="17" class="kop">RegistrationModel</text>
 <text x="395" y="648" text-anchor="middle" font-size="13.5">registraties, medewerkers, producten,</text>
@@ -103,7 +103,7 @@
 <text x="760" y="956" text-anchor="middle" font-size="13.5">loonadministratie</text>
 <rect x="920" y="862" width="230" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>
 <text x="1035" y="896" text-anchor="middle" font-size="16" class="kop">Camera + face-api</text>
-<text x="1035" y="918" text-anchor="middle" font-size="13.5">alleen na een tik aan,</text>
+<text x="1035" y="918" text-anchor="middle" font-size="13.5">alleen op het startscherm,</text>
 <text x="1035" y="937" text-anchor="middle" font-size="13.5">modellen uit het project,</text>
 <text x="1035" y="956" text-anchor="middle" font-size="13.5">geen beeld bewaard</text>
 <rect x="1450" y="862" width="210" height="126" rx="12" fill="#e8f2f6" stroke="#176b8b" stroke-width="1.8" class="box"/>

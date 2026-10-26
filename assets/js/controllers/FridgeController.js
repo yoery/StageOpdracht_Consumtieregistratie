@@ -50,6 +50,7 @@ import { SmartFridge } from "../fridge/SmartFridge.js";
  *   - RegistrationView (met FridgeView): tekent het venster en het tabblad Koelkast;
  *   - AdminController (via RegistrationApp): requireAdmin, showMissing en finishAdminChange;
  *   - ModalManager (via RegistrationApp): opent en sluit het venster en zet de focus terug;
+ *   - StandbyController (via RegistrationApp): na het sluiten van het venster komt het startscherm terug;
  *   - config.js: SMART_FRIDGE (de tijden en grenzen).
  */
 export class FridgeController {
@@ -213,7 +214,9 @@ export class FridgeController {
 
   // Sluit het venster en vergeet de opening. Knop "Klaar", Escape, en vanzelf na een tijd zonder
   // invoer (checkFridgeTimers). Is er toch nog een opening bezig, dan wordt die afgebroken.
-  finishFridgeWindow() {
+  // Daarna komt het startscherm terug, zodat de volgende persoon daar begint (StandbyController). Met
+  // `toStartScreen: false` niet: bij de knop naar het productvenster en als alle gegevens zijn gewist.
+  finishFridgeWindow({ toStartScreen = true } = {}) {
     if (this.fridgePhase === "closed") return;
     if (this.smartFridge?.isOpen()) this.smartFridge.abort();
 
@@ -229,12 +232,13 @@ export class FridgeController {
     this.setFridgeDoorWarning(false);
     this.view.setFridgeStatus("");
     this.app.closeModal("#fridgeModal");
+    if (toStartScreen) this.app.returnToStartScreen?.();
   }
 
   // Alle gegevens zijn gewist (in een ander tabblad): een opening die bezig is, wordt afgebroken
   // zonder te registreren en het venster gaat dicht.
   abortFridge() {
-    this.finishFridgeWindow();
+    this.finishFridgeWindow({ toStartScreen: false });
   }
 
   // ------------------------------------------------------------------
@@ -314,8 +318,8 @@ export class FridgeController {
     if (this.fridgePhase !== "open" || this.handText()) return false;
     const employeeId = this.fridgeEmployeeId;
     const how = this.fridgeRecognizedBy;
-    this.closeFridgeDoor({ cancel: true });
-    this.finishFridgeWindow();
+    this.closeFridgeDoor({ cancel: true, toStartScreen: false });
+    this.finishFridgeWindow({ toStartScreen: false });
     this.app.openEmployeeProducts(employeeId, { recognizedBy: how });
     return true;
   }
@@ -480,14 +484,14 @@ export class FridgeController {
   // Met `cancel` (Escape of de sluitknop) en niets gepakt gaat het venster meteen dicht, met een korte
   // melding. De opening wordt ook dan opgeslagen: de deur is open geweest.
   // Lukt opslaan niet, dan draait persist alles terug en staat er "Er is niets geregistreerd".
-  closeFridgeDoor({ cancel = false } = {}) {
+  closeFridgeDoor({ cancel = false, toStartScreen = true } = {}) {
     if (this.fridgePhase !== "open") return false;
 
     const result = this.smartFridge.finish();
     this.fridgeHeld = {};
     this.setFridgeDoorWarning(false);
     if (!result) {
-      this.finishFridgeWindow();
+      this.finishFridgeWindow({ toStartScreen });
       return false;
     }
 
@@ -499,7 +503,7 @@ export class FridgeController {
     this.noteFridgeActivity();
 
     if (cancel && saved && result.status === "nothing") {
-      this.finishFridgeWindow();
+      this.finishFridgeWindow({ toStartScreen });
       this.view.showToast(FridgeController.MESSAGES.nothingTaken, { duration: 4000 });
       return true;
     }

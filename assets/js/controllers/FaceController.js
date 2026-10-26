@@ -1,7 +1,8 @@
 /**
  * FaceController — het cameravenster van de demo gezichtsherkenning: herkennen met "Herken mij",
- * de korte scan na een tik op het standby-scherm (tik om te scannen) en een gezicht instellen of
- * uitzetten.
+ * de korte scan na een tik op het ovaal van het startscherm (tik om te scannen, FACE_DEMO.scanMode
+ * "tap") en een gezicht instellen of uitzetten. Het automatisch scannen op het startscherm (scanMode
+ * "auto") staat in AutoScanController.
  *
  * Verantwoordelijkheid:
  *   - het cameravenster openen en sluiten, met de juiste teksten en de focus;
@@ -14,9 +15,9 @@
  *   - de opgeslagen gezichten in het geheugen van FaceRecognitionDemo zetten (loadSavedFaces) en
  *     verlopen gezichtsinstellingen wissen (expireFaces).
  *
- * De camera gaat alleen aan na een bewuste handeling van de medewerker: de knop "Herken mij", de
- * link "Gezichtsherkenning instellen", "Ja, instellen" bij de vraag na een passcan, of een tik op
- * het standby-scherm (startWakeScan). Nooit vanzelf.
+ * In dit venster gaat de camera alleen aan na een bewuste handeling van de medewerker: de knop
+ * "Herken mij", de link "Gezichtsherkenning instellen", "Ja, instellen" bij de vraag na een passcan, of
+ * een tik op het ovaal van het startscherm (startWakeScan). Nooit vanzelf.
  *
  * Verbonden met:
  *   - FaceRecognitionDemo: laadt face-api, bedient de camera en vergelijkt gezichten;
@@ -140,7 +141,7 @@ export class FaceController {
     this.openFaceModal("recognize");
   }
 
-  // Tik om te scannen: na een tik op het standby-scherm (StandbyController.wakeFromStandby) start een
+  // Tik om te scannen: na een tik op het ovaal van het startscherm (StandbyController.handleStandbyTap) start een
   // korte scan, maar alleen als de demo aan staat, de tablet misschien een camera heeft en minstens één
   // actieve medewerker een geldige gezichtsinstelling heeft. Anders gebeurt er niets en staat de
   // beginpagina klaar (naam kiezen of pas). Geeft true terug als de scan start.
@@ -387,6 +388,8 @@ export class FaceController {
       if (this.enrollContinuation) {
         this.closeFaceModal({ continueFlow: false });
         this.view.showToast("De tijd is om en de camera is uitgezet. Er is niets ingesteld.", { tone: "error", duration: 5000 });
+        // De medewerker is waarschijnlijk weggelopen: de volgende persoon begint op het startscherm.
+        this.app.returnToStartScreen?.();
         return;
       }
       this.setFaceStatus("De tijd is om en de camera is uitgezet. Sluit dit venster en probeer het opnieuw.", "error");

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1960" height="4380" viewBox="0 0 1960 4380" role="img" aria-labelledby="title desc">
   <title id="title">Klassendiagram JavaScript</title>
-  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de elf onderdelen van de controller (ModalManager, EmployeeController, AdminController, FaceController, BadgeController, CorrectionController, StockController, FormController, FridgeController, RecognitionController en StandbyController), FridgeView, de slimme koelkast (SmartFridge met de interfaces FridgeLock en ShelfScale en de nagebootste SimulatedLock en SimulatedShelfScale) en de modules main.js, config.js, ids.js en icons.js.</desc>
+  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de twaalf onderdelen van de controller (ModalManager, EmployeeController, AdminController, FaceController, BadgeController, CorrectionController, StockController, FormController, FridgeController, RecognitionController, StandbyController voor het startscherm en AutoScanController voor het automatisch scannen), FaceIntent (de intentie-drempel), FridgeView, de slimme koelkast (SmartFridge met de interfaces FridgeLock en ShelfScale en de nagebootste SimulatedLock en SimulatedShelfScale) en de modules main.js, config.js, ids.js en icons.js.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -105,7 +105,7 @@
 <text x="952" y="654" font-size="13">+ forms: FormController</text>
 <text x="952" y="673" font-size="13">+ fridge: FridgeController</text>
 <text x="952" y="692" font-size="13">+ recognition: RecognitionController</text>
-<text x="952" y="711" font-size="13">+ standby: StandbyController</text>
+<text x="952" y="711" font-size="13">+ standby: StandbyController, autoScan: AutoScanController</text>
 <path d="M940,724 L1420,724" fill="none" stroke="#159a72" stroke-width="1.2"/>
 <text x="952" y="744" font-size="13">+ constructor(model, view, …, clock)</text>
 <text x="952" y="763" font-size="13">+ initialize()</text>
@@ -137,12 +137,12 @@
 <text x="1532" y="497" font-size="13">+ detectCamera(): Promise</text>
 <text x="1532" y="516" font-size="13">+ hasCameraDevice(): boolean</text>
 <text x="1532" y="535" font-size="13">+ load(): Promise</text>
-<text x="1532" y="554" font-size="13">+ startCamera(video, isCurrent): Promise</text>
+<text x="1532" y="554" font-size="13">+ startCamera(video, isCurrent, size)</text>
 <text x="1532" y="573" font-size="13">+ stopCamera(video)</text>
-<text x="1532" y="592" font-size="13">+ readFace(video): Promise</text>
+<text x="1532" y="592" font-size="13">+ readFace(video), detectFaces(video)</text>
 <text x="1532" y="611" font-size="13">+ enroll(employeeId, descriptor)</text>
 <text x="1532" y="630" font-size="13">+ loadFaces(entries)</text>
-<text x="1532" y="649" font-size="13">+ forget(employeeId)</text>
+<text x="1532" y="649" font-size="13">+ describeFace(video, face): Promise</text>
 <text x="1532" y="668" font-size="13">+ isEnrolled(employeeId): boolean</text>
 <text x="1532" y="687" font-size="13">+ findMatch(descriptor, allowedIds)</text>
 <text x="1532" y="706" font-size="13">+ confirm(employeeId, required): boolean</text>
@@ -475,7 +475,7 @@
 <g>
 <rect x="515" y="2987" width="455" height="393" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M521,2987 H964 A6,6 0 0 1 970,2993 V3029 H515 V2993 A6,6 0 0 1 521,2987 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
-<text x="742.5" y="3015" text-anchor="middle" font-size="17" class="kop">StandbyController</text>
+<text x="742.5" y="3015" text-anchor="middle" font-size="17" class="kop">StandbyController (startscherm)</text>
 <text x="527" y="3049" font-size="13" text-decoration="underline">+ TICK_MS: number</text>
 <text x="527" y="3068" font-size="13" text-decoration="underline">+ GHOST_CLICK_MS: number</text>
 <text x="527" y="3087" font-size="13">+ app: RegistrationApp</text>
@@ -487,22 +487,65 @@
 <path d="M515,3195 L970,3195" fill="none" stroke="#159a72" stroke-width="1.2"/>
 <text x="527" y="3215" font-size="13">+ startStandbyWatch()</text>
 <text x="527" y="3234" font-size="13">+ tickStandby(now): boolean</text>
-<text x="527" y="3253" font-size="13">+ noteStandbyActivity(now)</text>
-<text x="527" y="3272" font-size="13">+ checkStandby(now): boolean</text>
-<text x="527" y="3291" font-size="13">+ enterStandby()</text>
-<text x="527" y="3310" font-size="13">+ wakeFromStandby({ scan }): boolean</text>
-<text x="527" y="3329" font-size="13">+ handleStandbyTap(event)</text>
-<text x="527" y="3348" font-size="13">+ handleStandbyKey(event)</text>
-<text x="527" y="3367" font-size="13">+ swallowStandbyGhostClick(event): boolean</text>
+<text x="527" y="3253" font-size="13">+ checkStandby(now): boolean</text>
+<text x="527" y="3272" font-size="13">+ enterStandby()</text>
+<text x="527" y="3291" font-size="13">+ returnToStartScreen(): boolean</text>
+<text x="527" y="3310" font-size="13">+ refreshStartScreen()</text>
+<text x="527" y="3329" font-size="13">+ startScreenTexts(): object</text>
+<text x="527" y="3348" font-size="13">+ wakeFromStandby(opties): boolean</text>
+<text x="527" y="3367" font-size="13">+ handleManualSearch(event)</text>
 </g>
 <path d="M1455,2610 V2967 H267.5" class="lijn"/>
 <path d="M267.5,2967 V2985" class="lijn" marker-end="url(#open)"/>
 <path d="M742.5,2967 V2985" class="lijn" marker-end="url(#open)"/>
-<text x="990" y="3027" font-size="17" class="kop">Herkennen en standby (sinds versie 3.17)</text>
-<text x="990" y="3049" font-size="13" class="sub">RecognitionController opent na de pas of de camera de koelkast of het productvenster</text>
-<text x="990" y="3067" font-size="13" class="sub">(RECOGNITION_TARGET) en stelt na een passcan de vraag over gezichtsherkenning.</text>
-<text x="990" y="3085" font-size="13" class="sub">StandbyController dimt het scherm en start na een tik de scan (FaceController).</text>
-<text x="990" y="3103" font-size="13" class="sub">De camera gaat alleen na een tik aan. Beide krijgen de klok (clock).</text>
+<g>
+<rect x="990" y="2987" width="455" height="412" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M996,2987 H1439 A6,6 0 0 1 1445,2993 V3029 H990 V2993 A6,6 0 0 1 996,2987 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1217.5" y="3015" text-anchor="middle" font-size="17" class="kop">AutoScanController</text>
+<text x="1002" y="3049" font-size="13" text-decoration="underline">+ MESSAGES: object</text>
+<text x="1002" y="3068" font-size="13">+ app: RegistrationApp</text>
+<text x="1002" y="3087" font-size="13">+ clock: object</text>
+<text x="1002" y="3106" font-size="13">+ intent: FaceIntent</text>
+<text x="1002" y="3125" font-size="13">+ scanCamera: string</text>
+<text x="1002" y="3144" font-size="13">+ scanAttempts: number</text>
+<text x="1002" y="3163" font-size="13">+ scanPausedUntil: number</text>
+<text x="1002" y="3182" font-size="13">+ cameraBlocked: boolean</text>
+<text x="1002" y="3201" font-size="13">+ greetingFor: string | null</text>
+<path d="M990,3214 L1445,3214" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1002" y="3234" font-size="13">+ startScreenMode(): string</text>
+<text x="1002" y="3253" font-size="13">+ shouldAutoScan(): boolean</text>
+<text x="1002" y="3272" font-size="13">+ updateAutoScan(): boolean</text>
+<text x="1002" y="3291" font-size="13">+ startAutoScan()</text>
+<text x="1002" y="3310" font-size="13">+ stopAutoScan()</text>
+<text x="1002" y="3329" font-size="13">+ scanTick(now)</text>
+<text x="1002" y="3348" font-size="13">+ recognizeFace(face, session)</text>
+<text x="1002" y="3367" font-size="13">+ pauseAfterUnknown(now)</text>
+<text x="1002" y="3386" font-size="13">+ greet(employeeId)</text>
+</g>
+<g>
+<rect x="1465" y="2987" width="455" height="260" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1471,2987 H1914 A6,6 0 0 1 1920,2993 V3029 H1465 V2993 A6,6 0 0 1 1471,2987 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="1692.5" y="3015" text-anchor="middle" font-size="17" class="kop">FaceIntent</text>
+<text x="1477" y="3049" font-size="13" text-decoration="underline">+ OVAL_ASPECT: number</text>
+<text x="1477" y="3068" font-size="13">+ settings: object (autoScan)</text>
+<text x="1477" y="3087" font-size="13">+ anchor: object | null</text>
+<text x="1477" y="3106" font-size="13">+ steadySince: number | null</text>
+<path d="M1465,3119 L1920,3119" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1477" y="3139" font-size="13" text-decoration="underline">+ ovalFor(width, height): object</text>
+<text x="1477" y="3158" font-size="13" text-decoration="underline">+ center(face): object</text>
+<text x="1477" y="3177" font-size="13" text-decoration="underline">+ isInside(face, oval): boolean</text>
+<text x="1477" y="3196" font-size="13">+ isNear(face, oval): boolean</text>
+<text x="1477" y="3215" font-size="13">+ update(frame, now): object</text>
+<text x="1477" y="3234" font-size="13">+ reset()</text>
+</g>
+<path d="M1217.5,2967 V2985" class="lijn" marker-end="url(#open)"/>
+<path d="M1445,3080 L1463,3080" class="lijn" marker-end="url(#open)"/>
+<text x="1475" y="3281" font-size="17" class="kop">Herkennen en startscherm (3.17 en 3.21)</text>
+<text x="1475" y="3303" font-size="13" class="sub">RecognitionController opent na de pas of de camera de</text>
+<text x="1475" y="3321" font-size="13" class="sub">koelkast of het productvenster (RECOGNITION_TARGET).</text>
+<text x="1475" y="3339" font-size="13" class="sub">StandbyController toont het startscherm (STANDBY).</text>
+<text x="1475" y="3357" font-size="13" class="sub">AutoScanController zet de camera alleen op het startscherm</text>
+<text x="1475" y="3375" font-size="13" class="sub">aan (FACE_DEMO.scanMode) en gebruikt FaceIntent als drempel.</text>
 <!-- Slimme koelkast -->
 <g>
 <rect x="40" y="3519" width="430" height="583" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
@@ -716,7 +759,7 @@
 <text x="1532" y="1511" font-size="13">BadgeReader, AdminController,</text>
 <text x="1532" y="1530" font-size="13">EmployeeController, SmartFridge,</text>
 <text x="1532" y="1549" font-size="13">FridgeController, RecognitionController,</text>
-<text x="1532" y="1568" font-size="13">StandbyController, main.js</text>
+<text x="1532" y="1568" font-size="13">Standby- en AutoScanController, main.js</text>
 </g>
 <g>
 <rect x="1520" y="1591" width="195" height="146" rx="6" fill="#ffffff" stroke="#176b8b" stroke-width="1.8" class="box"/>

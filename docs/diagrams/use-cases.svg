@@ -65,7 +65,7 @@
 <text x="480" y="650.5" text-anchor="middle" font-size="14.5">UC-21 Koelkast openen</text>
 <text x="480" y="669.5" text-anchor="middle" font-size="14.5">met de pas (demo)</text>
 <ellipse class="box" cx="890" cy="565" rx="125" ry="34" fill="#ffffff" stroke="#159a72" stroke-width="1.8"/>
-<text x="890" y="560.5" text-anchor="middle" font-size="14.5">UC-22 Tablet wekken en</text>
+<text x="890" y="560.5" text-anchor="middle" font-size="14.5">UC-22 Startscherm en</text>
 <text x="890" y="579.5" text-anchor="middle" font-size="14.5">herkend worden (demo)</text>
 <!-- Use cases van het systeem -->
 <ellipse class="box" cx="520" cy="940" rx="175" ry="27" fill="#ffffff" stroke="#159a72" stroke-width="1.8"/>
@@ -154,6 +154,6 @@
 <text x="736" y="804" font-size="14">UC-10 Medewerker beheren.</text>
 <text x="736" y="826" font-size="14">De koelkastindeling (beheer)</text>
 <text x="736" y="848" font-size="14">hoort bij UC-21.</text>
-<text x="736" y="870" font-size="14">UC-22: standby en tik om</text>
-<text x="736" y="892" font-size="14">te scannen (sinds 3.17).</text>
+<text x="736" y="870" font-size="14">UC-22: startscherm en</text>
+<text x="736" y="892" font-size="14">automatisch scannen (3.21).</text>
 </svg>

@@ -34,6 +34,8 @@ import { FACE_DEMO, RECOGNITION_TARGET } from "../config.js";
  *   - RegistrationModel: hasValidFaceEnrollment, faceOfferAnswer en declineFaceOffer;
  *   - FaceRecognitionDemo: of de demo aan staat en of er een camera is;
  *   - ModalManager (via RegistrationApp): opent en sluit #faceOfferModal;
+ *   - StandbyController (via RegistrationApp): het startscherm verdwijnt als er na herkennen een venster
+ *     opent (wakeFromStandby) en komt terug als de vraag vanzelf sluit (returnToStartScreen);
  *   - config.js: RECOGNITION_TARGET en FACE_DEMO (offerAfterBadge, offerIdleCloseMs).
  */
 export class RecognitionController {
@@ -87,8 +89,9 @@ export class RecognitionController {
 
   // Een medewerker is herkend (`how`: "badge" of "face"). Na een passcan komt eerst de vraag over
   // gezichtsherkenning als die van toepassing is (shouldOfferFace). Daarna, of meteen, opent de
-  // koelkast of het productvenster.
+  // koelkast of het productvenster. Stond het startscherm in beeld, dan verdwijnt het (de camera gaat uit).
   afterRecognition(employeeId, how) {
+    this.app.wakeFromStandby?.();
     if (how === "badge") {
       this.app.expireFaces();
       const kind = this.shouldOfferFace(employeeId);
@@ -103,6 +106,7 @@ export class RecognitionController {
   // Opent de koelkast of het productvenster voor een (nog steeds actieve) medewerker.
   continueAfterRecognition(employeeId, how) {
     if (!this.model.findEmployee(employeeId)?.active) return;
+    this.app.wakeFromStandby?.();
     if (this.recognitionTarget(employeeId) === "fridge" && this.app.openFridgeFor(employeeId, how)) return;
     this.app.openEmployeeProducts(employeeId, { recognizedBy: how });
   }
@@ -186,11 +190,13 @@ export class RecognitionController {
   }
 
   // Sluit de vraag als er FACE_DEMO.offerIdleCloseMs geen invoer is geweest (niemand meer bij de
-  // tablet). Er wordt niets onthouden en er opent niets. Geeft true terug als de vraag is gesloten.
+  // tablet). Er wordt niets onthouden en er opent niets: het startscherm komt terug (returnToStartScreen).
+  // Geeft true terug als de vraag is gesloten.
   closeFaceOfferIfIdle(now = this.clock.now()) {
     if (!this.isFaceOfferOpen()) return false;
     if (now - this.lastOfferActivity < this.offerSettings.offerIdleCloseMs) return false;
     this.closeFaceOffer();
+    this.app.returnToStartScreen?.();
     return true;
   }
 }

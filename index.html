@@ -52,7 +52,7 @@
   <link rel="stylesheet" href="assets/css/suggestion.css">
   <link rel="stylesheet" href="assets/css/directory-tools.css">
   <link rel="stylesheet" href="assets/css/face.css">
-  <link rel="stylesheet" href="assets/css/standby.css">
+  <link rel="stylesheet" href="assets/css/start-screen.css">
   <link rel="stylesheet" href="assets/css/fridge.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
   <!-- Startpunt van de applicatie. Modules werken alleen via een webserver (bijv. Live Server), niet via file://. -->
@@ -203,17 +203,30 @@
     </footer>
   </div>
 
-  <!-- Standby (StandbyController, STANDBY in config.js): na een tijd zonder invoer op de beginpagina
-       dimt dit scherm de pagina. Het is één knop over het hele scherm: een tik (of Enter of spatie)
-       maakt de tablet wakker en start, als dat kan, de korte scan van de demo gezichtsherkenning. De tik
-       valt op deze knop en niet op een knop eronder. #standbyHint zegt vooraf wat er na de tik gebeurt. -->
-  <button type="button" class="standby-overlay hidden" id="standbyOverlay" aria-labelledby="standbyTitle" aria-describedby="standbyHint">
-    <span class="standby-card">
-      <span class="brand-mark standby-mark" aria-hidden="true">TVB</span>
-      <strong class="standby-title" id="standbyTitle">Tik op het scherm om te beginnen</strong>
-      <span class="standby-hint" id="standbyHint"></span>
-    </span>
-  </button>
+  <!-- Startscherm (StandbyController en AutoScanController, STANDBY en FACE_DEMO.scanMode in config.js).
+       Verschijnt bij het openen, na afloop van een registratie of koelkastopening en na een tijd zonder
+       invoer. Drie manieren om te beginnen: de pas (werkt altijd), het gezicht in het ovaal en de knop
+       "Handmatig zoeken" (de lijst hierboven). data-mode is "auto" (de camera kijkt in het ovaal), "tap"
+       (tik op het ovaal, #startTapButton) of "badge" (alleen pas en handmatig). Het camerabeeld (#startVideo)
+       is alleen te zien met de klasse has-camera en wordt nooit bewaard. #startStatus is een live region. -->
+  <section class="start-screen hidden" id="startScreen" role="dialog" aria-modal="true" aria-labelledby="startTitle" aria-describedby="startHelp" data-mode="badge">
+    <div class="start-brand">
+      <span class="brand-mark" aria-hidden="true">TVB</span>
+      <h2 class="start-title" id="startTitle">Consumptieregistratie</h2>
+    </div>
+    <div class="start-main">
+      <div class="start-oval" id="startOval" data-state="idle">
+        <video id="startVideo" autoplay muted playsinline aria-hidden="true"></video>
+        <span class="start-oval-icon" id="startOvalIcon" aria-hidden="true" data-icon="badge"></span>
+        <button type="button" class="start-oval-tap hidden" id="startTapButton" aria-label="Tik om je gezicht te laten scannen"></button>
+      </div>
+      <p class="start-status" id="startStatus" role="status"></p>
+      <p class="start-hint" id="startHint"></p>
+      <button type="button" class="primary-button start-manual" id="startManualButton"><span data-icon="search"></span> Handmatig zoeken</button>
+    </div>
+    <p class="start-privacy hidden" id="startPrivacy"><span data-icon="lock"></span> <span id="startPrivacyText"></span></p>
+    <p class="visually-hidden" id="startHelp"></p>
+  </section>
 
   <!-- Modal voor admin-login en het beheerdashboard. -->
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
@@ -571,7 +584,7 @@
 
   <!-- Demo gezichtsherkenning: camerabeeld met een kader voor het gezicht.
        Wordt gebruikt om een gezicht in te stellen (per medewerker), om iemand te herkennen met
-       "Herken mij" en voor de korte scan na een tik op het standby-scherm (klasse is-wake). -->
+       "Herken mij" en voor de korte scan na een tik op het ovaal van het startscherm (klasse is-wake). -->
   <div class="modal-backdrop hidden" id="faceModal" role="dialog" aria-modal="true" aria-labelledby="faceTitle">
     <div class="modal face-modal">
       <button class="modal-close" data-close-face-modal aria-label="Sluiten" data-icon="close"></button>

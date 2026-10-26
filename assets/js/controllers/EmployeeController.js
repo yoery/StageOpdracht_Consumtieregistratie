@@ -12,6 +12,8 @@ import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS } from "../config.js";
  *     met de pas of de camera, "Zelfde als vorige keer");
  *   - het productvenster vanzelf sluiten als het 75 seconden niet is gebruikt
  *     (EMPLOYEE_IDLE_CLOSE_MS in config.js), met in de laatste 10 seconden een waarschuwing;
+ *   - na registreren, na vanzelf sluiten en na sluiten van een venster dat na herkennen opende, het
+ *     startscherm terug laten komen (StandbyController.returnToStartScreen);
  *   - de gekozen producten in één keer registreren (via persist) en daarna de focus goed zetten.
  *
  * De keuze zelf (selectedEmployeeId, selectedProducts en recognizedBy) staat in RegistrationApp,
@@ -178,6 +180,8 @@ export class EmployeeController {
   // zodat die na het sluiten terug kan (zie closeModal).
   openEmployeeProducts(employeeId, { recognized = false, recognizedBy = recognized ? "face" : null } = {}) {
     this.app.rememberOpener("#employeeProductsModal");
+    // Het productvenster ligt nooit onder het startscherm: staat dat in beeld, dan verdwijnt het.
+    this.app.wakeFromStandby?.();
     this.app.selectedEmployeeId = employeeId;
     this.app.selectedProducts = {};
     this.app.recognizedBy = recognizedBy;
@@ -295,12 +299,16 @@ export class EmployeeController {
   // leeggemaakt (resetEmployeeSearch). Op de gedeelde tablet ziet de volgende gebruiker dan niet naar
   // wie er net is gezocht (FR-70, privacy). De focus gaat terug naar de rij van deze medewerker,
   // zonder dat de pagina daarvoor scrolt (zie focusEmployeeRow).
+  // Was de medewerker herkend met de pas of de camera (het venster opende vanaf het startscherm), dan komt
+  // daarna het startscherm terug. Na een naam uit de lijst niet: dan kiest hij misschien een andere naam.
   dismissEmployeeProducts() {
     const employeeId = this.app.selectedEmployeeId;
+    const recognized = Boolean(this.app.recognizedBy);
     const opener = this.app.modalOpeners.get(this.view.$("#employeeProductsModal"));
     this.closeEmployeeProducts();
     this.resetEmployeeSearch();
     if (employeeId) this.focusEmployeeRow(employeeId, opener);
+    if (recognized) this.app.returnToStartScreen?.();
   }
 
   // ------------------------------------------------------------------
@@ -356,6 +364,8 @@ export class EmployeeController {
       this.closeEmployeeProducts();
       this.resetEmployeeSearch();
       this.focusEmployeeRow(employeeId, opener);
+      // De medewerker is weggelopen: de volgende persoon begint op het startscherm.
+      this.app.returnToStartScreen?.();
       return true;
     }
 
@@ -438,8 +448,10 @@ export class EmployeeController {
     this.focusEmployeeRow(employeeId, opener);
 
     // Op een gedeelde tablet moet de medewerker kunnen lezen voor wie en wat er is opgeslagen,
-    // daarom blijft deze melding langer staan.
+    // daarom blijft deze melding langer staan. De melding ligt boven het startscherm.
     this.view.showToast(message, { tone: "success", duration: 4000 });
+    // Na afloop van de registratie begint de volgende persoon weer op het startscherm (StandbyController).
+    this.app.returnToStartScreen?.();
   }
 
   // Zet de focus op de (nieuwe) rij van deze medewerker in de lijst, maar alleen als het element

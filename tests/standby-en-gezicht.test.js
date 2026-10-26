@@ -3,6 +3,8 @@
 // passcan, het jaarlijks verlopen van een gezichtsinstelling en het opslaan, controleren en wissen van
 // de gezichtskenmerken. Met een nep-klok, een nep-camera (mediaDevices) en zonder face-api: het laden
 // en het lezen van een gezicht worden nagebootst.
+// Sinds versie 3.21 is de standby het startscherm (zie tests/startscherm.test.js). De tests in dit bestand
+// gaan over tik om te scannen en draaien daarom met FACE_DEMO.scanMode "tap": zo werkt het nog zoals vroeger.
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -79,7 +81,7 @@ const createCamera = ({ hasCamera = true } = {}) => {
 // De echte FaceRecognitionDemo met de nep-camera. Laden is direct klaar en readFace geeft het
 // "gezicht" terug dat de test kiest (of null: geen gezicht in beeld).
 const createDemo = (camera, { settings = {}, seen = () => null } = {}) => {
-  const demo = new FaceRecognitionDemo({ ...FACE_DEMO, scanTimeoutMs: 60, wakeScanMs: 60, ...settings }, camera.mediaDevices);
+  const demo = new FaceRecognitionDemo({ ...FACE_DEMO, scanTimeoutMs: 60, wakeScanMs: 60, scanMode: "tap", ...settings }, camera.mediaDevices);
   demo.load = async () => {};
   demo.readFace = async () => seen();
   demo.confirm = (employeeId) => employeeId; // direct bevestigd, zodat de test niet hoeft te wachten
@@ -96,7 +98,7 @@ const createApp = ({ model = createModel().model, hasCamera = true, faceSettings
   const view = createRecordingView();
   for (const selector of MODALS) view.$(selector).classList.add("hidden");
   view.$("#faceVideo").play = async () => {};
-  view.$("#standbyOverlay").classList.add("hidden");
+  view.$("#startScreen").classList.add("hidden");
   const clock = createClock();
   const camera = createCamera({ hasCamera });
   const demo = createDemo(camera, { settings: faceSettings, seen });
@@ -113,7 +115,7 @@ const createApp = ({ model = createModel().model, hasCamera = true, faceSettings
 };
 
 const isOpen = (view, selector) => !view.$(selector).classList.contains("hidden");
-const standbyCalls = (view) => view.calls.filter(([name]) => name === "showStandby").map(([, shown]) => shown);
+const standbyCalls = (view) => view.calls.filter(([name]) => name === "showStartScreen").map(([, shown]) => shown);
 const toastTexts = (view) => view.toasts.map(({ message }) => message);
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -127,7 +129,7 @@ const enrollInModel = (app, model, employeeId = "employee-1", value = 0.1) => {
 // Standby
 // ------------------------------------------------------------------
 
-test("standby: pas na STANDBY.idleMs zonder invoer op de beginpagina wordt het scherm gedimd", () => {
+test("startscherm: pas na STANDBY.idleMs zonder invoer op de beginpagina komt het startscherm terug", () => {
   const { app, view, clock } = createApp();
   app.startStandbyWatch();
 
@@ -181,7 +183,7 @@ test("standby: met STANDBY.enabled = false gaat de tablet nooit in standby", () 
   app.stopStandbyWatch();
 });
 
-test("standby: het zoekveld wordt leeggemaakt als de tablet in standby gaat", () => {
+test("standby: het zoekveld wordt leeggemaakt als het startscherm verschijnt", () => {
   const { app, view } = createApp();
   view.$("#employeeSearch").value = "Lot";
 
@@ -190,13 +192,13 @@ test("standby: het zoekveld wordt leeggemaakt als de tablet in standby gaat", ()
   assert.equal(view.$("#employeeSearch").value, "");
 });
 
-test("standby: een tik maakt wakker en gaat niet door naar de pagina (geen klik-door)", () => {
+test("startscherm: Handmatig zoeken verbergt het startscherm en gaat niet door naar de pagina (geen klik-door)", () => {
   const { app, view, clock } = createApp();
   app.enterStandby();
   let stopped = false;
   let prevented = false;
 
-  app.handleStandbyTap({ preventDefault: () => { prevented = true; }, stopPropagation: () => { stopped = true; } });
+  app.handleManualSearch({ detail: 1, preventDefault: () => { prevented = true; }, stopPropagation: () => { stopped = true; } });
 
   assert.equal(app.standbyActive, false);
   assert.deepEqual(standbyCalls(view), [true, false]);
@@ -212,32 +214,21 @@ test("standby: een tik maakt wakker en gaat niet door naar de pagina (geen klik-
   assert.equal(app.swallowStandbyGhostClick({ target: createFakeElement({ id: "fridgeOpenButton" }), preventDefault() {}, stopPropagation() {} }), false);
 });
 
-test("standby: een gewone toets of het eerste teken van een passcan maakt alleen wakker (geen scan)", () => {
-  const { app, model, camera } = createApp();
-  enrollInModel(app, model);
+test("startscherm (tap): een tik op het ovaal doet niets zolang niemand een gezicht heeft ingesteld", () => {
+  const { app, camera } = createApp();
   app.enterStandby();
 
-  app.handleStandbyKey({ key: "0", target: createFakeElement({ id: "standbyOverlay" }) });
+  assert.equal(app.handleStandbyTap({}), false);
 
-  assert.equal(app.standbyActive, false);
+  assert.equal(app.standbyActive, true);
   assert.equal(app.faceMode, null);
   assert.equal(camera.starts, 0);
 });
 
-test("standby: Enter op het standby-scherm wordt een klik op die knop (handleStandbyKey laat hem door)", () => {
-  const { app } = createApp();
-  app.enterStandby();
-
-  app.handleStandbyKey({ key: "Enter", target: createFakeElement({ id: "standbyOverlay" }) });
-
-  assert.equal(app.standbyActive, true, "de klik die volgt (handleStandbyTap) maakt wakker en start de scan");
-});
-
-test("standby: een passcan in standby maakt wakker en wordt meteen verwerkt", () => {
+test("standby: een passcan op het startscherm wordt meteen verwerkt en het startscherm verdwijnt", () => {
   const { app, view, camera } = createApp({ target: "products" });
   app.enterStandby();
 
-  app.handleStandbyKey({ key: "0", target: createFakeElement({ id: "standbyOverlay" }) });
   app.recognizeBadge("04A1B2C3");
 
   assert.equal(app.standbyActive, false);
@@ -247,12 +238,20 @@ test("standby: een passcan in standby maakt wakker en wordt meteen verwerkt", ()
   assert.equal(isOpen(view, "#faceModal"), false);
 });
 
-test("standby: de tekst op het standby-scherm zegt vooraf dat de camera na de tik even kijkt", () => {
+test("startscherm (tap): de tekst zegt vooraf dat de camera na de tik hooguit 10 seconden kijkt", () => {
   const { app, model } = createApp({ faceSettings: { wakeScanMs: 10000 } });
-  assert.equal(app.standbyHint(), "Je kunt ook meteen je pas tegen de lezer houden.");
+  const before = app.startScreenTexts();
+  assert.equal(before.mode, "badge");
+  assert.equal(before.status, "Houd je pas tegen de lezer");
+  assert.equal(before.hint, "Gezichtsherkenning stel je in na een passcan of in je productvenster.");
 
   enrollInModel(app, model);
-  assert.equal(app.standbyHint(), "Na de tik kijkt de camera hooguit 10 seconden of hij je herkent. Alles blijft op deze tablet. Je kunt ook je pas tegen de lezer houden.");
+  const after = app.startScreenTexts();
+  assert.equal(after.mode, "tap");
+  assert.equal(after.status, "Tik op het ovaal om je gezicht te laten scannen");
+  assert.equal(after.hint, "Of houd je pas tegen de lezer.");
+  assert.equal(after.privacy, "Na de tik kijkt de camera hooguit 10 seconden. Alles blijft op deze tablet.");
+  assert.equal(after.help, "Startscherm. Begin zo: houd je pas tegen de lezer, tik op het ovaal om herkend te worden met de camera of kies Handmatig zoeken om je naam in de lijst te zoeken.");
 });
 
 // ------------------------------------------------------------------
@@ -266,7 +265,7 @@ test("camera: gaat nooit vanzelf aan, ook niet in standby of bij het wakker word
 
   clock.advance(STANDBY.idleMs * 5);
   assert.equal(app.standbyActive, true);
-  app.handleStandbyKey({ key: "a", target: null });
+  app.handleManualSearch({ detail: 1 });
   clock.advance(STANDBY.idleMs * 5);
   await wait(20);
 

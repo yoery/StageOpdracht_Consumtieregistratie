@@ -1,5 +1,5 @@
 ﻿/* Demo gezichtsherkenning: instellen in het productvenster, het cameravenster met het ovale kader,
-   de toestemming, de korte scan na het standby-scherm en de vraag na een passcan.
+   de toestemming, de korte scan na een tik op het ovaal van het startscherm en de vraag na een passcan.
    Laadt na directory-tools.css.
    De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
 .face-enroll {
@@ -86,7 +86,7 @@
   color:var(--muted);
   font-size:12px
 }
-/* De korte scan na een tik op het standby-scherm (tik om te scannen): hetzelfde cameravenster, iets
+/* De korte scan na een tik op het ovaal van het startscherm (tik om te scannen): hetzelfde cameravenster, iets
    smaller, zodat het niet opdringerig is. De knop heet hier "Stoppen". */
 .face-modal.is-wake {
   max-width:460px

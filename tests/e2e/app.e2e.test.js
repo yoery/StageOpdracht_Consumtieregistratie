@@ -6,7 +6,10 @@
 // browser wordt gestart en hoe je met BROWSER_PATH een andere browser kiest.
 //
 // Iedere test begint met lege opslag (dus met de demogegevens) en eindigt met de controle dat
-// er geen fouten in de console van de browser zijn verschenen.
+// er geen fouten in de console van de browser zijn verschenen. Sinds versie 3.21 opent de website op het
+// startscherm: browser.openApp tikt daarna op "Handmatig zoeken", zodat een test op de lijst begint. Komt
+// het startscherm terug (na registreren, na de koelkast, na een venster dat na de pas opende), dan tikt
+// de test opnieuw op "Handmatig zoeken" (browser.manualSearch).
 // De correctieknoppen (+ en −) in het beheer worden hier niet getest; die staan in de unit tests.
 import { describe, test, before, after, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -78,10 +81,11 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     await browser.waitFor(`document.querySelector("#registerSelectedProductsButton").textContent.trim() === "Registreren (${amount})"`);
     await browser.click("#registerSelectedProductsButton");
     await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-    // Een klik op een medewerkerrij binnen 500 ms na het sluiten telt niet (bescherming tegen een
-    // dubbelklik op "Registreren", zie EmployeeController.isGhostRowClick). Een echte gebruiker is
-    // nooit zo snel; de test wacht daarom even voordat hij verdergaat.
-    await sleep(550);
+    // Sinds versie 3.21 komt na registreren het startscherm terug, zodat de volgende persoon daar begint.
+    // De test tikt op "Handmatig zoeken" om verder te gaan op de lijst (browser.manualSearch wacht daarna
+    // even, want een klik binnen 500 ms telt niet).
+    await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`, { message: "Na registreren kwam het startscherm niet terug." });
+    await browser.manualSearch();
   };
 
   // Dubbelklik met de muis in het midden van een element: twee keer indrukken en loslaten, de
@@ -501,6 +505,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     })()`);
     await browser.send("Page.reload");
     await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.manualSearch();
   };
 
   scenario("UX 1: het productvenster sluit vanzelf na 75 seconden zonder invoer, met eerst een waarschuwing", async () => {
@@ -566,8 +571,10 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     assert.equal(await text("#registerSelectedProductsButton"), "Registreren (1)");
 
     // Staat een ander venster open (hier het beheer), dan opent er niets en volgt een melding.
+    // Het venster van Lotte opende na herkennen met de pas: na Escape komt het startscherm terug (3.21).
     await browser.press("Escape");
     await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    assert.equal(await browser.manualSearch(), true, "na sluiten kwam het startscherm niet terug");
     await browser.click("#adminOpenButton");
     await browser.waitFor(`!document.querySelector("#adminModal").classList.contains("hidden")`);
     await browser.click("#adminTitle");
@@ -638,9 +645,12 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       assert.equal(await browser.evaluate(`document.querySelector("#employeeCompanyFilter").getAttribute("aria-expanded")`), "false");
       assert.equal(await browser.evaluate(`document.querySelector('#companyFilterOptions [data-company-value="all"]').getAttribute("aria-selected")`), "true");
       assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);
-      // De medewerkerskaart staat bovenaan in beeld en de focus staat op de rij van deze medewerker.
+      // Sinds versie 3.21 komt na registreren het startscherm terug met de focus op "Handmatig zoeken".
+      // Daarachter staat de medewerkerskaart bovenaan in beeld.
+      await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
+      assert.equal(await browser.evaluate("document.activeElement.id"), "startManualButton");
+      await browser.manualSearch();
       assert.ok(await browser.evaluate(`document.querySelector(".directory-card").getBoundingClientRect().top >= 0`));
-      assert.equal(await browser.evaluate(`document.activeElement.getAttribute("aria-label")`), `Product kiezen voor ${name}`);
     });
   });
 
@@ -655,6 +665,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     })()`);
     await browser.send("Page.reload");
     await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.manualSearch();
 
     await browser.click(row("Lotte van Dijk"));
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
@@ -698,6 +709,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     })()`);
     await browser.send("Page.reload");
     await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.manualSearch();
     await browser.click(row("Lotte van Dijk"));
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
     for (const selector of ["#registerSelectedProductsButton", "#registerHint", "#employeeProductsHelp", "#employeePrivacyNote"]) {
@@ -733,6 +745,8 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.press("Escape");
       await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
       await sleep(550);
+      // Na de pas komt het startscherm terug (3.21), na een naam uit de lijst niet.
+      await browser.manualSearch();
     };
 
     for (const [width, height] of [[390, 844], [1080, 810]]) {
@@ -752,6 +766,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
           await browser.press("Escape");
           await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
           await sleep(550);
+          await browser.manualSearch();
         }
       });
     }
@@ -809,9 +824,10 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     assert.match(await text("#fridgeBody"), /Dit is geregistreerd op naam van Lotte van Dijk\. De koelkast is weer op slot\./);
     assert.equal(await browser.evaluate(`document.activeElement?.hasAttribute("data-fridge-done")`), true);
 
-    // Klaar: het venster sluit en de totalen zijn bijgewerkt.
+    // Klaar: het venster sluit, het startscherm komt terug (3.21) en de totalen zijn bijgewerkt.
     await browser.press("Enter");
     await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    assert.equal(await browser.manualSearch(), true, "na Klaar kwam het startscherm niet terug");
     assert.equal(await text("#todayTotal"), "2");
     assert.equal(await text("#monthTotal"), "2");
 
@@ -845,9 +861,11 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     assert.equal(await isHidden("#employeeProductsModal"), true);
     assert.equal(await browser.evaluate(`Boolean(document.querySelector("[data-fridge-take]"))`), false);
 
+    // Na het sluiten van het koelkastvenster komt het startscherm terug (3.21), met de focus op Handmatig zoeken.
     await browser.press("Escape");
     await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    assert.equal(await browser.evaluate(`document.activeElement?.id`), "fridgeOpenButton");
+    await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
     assert.equal((await browser.storedData())?.fridgeOpenings?.length ?? 0, 0);
   });
 
@@ -870,6 +888,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     })()`);
     await browser.send("Page.reload");
     await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.manualSearch();
   };
 
   // Opent het koelkastvenster en opent de koelkast via de demokeuze voor deze medewerker.
@@ -932,6 +951,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.send("Input.dispatchMouseEvent", { type: "mousePressed", ...corner });
       await browser.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...corner });
       await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+      await browser.manualSearch();
     }
     assert.equal((await browser.storedData()).registrations.length, 2);
   });
@@ -998,6 +1018,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     assert.equal(await browser.evaluate(`document.activeElement?.hasAttribute("data-close-fridge")`), true);
     await browser.press("Escape");
     await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    await browser.manualSearch();
 
     await openFridgeForDemo("Mark Jansen");
     assert.match(await text("#fridgeBody"), /Mark\. Pak wat je wilt en sluit de deur\./);
@@ -1005,79 +1026,170 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   });
 
   // ------------------------------------------------------------------
-  // Standby en de vraag over gezichtsherkenning na een passcan (TO versie 3.17)
+  // Het startscherm (TO versie 3.21) en de vraag over gezichtsherkenning na een passcan (versie 3.17)
   // ------------------------------------------------------------------
 
   // Nep-klok voor de pagina (zoals bij UX 1): Date.now() loopt window.klokVooruit milliseconden voor.
   const FAKE_CLOCK = "(() => { const echt = Date.now.bind(Date); window.klokVooruit = 0; Date.now = () => echt() + window.klokVooruit; })()";
   // Nagebootste camera: de app ziet een camera (enumerateDevices), maar aanzetten lukt niet. De camera
   // zelf is headless niet te testen. Dit script komt na het standaardscript zonder camera (browser.js).
-  const FAKE_CAMERA = `if (navigator.mediaDevices) navigator.mediaDevices.enumerateDevices = async () => [{ kind: "videoinput", deviceId: "e2e", label: "", groupId: "" }];
-    if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => { throw new DOMException("Geen camera in de test", "NotAllowedError"); };`;
-  const withPageScripts = async (sources, action) => {
+  // Het telt hoe vaak de app de camera probeert aan te zetten (window.cameraPogingen).
+  const FAKE_CAMERA = `window.cameraPogingen = 0;
+    if (navigator.mediaDevices) navigator.mediaDevices.enumerateDevices = async () => [{ kind: "videoinput", deviceId: "e2e", label: "", groupId: "" }];
+    if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => { window.cameraPogingen += 1; throw new DOMException("Geen camera in de test", "NotAllowedError"); };`;
+  // Opent de pagina met deze scripts. Met `startScreen: true` blijft het startscherm staan (zie browser.openApp).
+  const withPageScripts = async (sources, action, { startScreen = false } = {}) => {
     const identifiers = [];
     for (const source of sources) identifiers.push((await browser.send("Page.addScriptToEvaluateOnNewDocument", { source })).identifier);
     try {
-      await browser.openApp();
+      await browser.openApp({ startScreen });
       await action();
     } finally {
       for (const identifier of identifiers) await browser.send("Page.removeScriptToEvaluateOnNewDocument", { identifier });
     }
   };
   const openModalIds = () => browser.evaluate(`[...document.querySelectorAll(".modal-backdrop:not(.hidden)")].map((modal) => modal.id)`);
+  const startScreenShown = () => browser.evaluate(`!document.querySelector("#startScreen").classList.contains("hidden")`);
 
-  scenario("standby: na 2 minuten dimt het scherm, een tik wekt zonder klik-door en zonder camera", async () => {
+  scenario("startscherm: verschijnt bij het openen, zwart, zonder camera alleen pas en Handmatig zoeken, en Handmatig zoeken toont de lijst zonder klik-door", async () => {
+    await browser.openApp({ startScreen: true });
+    // Wacht tot de app weet dat er geen camera is (enumerateDevices geeft niets, zie browser.js).
+    await browser.waitFor(`document.querySelector("#startStatus").textContent === "Houd je pas tegen de lezer"`);
+    assert.equal(await browser.evaluate(`document.querySelector("#startScreen").dataset.mode`), "badge");
+    assert.equal(await text("#startHint"), "");
+    assert.equal(await isHidden("#startPrivacy"), true);
+    assert.equal(await isHidden("#startTapButton"), true);
+    assert.equal(await text("#startTitle"), "Consumptieregistratie");
+    assert.equal(await text("#startManualButton"), "Handmatig zoeken");
+    assert.equal(await text("#startHelp"), "Startscherm. Begin zo: houd je pas tegen de lezer of kies Handmatig zoeken om je naam in de lijst te zoeken.");
+    assert.equal(await browser.evaluate(`document.querySelector("#startScreen").getAttribute("role")`), "dialog");
+    assert.equal(await browser.evaluate(`document.querySelector("#startStatus").getAttribute("role")`), "status");
+    // Zwart, ook in het lichte thema, over het hele scherm, en de pagina eronder is niet te bereiken.
+    assert.equal(await browser.evaluate("document.documentElement.dataset.theme"), "light");
+    assert.equal(await browser.evaluate(`getComputedStyle(document.querySelector("#startScreen")).backgroundColor`), "rgb(5, 13, 15)");
+    assert.deepEqual(await browser.evaluate(`(() => { const box = document.querySelector("#startScreen").getBoundingClientRect(); return [box.top, box.left, box.width, box.height]; })()`), [0, 0, 1280, 900]);
+    assert.equal(await browser.evaluate(`document.querySelector(".app-shell").inert`), true);
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
+    // De knop is groot genoeg voor een vinger.
+    assert.ok(await browser.evaluate(`document.querySelector("#startManualButton").getBoundingClientRect().height >= 44`));
+    assert.equal(await browser.evaluate(`document.querySelector("#startVideo").srcObject`), null);
+
+    // Wat er onder de knop ligt: daar zou een klik-door op vallen.
+    const under = await browser.evaluate(`(() => {
+      const box = document.querySelector("#startManualButton").getBoundingClientRect();
+      document.querySelector("#startScreen").style.visibility = "hidden";
+      const element = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      document.querySelector("#startScreen").style.visibility = "";
+      return element?.closest("button, [data-open-employee]")?.getAttribute("aria-label") ?? "geen knop";
+    })()`);
+    await browser.click("#startManualButton");
+    await browser.waitFor(`document.querySelector("#startScreen").classList.contains("hidden")`);
+    await sleep(700);
+    assert.deepEqual(await openModalIds(), [], `de tik ging door naar ${under}`);
+    assert.equal(await browser.evaluate(`document.querySelector(".app-shell").inert`), false);
+
+    // Daarna werkt de lijst gewoon, ook het beheer (Admin login staat in de bovenbalk van de beginpagina).
+    await browser.click(row("Lotte van Dijk"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.click(`[data-product-increment="blikje"]`);
+    await browser.click("#registerSelectedProductsButton");
+    // Na registreren komt het startscherm terug, met de bevestiging erboven.
+    await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
+    await waitForToast("Lotte van Dijk: 1× Blikje geregistreerd");
+    assert.equal(await browser.evaluate(`(() => {
+      const toast = [...document.querySelectorAll("#toast, #toastAlert")].find((element) => !element.classList.contains("hidden"));
+      const layer = (element) => Number(getComputedStyle(element).zIndex);
+      return layer(toast) > layer(document.querySelector("#startScreen"));
+    })()`), true, "de bevestiging ligt niet boven het startscherm");
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeSearch").value`), "");
+  });
+
+  scenario("startscherm: komt terug na 2 minuten zonder invoer, en Enter op Handmatig zoeken zet de focus in het zoekveld", async () => {
     await withPageScripts([FAKE_CLOCK], async () => {
-      // Wat er onder het midden van het scherm ligt: daar valt straks de tik op het standby-scherm.
-      const under = await browser.evaluate(`document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest("button, [data-open-employee]")?.getAttribute("aria-label") ?? "geen knop"`);
-      assert.equal(await isHidden("#standbyOverlay"), true);
-
+      assert.equal(await startScreenShown(), false);
       await browser.evaluate("window.klokVooruit = 100000");
       await sleep(1500);
-      assert.equal(await isHidden("#standbyOverlay"), true, "vóór 2 minuten nog geen standby");
+      assert.equal(await startScreenShown(), false, "vóór 2 minuten nog geen startscherm");
       await browser.evaluate("window.klokVooruit = 121000");
-      await browser.waitFor(`!document.querySelector("#standbyOverlay").classList.contains("hidden")`);
-      assert.equal(await text("#standbyTitle"), "Tik op het scherm om te beginnen");
-      assert.equal(await text("#standbyHint"), "Je kunt ook meteen je pas tegen de lezer houden.");
+      await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
+      assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
       assert.equal(await browser.evaluate(`document.querySelector(".app-shell").inert`), true);
-      assert.equal(await browser.evaluate(`document.activeElement?.id`), "standbyOverlay");
-      assert.match(await browser.evaluate(`getComputedStyle(document.querySelector("#standbyOverlay")).backgroundColor`), /rgba\(20, 77, 91, 0\.94\)/);
 
-      // Eén tik maakt wakker. De tik drukt niets in wat eronder ligt en er gaat geen camera aan.
-      await browser.click("#standbyOverlay");
-      await browser.waitFor(`document.querySelector("#standbyOverlay").classList.contains("hidden")`);
-      await sleep(700);
-      assert.deepEqual(await openModalIds(), [], `de tik ging door naar ${under}`);
-      assert.equal(await browser.evaluate(`document.querySelector(".app-shell").inert`), false);
-
-      // Daarna werkt de pagina gewoon.
-      await browser.click(row("Lotte van Dijk"));
-      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-      await browser.press("Escape");
-      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-
-      // Opnieuw in standby: een gewone toets maakt ook wakker.
-      await browser.evaluate("window.klokVooruit = 121000 + 121000");
-      await browser.waitFor(`!document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+      // Een gewone toets doet niets op het startscherm (alleen een passcan of de knop).
       await browser.press("a");
-      await browser.waitFor(`document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+      await sleep(300);
+      assert.equal(await startScreenShown(), true);
+
+      // Met het toetsenbord: Enter op de knop opent de lijst en zet de focus in het zoekveld.
+      await browser.press("Enter");
+      await browser.waitFor(`document.querySelector("#startScreen").classList.contains("hidden")`);
+      assert.equal(await browser.evaluate(`document.activeElement?.id`), "employeeSearch");
       assert.deepEqual(await openModalIds(), []);
     });
   });
 
-  scenario("standby: een passcan in standby maakt wakker en opent meteen de koelkast", async () => {
-    await withPageScripts([FAKE_CLOCK], async () => {
-      await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
-      await browser.evaluate("window.klokVooruit = 121000");
-      await browser.waitFor(`!document.querySelector("#standbyOverlay").classList.contains("hidden")`);
+  scenario("startscherm: een passcan op het startscherm opent meteen de koelkast, en na Klaar komt het startscherm terug", async () => {
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+    await browser.evaluate("window.oudePagina = true");
+    await browser.send("Page.reload");
+    await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && !document.querySelector("#startScreen").classList.contains("hidden")`);
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
 
-      await browser.scanBadge("04A1B2C3");
+    // De lezer typt het pasnummer met een Enter erachter: die Enter drukt niet op Handmatig zoeken.
+    await browser.scanBadge("04A1B2C3");
+    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
+    assert.equal(await startScreenShown(), false);
+    assert.match(await text("#fridgeBody"), /Lotte\. Je bent herkend met je pas\./);
+    assert.deepEqual(await openModalIds(), ["fridgeModal"], "zonder camera geen vraag over gezichtsherkenning");
 
-      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
-      assert.equal(await isHidden("#standbyOverlay"), true);
-      assert.match(await text("#fridgeBody"), /Lotte\. Je bent herkend met je pas\./);
-      assert.deepEqual(await openModalIds(), ["fridgeModal"], "zonder camera geen vraag over gezichtsherkenning");
-    });
+    await browser.click(`[data-fridge-take="1"]`);
+    await browser.click("#fridgeCloseDoorButton");
+    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
+    await browser.press("Enter");
+    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
+    assert.equal((await browser.storedData()).registrations.filter(({ source }) => source === "fridge").length, 1);
+
+    // Een onbekende pas op het startscherm: een melding, het startscherm blijft staan.
+    await browser.scanBadge("DEADBEEF");
+    await waitForToast("Deze pas is niet gekoppeld aan een medewerker.");
+    assert.equal(await startScreenShown(), true);
+    assert.deepEqual(await openModalIds(), []);
+  });
+
+  scenario("startscherm: met een ingesteld gezicht en een camera zonder toestemming blijven alleen pas en Handmatig zoeken over, zonder fouten", async () => {
+    // Lotte heeft gezichtsherkenning ingesteld (128 getallen, rechtstreeks in de opslag).
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
+    await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      const lotte = data.employees.find((employee) => employee.name === "Lotte van Dijk");
+      data.faceEnrollments = [{ id: "e2e-gezicht", employeeId: lotte.id, descriptor: new Array(128).fill(0.1), enrolledAt: new Date().toISOString() }];
+      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
+    })()`);
+    const { identifier } = await browser.send("Page.addScriptToEvaluateOnNewDocument", { source: FAKE_CAMERA });
+    try {
+      await browser.evaluate("window.oudePagina = true");
+      await browser.send("Page.reload");
+      await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && !document.querySelector("#startScreen").classList.contains("hidden")`);
+      // De camera wordt één keer geprobeerd (alleen op het startscherm). Zonder toestemming toont het
+      // startscherm daarna alleen de pas en Handmatig zoeken, zonder foutmelding in beeld of in de console.
+      await browser.waitFor("window.cameraPogingen === 1", { message: "De camera werd niet geprobeerd." });
+      await browser.waitFor(`document.querySelector("#startScreen").dataset.mode === "badge"`);
+      assert.equal(await text("#startStatus"), "Houd je pas tegen de lezer");
+      assert.equal(await browser.evaluate(`document.querySelector("#startScreen").classList.contains("has-camera")`), false);
+      assert.equal(await visibleToastText(), "");
+      await sleep(1500);
+      assert.equal(await browser.evaluate("window.cameraPogingen"), 1, "de camera wordt niet steeds opnieuw geprobeerd");
+
+      // Handmatig zoeken: de camera blijft uit.
+      await browser.manualSearch();
+      await sleep(500);
+      assert.equal(await browser.evaluate("window.cameraPogingen"), 1);
+    } finally {
+      await browser.send("Page.removeScriptToEvaluateOnNewDocument", { identifier });
+    }
   });
 
   scenario("vraag na een passcan: Nee wordt onthouden en daarna gaat de koelkast open", async () => {

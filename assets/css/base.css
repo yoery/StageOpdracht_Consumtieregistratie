@@ -89,8 +89,17 @@
   /* Achtergrond van knoppen met witte tekst als je eroverheen gaat of er met Tab op staat. */
   --primary-hover:var(--green-dark);
   --plus-hover:var(--blue);
-  /* Standby: de donkere huiskleur van de hero (--hero-start) bijna dekkend, zodat het scherm donker wordt. */
-  --standby-bg:rgba(20,77,91,.94)
+  /* Startscherm (start-screen.css): altijd donker, ook in het lichte thema, omdat de opdrachtgever een
+     zwart beginscherm wil. Bijna zwart met een zweem van de donkere huiskleur. De accentkleuren zijn de
+     lichte huiskleuren die ook op de donkere melding staan (--toast-success en --warning-text van het
+     donkere thema), zodat ze op zwart goed leesbaar zijn. Het donkere thema overschrijft ze niet. */
+  --start-screen-bg:#050d0f;
+  --start-screen-oval:#0d1a1c;
+  --start-screen-text:#fff;
+  --start-screen-muted:rgba(255,255,255,.78);
+  --start-screen-line:rgba(255,255,255,.5);
+  --start-screen-accent:#70d9ad;
+  --start-screen-warning:#f0b36b
 }
 /* Donker thema. Wordt gebruikt als <html data-theme="dark"> is gezet (door ThemeManager).
    De achtergrond wordt donker en de tekst krijgt de groene huiskleur, iets lichter
@@ -130,9 +139,7 @@
   /* --green-dark en --blue zijn hier licht; witte tekst daarop is slecht leesbaar. Daarom de
      donkergroene en donkere blauwgroene huiskleur, zodat de witte tekst goed leesbaar blijft. */
   --primary-hover:#087252;
-  --plus-hover:#12505f;
-  /* Standby in het donkere thema: de achtergrondkleur (--bg) bijna dekkend. */
-  --standby-bg:rgba(13,26,28,.94)
+  --plus-hover:#12505f
 }
 /* Algemene reset en basisopmaak voor tekst, knoppen en invoervelden. */
 * {

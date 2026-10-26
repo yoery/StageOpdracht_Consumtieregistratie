@@ -21,13 +21,16 @@ import { FACE_DEMO } from "./config.js";
  *   - nagaan of de tablet een camera heeft (detectCamera), zonder die aan te zetten;
  *   - de camera starten en stoppen;
  *   - van het camerabeeld een descriptor maken;
+ *   - op het startscherm alleen gezichten zoeken (detectFaces, zonder kenmerken) en pas na de
+ *     intentie-drempel de descriptor van dat ene gezicht maken (describeFace);
  *   - gezichten van medewerkers in het geheugen houden en een gezicht herkennen.
  *
  * Verbonden met:
  *   - config.js: FACE_DEMO (adres van de bibliotheek en modellen, drempelwaarde, tijdslimiet);
  *   - FaceController (onderdeel van de controller RegistrationApp): stuurt de demo aan
  *     (instellen, herkennen, venster openen en sluiten);
- *   - index.html: het venster #faceModal met het videobeeld #faceVideo.
+ *   - AutoScanController: het automatisch scannen op het startscherm (detectFaces en describeFace);
+ *   - index.html: het venster #faceModal met het videobeeld #faceVideo, en #startVideo op het startscherm.
  */
 export class FaceRecognitionDemo {
   // `mediaDevices` is de camera-functie van de browser. Die kan worden meegegeven, zodat de
@@ -69,7 +72,7 @@ export class FaceRecognitionDemo {
   }
 
   // Kan er misschien een camera zijn (niet zeker dat er geen is)? Dan mag de scan na een tik op het
-  // standby-scherm het proberen. Mislukt het starten, dan gaat de scan netjes dicht.
+  // startscherm (scanMode "tap") of het automatisch scannen het proberen. Mislukt het starten, dan gaat de scan netjes dicht.
   mayHaveCamera() {
     return this.isAvailable() && this.hasCamera !== false;
   }
@@ -95,9 +98,11 @@ export class FaceRecognitionDemo {
   // zegt of het venster nog steeds open is; is het intussen gesloten, dan wordt deze camera
   // meteen weer uitgezet en geeft de methode false terug. Zo blijft er nooit een camera aan
   // staan die niemand meer kan uitzetten.
-  async startCamera(video, isCurrent = () => true) {
+  // `size` ({ width, height }) is de gevraagde resolutie. Standaard 640 bij 480. Het startscherm vraagt
+  // een lagere resolutie (FACE_DEMO.autoScan), zodat de tablet niet warm wordt.
+  async startCamera(video, isCurrent = () => true, size = { width: 640, height: 480 }) {
     const stream = await this.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      video: { facingMode: "user", width: { ideal: size.width }, height: { ideal: size.height } },
       audio: false
     });
 
@@ -131,24 +136,74 @@ export class FaceRecognitionDemo {
   // Gaat er in de bibliotheek iets mis (bijvoorbeeld omdat het beeld net wegvalt), dan telt dat
   // als "geen gezicht", zodat het zoeken gewoon doorgaat in plaats van vast te lopen.
   async readFace(video) {
-    let results;
+    // Eerst alleen de gezichten zoeken (zonder kenmerken). Daarna worden alleen van het grootste
+    // gezicht, de persoon die vooraan staat, de kenmerken berekend via describeFace. Zo krijgen andere
+    // gezichten in beeld nooit kenmerken, net als bij het automatisch scannen op het startscherm.
+    let detections;
     try {
       const options = new this.faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 });
-      results = await this.faceapi
-        .detectAllFaces(video, options)
-        .withFaceLandmarks(true)
-        .withFaceDescriptors();
+      detections = await this.faceapi.detectAllFaces(video, options);
     } catch (error) {
-      console.warn("Gezicht lezen mislukt; er wordt opnieuw gezocht.", error);
+      console.warn("Gezicht lezen mislukt. Er wordt opnieuw gezocht.", error);
       return null;
     }
 
-    const closest = this.largestFace(results.map((result) => ({
-      area: result.detection.box.width * result.detection.box.height,
-      descriptor: Array.from(result.descriptor)
+    const closest = this.largestFace(detections.map(({ box }) => ({
+      area: box.width * box.height,
+      box: { x: box.x, y: box.y, width: box.width, height: box.height }
     })));
 
-    return closest ? closest.descriptor : null;
+    return closest ? this.describeFace(video, closest.box) : null;
+  }
+
+  // Alleen gezichten zoeken, zonder kenmerken (het automatisch scannen op het startscherm, zie
+  // AutoScanController). Geeft { width, height, faces } terug: de grootte van het camerabeeld en per
+  // gezicht alleen de rechthoek { x, y, width, height } in pixels. Er wordt geen descriptor berekend, ook
+  // niet van voorbijgangers. Is er nog geen beeld, of gaat er in de bibliotheek iets mis, dan telt dat
+  // als "geen gezicht", zonder melding in de console (het scannen loopt de hele tijd door).
+  async detectFaces(video) {
+    const width = video?.videoWidth || 0;
+    const height = video?.videoHeight || 0;
+    if (!this.faceapi || !width || !height) return { width, height, faces: [] };
+    try {
+      const options = new this.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+      const detections = await this.faceapi.detectAllFaces(video, options);
+      const faces = detections.map(({ box }) => ({ x: box.x, y: box.y, width: box.width, height: box.height }));
+      return { width, height, faces };
+    } catch (error) {
+      return { width, height, faces: [] };
+    }
+  }
+
+  // De kenmerken (descriptor) van precies dit ene gezicht (`face` is een rechthoek uit detectFaces), voor
+  // het automatisch scannen nadat de intentie-drempel is gehaald (FaceIntent). Alleen het stuk van het
+  // beeld rond dit gezicht gaat naar de herkenning, zodat andere gezichten in beeld geen kenmerken
+  // krijgen. Dat stuk staat even in een canvas in het geheugen en wordt daarna meteen leeggemaakt. Geeft
+  // de descriptor terug, of null als er in dat stuk geen gezicht wordt gevonden.
+  async describeFace(video, face) {
+    if (!this.faceapi || !face || typeof globalThis.document?.createElement !== "function") return null;
+    const margin = 0.3;
+    const sx = Math.max(0, Math.floor(face.x - face.width * margin));
+    const sy = Math.max(0, Math.floor(face.y - face.height * margin));
+    const sw = Math.min((video.videoWidth || 0) - sx, Math.ceil(face.width * (1 + margin * 2)));
+    const sh = Math.min((video.videoHeight || 0) - sy, Math.ceil(face.height * (1 + margin * 2)));
+    if (sw <= 0 || sh <= 0) return null;
+
+    const canvas = globalThis.document.createElement("canvas");
+    canvas.width = sw;
+    canvas.height = sh;
+    try {
+      canvas.getContext("2d").drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+      const options = new this.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+      const result = await this.faceapi.detectSingleFace(canvas, options).withFaceLandmarks(true).withFaceDescriptor();
+      return result ? Array.from(result.descriptor) : null;
+    } catch (error) {
+      return null;
+    } finally {
+      // Het stukje beeld wordt niet bewaard: het canvas wordt leeggemaakt.
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   }
 
   // Kiest uit een lijst gevonden gezichten ({ area, descriptor }) het grootste, of null bij een lege lijst.

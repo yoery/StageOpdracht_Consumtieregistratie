@@ -13,13 +13,14 @@ import { FormController } from "./controllers/FormController.js";
 import { FridgeController } from "./controllers/FridgeController.js";
 import { RecognitionController } from "./controllers/RecognitionController.js";
 import { StandbyController } from "./controllers/StandbyController.js";
+import { AutoScanController } from "./controllers/AutoScanController.js";
 import { SmartFridge } from "./fridge/SmartFridge.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
  * (de "Controller" in MVC).
  *
- * De controller bestaat uit deze class en elf kleinere classes met elk één taak. RegistrationApp
+ * De controller bestaat uit deze class en twaalf kleinere classes met elk één taak. RegistrationApp
  * maakt die onderdelen, koppelt de knoppen en toetsen eraan en is voor de rest van de app (en
  * voor de tests) het ene aanspreekpunt: iedere methode van een onderdeel is ook als methode van
  * RegistrationApp te gebruiken (zie de lijst DELEGATES onderaan dit bestand).
@@ -47,7 +48,10 @@ import { SmartFridge } from "./fridge/SmartFridge.js";
  *   - FridgeController: de slimme koelkast (demo), het koelkastvenster en het tabblad Koelkast;
  *   - RecognitionController: wat er opent na herkennen met de pas of de camera (koelkast of
  *     productvenster) en de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" na een passcan;
- *   - StandbyController: de standby van de tablet en wakker maken met een tik (tik om te scannen).
+ *   - StandbyController: het startscherm (sinds versie 3.21): tonen bij het openen, na afloop van een
+ *     registratie of koelkastopening en na een tijd zonder invoer, en "Handmatig zoeken";
+ *   - AutoScanController: het automatisch scannen op het startscherm met de intentie-drempel
+ *     (FACE_DEMO.scanMode "auto"). De camera staat alleen aan op het startscherm.
  * Ieder onderdeel krijgt deze controller mee en gebruikt het model, de view, persist en de
  * gedeelde toestand via this.app.
  *
@@ -106,6 +110,7 @@ export class RegistrationApp {
     this.fridge = new FridgeController(this, clock);
     this.recognition = new RecognitionController(this, clock);
     this.standby = new StandbyController(this, clock);
+    this.autoScan = new AutoScanController(this, clock);
   }
 
   // Is de medewerker in het productvenster herkend met de camera (demo gezichtsherkenning)?
@@ -138,11 +143,13 @@ export class RegistrationApp {
   // volgende ochtend nog de cijfers van gisteren tonen. Een tweede timer logt de beheerder uit
   // als het beheer 5 minuten niet is gebruikt (AdminController.startIdleWatch). Een derde timer
   // sluit het productvenster als dat 75 seconden niet is gebruikt
-  // (EmployeeController.startProductIdleWatch). Een vierde timer zet de tablet in standby na een tijd
+  // (EmployeeController.startProductIdleWatch). Een vierde timer toont het startscherm na een tijd
   // zonder invoer op de beginpagina (StandbyController.startStandbyWatch).
   // Demo gezichtsherkenning: verlopen gezichtsinstellingen worden gewist, de geldige opgeslagen
   // gezichten gaan in het geheugen om mee te vergelijken, en de app kijkt (zonder de camera aan te
-  // zetten) of er een camera is.
+  // zetten) of er een camera is. Daarna wordt het startscherm bijgewerkt: pas als bekend is of er een
+  // camera is, kan de camera van het startscherm aan (AutoScanController).
+  // Als laatste verschijnt het startscherm (als STANDBY.enabled aan staat).
   initialize() {
     this.renderTodayLabel(new Date());
 
@@ -154,12 +161,14 @@ export class RegistrationApp {
 
     this.expireFaces();
     this.loadSavedFaces();
-    this.faceDemo.detectCamera?.();
+    const cameraCheck = this.faceDemo.detectCamera?.();
 
     this.dayTimer = setInterval(() => this.refreshIfNewDay(), 60 * 1000);
     this.startIdleWatch();
     this.startProductIdleWatch();
     this.startStandbyWatch();
+    if (this.isStandbyEnabled()) this.enterStandby();
+    Promise.resolve(cameraCheck).then(() => this.refreshStartScreen(), () => {});
   }
 
   // Toont op de beginpagina alleen de manieren van herkennen die aan staan in config.js:
@@ -297,6 +306,7 @@ export class RegistrationApp {
     this.loadSavedFaces();
 
     if (!this.view.$("#faceModal").classList.contains("hidden")) this.closeFaceModal({ continueFlow: false });
+    this.cancelGreeting();
     this.closeFaceOffer();
     if (this.selectedEmployeeId) this.closeEmployeeProducts();
     // Een koelkastopening die bezig is, hoort bij gegevens die niet meer bestaan: afbreken zonder
@@ -630,16 +640,18 @@ export class RegistrationApp {
     });
   }
 
-  // Standby (StandbyController): een tik op het standby-scherm maakt wakker en start de scan, een
-  // toets maakt wakker, en een klik vlak na het wakker worden wordt tegengehouden (geen klik-door).
-  // Iedere tik, klik, toets, aanraking of scroll telt als invoer. In de capture-fase, zodat ook invoer
-  // meetelt die een andere listener tegenhoudt.
+  // Startscherm (StandbyController en AutoScanController): "Handmatig zoeken" toont de beginpagina, een
+  // tik op het ovaal start de korte scan (scanMode "tap"), en een klik vlak na het verbergen van het
+  // startscherm wordt tegengehouden (geen klik-door). Wordt het tabblad verborgen, dan gaat de camera
+  // uit, en weer aan als het tabblad terugkomt op het startscherm. Iedere tik, klik, toets, aanraking of
+  // scroll telt als invoer. In de capture-fase, zodat ook invoer meetelt die een andere listener tegenhoudt.
   registerStandbyEvents() {
-    const overlay = this.view.$("#standbyOverlay");
-    if (!overlay) return;
-    overlay.addEventListener("click", (event) => this.handleStandbyTap(event));
+    const startScreen = this.view.$("#startScreen");
+    if (!startScreen) return;
+    this.onClick("#startManualButton", (event) => this.handleManualSearch(event));
+    this.onClick("#startTapButton", (event) => this.handleStandbyTap(event));
     document.addEventListener("click", (event) => this.swallowStandbyGhostClick(event), { capture: true });
-    document.addEventListener("keydown", (event) => this.handleStandbyKey(event), { capture: true });
+    document.addEventListener("visibilitychange", () => this.updateAutoScan());
     for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
       document.addEventListener(type, () => this.noteStandbyActivity(), { capture: true, passive: true });
     }
@@ -754,10 +766,18 @@ const DELEGATES = {
   standby: {
     methods: [
       "isStandbyEnabled", "startStandbyWatch", "stopStandbyWatch", "tickStandby", "isHomeIdle", "noteStandbyActivity",
-      "checkStandby", "enterStandby", "standbyHint", "wakeFromStandby", "handleStandbyTap", "handleStandbyKey",
-      "isStandbyGhostClick", "swallowStandbyGhostClick"
+      "checkStandby", "enterStandby", "returnToStartScreen", "refreshStartScreen", "startScreenTexts", "startScreenHelp",
+      "wakeFromStandby", "handleManualSearch", "handleStandbyTap", "isStandbyGhostClick", "swallowStandbyGhostClick"
     ],
-    fields: ["standbyActive", "lastStandbyActivity", "standbyTimer", "standbyWokeAt"]
+    fields: ["standbyActive", "lastStandbyActivity", "standbyTimer", "standbyWokeAt", "renderedStartTexts"]
+  },
+  autoScan: {
+    methods: [
+      "scanMode", "canUseFace", "faceSetupPossible", "startScreenMode", "shouldAutoScan", "updateAutoScan",
+      "startAutoScan", "stopAutoScan", "resetScan", "setScanState", "scanTick", "recognizeFace", "pauseAfterUnknown",
+      "greet", "cancelGreeting"
+    ],
+    fields: ["scanSession", "scanCamera", "scanAttempts", "scanPausedUntil", "scanState", "cameraBlocked", "greetingFor", "descriptorCount"]
   },
   admin: {
     methods: [

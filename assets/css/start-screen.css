@@ -1,0 +1,181 @@
+﻿/* Startscherm (StandbyController en AutoScanController, sinds versie 3.21): het zwarte scherm met het
+   TVB-logo, het ovaal voor het gezicht, de tekst eronder en de knop "Handmatig zoeken". Vervangt het
+   gedimde standby-scherm (standby.css tot en met versie 3.20) en staat op dezelfde plek in de volgorde.
+   Het startscherm is altijd donker, ook in het lichte thema (de wens van de opdrachtgever). De kleuren
+   komen uit base.css (--start-screen-*).
+   Laadt na face.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Het scherm ligt boven de pagina en de vensters (z-index 5) en onder de meldingen (z-index 8), zodat
+   "… geregistreerd" na afloop ook op het startscherm te lezen is. */
+.start-screen {
+  position:fixed;
+  inset:0;
+  z-index:7;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  justify-items:center;
+  gap:16px;
+  padding:24px 16px max(24px, env(safe-area-inset-bottom));
+  overflow-y:auto;
+  background:var(--start-screen-bg);
+  color:var(--start-screen-text);
+  text-align:center;
+  animation:start-screen-in .4s ease-out
+}
+.start-brand {
+  display:flex;
+  align-items:center;
+  gap:10px
+}
+.start-brand .brand-mark {
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  font-size:11px
+}
+.start-title {
+  margin:0;
+  color:var(--start-screen-muted);
+  font:600 15px "Space Grotesk",sans-serif
+}
+.start-main {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  width:100%;
+  max-width:520px
+}
+/* Het ovaal (3 bij 4, staand) met het camerabeeld. FaceIntent.OVAL_ASPECT rekent met dezelfde verhouding.
+   Zo groot als past: niet breder dan 64 procent van het scherm en 360 pixels, en laag genoeg om de tekst
+   en de knop eronder in beeld te houden. */
+.start-oval {
+  position:relative;
+  flex:none;
+  width:min(64vw, 360px, calc((100vh - 330px) * .75));
+  width:min(64vw, 360px, calc((100dvh - 330px) * .75));
+  min-width:180px;
+  aspect-ratio:3 / 4;
+  border:3px solid var(--start-screen-line);
+  border-radius:50%;
+  overflow:hidden;
+  background:var(--start-screen-oval);
+  transition:border-color .3s, box-shadow .3s
+}
+/* Het camerabeeld, gespiegeld (zoals een spiegel). Alleen te zien als de camera echt aan staat. */
+.start-oval video {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scaleX(-1);
+  opacity:0
+}
+.start-screen.has-camera .start-oval video {
+  opacity:1
+}
+.start-oval-icon {
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:var(--start-screen-muted)
+}
+.start-oval-icon svg {
+  width:30%;
+  height:auto
+}
+.start-screen.has-camera .start-oval-icon {
+  display:none
+}
+/* Iemand staat goed in het ovaal ("Even stil blijven…") of is herkend: het ovaal wordt groen. */
+.start-oval[data-state="steady"],.start-oval[data-state="recognized"] {
+  border-color:var(--start-screen-accent);
+  box-shadow:0 0 0 6px rgba(112,217,173,.22)
+}
+.start-oval[data-state="recognized"] {
+  box-shadow:0 0 0 10px rgba(112,217,173,.32)
+}
+/* Niet herkend: een oranje rand, zonder beweging. */
+.start-oval[data-state="unknown"],.start-oval[data-state="multiple"] {
+  border-color:var(--start-screen-warning)
+}
+/* Een rustige ademhaling van de groene rand terwijl iemand stil staat. Niet bij "minder beweging". */
+@media (prefers-reduced-motion:no-preference) {
+  .start-oval[data-state="steady"] {
+    animation:start-oval-steady 1s ease-in-out infinite alternate
+  }
+}
+/* scanMode "tap": het hele ovaal is een knop. */
+.start-oval-tap {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  background:transparent;
+  cursor:pointer
+}
+.start-oval-tap:focus-visible,.start-manual:focus-visible {
+  outline:3px solid var(--start-screen-accent);
+  outline-offset:4px
+}
+.start-status {
+  min-height:1.25em;
+  margin:0;
+  font:600 clamp(22px, 4.5vw, 32px)/1.25 "Space Grotesk",sans-serif
+}
+.start-hint {
+  margin:-6px 0 0;
+  color:var(--start-screen-muted);
+  font-size:16px;
+  line-height:1.5
+}
+.start-hint:empty {
+  display:none
+}
+/* Een langere melding ("Je bent niet herkend. …", "Graag één persoon tegelijk") is kleiner, zodat hij
+   op twee regels past. De regel eronder ("Of houd je pas tegen de lezer.") zegt dan hetzelfde en wordt
+   verborgen, maar houdt zijn plek, zodat de knop niet verspringt. */
+.start-oval:is([data-state="unknown"],[data-state="multiple"]) ~ .start-status {
+  max-width:440px;
+  font-size:22px
+}
+.start-oval:is([data-state="unknown"],[data-state="multiple"],[data-state="recognized"]) ~ .start-hint {
+  visibility:hidden
+}
+/* "Handmatig zoeken": de huisstijlknop, groot genoeg voor een vinger (56 pixels hoog). */
+.start-screen .start-manual {
+  min-width:240px;
+  min-height:56px;
+  margin-top:4px;
+  padding:0 28px;
+  border-radius:12px;
+  font-size:18px
+}
+.start-privacy {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  max-width:460px;
+  margin:0;
+  color:var(--start-screen-muted);
+  font-size:13px;
+  line-height:1.4
+}
+.start-privacy svg {
+  flex:none
+}
+@keyframes start-screen-in {
+  from {
+    opacity:0
+  }
+}
+@keyframes start-oval-steady {
+  to {
+    box-shadow:0 0 0 12px rgba(112,217,173,.12)
+  }
+}
