@@ -15,7 +15,7 @@ import { DAYLIGHT_HOURS } from "./config.js";
  * Verbonden met:
  *   - index.html: de slider (#themeSwitch) en de knoppen met data-theme-mode in de bovenbalk,
  *     en een klein script in de <head> dat het donkere thema al vóór het tekenen zet.
- *   - styles.css: de kleuren voor data-theme="dark" staan in :root[data-theme="dark"].
+ *   - assets/css/base.css: de kleuren voor data-theme="dark" staan in :root[data-theme="dark"].
  *   - config.js: DAYLIGHT_HOURS, de tijden van zonsopkomst en zonsondergang per maand.
  *   - main.js: maakt de ThemeManager aan en start hem.
  *

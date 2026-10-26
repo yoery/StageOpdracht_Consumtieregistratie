@@ -24,7 +24,7 @@ import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import {
-  createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee, asAdmin
+  createModel, createRecordingView, createStrictView, createDataStore, createFakeElement, addEmployee, asAdmin, readAllCss
 } from "./helpers.js";
 
 // Console-waarschuwingen van DataStore horen bij deze tests; ze maken de uitvoer alleen onrustig.
@@ -510,7 +510,7 @@ test("punt 10: bij wijzigen is 'Opslaan' de enige en dus primaire knop", () => {
 });
 
 test("punt 10: op een smal scherm krijgen de filters de hele breedte en kunnen ze krimpen", () => {
-  const css = fs.readFileSync(new URL("../assets/css/styles.css", import.meta.url), "utf8");
+  const css = readAllCss();
   const mobile = css.slice(css.indexOf("@media(max-width:720px)"));
 
   assert.match(mobile, /\.filter-row label \{\s*flex:1 1 100%;\s*min-width:0\s*\}/);

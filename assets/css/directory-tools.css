@@ -1,0 +1,76 @@
+﻿/* Beginpagina: de regel met de hint voor de pas en de demoknoppen (camera en slimme koelkast),
+   "Tik op je naam" naast de teller, en het zoekveld en het bedrijfsfilter naast elkaar vanaf een
+   tablet.
+   Laadt na suggestion.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Demo gezichtsherkenning: knop op de beginpagina en instellen in het productvenster. */
+/* De hint voor de pas en de demoknoppen ("Herken mij met de camera (demo)" en "Slimme koelkast (demo)")
+   staan naast elkaar op één regel (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger
+   op het scherm. De demoknoppen staan samen rechts (.directory-actions). Staan ze allemaal uit
+   (config.js), dan verdwijnt de regel helemaal. */
+.directory-tools {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px 16px;
+  margin-top:16px
+}
+.directory-tools:not(:has(> .badge-hint:not(.hidden), > .directory-actions > :not(.hidden))) {
+  display:none
+}
+.directory-actions {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:10px;
+  margin-left:auto
+}
+.directory-actions:not(:has(> :not(.hidden))) {
+  display:none
+}
+.badge-hint {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  color:var(--muted);
+  font-size:14px
+}
+.badge-hint span {
+  display:inline-flex;
+  font-size:20px;
+  color:var(--green-dark)
+}
+.face-start {
+  min-height:44px;
+  margin-left:auto
+}
+/* "Tik op je naam": één keer, rechts in de kop naast de teller. */
+.card-heading-meta {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:6px 12px
+}
+.list-hint {
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  font-weight:600
+}
+/* Op een tablet en groter staan het zoekveld en het bedrijfsfilter naast elkaar op één regel, zodat
+   de medewerkerlijst hoger op het scherm begint. Op een telefoon staan ze onder elkaar. */
+@media (min-width:721px) {
+  .directory-filters {
+    display:grid;
+    grid-template-columns:minmax(0,3fr) minmax(0,2fr);
+    align-items:center;
+    gap:12px;
+    margin:16px 0 18px
+  }
+  .directory-filters .search-box,.directory-filters .company-filter {
+    margin:0
+  }
+}

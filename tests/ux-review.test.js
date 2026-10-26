@@ -26,12 +26,12 @@ import { EmployeeController } from "../assets/js/controllers/EmployeeController.
 import { BadgeReader } from "../assets/js/BadgeReader.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS } from "../assets/js/config.js";
-import { createModel, addEmployee, createRecordingView, createFakeElement, disabledFridge } from "./helpers.js";
+import { createModel, addEmployee, createRecordingView, createFakeElement, disabledFridge, readAllCss } from "./helpers.js";
 
 const SECOND = 1000;
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const html = read("../index.html");
-const css = read("../assets/css/styles.css");
+const css = readAllCss();
 
 // Nep-klok: de tijd staat stil tot de test hem verzet. setInterval onthoudt alleen de actie.
 const createClock = () => {

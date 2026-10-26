@@ -32,10 +32,10 @@ import { FridgeController } from "../assets/js/controllers/FridgeController.js";
 import { StockController } from "../assets/js/controllers/StockController.js";
 import { FormController } from "../assets/js/controllers/FormController.js";
 import { SMART_FRIDGE } from "../assets/js/config.js";
-import { createModel, addEmployee, createRecordingView, createFakeElement, fakeLocalStorageWithKeys, asAdmin } from "./helpers.js";
+import { createModel, addEmployee, createRecordingView, createFakeElement, fakeLocalStorageWithKeys, asAdmin, readAllCss } from "./helpers.js";
 
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
-const css = read("../assets/css/styles.css");
+const css = readAllCss();
 const appSource = read("../assets/js/RegistrationApp.js");
 const schema = read("../docs/DATABASE-SCHEMA.sql").replace(/\r\n/g, "\n");
 const to = read("../docs/TO-BLIKJESREGISTRATIE.md");

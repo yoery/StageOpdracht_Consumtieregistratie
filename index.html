@@ -34,8 +34,27 @@
       // Geen toegang tot de opslag: de pagina start licht en ThemeManager regelt de rest.
     }
   </script>
-  <!-- Externe stylesheet met alle kleuren, layouts en componentstijlen. -->
-  <link rel="stylesheet" href="assets/css/styles.css">
+  <!-- Stylesheets per onderdeel (assets/css/). De volgorde hieronder is de volgorde van de cascade:
+       een latere regel wint van een eerdere met dezelfde sterkte. base.css (lettertypes, kleuren
+       en reset) staat daarom bovenaan en responsive.css (mediaqueries) onderaan. Niet omwisselen. -->
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/topbar.css">
+  <link rel="stylesheet" href="assets/css/home.css">
+  <link rel="stylesheet" href="assets/css/modal.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <link rel="stylesheet" href="assets/css/product-window.css">
+  <link rel="stylesheet" href="assets/css/admin-forms.css">
+  <link rel="stylesheet" href="assets/css/toast.css">
+  <link rel="stylesheet" href="assets/css/admin-corrections.css">
+  <link rel="stylesheet" href="assets/css/motion.css">
+  <link rel="stylesheet" href="assets/css/icons.css">
+  <link rel="stylesheet" href="assets/css/feedback.css">
+  <link rel="stylesheet" href="assets/css/suggestion.css">
+  <link rel="stylesheet" href="assets/css/directory-tools.css">
+  <link rel="stylesheet" href="assets/css/face.css">
+  <link rel="stylesheet" href="assets/css/standby.css">
+  <link rel="stylesheet" href="assets/css/fridge.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
   <!-- Startpunt van de applicatie. Modules werken alleen via een webserver (bijv. Live Server), niet via file://. -->
   <script type="module" src="assets/js/main.js"></script>
 </head>

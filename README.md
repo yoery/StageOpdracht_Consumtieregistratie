@@ -17,8 +17,25 @@ Browsertests (end-to-end) draai je met `npm run test:e2e`. Ze openen de echte pa
 ```text
 index.html                  # Hoofdpagina van de website
 assets/
-  css/
-    styles.css              # Vormgeving
+  css/                      # Vormgeving, één stylesheet per onderdeel. index.html laadt ze in deze volgorde (de cascade)
+    base.css                # Lettertypes, kleurvariabelen voor licht en donker, reset
+    topbar.css              # Bovenbalk met logo, thema-schakelaar en Admin login
+    home.css                # Beginpagina: banner, medewerkerlijst, zoeken, bedrijfsfilter, totalen, footer
+    modal.css               # Vensters, velden en de algemene knoppen
+    admin.css               # Beheer: kop, tabbladen, filters en tabellen
+    product-window.css      # Productvenster met − en + en de knopbalk met Registreren
+    admin-forms.css         # Beheer: formulieren, lijsten, bedrijven, consumptiepunten en voorraad
+    toast.css               # Meldingen
+    admin-corrections.css   # Beheer: correcties en Registratie verwijderen
+    motion.css              # Overgangen, animaties en minder beweging
+    icons.css               # SVG-iconen
+    feedback.css            # Foutmeldingen onder een veld, lege toestand en lijsten in het beheer
+    suggestion.css          # Begroeting en aanbeveling in het productvenster
+    directory-tools.css     # Pashint, demoknoppen en zoekveld en filter naast elkaar
+    face.css                # Demo gezichtsherkenning
+    standby.css             # Standby-scherm
+    fridge.css              # Slimme koelkast en het tabblad Koelkast
+    responsive.css          # Mediaqueries voor telefoon en tablet (als laatste)
   js/
     main.js                 # Startpunt van de app
     config.js               # Vaste waarden: standaardproducten, bedrijven en de tijden voor automatisch uitloggen en sluiten
@@ -61,9 +78,9 @@ docs/
   *.docx, *.pdf             # Word- en PDF-versies van het TO en de documentatie in de TVB-huisstijl
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
-  helpers.js                # Gedeelde hulpfuncties voor de tests
+  helpers.js                # Gedeelde hulpfuncties voor de tests (ook readAllCss: alle CSS in de volgorde van index.html)
   e2e/                      # 31 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 811 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie)
+  *.test.js                 # 812 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op

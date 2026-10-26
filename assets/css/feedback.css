@@ -1,0 +1,106 @@
+﻿/* Terugkoppeling en rust in het beheer: iconen in de meldingen, de foutmelding onder een
+   formulierveld, de lege toestand (.empty-block) en de lijsten in het beheer met één kader per lijst.
+   Laadt na icons.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Meldingen: succes met een vinkje, fout met een waarschuwingsteken. */
+.toast {
+  display:flex;
+  align-items:center;
+  gap:8px
+}
+.toast .icon {
+  width:18px;
+  height:18px
+}
+.toast-success .icon {
+  color:var(--toast-success)
+}
+.toast-error .icon {
+  color:var(--toast-error)
+}
+/* Foutmelding direct onder een formulierveld. */
+.field-error {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  color:var(--error-text);
+  font-size:13px;
+  font-weight:600
+}
+[aria-invalid="true"] {
+  border-color:var(--danger) !important
+}
+/* Lege toestand: icoon, korte kop, uitleg en eventueel een knop. Overal dezelfde opbouw. */
+.empty-block {
+  display:grid;
+  justify-items:center;
+  gap:6px;
+  padding:28px 16px;
+  text-align:center;
+  color:var(--muted)
+}
+.empty-block .icon {
+  width:32px;
+  height:32px;
+  margin-bottom:4px;
+  color:var(--green)
+}
+.empty-block strong {
+  color:var(--ink);
+  font-size:15px
+}
+.empty-block p {
+  max-width:46ch;
+  margin:0;
+  font-size:13px;
+  line-height:1.5
+}
+.empty-block .secondary-button,.empty-state .secondary-button {
+  margin-top:10px
+}
+.admin-table-wrap td.empty-cell {
+  padding:0;
+  white-space:normal
+}
+/* Rustigere lijsten in het beheerscherm: één kader per lijst, rijen gescheiden door een lijn. */
+.admin-employee-list,.admin-correction-list {
+  gap:0;
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden
+}
+.admin-employee-list > .admin-employee-item,.admin-correction-item {
+  border:0;
+  border-radius:0
+}
+.admin-employee-list > .admin-employee-item + .admin-employee-item,
+.admin-correction-item + .admin-correction-item {
+  border-top:1px solid var(--line)
+}
+.admin-company-item {
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden
+}
+.admin-company-item .admin-employee-item {
+  border:0;
+  border-radius:0
+}
+.admin-point-list {
+  gap:0;
+  margin:0
+}
+.admin-company-item .admin-point-item {
+  border-top:1px solid var(--line);
+  padding-left:34px
+}
+.admin-point-empty {
+  margin:0;
+  padding:10px 34px;
+  border-top:1px solid var(--line)
+}
+/* Actieknoppen in de beheerlijsten even groot als de andere knoppen. */
+.admin-employee-item .table-action {
+  font-size:13px
+}

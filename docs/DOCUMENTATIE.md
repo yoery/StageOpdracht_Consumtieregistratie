@@ -11,7 +11,7 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | Bestand | Functie |
 |---|---|
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
-| `assets/css/styles.css` | De volledige vormgeving, kleuren, layout en mobiele weergave |
+| `assets/css/` | De vormgeving, kleuren, layout en mobiele weergave, verdeeld over achttien stylesheets per onderdeel (sinds versie 3.20, zie hoofdstuk 6). `index.html` laadt ze in een vaste volgorde |
 | `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
 | `assets/js/config.js` | Vaste waarden: opslagsleutel, kleuren, voorbeeldmedewerkers, standaardproducten, de 13 bedrijven, de tijden van zonsopkomst en zonsondergang, de instellingen van de demo gezichtsherkenning (`FACE_DEMO`), van de pasjeslezer (`BADGE_READER`), na hoeveel tijd zonder invoer de beheerder wordt uitgelogd (`ADMIN_IDLE_LOGOUT_MS`, 5 minuten) en na hoeveel tijd zonder invoer het productvenster vanzelf sluit (`EMPLOYEE_IDLE_CLOSE_MS`, 75 seconden, met de waarschuwing `EMPLOYEE_IDLE_WARNING_MS`, de laatste 10 seconden) en de instellingen van de slimme koelkast (`SMART_FRIDGE`, zie 4.17), wat er opent na herkennen (`RECOGNITION_TARGET`) en de standby (`STANDBY`, zie 4.18) |
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
@@ -50,10 +50,10 @@ Deze versie is een **frontend-demo**. De gegevens worden opgeslagen in `localSto
 | `tests/slimme-koelkast.test.js` | Tests voor de slimme koelkast: omrekenen van gewicht naar aantallen (tolerantie, terugleggen, meerdere schappen, onverklaarbaar verschil), het slot met een nep-klok, de weegschaal, registraties met voorraad en logboek, de indeling, de controle en migratie in `DataStore`, wissen, en het koelkastvenster met de pas (onbekende pas, tweede scan, deur te lang open, mislukt opslaan, herladen) |
 | `tests/standby-en-gezicht.test.js` | Tests voor de standby, tik om te scannen en de vraag na een passcan (versie 3.17), met een nep-klok en een nep-camera: dimmen na 2 minuten, wakker zonder klik-door, de camera alleen na een tik en uit na de scantijd, herkend naar de koelkast of het productvenster, de pas naar de koelkast, `Ja, instellen` en `Nee`, verlopen na 365 dagen, opslaan, controleren en wissen van de kenmerken, en niets in de CSV-export of het logboek |
 | `tests/generale-repetitie.test.js` | Regressietests voor de fouten uit de generale repetitie van de demo (versie 3.19): een pas in een ander tekstveld laat de oude inhoud staan (niet in `Pasnummer`), de melding per reden als de camera niet start, de binnenruimte van de velden in de voorraadtabel en het lege pictogram in `index.html` |
-| `tests/` | Unit tests (811) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/` | Unit tests (812) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
-| `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
+| `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, iedere stylesheet precies één keer gelinkt in `index.html`, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
 | `tests/gegevens-en-tabbladen.test.js` | Tests voor de prijsgrens van 1000 euro, de focus na `Registreren`, "niets gewijzigd" bij opslaan, en verouderde formulieren of een gewiste opslag na een wijziging in een ander tabblad. Gebruikt de strenge nep-view (`createStrictView` in `helpers.js`) |
 | `tests/werkgever-en-correctiedatum.test.js` | Tests voor het werkgevernummer per registratie en de datum bij een correctie `+` |
 | `tests/to-controle.test.js` | Regressietests voor de TO-controle: "1 medewerker"/"2 medewerkers", bevestiging bij product verwijderen, de melding bij een verwijderde medewerker (correctie `+`), alleen een inactieve medewerker zonder registraties verwijderen, uniek werkgevernummer, dubbele id's en datums in de toekomst bij het laden, de apostrof in de CSV, `lastRegistration` en `pointId`, het SQL-schema (`counted_at`, geen rol `manager`), de opslagknoppen bij wijzigen, de filters op een smal scherm en tests voor FR-01, FR-02, FR-04, FR-10 en FR-29 (actieve medewerkers, zoeken op naam, de `−` in het productvenster, alle registraties voor de beheerder, geen bedragen of aantallen op de publieke pagina). Verder: "1 product" in de correctielijst, een klik op de medewerkerkaart (FR-32) en het totaal op de knop `Registreren` (FR-47) |
@@ -318,7 +318,7 @@ In de `<head>` staan:
 - De titel en beschrijving voor browser en zoekmachines.
 - `referrer` op `no-referrer`: de browser stuurt bij links en verzoeken het adres van de pagina niet mee.
 - Een Content-Security-Policy (`http-equiv="Content-Security-Policy"`): de browser laadt alleen bestanden van de eigen server. De twee inline scripts (het themascript in de `<head>` en de `file://`-waarschuwing onderaan) zijn toegestaan via hun sha256-hash. Wijzig je zo'n script, dan moet de hash in de CSP mee veranderen. `tests/beveiliging-config.test.js` controleert dat. `frame-ancestors` werkt niet in een meta-tag. Die moet in productie als HTTP-header door de webserver worden meegestuurd (zie het TO, hoofdstuk 13).
-- `assets/css/styles.css` voor de vormgeving. De lettertypes worden daar met `@font-face` uit `assets/fonts/` geladen, niet van Google Fonts.
+- De achttien stylesheets uit `assets/css/` voor de vormgeving, elk met een eigen `<link rel="stylesheet">`, van `base.css` tot en met `responsive.css` (zie hoofdstuk 6). De lettertypes worden in `base.css` met `@font-face` uit `assets/fonts/` geladen, niet van Google Fonts.
 - `assets/js/main.js` als startpunt van de JavaScript.
 
 ### Navigatiebalk
@@ -385,11 +385,40 @@ Onder het logboek (`auditTab`) staan een uitleg en de knop `Alle gegevens wissen
 
 Onderaan `index.html` staat een klein script dat controleert of de pagina via `file://` is geopend. Is dat zo, dan verschijnt bovenaan een balk met de uitleg dat de website via Live Server moet worden gestart (zie hoofdstuk 3).
 
-## 6. Uitleg van `assets/css/styles.css`
+## 6. Uitleg van de CSS (`assets/css/`)
+
+### Bestanden en volgorde
+
+Tot en met versie 3.19 stond alle vormgeving in één bestand (`styles.css`, 2706 regels). Sinds versie 3.20 staat die in achttien kleinere stylesheets, één per onderdeel. Er is daarbij niets aan de regels zelf veranderd: het oude bestand is in aaneengesloten stukken geknipt, in de oorspronkelijke volgorde, en ieder stuk kreeg bovenaan een korte uitleg.
+
+`index.html` laadt de bestanden met losse `<link rel="stylesheet">`-regels in deze volgorde. Die volgorde is belangrijk: hebben twee regels dezelfde sterkte, dan wint de regel die later komt. Zet de bestanden dus niet in een andere volgorde.
+
+| Volgorde | Bestand | Wat erin staat |
+|---|---|---|
+| 1 | `base.css` | Lettertypes, de kleurvariabelen voor licht en donker, de reset en de pagina-opbouw |
+| 2 | `topbar.css` | De bovenbalk met logo, thema-schakelaar en de knop `Admin login` |
+| 3 | `home.css` | De beginpagina: banner, medewerkerlijst, zoekveld, bedrijfsfilter, totalen, tip en footer |
+| 4 | `modal.css` | Vensters, velden in een venster en de algemene knoppen |
+| 5 | `admin.css` | Het beheer: kop, tabbladen, filters en tabellen |
+| 6 | `product-window.css` | Het productvenster met `−` en `+` en de knopbalk met `Registreren` |
+| 7 | `admin-forms.css` | Het beheer: formulieren, lijsten, bedrijven, consumptiepunten en voorraad |
+| 8 | `toast.css` | De melding bij openen als los bestand en de tijdelijke meldingen |
+| 9 | `admin-corrections.css` | Het beheer: correcties en het venster `Registratie verwijderen` |
+| 10 | `motion.css` | Overgangen en animaties, en geen animaties bij "minder beweging" |
+| 11 | `icons.css` | De SVG-iconen |
+| 12 | `feedback.css` | Iconen in meldingen, foutmeldingen onder een veld en de lege toestand |
+| 13 | `suggestion.css` | De begroeting en de aanbeveling in het productvenster |
+| 14 | `directory-tools.css` | De hint voor de pas, de demoknoppen en zoekveld en filter naast elkaar |
+| 15 | `face.css` | De demo gezichtsherkenning |
+| 16 | `standby.css` | Het standby-scherm |
+| 17 | `fridge.css` | De slimme koelkast en het tabblad Koelkast |
+| 18 | `responsive.css` | De mediaqueries voor telefoon en tablet. Staat als laatste |
+
+Een nieuwe regel hoort in het bestand van het onderdeel. Komt er een nieuw bestand bij, link het dan ook in `index.html`. `tests/beveiliging-config.test.js` controleert dat ieder bestand in `assets/css/` precies één keer wordt geladen. De unit tests lezen alle CSS samen met `readAllCss()` uit `tests/helpers.js`, in de volgorde van `index.html`.
 
 ### CSS-variabelen
 
-In `:root` staan herbruikbare variabelen:
+In `:root` (in `base.css`) staan herbruikbare variabelen:
 
 - `--green`: hoofdgroen van de organisatie.
 - `--green-dark`: donkere groene tekst en hoverkleur.
@@ -407,13 +436,14 @@ Als het organisatiepalet later verandert, kunnen de kleuren centraal worden aang
 
 **Licht en donker thema:** alle kleuren in de stylesheet komen uit deze variabelen. `:root` bevat de lichte kleuren, `:root[data-theme="dark"]` dezelfde variabelen met donkere waarden. De class `ThemeManager` zet `data-theme="light"` of `data-theme="dark"` op het `<html>`-element, en de hele website verandert dan mee. Een klein script in de `<head>` van `index.html` zet het donkere thema al vóór het tekenen van de pagina, zodat de pagina niet eerst wit oplicht. Bij `Auto` gebruikt het script het thema van het vorige bezoek, dat `ThemeManager` bewaart onder `tvb-theme-last`. Alleen de witte tekst op groene knoppen, de letters in de avatars en de kleuren van de banner zijn in beide thema's hetzelfde. Door `color-scheme` tekent de browser de keuzelijsten (`select`) en hun opties in het donkere thema ook donker: witte tekst op `--paper`, contrast 15,7:1. Placeholdertekst, zoals "Alle bedrijven" in het bedrijfsfilter, krijgt in het donkere thema `--muted` (6,9:1), omdat het standaardgrijs van de browser daar maar 3,4:1 haalt. In het lichte thema is `--muted` iets donkerder gemaakt (`#5a6c71`, dezelfde tint), zodat de uitleg- en bijschrifttekst op alle lichte achtergronden minstens 4,5:1 haalt (4,6:1 tot 5,5:1).
 
-De stylesheet is geordend van algemeen naar specifiek:
+De stylesheets zijn geordend van algemeen naar specifiek:
 
-1. Globale variabelen en reset.
-2. Basislayout en navigatie.
-3. Hoofdcomponenten zoals hero, kaarten en medewerkerregels.
+1. Globale variabelen en reset (`base.css`).
+2. Basislayout en navigatie (`topbar.css` en `home.css`).
+3. Hoofdcomponenten zoals hero, kaarten, medewerkerregels, vensters en het productvenster.
 4. Admincomponenten, tabellen en meldingen.
-5. Responsive regels voor kleinere schermen.
+5. De onderdelen die later zijn toegevoegd: gezichtsherkenning, standby en de slimme koelkast.
+6. Responsive regels voor kleinere schermen (`responsive.css`).
 
 Herbruikbare stijlen staan gegroepeerd in componentselectors, bijvoorbeeld `.card`, `.primary-button`, `.stat-card` en `.admin-search`. Hierdoor blijft de styling centraal beheerd en hoeft dezelfde stijl niet op meerdere plekken te worden gekopieerd.
 

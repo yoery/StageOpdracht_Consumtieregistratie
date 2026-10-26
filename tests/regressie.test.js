@@ -13,7 +13,7 @@ import { DEFAULT_PRODUCTS } from "../assets/js/config.js";
 import { DataStore } from "../assets/js/DataStore.js";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import {
-  createModel, createDataStore, createRecordingView, createFakeElement, fakeLocalStorage, registration, asAdmin
+  createModel, createDataStore, createRecordingView, createFakeElement, fakeLocalStorage, registration, asAdmin, readAllCss
 } from "./helpers.js";
 
 console.warn = () => {};
@@ -448,7 +448,7 @@ test("controle 2, punt 2: na een eigen registratie staat er wel 'welkom terug' (
 });
 
 test("controle 2, punt 3: het zoekveld krijgt een zichtbare focus", () => {
-  const css = fs.readFileSync(new URL("../assets/css/styles.css", import.meta.url), "utf8");
+  const css = readAllCss();
 
   assert.match(css, /\.search-box:focus-within\s*\{\s*border-color\s*:\s*var\(--green\)/);
 });

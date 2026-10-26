@@ -1,0 +1,35 @@
+﻿/* Productvenster: de persoonlijke begroeting en de aanbeveling "Vorige keer koos je ...".
+   Laadt na feedback.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Persoonlijke begroeting en de aanbeveling "Vorige keer koos je ..." in het productvenster. */
+.welcome-line {
+  margin:6px 0 0;
+  color:var(--green-dark);
+  font-weight:600
+}
+.suggestion {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:16px;
+  padding:12px 14px;
+  border:1px solid var(--mint-border);
+  border-radius:10px;
+  background:var(--mint);
+  color:var(--ink);
+  font-size:14px
+}
+.suggestion > span {
+  flex:1;
+  min-width:180px
+}
+.suggestion .icon {
+  width:20px;
+  height:20px;
+  color:var(--green)
+}
+/* "Zelfde als vorige keer": minstens 44 pixels hoog, net als de andere tikdoelen (UX-review 3.12). */
+.suggestion .secondary-button {
+  min-height:44px
+}

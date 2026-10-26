@@ -1,0 +1,59 @@
+﻿/* Standby (StandbyController): het scherm dat de pagina dimt met het TVB-logo en "Tik op het
+   scherm om te beginnen".
+   Laadt na face.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Standby (StandbyController): een knop over het hele scherm die de pagina dimt in de donkere
+   huiskleur, met het TVB-logo en "Tik op het scherm om te beginnen". Ligt boven vensters en meldingen.
+   Verschijnt met een rustige fade, zonder beweging bij "minder beweging" (zie prefers-reduced-motion). */
+.standby-overlay {
+  position:fixed;
+  inset:0;
+  z-index:9;
+  width:100%;
+  height:100%;
+  display:grid;
+  place-items:center;
+  padding:24px 16px;
+  border:0;
+  border-radius:0;
+  background:var(--standby-bg);
+  color:#fff;
+  font:inherit;
+  text-align:center;
+  cursor:pointer;
+  animation:standby-in .6s ease-out
+}
+.standby-overlay:focus-visible {
+  outline:3px solid var(--toast-success);
+  outline-offset:-8px
+}
+.standby-card {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  max-width:520px
+}
+.standby-mark {
+  width:64px;
+  height:64px;
+  border-radius:18px;
+  font-size:18px
+}
+.standby-title {
+  font:600 clamp(24px,5vw,36px)/1.2 "Space Grotesk",sans-serif
+}
+.standby-hint {
+  max-width:440px;
+  color:rgba(255,255,255,.86);
+  font-size:16px;
+  line-height:1.5
+}
+.standby-hint:empty {
+  display:none
+}
+@keyframes standby-in {
+  from {
+    opacity:0
+  }
+}

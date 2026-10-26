@@ -1,0 +1,105 @@
+﻿/* Beheer (dashboard): de kop, de tabbladen, de filterregel met de exportknop, de tabellen
+   (registraties en logboek) en het begin van het medewerkerformulier. Vervolg in admin-forms.css
+   en admin-corrections.css.
+   Laadt na modal.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Dashboardkop, tabs en filterbediening. */
+.admin-header {
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+  gap:20px;
+  padding-top:28px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--line)
+}
+.admin-tabs {
+  display:flex;
+  gap:22px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:20px;
+  overflow-x:auto
+}
+.tab {
+  white-space:nowrap
+}
+.tab {
+  padding:14px 2px;
+  background:none;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  border-bottom:2px solid transparent
+}
+.tab.active {
+  color:var(--green-dark);
+  border-color:var(--green)
+}
+.filter-row {
+  display:flex;
+  align-items:end;
+  gap:12px;
+  margin-bottom:18px
+}
+.filter-row label {
+  flex:1;
+  margin:0
+}
+.export-button {
+  height:43px;
+  white-space:nowrap
+}
+/* Registratietabel en medewerkersbeheer. */
+.admin-table-wrap {
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:auto
+}
+.admin-table-wrap table {
+  border-collapse:collapse;
+  width:100%;
+  font-size:12px
+}
+.admin-table-wrap th {
+  text-align:left;
+  color:var(--muted);
+  background:var(--paper-soft);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.7px
+}
+.admin-table-wrap td,.admin-table-wrap th {
+  padding:12px;
+  border-bottom:1px solid var(--line);
+  white-space:nowrap
+}
+.admin-table-wrap tr:last-child td {
+  border:0
+}
+/* Logboek: de kolom Details mag afbreken. De omschrijvingen zijn sinds versie 3.16 langer
+   (verwacht, geteld en verschil bij een telling, oude en nieuwe waarde bij een wijziging).
+   Zonder afbreken werd de tabel breder dan het beheervenster en viel de kolom Datum & tijd weg. */
+#auditTab .admin-table-wrap td:nth-child(2) {
+  white-space:normal;
+  overflow-wrap:anywhere;
+  min-width:18ch
+}
+.table-action {
+  background:none;
+  color:var(--danger);
+  font-size:17px
+}
+.add-employee-form {
+  display:flex;
+  gap:10px;
+  margin-bottom:20px
+}
+.employee-fields {
+  flex-wrap:wrap
+}
+.employee-fields input {
+  min-width:150px
+}
+.employee-form-modal {
+  max-width:650px
+}

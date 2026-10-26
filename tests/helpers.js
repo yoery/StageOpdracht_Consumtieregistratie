@@ -1,4 +1,5 @@
 // Gedeelde hulpfuncties voor de unit tests.
+import fs from "node:fs";
 import { RegistrationModel } from "../assets/js/RegistrationModel.js";
 import { DataStore } from "../assets/js/DataStore.js";
 import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
@@ -166,6 +167,21 @@ export const asAdmin = (app) => {
   app.adminLoggedIn = true;
   return app;
 };
+
+// De stylesheets in de volgorde waarin index.html ze laadt (de <link rel="stylesheet">-regels).
+// Sinds versie 3.20 is de opmaak verdeeld over losse bestanden in assets/css/. De volgorde is de
+// cascade: een latere regel wint van een eerdere met dezelfde sterkte.
+export const cssFiles = () => {
+  const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  return [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((match) => match[1]);
+};
+
+// Alle CSS achter elkaar, in de laadvolgorde van index.html. Zo controleren de tests dezelfde regels
+// als toen alles nog in één bestand (styles.css) stond. Het BOM-teken aan het begin van ieder bestand
+// valt weg.
+export const readAllCss = () => cssFiles()
+  .map((file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8").replace(/^﻿/, ""))
+  .join("");
 
 // Een registratie met een vaste datum (lokale tijd), voor tests met maanden.
 export const registration = (id, employeeId, productId, createdAt) => ({

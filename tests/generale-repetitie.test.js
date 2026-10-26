@@ -19,7 +19,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { BadgeController } from "../assets/js/controllers/BadgeController.js";
 import { FaceController } from "../assets/js/controllers/FaceController.js";
-import { createModel, createRecordingView, createFakeElement, asAdmin, disabledFridge } from "./helpers.js";
+import { createModel, createRecordingView, createFakeElement, asAdmin, disabledFridge, readAllCss } from "./helpers.js";
 
 const read = (file) => fs.readFileSync(new URL(file, import.meta.url), "utf8");
 
@@ -213,7 +213,7 @@ test("generale repetitie 2: zonder camera zegt het cameravenster 'Geen camera ge
 // ------------------------------------------------------------------
 
 test("generale repetitie 3: de velden in de voorraadtabel houden 8 pixels binnenruimte, ook in het beheervenster", () => {
-  const css = read("../assets/css/styles.css");
+  const css = readAllCss();
   // .modal input (0,1,1) is sterker dan .stock-input (0,1,0). Daarom een regel met .stock-table ervoor.
   assert.match(css, /\.modal input,\.filter-row select,\.add-employee-form input \{[^}]*padding:0 12px/);
   assert.match(css, /\n\.stock-table \.stock-input \{\s*padding:0 8px\s*\}/);

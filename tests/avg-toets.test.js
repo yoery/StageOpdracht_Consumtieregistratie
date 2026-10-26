@@ -12,7 +12,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { AdminController } from "../assets/js/controllers/AdminController.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { ADMIN_IDLE_LOGOUT_MS } from "../assets/js/config.js";
-import { createModel, createRecordingView } from "./helpers.js";
+import { createModel, createRecordingView, readAllCss } from "./helpers.js";
 
 const MINUTE = 60 * 1000;
 
@@ -234,7 +234,7 @@ test("productvenster: korte uitleg over de inhouding op het loon, zonder link", 
 });
 
 test("productvenster: de uitleg gebruikt de bestaande kleur voor uitlegtekst (--muted)", () => {
-  const css = fs.readFileSync(new URL("../assets/css/styles.css", import.meta.url), "utf8");
+  const css = readAllCss();
 
   assert.match(css, /\.muted,\.login-hint \{\s*color:var\(--muted\)/);
   assert.match(css, /\.privacy-note \{[^}]*border-top:1px solid var\(--line\)/);

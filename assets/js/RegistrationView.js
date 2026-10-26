@@ -635,7 +635,7 @@ export class RegistrationView {
 
     // Zonder producten op het consumptiepunt valt er niets te kiezen en niets te registreren. Dan
     // vervalt alles wat over kiezen en registreren gaat: de uitleg "Tik op + ...", de knopbalk
-    // (klasse is-empty: geen lijn en geen lege strook, zie styles.css) en de regel over de inhouding
+    // (klasse is-empty: geen lijn en geen lege strook, zie product-window.css) en de regel over de inhouding
     // op het loon. Zo staat alleen de melding "Geen producten op jouw consumptiepunt." in het venster,
     // zonder dubbele scheidingslijnen eronder. De waarschuwing vlak voor het automatisch sluiten
     // staat in de knopbalk en blijft daardoor wel zichtbaar.
@@ -706,7 +706,7 @@ export class RegistrationView {
   // Toont of verbergt in het productvenster de regel "Venster sluit zo. Tik om door te gaan."
   // (zie EmployeeController.closeProductWindowIfIdle). #productIdleWarning is een vaste statusregel
   // (role="status") die altijd op de pagina staat. Is hij leeg, dan neemt hij geen ruimte in (zie
-  // .idle-warning:empty in styles.css). Omdat alleen de tekst verandert, leest een schermlezer de
+  // .idle-warning:empty in product-window.css). Omdat alleen de tekst verandert, leest een schermlezer de
   // waarschuwing voor zodra die verschijnt.
   showIdleWarning(shown) {
     const warning = this.$("#productIdleWarning");
@@ -988,7 +988,7 @@ export class RegistrationView {
   // (role="status", voor gewone meldingen) en #toastAlert (role="alert", voor foutmeldingen). Een
   // schermlezer leest een live region alleen voor als die al bestond voordat de tekst veranderde.
   // Daarom wordt de regio eerst leeg zichtbaar gemaakt en komt de tekst er pas daarna in (na
-  // TOAST_TEXT_DELAY_MS). Zolang de regio leeg is, is hij doorzichtig (.toast:empty in styles.css),
+  // TOAST_TEXT_DELAY_MS). Zolang de regio leeg is, is hij doorzichtig (.toast:empty in toast.css),
   // dus op het scherm ziet de melding er hetzelfde uit als vroeger. Er staat steeds maar één
   // melding in beeld: de andere regio wordt verborgen.
   showToast(message, { tone = "info", duration = 2500 } = {}) {

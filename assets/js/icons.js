@@ -4,7 +4,7 @@
  * Eerder waren de iconen teksttekens (zoals een vinkje of een pijltje). Die zien er per
  * apparaat en lettertype anders uit. Deze SVG-iconen zijn overal gelijk en scherp.
  * Alle iconen zijn getekend op een raster van 24 x 24 met dezelfde lijndikte (zie .icon in
- * styles.css) en nemen de tekstkleur over, dus ze werken in het lichte en donkere thema.
+ * assets/css/icons.css) en nemen de tekstkleur over, dus ze werken in het lichte en donkere thema.
  *
  * Dit bestand bevat alleen tekeningen en één hulpfunctie, daarom is het geen class.
  *

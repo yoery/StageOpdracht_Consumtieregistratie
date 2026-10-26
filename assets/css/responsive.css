@@ -1,0 +1,236 @@
+﻿/* Schermformaten: de mediaqueries voor telefoon, staande en liggende tablet en schermen met weinig
+   hoogte, en de grotere kleine teksten op tablets en telefoons. Staat als laatste, zodat deze regels
+   de regels in de andere stylesheets overschrijven.
+   Laadt als laatste.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+@media (max-width:720px) {
+  .directory-actions,.fridge-start {
+    width:100%
+  }
+  .fridge-shelf-field {
+    grid-template-columns:1fr
+  }
+  .fridge-cabinet {
+    grid-template-columns:36px 1fr
+  }
+  .fridge-shelf {
+    padding:10px
+  }
+  .fridge-item {
+    width:32px;
+    height:32px
+  }
+}
+@media (min-width:721px) and (max-width:900px) {
+  :root {
+    --gutter:20px
+  }
+  .content-grid {
+    grid-template-columns:1fr;
+    /* Eén kolom: de medewerkerskaart krijgt de vrije hoogte, de kaarten eronder niet. */
+    grid-template-rows:1fr auto
+  }
+  .summary-column {
+    display:grid;
+    /* Twee totalen naast elkaar en de tip eronder, in plaats van drie gelijke kaarten op een rij. */
+    grid-template-columns:1fr 1fr
+  }
+  .tip-card {
+    grid-column:1/-1
+  }
+  .employee-row {
+    min-height:58px;
+    padding:10px 14px
+  }
+  .company-filter select,
+  .search-box {
+    min-height:48px
+  }
+  .modal {
+    width:min(760px,calc(100vw - 32px));
+    max-height:calc(100vh - 32px)
+  }
+}
+/* Mobiele layout: onderdelen stapelen op smalle schermen. */
+/* Staande tablet (bijv. bij een consumptiepunt) en schermen met weinig hoogte, zoals een liggende
+   tablet (1080 × 810): een compactere banner, zodat de medewerkerlijst hoger op het scherm begint
+   en er meer namen in beeld staan. Tekst, kleuren en afbeelding blijven hetzelfde. */
+@media (min-width:721px) and (max-width:1100px) and (orientation:portrait), (min-width:721px) and (max-height:900px) {
+  .hero {
+    min-height:0;
+    padding:30px 40px
+  }
+  .hero h1 {
+    font-size:34px
+  }
+  .hero-copy {
+    margin-top:10px
+  }
+  .hero-shape {
+    top:50%;
+    width:150px;
+    height:150px;
+    margin-top:-75px
+  }
+  .hero-shape:before {
+    inset:16px
+  }
+  .hero-shape:after {
+    inset:32px
+  }
+  .hero-shape span {
+    font-size:52px
+  }
+  .content-grid {
+    margin-top:18px
+  }
+}
+/* Liggende tablet en andere brede schermen met weinig hoogte: de banner nog iets lager. De uitleg
+   past daar op één regel naast het decoratieve symbool. */
+@media (min-width:1000px) and (max-height:900px) {
+  .hero {
+    padding:24px 40px
+  }
+  .hero h1 {
+    font-size:32px
+  }
+  .hero-copy {
+    max-width:700px;
+    margin-top:8px
+  }
+}
+@media(max-width:720px) {
+  :root {
+    --gutter:16px
+  }
+  .admin-label,.status-pill {
+    display:none
+  }
+  /* Minder ruimte in de bovenbalk: de zon- en maanicoontjes naast de slider vervallen. */
+  .topbar-actions {
+    gap:8px
+  }
+  .theme-switch-icon {
+    display:none
+  }
+  .hero {
+    padding:39px 26px;
+    min-height:265px
+  }
+  .hero-shape {
+    right:-38px;
+    opacity:.7
+  }
+  .content-grid {
+    grid-template-columns:1fr;
+    grid-template-rows:1fr auto
+  }
+  .summary-column {
+    display:grid;
+    grid-template-columns:1fr 1fr
+  }
+  .tip-card {
+    grid-column:1/-1
+  }
+  .recent-section {
+    margin-top:35px
+  }
+  .activity-row {
+    grid-template-columns:1fr 90px 60px;
+    padding:13px 12px
+  }
+  .modal {
+    padding:25px 18px
+  }
+  .employee-products-modal {
+    --modal-pad-x:18px;
+    --modal-pad-bottom:25px
+  }
+  .face-start {
+    width:100%
+  }
+  .employee-row {
+    min-height:58px
+  }
+  .employee-form-modal .employee-fields {
+    grid-template-columns:1fr
+  }
+  .employee-form-actions {
+    flex-direction:column
+  }
+  .filter-row {
+    align-items:stretch;
+    flex-wrap:wrap
+  }
+  /* Op een smal scherm krijgt ieder filter de hele breedte. min-width:0 laat de keuzelijst
+     krimpen, anders duwt een lange maandnaam het veld buiten het beheervenster. */
+  .filter-row label {
+    flex:1 1 100%;
+    min-width:0
+  }
+  .filter-row select {
+    width:100%;
+    min-width:0
+  }
+  .export-button {
+    width:100%
+  }
+  footer {
+    padding-top:18px;
+    padding-bottom:18px;
+    gap:20px;
+    flex-direction:column
+  }
+}
+/* Telefoons: alleen het TVB-logo in de bovenbalk, zodat de thema-knoppen en de admin-knop passen. */
+@media(max-width:520px) {
+  .brand > span:not(.brand-mark) {
+    display:none
+  }
+}
+/* Tablets en telefoons: de kleine teksten worden groter, zodat ze op armlengte leesbaar zijn.
+   Op een groot scherm blijven de oorspronkelijke maten staan. */
+@media(max-width:1100px) {
+  .eyebrow,.section-kicker {
+    font-size:12px
+  }
+  .brand small,.search-box kbd {
+    font-size:12px
+  }
+  .theme-modes button {
+    font-size:13px
+  }
+  .status-pill,.count-badge {
+    font-size:13px
+  }
+  .company-filter,.company-options button {
+    font-size:14px
+  }
+  .employee-total,.stat-card span,.stat-card small,.tip-card p,footer {
+    font-size:13px
+  }
+  .empty-state p {
+    font-size:14px
+  }
+  .modal label,.filter-row label,.offer-list legend,.admin-search {
+    font-size:14px
+  }
+  .primary-button,.secondary-button,.stock-table .table-action,.admin-employee-item .table-action {
+    font-size:14px
+  }
+  .form-error,.field-hint,.admin-point-empty {
+    font-size:14px
+  }
+  .admin-table-wrap table {
+    font-size:14px
+  }
+  .admin-table-wrap th,.stock-badge {
+    font-size:12px
+  }
+  .admin-employee-item small,.correction-count {
+    font-size:13px
+  }
+  .correction-product-row > span,.remove-registration-info {
+    font-size:14px
+  }
+}

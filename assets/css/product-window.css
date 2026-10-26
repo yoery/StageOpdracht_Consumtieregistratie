@@ -1,0 +1,191 @@
+﻿/* Productvenster (EmployeeController): de lijst met producten met − en +, een gekozen product,
+   de knopbalk onderaan met Registreren (sticky), de uitleg bij de uitgeschakelde knop, de
+   waarschuwing voor het automatisch sluiten, de privacyregel en de klikbare medewerkerrij die het
+   venster opent. De begroeting en de aanbeveling staan in suggestion.css.
+   Laadt na admin.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+.employee-products-modal {
+  max-width:520px
+}
+.personal-product-list {
+  display:grid;
+  gap:8px;
+  margin-top:20px
+}
+.personal-product-item {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  padding:13px 15px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--paper);
+  color:var(--ink)
+}
+.personal-product-item span {
+  display:grid;
+  gap:3px;
+  flex:1
+}
+.personal-product-item small {
+  color:var(--muted)
+}
+/* − en + in het productvenster: 44 × 44 pixels, groot genoeg om met een vinger te raken. */
+.personal-product-step {
+  width:44px;
+  height:44px;
+  flex:none;
+  border:0;
+  border-radius:50%;
+  font-size:24px;
+  line-height:1;
+  cursor:pointer
+}
+.personal-product-plus {
+  background:var(--green);
+  color:#fff
+}
+.personal-product-plus:focus-visible {
+  background:var(--plus-hover)
+}
+@media (hover:hover) {
+  .personal-product-plus:hover {
+    background:var(--plus-hover)
+  }
+}
+.personal-product-minus {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.personal-product-minus:focus-visible {
+  background:var(--mint-border)
+}
+@media (hover:hover) {
+  .personal-product-minus:hover {
+    background:var(--mint-border)
+  }
+}
+.personal-product-minus:disabled {
+  opacity:.4;
+  cursor:default
+}
+.personal-product-amount {
+  min-width:36px;
+  text-align:center;
+  font-size:17px;
+  font-weight:500;
+  color:var(--muted)
+}
+/* Product met een keuze (aantal 1 of meer): lichtgroene achtergrond, groene rand en een vet aantal.
+   De "−" krijgt dan de papierkleur, zodat hij op de lichtgroene achtergrond zichtbaar blijft. */
+.personal-product-item.is-selected {
+  background:var(--mint);
+  border-color:var(--green)
+}
+.personal-product-item.is-selected .personal-product-amount {
+  font-weight:700;
+  color:var(--green-dark)
+}
+.personal-product-item.is-selected .personal-product-minus {
+  background:var(--paper)
+}
+/* Demo gezichtsherkenning instellen: een eigen regel boven de knopbalk. */
+#faceEnrollArea {
+  margin-top:16px
+}
+/* Knopbalk onderaan het productvenster. position:sticky houdt de balk onderaan in beeld terwijl de
+   productlijst erachter scrolt (liggende tablet, telefoon en 200% zoom). De balk loopt over de hele
+   breedte van het venster: de negatieve marge heft de zijmarge van het venster op (--modal-pad-x).
+   bottom is min de ondermarge van het venster (--modal-pad-bottom): anders blijft de balk boven die
+   marge hangen en is de lijst eronder nog zichtbaar. */
+.employee-products-modal {
+  --modal-pad-x:31px;
+  --modal-pad-bottom:31px;
+  /* Een product dat met Tab in beeld komt, valt niet achter de knopbalk. */
+  scroll-padding-bottom:150px
+}
+.employee-products-actions {
+  position:sticky;
+  bottom:calc(-1 * var(--modal-pad-bottom));
+  z-index:1;
+  display:grid;
+  gap:8px;
+  margin:16px calc(-1 * var(--modal-pad-x)) 0;
+  padding:12px var(--modal-pad-x) 14px;
+  background:var(--paper);
+  border-top:1px solid var(--line)
+}
+/* Geen producten op het consumptiepunt: geen knop en geen uitleg, dus ook geen balk. De lijn, de
+   ruimte en het sticky gedrag vervallen, zodat er geen lege strook tussen twee lijnen overblijft.
+   Alleen de waarschuwing vlak voor het automatisch sluiten kan hier nog verschijnen. */
+.employee-products-actions.is-empty {
+  position:static;
+  margin:0;
+  padding:0;
+  border-top:0;
+  background:none
+}
+.employee-products-actions.is-empty .idle-warning:not(:empty) {
+  margin-top:16px
+}
+/* Registreren: over de volle breedte, 54 pixels hoog, 19 pixels vet. Witte tekst op --green is
+   3,56:1. Vette tekst van 19 pixels (ruim 14 punt) is "grote tekst" volgens WCAG 1.4.3, waarvoor 3:1
+   genoeg is. */
+.employee-products-actions .register-button {
+  width:100%;
+  min-height:54px;
+  font-size:19px;
+  font-weight:700
+}
+/* Uitleg bij de uitgeschakelde knop: "Kies eerst een product met +". */
+.register-hint {
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  text-align:center
+}
+/* Na een tik op de uitgeschakelde knop: vet in de bestaande foutkleur, zonder animatie. */
+.register-hint.register-hint-emphasis {
+  color:var(--error-text);
+  font-weight:700
+}
+/* "Venster sluit zo. Tik om door te gaan." Een vaste statusregel: leeg neemt hij geen ruimte in. */
+.idle-warning {
+  margin:0
+}
+.idle-warning:not(:empty) {
+  padding:8px 12px;
+  border:1px solid var(--warning-border);
+  border-radius:8px;
+  background:var(--warning-bg);
+  color:var(--warning-text);
+  font-weight:700;
+  text-align:center
+}
+/* Uitgeschakelde knoppen zien er ook uitgeschakeld uit. Registreren zonder keuze is uitgeschakeld met
+   aria-disabled (en niet met disabled), zodat de knop met Tab bereikbaar blijft. */
+.primary-button:disabled,.secondary-button:disabled,
+.primary-button[aria-disabled="true"] {
+  opacity:.45;
+  cursor:not-allowed;
+  transform:none
+}
+.primary-button[aria-disabled="true"]:hover {
+  background:var(--green)
+}
+/* Korte uitleg onder in het productvenster: wat er met een registratie gebeurt (AVG). */
+.privacy-note {
+  margin:16px 0 0;
+  padding-top:12px;
+  border-top:1px solid var(--line)
+}
+.employee-row-clickable {
+  cursor:pointer
+}
+@media (hover:hover) {
+  .employee-row-clickable:hover {
+    border-color:var(--green)
+  }
+}

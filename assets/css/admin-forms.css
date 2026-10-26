@@ -1,0 +1,248 @@
+﻿/* Beheer: het medewerkerformulier, de beheerlijsten (medewerkers met het label "Pas gekoppeld"),
+   de knop "Alle gegevens wissen", bedrijven met hun consumptiepunten, het assortiment per
+   consumptiepunt en het voorraadoverzicht (meldingen, labels, leveringsveld).
+   Laadt na product-window.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+.employee-form-modal .employee-fields {
+  display:grid;
+  grid-template-columns:1fr 1fr
+}
+.employee-form-modal .employee-fields input {
+  width:100%
+}
+.employee-form-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  grid-column:1 / -1;
+  margin-top:8px
+}
+.add-employee-form input {
+  flex:1
+}
+.admin-employee-list {
+  display:grid;
+  gap:8px
+}
+.admin-employee-item {
+  display:flex;
+  justify-content:space-between;
+  padding:13px;
+  border:1px solid var(--line);
+  border-radius:8px
+}
+.admin-employee-item span {
+  display:grid;
+  gap:3px
+}
+.admin-employee-item small {
+  color:var(--muted);
+  font-size:11px
+}
+/* Label "Pas gekoppeld" achter de naam; zelfde vorm en kleuren als de voorraadlabels (.stock-badge.stock-ok). */
+.admin-employee-item .badge-linked {
+  display:inline-block;
+  margin-left:6px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:var(--mint);
+  color:var(--green-dark);
+  font-size:11px;
+  font-weight:700;
+  white-space:nowrap;
+  vertical-align:middle
+}
+.admin-item-actions {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end
+}
+.admin-item-actions .table-action {
+  white-space:nowrap
+}
+.admin-employee-item .table-action {
+  margin-left:6px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--paper);
+  color:var(--green-dark);
+  cursor:pointer
+}
+.admin-employee-item .danger-action {
+  color:var(--danger)
+}
+/* Knop "Alle gegevens wissen" in het logboek: rode tekst op de lichtrode foutachtergrond
+   (bestaande huiskleuren), zodat meteen te zien is dat deze knop gegevens wist. */
+.secondary-button.danger-action {
+  color:var(--error-text);
+  background:var(--error-bg)
+}
+#loadMoreAuditButton {
+  margin-top:12px
+}
+/* Keuzelijsten bedrijf en consumptiepunt in de beheerformulieren. */
+.add-employee-form select {
+  height:43px;
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 12px;
+  outline-color:var(--green);
+  background:var(--paper)
+}
+/* Labels boven de velden in de beheerformulieren; de ruimte komt van de grid-gap. */
+.employee-fields label {
+  margin:0
+}
+.field-hint {
+  align-self:end;
+  margin:0;
+  padding-bottom:12px;
+  color:var(--muted);
+  font-size:12px
+}
+/* Bedrijven met daaronder hun consumptiepunten. */
+#companiesTab > .primary-button {
+  margin-bottom:14px
+}
+.admin-company-list {
+  display:grid;
+  gap:12px
+}
+.admin-company-item > .admin-employee-item {
+  background:var(--paper-soft)
+}
+.admin-point-list {
+  display:grid;
+  gap:6px;
+  margin:6px 0 0 22px
+}
+.admin-point-empty {
+  font-size:12px;
+  margin:4px 0
+}
+/* Aan/uit-lijst met producten in het consumptiepuntformulier. */
+.offer-list {
+  grid-column:1 / -1;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 14px 14px
+}
+.offer-list legend {
+  padding:0 6px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--ink)
+}
+#pointProductList {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:4px 14px
+}
+.modal .offer-item {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  font-weight:500;
+  font-size:13px;
+  cursor:pointer
+}
+/* Overschrijft de algemene formulierregels (flex:1, min-width, height) voor vinkjes. */
+.modal .offer-item input {
+  flex:none;
+  width:17px;
+  min-width:0;
+  height:17px;
+  padding:0;
+  accent-color:var(--green)
+}
+/* Voorraadoverzicht. */
+.stock-alerts {
+  margin-bottom:18px;
+  padding:14px 16px;
+  border:1px solid var(--warning-border);
+  border-radius:10px;
+  background:var(--warning-soft);
+  font-size:13px
+}
+.stock-alerts h3 {
+  margin:0 0 8px;
+  font-size:14px
+}
+.stock-alerts ul {
+  display:grid;
+  gap:6px;
+  margin:0;
+  padding:0;
+  list-style:none
+}
+.stock-all-ok {
+  margin:0;
+  color:var(--green-dark)
+}
+.stock-alerts:has(.stock-all-ok) {
+  border-color:var(--line);
+  background:var(--mint)
+}
+.text-link {
+  background:none;
+  padding:0;
+  color:var(--blue);
+  font-weight:600;
+  text-decoration:underline;
+  cursor:pointer
+}
+.stock-badge {
+  display:inline-block;
+  min-width:86px;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  text-align:center
+}
+.stock-ok {
+  background:var(--mint);
+  color:var(--green-dark)
+}
+.stock-low {
+  background:var(--warning-bg);
+  color:var(--warning-text)
+}
+.stock-out {
+  background:var(--error-bg);
+  color:var(--error-text)
+}
+.stock-input {
+  width:80px;
+  height:34px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:0 8px;
+  outline-color:var(--green);
+  background:var(--paper)
+}
+/* De algemene regel .modal input (padding 12px) is sterker dan .stock-input. Daardoor paste op een
+   tablet (tekst van 14 pixels) "Aantal" in het leveringsveld niet meer ("Aanta"). De binnenruimte
+   van 8 pixels geldt daarom ook in het beheervenster. De hoogte van .modal input (43 pixels) blijft,
+   voor een tikdoel van ruim 40 pixels. */
+.stock-table .stock-input {
+  padding:0 8px
+}
+.stock-delivery {
+  display:flex;
+  gap:6px;
+  align-items:center
+}
+.stock-table .table-action {
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--paper);
+  color:var(--green-dark);
+  font-size:12px;
+  cursor:pointer
+}

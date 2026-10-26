@@ -1,0 +1,53 @@
+﻿/* Meldingen: de waarschuwing als index.html direct als bestand wordt geopend (.file-warning) en
+   de tijdelijke meldingen na een actie (.toast, zie RegistrationView.showToast). De iconen in de
+   meldingen staan in feedback.css.
+   Laadt na admin-forms.css.
+   De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
+/* Waarschuwing wanneer index.html direct als bestand wordt geopend. */
+.file-warning {
+  background:var(--warning-bg);
+  border-bottom:1px solid var(--warning-border);
+  color:var(--ink);
+  padding:12px 20px;
+  font-size:14px;
+  text-align:center
+}
+/* Tijdelijke meldingen na acties. */
+/* Onderaan in het midden, zodat de melding op een tablet goed in beeld is. */
+.toast {
+  position:fixed;
+  bottom:25px;
+  left:50%;
+  transform:translateX(-50%);
+  max-width:calc(100vw - 32px);
+  text-align:center;
+  background:var(--toast-bg);
+  color:var(--toast-text);
+  border-radius:8px;
+  padding:13px 18px;
+  font-size:16px;
+  box-shadow:var(--shadow);
+  z-index:8;
+  /* Een melding heeft geen knoppen: een tik gaat erdoorheen naar wat eronder ligt (bijvoorbeeld Registreren). */
+  pointer-events:none
+}
+.toast.show {
+  animation:pop .25s ease
+}
+/* Een meldingsregio is heel even leeg zichtbaar voordat de tekst erin komt (zie
+   RegistrationView.showToast). Dan is hij doorzichtig: zo staat er geen leeg vlak in beeld, maar
+   blijft de regio wel bestaan voor een schermlezer. */
+.toast:empty {
+  opacity:0
+}
+/* De melding schuift iets omhoog in beeld; translateX(-50%) houdt hem in het midden. */
+@keyframes pop {
+  from {
+    transform:translate(-50%,10px);
+    opacity:0
+  }
+  to {
+    transform:translate(-50%,0);
+    opacity:1
+  }
+}
