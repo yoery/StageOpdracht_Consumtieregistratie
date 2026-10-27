@@ -178,6 +178,7 @@ export class AdminController {
 
   // Knop "Uitloggen": de beheerder is uitgelogd en ziet het loginformulier weer.
   logout() {
+    if (this.app.enrollByAdmin) this.app.closeFaceModal({ continueFlow: false });
     this.app.adminLoggedIn = false;
     this.lastAdminActivity = null;
     this.view.$("#loginPassword").value = "";
@@ -192,6 +193,9 @@ export class AdminController {
   closeAdmin() {
     // Een open venster "Registratie verwijderen" hoort bij het beheer en gaat dus ook dicht.
     if (this.app.removalTarget) this.app.closeRemoveRegistration();
+    // Een gezicht dat de beheerder aan het instellen is, hoort ook bij het beheer: het cameravenster gaat
+    // dicht en de camera uit, zonder iets te bewaren.
+    if (this.app.enrollByAdmin) this.app.closeFaceModal({ continueFlow: false });
     this.app.adminLoggedIn = false;
     this.lastAdminActivity = null;
     this.view.$("#loginPassword").value = "";

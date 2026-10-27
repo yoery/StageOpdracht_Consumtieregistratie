@@ -29,6 +29,7 @@ const FOCUS_TARGETS = {
   editEmployee: "#addEmployeeButton",
   toggleEmployee: "#addEmployeeButton",
   removeEmployee: "#addEmployeeButton",
+  adminFace: "#addEmployeeButton",
   editProduct: "#addProductButton",
   removeProduct: "#addProductButton",
   addPoint: "#addCompanyButton",

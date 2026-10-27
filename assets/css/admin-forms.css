@@ -73,6 +73,15 @@
 .admin-employee-item .danger-action {
   color:var(--danger)
 }
+/* Gezichtsherkenning in het tabblad Medewerkers: tot wanneer de instelling geldt, of waarom instellen
+   niet kan. Zonder camera is de knop uitgeschakeld met aria-disabled (hij blijft met Tab bereikbaar). */
+.admin-employee-item .admin-face-status {
+  color:var(--green-dark)
+}
+.admin-employee-item .table-action[aria-disabled="true"] {
+  opacity:.55;
+  cursor:not-allowed
+}
 /* Knop "Alle gegevens wissen" in het logboek: rode tekst op de lichtrode foutachtergrond
    (bestaande huiskleuren), zodat meteen te zien is dat deze knop gegevens wist. */
 .secondary-button.danger-action {

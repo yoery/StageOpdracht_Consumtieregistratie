@@ -244,7 +244,8 @@ export class RegistrationModel {
   }
 
   // Demo gezichtsherkenning: de opgeslagen gezichtsinstellingen, per medewerker
-  // { id, employeeId, descriptor (128 getallen), enrolledAt }. Leeg bij gegevens van vóór versie 3.17.
+  // { id, employeeId, descriptor (128 getallen), enrolledAt, consentAt }. Leeg bij gegevens van vóór
+  // versie 3.17. `consentAt` (het moment van toestemming) bestaat sinds versie 3.22.
   get faceEnrollments() {
     return this.state.faceEnrollments ?? [];
   }
@@ -1014,6 +1015,13 @@ export class RegistrationModel {
     return now.getTime() - Date.parse(entry.enrolledAt) >= validityDays * DAY_MS;
   }
 
+  // Tot wanneer geldt de gezichtsinstelling van deze medewerker? Een Date (`validityDays` dagen na
+  // `enrolledAt`), of null zonder instelling. Het beheer toont dit als "Ingesteld tot 27-10-2027".
+  faceEnrollmentValidUntil(employeeId, validityDays = FACE_DEMO.validityDays) {
+    const entry = this.faceEnrollment(employeeId);
+    return entry ? new Date(Date.parse(entry.enrolledAt) + validityDays * DAY_MS) : null;
+  }
+
   // Heeft deze medewerker een geldige gezichtsinstelling: hij is actief en de instelling is niet verlopen?
   hasValidFaceEnrollment(employeeId, now = new Date(), validityDays = FACE_DEMO.validityDays) {
     const entry = this.faceEnrollment(employeeId);
@@ -1049,10 +1057,22 @@ export class RegistrationModel {
   // instelling wordt vervangen en een eerder "Nee" of "verlopen" vervalt (de medewerker heeft het nu
   // zelf ingesteld). Alleen de getallen worden bewaard, als gewone lijst. Geeft false terug (en
   // verandert niets) als de medewerker niet bestaat of niet actief is, of als de descriptor niet klopt.
-  saveFaceEnrollment(employeeId, descriptor, enrolledAt = new Date()) {
+  // `consentAt` is het moment waarop de medewerker toestemming gaf (het vinkje in het cameravenster).
+  // Vastleggen kan alleen terwijl het vinkje staat, dus dat is hetzelfde moment als `enrolledAt`. Zo is
+  // per instelling aantoonbaar wanneer de toestemming is gegeven (zie TO hoofdstuk 13). Na verlopen en
+  // bij opnieuw instellen hoort er dus altijd een nieuwe toestemming bij. Toestemming na het vastleggen
+  // kan niet: dan verandert er niets.
+  saveFaceEnrollment(employeeId, descriptor, enrolledAt = new Date(), consentAt = enrolledAt) {
     if (!this.findEmployee(employeeId)?.active || !this.isValidDescriptor(descriptor)) return false;
+    if (!(consentAt instanceof Date) || Number.isNaN(consentAt.getTime()) || consentAt.getTime() > enrolledAt.getTime()) return false;
 
-    const entry = { id: createId(), employeeId, descriptor: Array.from(descriptor), enrolledAt: enrolledAt.toISOString() };
+    const entry = {
+      id: createId(),
+      employeeId,
+      descriptor: Array.from(descriptor),
+      enrolledAt: enrolledAt.toISOString(),
+      consentAt: consentAt.toISOString()
+    };
     this.state.faceEnrollments = [...this.faceEnrollments.filter((item) => item.employeeId !== employeeId), entry];
     this.state.faceOffers = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
     return true;
@@ -1065,8 +1085,9 @@ export class RegistrationModel {
     this.state.faceEnrollments = this.faceEnrollments.filter((entry) => entry.employeeId !== employeeId);
   }
 
-  // Knop "Nee" bij de vraag: wordt onthouden, zodat de vraag niet meer komt. De medewerker kan het
-  // later zelf instellen via "Gezichtsherkenning instellen (demo)" in het productvenster.
+  // Knop "Nee" bij de vraag: wordt onthouden, zodat de vraag niet meer komt (ook na "verlopen"). De
+  // medewerker kan het later zelf instellen via "Gezichtsherkenning instellen (demo)" in het
+  // productvenster, maar alleen als dat venster opende na herkenning met zijn pas, of via de beheerder.
   declineFaceOffer(employeeId, answeredAt = new Date()) {
     if (!this.findEmployee(employeeId)) return false;
     this.setFaceOfferAnswer(employeeId, "declined", answeredAt);

@@ -564,6 +564,9 @@ export class DataStore {
   // en MAX_DESCRIPTOR_VALUE (alleen getallen, geen tekst, beelden of andere velden) en een geldige
   // datum van instellen (`enrolledAt`, hooguit één dag na `now`). Een verlopen instelling is hier nog
   // geldig: het model wist die na het laden en onthoudt dat ze is verlopen (expireFaceEnrollments).
+  // Sinds versie 3.22 staat er ook het moment van toestemming bij (`consentAt`): een geldige datum, niet
+  // na `enrolledAt` (zonder toestemming vooraf wordt er niets vastgelegd). Een instelling zonder
+  // toestemmingsmoment is na de migratie (zie migrateFaceEnrollment) geknoeid en valt af.
   isValidFaceEnrollment(entry, now = new Date()) {
     return (
       this.isSafeId(entry?.id) &&
@@ -572,8 +575,19 @@ export class DataStore {
       entry.descriptor.length === FACE_DESCRIPTOR_LENGTH &&
       entry.descriptor.every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE) &&
       this.isValidDateTime(entry.enrolledAt, now.getTime() + MAX_FUTURE_MS) &&
-      Object.keys(entry).every((key) => ["id", "employeeId", "descriptor", "enrolledAt"].includes(key))
+      this.isValidDateTime(entry.consentAt, now.getTime() + MAX_FUTURE_MS) &&
+      Date.parse(entry.consentAt) <= Date.parse(entry.enrolledAt) &&
+      Object.keys(entry).every((key) => ["id", "employeeId", "descriptor", "enrolledAt", "consentAt"].includes(key))
     );
+  }
+
+  // Een gezichtsinstelling van vóór versie 3.22 heeft nog geen `consentAt`. Toen kon er ook alleen
+  // worden vastgelegd terwijl het toestemmingsvinkje stond, dus de toestemming is op hetzelfde moment
+  // gegeven als het instellen: `consentAt` wordt `enrolledAt`. Een instelling met een `consentAt` blijft
+  // zoals ze is (de controle daarna keurt een ongeldige waarde af).
+  migrateFaceEnrollment(entry) {
+    if (entry.consentAt !== undefined || entry.enrolledAt === undefined) return entry;
+    return { ...entry, consentAt: entry.enrolledAt };
   }
 
   // Eén antwoord op de vraag na een passcan: een veilige id en medewerker, "declined" of "expired" en
@@ -677,7 +691,8 @@ export class DataStore {
       fridgeOpenings: objects(data.fridgeOpenings),
       // Demo gezichtsherkenning (vanaf 3.17): oudere gegevens hebben geen opgeslagen gezichten en geen
       // antwoorden. Toen stonden gezichten alleen in het geheugen; die zijn na herladen dus al weg.
-      faceEnrollments: objects(data.faceEnrollments),
+      // Sinds 3.22 staat bij iedere instelling het moment van toestemming (zie migrateFaceEnrollment).
+      faceEnrollments: objects(data.faceEnrollments).map((entry) => this.migrateFaceEnrollment(entry)),
       faceOffers: objects(data.faceOffers)
     };
   }

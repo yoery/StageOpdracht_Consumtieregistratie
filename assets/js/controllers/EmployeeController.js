@@ -208,11 +208,15 @@ export class EmployeeController {
     const decrementId = focused?.dataset?.productDecrement;
 
     this.removeUnavailableSelections();
+    // Wat er over gezichtsherkenning in het venster staat, hangt af van hoe de medewerker is herkend
+    // (zie RegistrationView.faceAreaHtml): instellen alleen na de pas, uitzetten na de pas of de camera.
     this.view.renderEmployeeProducts(this.app.selectedEmployeeId, this.app.selectedProducts, {
       available: this.faceDemo.isAvailable(),
+      camera: this.faceDemo.mayHaveCamera?.() !== false,
       enrolled: this.faceDemo.isEnrolled(this.app.selectedEmployeeId),
       recognized: this.app.recognizedByFace,
-      recognizedByBadge: this.app.recognizedBy === "badge"
+      recognizedByBadge: this.app.recognizedBy === "badge",
+      badgeReader: this.app.badgeReader?.isEnabled?.() !== false
     });
 
     // De product-id wordt met cssAttributeValue veilig gemaakt voor de zoekopdracht (selector).

@@ -1246,6 +1246,54 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     });
   });
 
+  scenario("gezicht veilig instellen (3.22): na Handmatig zoeken en een naam geen link, in het beheer de knop (zonder camera uitgeschakeld)", async () => {
+    // Met camera: na kiezen op naam geen link en geen Uitzetten, wel de uitleg.
+    await withPageScripts([FAKE_CAMERA], async () => {
+      await browser.click(row("Mark Jansen"));
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      assert.equal(await browser.evaluate(`document.querySelector("#faceEnrollArea [data-face-enroll], #faceEnrollArea [data-face-forget]")`), null);
+      assert.equal(await text("#faceEnrollArea"), "Gezichtsherkenning instellen? Houd je pas tegen de lezer of vraag het de beheerder.");
+      await browser.press("Escape");
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+      // In het beheer: de knop opent het instelvenster boven het beheer, met het vinkje uit.
+      await loginAsAdmin();
+      await browser.click(`.tab[data-tab="employees"]`);
+      const lotte = `#adminEmployeeList [data-admin-face][aria-label="Gezichtsherkenning instellen voor Lotte van Dijk"]`;
+      await browser.waitFor(`document.querySelector(${JSON.stringify(lotte)})`);
+      assert.equal(await browser.evaluate(`document.querySelector(${JSON.stringify(lotte)}).getAttribute("aria-disabled")`), null);
+      await browser.click(lotte);
+      await browser.waitFor(`!document.querySelector("#faceModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["adminModal", "faceModal"]);
+      assert.equal(await text("#faceTitle"), "Gezichtsherkenning instellen voor Lotte van Dijk");
+      assert.equal(await text("#faceHelp"), "Laat Lotte van Dijk zelf in de camera kijken en het vinkje zetten. Klik daarna op Gezicht vastleggen.");
+      assert.equal(await browser.evaluate(`document.querySelector("#faceConsent").checked`), false);
+      await browser.click("#faceModal .employee-form-actions [data-close-face-modal]");
+      await browser.waitFor(`document.querySelector("#faceModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["adminModal"]);
+      const stored = await browser.storedData();
+      assert.deepEqual(stored?.faceEnrollments ?? [], []);
+    });
+
+    // Zonder camera (standaard in de browsertest): geen uitleg in het productvenster en in het beheer
+    // een uitgeschakelde knop met de reden.
+    await browser.openApp();
+    await browser.click(row("Mark Jansen"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    // De app weet na het laden dat er geen camera is (enumerateDevices geeft niets, zie browser.js).
+    await browser.waitFor(`document.querySelector("#faceEnrollArea").classList.contains("hidden")`);
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await loginAsAdmin();
+    await browser.click(`.tab[data-tab="employees"]`);
+    const disabled = `#adminEmployeeList [data-admin-face="${await browser.evaluate(`[...document.querySelectorAll("#adminEmployeeList [data-admin-face]")][0]?.dataset.adminFace`)}"]`;
+    assert.equal(await browser.evaluate(`document.querySelector(${JSON.stringify(disabled)}).getAttribute("aria-disabled")`), "true");
+    assert.equal(await browser.evaluate(`document.getElementById(document.querySelector(${JSON.stringify(disabled)}).getAttribute("aria-describedby")).textContent`), "Geen camera gevonden. Instellen kan alleen met een camera.");
+    await browser.click(disabled);
+    await waitForToast("Geen camera gevonden op deze tablet. Instellen kan alleen met een camera.");
+    assert.deepEqual(await openModalIds(), ["adminModal"]);
+  });
+
   scenario("generale repetitie: een pas in het inlogvenster of een zoekveld van het beheer laat geen pasnummer achter, en 'Aantal' past op een tablet", async () => {
     // Pas in het e-mailveld van het inloggen: het e-mailadres blijft staan, er komt een melding.
     await browser.click("#adminOpenButton");

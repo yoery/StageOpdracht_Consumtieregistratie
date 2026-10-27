@@ -171,7 +171,9 @@ export class RecognitionController {
   acceptFaceOffer() {
     const flow = this.closeFaceOffer();
     if (!flow) return;
-    this.app.startFaceEnrollmentFor(flow.employeeId, () => this.continueAfterRecognition(flow.employeeId, flow.how));
+    // `flow.how` is "badge": de vraag komt alleen na een passcan, en zelf instellen kan alleen na de pas.
+    const continuation = () => this.continueAfterRecognition(flow.employeeId, flow.how);
+    if (this.app.startFaceEnrollmentFor(flow.employeeId, continuation, flow.how) === false) continuation();
   }
 
   // "Nee": onthouden (opgeslagen, zonder logboekregel), daarna gaat de flow verder. Lukt opslaan niet,

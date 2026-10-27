@@ -680,12 +680,13 @@ test("'Herken mij' zonder ingestelde gezichten geeft een melding en opent de cam
   app.startFaceRecognition();
 
   assert.equal(view.$("#faceModal").classList.contains("hidden"), true);
-  assert.deepEqual(toastTexts(view), ["Er is nog niemand ingesteld voor gezichtsherkenning. Kies je naam en zet het aan in het productvenster."]);
+  assert.deepEqual(toastTexts(view), ["Er is nog niemand ingesteld voor gezichtsherkenning. Houd je pas tegen de lezer of vraag het de beheerder."]);
 });
 
 test("'Uitzetten' vergeet het gezicht van de medewerker", () => {
   const { app, view } = createApp();
-  app.openEmployeeProducts("employee-1");
+  // Uitzetten kan alleen na herkenning met de pas of de camera (sinds versie 3.22).
+  app.openEmployeeProducts("employee-1", { recognizedBy: "badge" });
   app.faceDemo.enroll("employee-1", [0.1, 0.2]);
 
   app.forgetFace();

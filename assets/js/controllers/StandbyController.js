@@ -58,7 +58,7 @@ export class StandbyController {
     badge: "Houd je pas tegen de lezer",
     manualOnly: "Tik op Handmatig zoeken om je naam te kiezen",
     orBadge: "Of houd je pas tegen de lezer.",
-    noFaces: "Gezichtsherkenning stel je in na een passcan of in je productvenster.",
+    noFaces: "Gezichtsherkenning stel je in na een passcan of via de beheerder.",
     privacyAuto: "De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard of verstuurd."
   };
 

@@ -45,6 +45,9 @@ export class RegistrationView {
     this.$ = (selector) => document.querySelector(selector);
     // Het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo) staan in een eigen class.
     this.fridge = new FridgeView(this);
+    // Functie van de controller die zegt of de beheerder een gezicht kan instellen (zie adminFaceParts).
+    // Zonder controller (bijvoorbeeld in een test) staan er geen knoppen voor gezichtsherkenning.
+    this.faceSetup = null;
   }
 
   // ------------------------------------------------------------------
@@ -509,10 +512,12 @@ export class RegistrationView {
     const employees = this.model.employees.filter(({ name }) =>
       name.toLowerCase().includes(query)
     );
+    const face = this.faceSetup?.() ?? { state: "off" };
 
     this.$("#adminEmployeeList").innerHTML =
-      employees.map((employee) =>
-        `<div class="admin-employee-item">
+      employees.map((employee) => {
+        const faceParts = this.adminFaceParts(employee, face);
+        return `<div class="admin-employee-item">
           <span>
             <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}</strong>
             <small>
@@ -522,9 +527,11 @@ export class RegistrationView {
               ${this.escapeHtml(employee.personnelNumber || "Geen personeelsnummer")}
               ${employee.employerNumber ? ` · werkgevernr. ${this.escapeHtml(employee.employerNumber)} (afwijkend)` : ""}
             </small>
+            ${faceParts.status}
           </span>
 
           <div class="admin-item-actions">
+            ${faceParts.button}
             <button class="table-action"
                     data-toggle-employee="${this.escapeHtml(employee.id)}">
               ${employee.active ? "Deactiveren" : "Activeren"}
@@ -544,8 +551,42 @@ export class RegistrationView {
               Wijzigen
             </button>
           </div>
-        </div>`
-      ).join("") || this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm, of voeg een medewerker toe." });
+        </div>`;
+      }).join("") || this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm, of voeg een medewerker toe." });
+  }
+
+  // Demo gezichtsherkenning in het tabblad Medewerkers (sinds versie 3.22): de beheerder kan per actieve
+  // medewerker een gezicht instellen of uitzetten. `face` komt van de controller (faceSetup):
+  // { state: "ready" | "noCamera" | "off", validityDays }. Geeft { status, button } als HTML terug:
+  //   - demo uit of een inactieve medewerker: niets;
+  //   - een instelling: "Gezichtsherkenning ingesteld tot 27-10-2027" en de knop Uitzetten (ook zonder camera);
+  //   - geen instelling: de knop "Gezichtsherkenning instellen". Zonder camera is die uitgeschakeld
+  //     (aria-disabled, zodat hij met Tab bereikbaar blijft) met de uitleg eronder.
+  adminFaceParts(employee, face) {
+    if (face.state === "off" || !employee.active) return { status: "", button: "" };
+    const id = this.escapeHtml(employee.id);
+    const name = this.escapeHtml(employee.name);
+    const validUntil = this.model.faceEnrollmentValidUntil(employee.id, face.validityDays);
+    if (validUntil) {
+      const date = new Intl.DateTimeFormat("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" }).format(validUntil);
+      return {
+        status: `<small class="admin-face-status">Gezichtsherkenning ingesteld tot ${date}</small>`,
+        button: `<button class="table-action" data-admin-face="${id}" data-admin-face-action="forget"
+                    aria-label="Gezichtsherkenning uitzetten voor ${name}">Uitzetten</button>`
+      };
+    }
+    if (face.state === "noCamera") {
+      return {
+        status: `<small class="admin-face-status" id="adminFaceHelp-${id}">Geen camera gevonden. Instellen kan alleen met een camera.</small>`,
+        button: `<button class="table-action" data-admin-face="${id}" data-admin-face-action="enroll" aria-disabled="true"
+                    aria-describedby="adminFaceHelp-${id}">Gezichtsherkenning instellen</button>`
+      };
+    }
+    return {
+      status: "",
+      button: `<button class="table-action" data-admin-face="${id}" data-admin-face-action="enroll"
+                  aria-label="Gezichtsherkenning instellen voor ${name}">Gezichtsherkenning instellen</button>`
+    };
   }
 
   // Begroeting die past bij het tijdstip: tot 12 uur "Goedemorgen", tot 18 uur "Goedemiddag".
@@ -561,6 +602,35 @@ export class RegistrationView {
     const parts = Object.entries(selection).map(([productId, amount]) => `${amount}× ${this.model.productName(productId)}`);
     if (parts.length <= 1) return parts.join("");
     return `${parts.slice(0, -1).join(", ")} en ${parts.at(-1)}`;
+  }
+
+  // De regel over de demo gezichtsherkenning in het productvenster (sinds versie 3.22, TO hoofdstuk 13).
+  // `face`: { available (demo aan), camera (er kan een camera zijn), enrolled, recognized (camera),
+  // recognizedByBadge (pas), badgeReader (de pasjeslezer staat aan) }.
+  //   - na herkenning met de pas of de camera en een ingesteld gezicht: "staat aan" met Uitzetten;
+  //   - na herkenning met de pas zonder ingesteld gezicht: de link "Gezichtsherkenning instellen (demo)".
+  //     De pas stelt vast wie er staat;
+  //   - na kiezen op naam: geen link en geen Uitzetten. Iedereen kan op de naam van een collega tikken,
+  //     en mag daarna niet zijn eigen gezicht onder die naam zetten of het gezicht van die collega
+  //     uitzetten. Er staat alleen een korte uitleg hoe het wel kan. Die uitleg staat er altijd (ook
+  //     als de collega al een gezicht heeft), zodat niet te zien is wie gezichtsherkenning gebruikt.
+  // Zonder demo staat er niets. Zonder camera geen link en geen uitleg (instellen kan dan niet).
+  faceAreaHtml(face) {
+    if (!face.available) return "";
+    const recognized = Boolean(face.recognized || face.recognizedByBadge);
+    const camera = face.camera !== false;
+    if (recognized && face.enrolled) {
+      return `<span class="face-enrolled">${icon("check")} Gezichtsherkenning staat aan (demo)</span>
+           <button type="button" class="text-link" data-face-forget>Uitzetten</button>`;
+    }
+    if (face.recognizedByBadge && camera) {
+      return `<button type="button" class="text-link" data-face-enroll>${icon("faceScan")} Gezichtsherkenning instellen (demo)</button>`;
+    }
+    if (!recognized && camera) {
+      const how = face.badgeReader === false ? "Vraag het de beheerder." : "Houd je pas tegen de lezer of vraag het de beheerder.";
+      return `<span class="face-enroll-hint">Gezichtsherkenning instellen? ${how}</span>`;
+    }
+    return "";
   }
 
   // Opent het productvenster van een medewerker. `selectedProducts` komt van de controller
@@ -602,15 +672,11 @@ export class RegistrationView {
         <button type="button" class="secondary-button" data-repeat-last>Zelfde als vorige keer</button>`
       : "";
 
-    // Demo gezichtsherkenning: instellen of uitzetten (alleen als de demo beschikbaar is).
+    // Demo gezichtsherkenning: instellen of uitzetten (zie faceAreaHtml).
+    const faceAreaHtml = this.faceAreaHtml(face);
     const faceArea = this.$("#faceEnrollArea");
-    faceArea.classList.toggle("hidden", !face.available);
-    faceArea.innerHTML = !face.available
-      ? ""
-      : face.enrolled
-        ? `<span class="face-enrolled">${icon("check")} Gezichtsherkenning staat aan (demo)</span>
-           <button type="button" class="text-link" data-face-forget>Uitzetten</button>`
-        : `<button type="button" class="text-link" data-face-enroll>${icon("faceScan")} Gezichtsherkenning instellen (demo)</button>`;
+    faceArea.classList.toggle("hidden", faceAreaHtml === "");
+    faceArea.innerHTML = faceAreaHtml;
 
     // Alleen de producten van het eigen consumptiepunt zijn te kiezen.
     const products = this.model.productsForEmployee(employeeId);

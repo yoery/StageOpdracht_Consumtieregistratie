@@ -111,6 +111,13 @@ export class RegistrationApp {
     this.recognition = new RecognitionController(this, clock);
     this.standby = new StandbyController(this, clock);
     this.autoScan = new AutoScanController(this, clock);
+
+    // De view kent de demo gezichtsherkenning niet. Voor de knoppen "Gezichtsherkenning instellen" en
+    // "Uitzetten" in het tabblad Medewerkers vraagt hij hier of instellen kan ("ready", "noCamera" of
+    // "off") en hoe lang een instelling geldt (zie RegistrationView.renderAdminEmployees).
+    if (view && typeof view === "object") {
+      view.faceSetup = () => ({ state: this.faceSetupState(), validityDays: this.faceDemo.settings?.validityDays });
+    }
   }
 
   // Is de medewerker in het productvenster herkend met de camera (demo gezichtsherkenning)?
@@ -441,6 +448,10 @@ export class RegistrationApp {
       ["[data-repeat-last]", () => this.repeatLastSelection()],
       ["[data-face-enroll]", () => this.startFaceEnrollment()],
       ["[data-face-forget]", () => this.forgetFace()],
+      // Beheer, tabblad Medewerkers: gezichtsherkenning instellen of uitzetten door de beheerder.
+      ["[data-admin-face]", (button) => (button.dataset.adminFaceAction === "forget"
+        ? this.adminForgetFace(button.dataset.adminFace)
+        : this.startAdminFaceEnrollment(button.dataset.adminFace))],
       // Slimme koelkast (demo)
       ["[data-fridge-take]", (button) => this.takeFromShelf(button.dataset.fridgeTake)],
       ["[data-fridge-return]", (button) => this.returnToShelf(button.dataset.fridgeReturn)],
@@ -749,11 +760,12 @@ const DELEGATES = {
   face: {
     methods: [
       "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "forgetFace", "setFaceStatus",
+      "faceSetupState", "canSelfEnroll", "canSelfForget", "startAdminFaceEnrollment", "adminForgetFace", "renderAdminFaceChange",
       "faceTexts", "openFaceModal", "hasActiveFace", "loadSavedFaces", "expireFaces",
       "updateEnrollButton", "scanForFace", "endWakeScan", "stopCameraAfterTimeout", "scheduleEnrollTimeout",
       "captureEnrollment", "readFaceForEnrollment", "closeFaceModal"
     ],
-    fields: ["faceSession", "faceMode", "faceEmployeeId", "cameraReady", "captureSession", "enrollTimer", "enrollContinuation", "capturing"]
+    fields: ["faceSession", "faceMode", "faceEmployeeId", "cameraReady", "captureSession", "enrollTimer", "enrollContinuation", "enrollByAdmin", "capturing"]
   },
   recognition: {
     methods: [

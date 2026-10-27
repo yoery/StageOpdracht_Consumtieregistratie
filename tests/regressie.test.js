@@ -666,7 +666,7 @@ test("controle 3, punt 3: na 'Zelfde als vorige keer' gaat de focus naar 'Regist
 
 test("controle 3, punt 3: zonder producten gaat de focus naar de sluitknop", () => {
   const { app, view } = createApp();
-  app.openEmployeeProducts("employee-1");
+  app.openEmployeeProducts("employee-1", { recognizedBy: "badge" }); // Uitzetten kan alleen na de pas of de camera (3.22)
   view.$("#registerSelectedProductsButton").classList.add("hidden");
   view.$("#employeeProductsModal .modal-close").focused = false;
 

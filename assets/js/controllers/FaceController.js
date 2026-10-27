@@ -15,9 +15,23 @@
  *   - de opgeslagen gezichten in het geheugen van FaceRecognitionDemo zetten (loadSavedFaces) en
  *     verlopen gezichtsinstellingen wissen (expireFaces).
  *
- * In dit venster gaat de camera alleen aan na een bewuste handeling van de medewerker: de knop
- * "Herken mij", de link "Gezichtsherkenning instellen", "Ja, instellen" bij de vraag na een passcan, of
- * een tik op het ovaal van het startscherm (startWakeScan). Nooit vanzelf.
+ * In dit venster gaat de camera alleen aan na een bewuste handeling: de knop "Herken mij", de link
+ * "Gezichtsherkenning instellen", "Ja, instellen" bij de vraag na een passcan, de knop "Gezichtsherkenning
+ * instellen" van de beheerder, of een tik op het ovaal van het startscherm (startWakeScan). Nooit vanzelf.
+ *
+ * Wie mag een gezicht instellen of uitzetten (sinds versie 3.22, TO hoofdstuk 13 en bijlage B punt 8)?
+ * Iedereen kan op de tablet op de naam van een collega tikken. Mocht je daarna een gezicht instellen,
+ * dan kon iemand zijn eigen gezicht onder de naam van een collega zetten en daarna op diens naam
+ * pakken. Daarom:
+ *   - zelf instellen kan alleen na herkenning met de pas: via de vraag na een passcan, of via de link
+ *     in het productvenster als dat venster opende na de pas (canSelfEnroll). De pas stelt vast wie er
+ *     staat. Na kiezen op naam staat de link er niet en weigert startFaceEnrollment;
+ *   - zelf uitzetten kan alleen na herkenning met de pas of de camera (canSelfForget), niet na kiezen
+ *     op naam. Anders kon iemand de gezichtsherkenning van een collega uitzetten;
+ *   - de beheerder kan per medewerker instellen en uitzetten in het tabblad Medewerkers
+ *     (startAdminFaceEnrollment en adminForgetFace), alleen als hij is ingelogd (requireAdmin). Hij
+ *     ziet wie er voor de camera staat. Het toestemmingsvinkje zet de medewerker zelf.
+ * Dit blijft een controle in de browser. In productie moet de server dit controleren.
  *
  * Verbonden met:
  *   - FaceRecognitionDemo: laadt face-api, bedient de camera en vergelijkt gezichten;
@@ -45,6 +59,15 @@ export class FaceController {
     inUse: "De camera wordt al door een ander programma gebruikt. Sluit dat programma, of kies je naam in de lijst."
   };
 
+  // Meldingen als instellen of uitzetten niet mag of niet kan (zie het commentaar bovenaan).
+  static SETUP_MESSAGES = {
+    enrollNotAllowed: "Gezichtsherkenning instellen kan alleen na herkenning met je pas, of via de beheerder.",
+    forgetNotAllowed: "Uitzetten kan alleen na herkenning met je pas of de camera, of via de beheerder.",
+    demoOff: "De demo gezichtsherkenning staat uit.",
+    noCamera: "Geen camera gevonden op deze tablet. Instellen kan alleen met een camera.",
+    adminLoggedOut: "Je bent uitgelogd als beheerder. Er is niets ingesteld."
+  };
+
   static cameraErrorMessage(error) {
     const name = error?.name;
     if (["NotFoundError", "DevicesNotFoundError", "OverconstrainedError"].includes(name)) return FaceController.CAMERA_ERRORS.notFound;
@@ -62,6 +85,7 @@ export class FaceController {
     this.captureSession = null;    // sessienummer van het vastleggen dat nu loopt (zie get capturing)
     this.enrollTimer = null;       // time-out die de camera uitzet als er niets wordt vastgelegd (zie scheduleEnrollTimeout)
     this.enrollContinuation = null; // wat er na het instellen verder gaat (na "Ja, instellen" bij de vraag na een passcan)
+    this.enrollByAdmin = false;    // stelt de beheerder dit gezicht in (vanuit het tabblad Medewerkers)?
   }
 
   // Onderdelen van de app die deze class gebruikt (model, view, faceDemo). Die komen steeds
@@ -133,7 +157,7 @@ export class FaceController {
     this.expireFaces();
     if (!this.hasActiveFace()) {
       this.view.showToast(
-        "Er is nog niemand ingesteld voor gezichtsherkenning. Kies je naam en zet het aan in het productvenster.",
+        "Er is nog niemand ingesteld voor gezichtsherkenning. Houd je pas tegen de lezer of vraag het de beheerder.",
         { tone: "error", duration: 5000 }
       );
       return;
@@ -153,33 +177,132 @@ export class FaceController {
     return true;
   }
 
-  // Link "Gezichtsherkenning instellen (demo)" in het productvenster van een medewerker.
+  // Kan er op deze tablet een gezicht worden ingesteld? "ready" (de demo staat aan en er is misschien
+  // een camera), "noCamera" (zeker geen camera gevonden, zie FaceRecognitionDemo.detectCamera) of "off"
+  // (de demo staat uit of de browser kent geen camera). Uitzetten kan ook zonder camera.
+  faceSetupState() {
+    if (!this.faceDemo?.isAvailable?.()) return "off";
+    if (this.faceDemo.mayHaveCamera?.() === false) return "noCamera";
+    return "ready";
+  }
+
+  // Mag de medewerker in het productvenster zelf zijn gezicht instellen? Alleen als het venster opende
+  // na herkenning met de pas (zie het commentaar bovenaan). Niet na kiezen op naam en niet na de camera
+  // (wie met de camera is herkend, heeft al een gezicht ingesteld).
+  canSelfEnroll() {
+    return Boolean(this.app.selectedEmployeeId) && this.app.recognizedBy === "badge";
+  }
+
+  // Mag de medewerker in het productvenster zelf zijn gezichtsherkenning uitzetten? Alleen na herkenning
+  // met de pas of de camera, niet na kiezen op naam.
+  canSelfForget() {
+    return Boolean(this.app.selectedEmployeeId) && (this.app.recognizedBy === "badge" || this.app.recognizedBy === "face");
+  }
+
+  // Link "Gezichtsherkenning instellen (demo)" in het productvenster van een medewerker. De link staat
+  // er alleen na herkenning met de pas. Wordt deze methode toch aangeroepen na kiezen op naam, dan opent
+  // de camera niet en volgt een melding. Geeft true terug als het instelvenster opent.
   startFaceEnrollment() {
+    if (!this.canSelfEnroll()) {
+      this.view.showToast(FaceController.SETUP_MESSAGES.enrollNotAllowed, { tone: "error", duration: 5000 });
+      return false;
+    }
     this.enrollContinuation = null;
+    this.enrollByAdmin = false;
     this.openFaceModal("enroll", this.app.selectedEmployeeId);
+    return true;
   }
 
   // "Ja, instellen" bij de vraag na een passcan (RecognitionController): het instelvenster voor deze
   // medewerker, zonder productvenster eronder. `continuation` gaat daarna verder met de koelkast of
-  // het productvenster, na vastleggen en ook na Annuleren.
-  startFaceEnrollmentFor(employeeId, continuation) {
+  // het productvenster, na vastleggen en ook na Annuleren. `how` is hoe de medewerker is herkend: de
+  // vraag komt alleen na de pas, dus alleen "badge" opent het venster. Geeft true terug als het opent.
+  startFaceEnrollmentFor(employeeId, continuation, how = null) {
+    if (how !== "badge" || !this.model.findEmployee(employeeId)?.active) {
+      this.view.showToast(FaceController.SETUP_MESSAGES.enrollNotAllowed, { tone: "error", duration: 5000 });
+      return false;
+    }
+    this.enrollByAdmin = false;
     this.openFaceModal("enroll", employeeId);
     this.enrollContinuation = continuation;
+    return true;
+  }
+
+  // Knop "Gezichtsherkenning instellen" in het tabblad Medewerkers van het beheer: het instelvenster
+  // voor deze medewerker, alleen voor een ingelogde beheerder, een actieve medewerker en als er een
+  // camera kan zijn. Het venster ligt boven het beheer. De medewerker kijkt zelf in de camera en zet
+  // zelf het toestemmingsvinkje. Geeft true terug als het venster opent.
+  startAdminFaceEnrollment(employeeId) {
+    if (!this.app.requireAdmin()) return false;
+    const employee = this.model.findEmployee(employeeId);
+    if (!employee) {
+      this.app.showMissing("Deze medewerker");
+      return false;
+    }
+    const state = this.faceSetupState();
+    if (!employee.active || state !== "ready") {
+      const message = state === "off" ? FaceController.SETUP_MESSAGES.demoOff
+        : state === "noCamera" ? FaceController.SETUP_MESSAGES.noCamera
+          : "Alleen een actieve medewerker kan gezichtsherkenning gebruiken.";
+      this.view.showToast(message, { tone: "error", duration: 5000 });
+      return false;
+    }
+    this.enrollContinuation = null;
+    this.enrollByAdmin = true;
+    this.openFaceModal("enroll", employeeId);
+    return true;
+  }
+
+  // Knop "Uitzetten" bij een medewerker in het tabblad Medewerkers: wist de gezichtsinstelling uit het
+  // model en uit het geheugen, met de logboekregel "Gezichtsherkenning uitgezet door beheerder" (alleen
+  // de naam, geen kenmerken). Alleen voor een ingelogde beheerder. Geeft true terug als het is gelukt.
+  adminForgetFace(employeeId) {
+    if (!this.app.requireAdmin()) return false;
+    if (!this.model.findEmployee(employeeId)) {
+      this.app.showMissing("Deze medewerker");
+      return false;
+    }
+    const name = this.app.employeeLabel(employeeId);
+    const saved = this.app.persist(
+      () => { this.model.removeFaceEnrollment(employeeId); },
+      { action: "Gezichtsherkenning uitgezet door beheerder", details: name }
+    );
+    if (!saved) return false;
+    this.faceDemo.forget(employeeId);
+    this.renderAdminFaceChange();
+    this.view.showToast(`Gezichtsherkenning staat uit voor ${name}. De kenmerken zijn gewist.`, { tone: "success" });
+    return true;
+  }
+
+  // Tekent de medewerkerslijst en het logboek van het beheer opnieuw na instellen of uitzetten door de
+  // beheerder. De knop van dezelfde medewerker krijgt de focus terug (zie ModalManager.preserveFocus).
+  renderAdminFaceChange() {
+    this.app.preserveFocus(() => {
+      this.view.renderAdminEmployees();
+      this.app.renderAuditLog();
+    });
   }
 
   // Link "Uitzetten": wist de gezichtsinstelling van deze medewerker uit het model (opgeslagen) en
   // uit het geheugen, met de logboekregel "Gezichtsherkenning uitgezet" (zonder kenmerken).
+  // Alleen na herkenning met de pas of de camera (canSelfForget). Na kiezen op naam staat de link er
+  // niet. Wordt deze methode dan toch aangeroepen, dan verandert er niets en volgt een melding.
   forgetFace() {
+    if (!this.canSelfForget()) {
+      this.view.showToast(FaceController.SETUP_MESSAGES.forgetNotAllowed, { tone: "error", duration: 5000 });
+      return false;
+    }
     const employeeId = this.app.selectedEmployeeId;
     const saved = this.app.persist(
       () => { this.model.removeFaceEnrollment(employeeId); },
       { action: "Gezichtsherkenning uitgezet", details: this.app.employeeLabel(employeeId) }
     );
-    if (!saved) return;
+    if (!saved) return false;
     this.faceDemo.forget(employeeId);
     this.app.renderProductWindow();
     this.app.focusProductWindowAction();
     this.view.showToast("Gezichtsherkenning staat uit voor deze medewerker. De kenmerken zijn gewist.", { tone: "success" });
+    return true;
   }
 
   // Toont een statustekst in het cameravenster ("info" of "error").
@@ -192,11 +315,11 @@ export class FaceController {
   // De teksten van het cameravenster per soort venster.
   faceTexts(mode, name) {
     if (mode === "enroll") {
-      return {
-        title: `Gezichtsherkenning instellen voor ${name}`,
-        help: "Plaats je gezicht binnen het kader. Zet het vinkje en klik op Gezicht vastleggen.",
-        close: "Annuleren"
-      };
+      // De beheerder bedient het venster, maar de medewerker kijkt zelf in de camera en geeft zelf toestemming.
+      const help = this.enrollByAdmin
+        ? `Laat ${name} zelf in de camera kijken en het vinkje zetten. Klik daarna op Gezicht vastleggen.`
+        : "Plaats je gezicht binnen het kader. Zet het vinkje en klik op Gezicht vastleggen.";
+      return { title: `Gezichtsherkenning instellen voor ${name}`, help, close: "Annuleren" };
     }
     if (mode === "wake") {
       const seconds = Math.round(this.faceDemo.settings.wakeScanMs / 1000);
@@ -439,11 +562,26 @@ export class FaceController {
       return;
     }
 
+    // Stelt de beheerder in en is hij intussen uitgelogd (bijvoorbeeld automatisch na vijf minuten),
+    // dan wordt er niets bewaard.
+    const byAdmin = this.enrollByAdmin;
+    if (byAdmin && !this.app.adminLoggedIn) {
+      this.setFaceStatus(FaceController.SETUP_MESSAGES.adminLoggedOut, "error");
+      this.stopCameraAfterTimeout();
+      return;
+    }
+
+    // Was de vorige instelling verlopen, dan is dit opnieuw instellen (met een nieuwe toestemming).
+    // De logboekregel zegt dat, met alleen de naam en zonder kenmerken.
     const employeeId = this.faceEmployeeId;
     const name = this.app.employeeLabel(employeeId);
+    const renewed = this.model.faceOfferAnswer(employeeId) === "expired";
+    const action = `Gezichtsherkenning ${renewed ? "opnieuw ingesteld" : "ingesteld"}${byAdmin ? " door beheerder" : ""}`;
+    // Het moment van toestemming: het vinkje staat nu (zie hierboven), dus gelijk aan het moment van instellen.
+    const enrolledAt = new Date();
     const saved = this.app.persist(
-      () => this.model.saveFaceEnrollment(employeeId, descriptor),
-      { action: "Gezichtsherkenning ingesteld", details: name }
+      () => this.model.saveFaceEnrollment(employeeId, descriptor, enrolledAt, enrolledAt),
+      { action, details: name }
     );
     if (!saved) {
       this.setFaceStatus("Het gezicht kon niet worden opgeslagen. Er is niets ingesteld.", "error");
@@ -453,8 +591,14 @@ export class FaceController {
 
     this.faceDemo.enroll(employeeId, Array.from(descriptor));
     const fromOffer = Boolean(this.enrollContinuation);
+    if (byAdmin) {
+      // Eerst de lijst opnieuw tekenen, dan het venster sluiten: de focus gaat zo naar de nieuwe knop
+      // van deze medewerker (zie ModalManager.closeModal).
+      this.view.renderAdminEmployees();
+      this.app.renderAuditLog();
+    }
     this.closeFaceModal();
-    if (!fromOffer) {
+    if (!fromOffer && !byAdmin) {
       this.app.renderProductWindow();
       this.app.focusProductWindowAction();
     }
@@ -491,6 +635,7 @@ export class FaceController {
     this.enrollTimer = null;
     this.faceDemo.stopCamera(this.view.$("#faceVideo"));
     this.app.closeModal("#faceModal");
+    this.enrollByAdmin = false;
 
     const continuation = this.enrollContinuation;
     this.enrollContinuation = null;

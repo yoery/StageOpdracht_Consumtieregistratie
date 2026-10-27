@@ -16,6 +16,10 @@
   gap:6px;
   min-height:44px
 }
+/* Na kiezen op naam: alleen een korte uitleg hoe instellen wel kan (met de pas of via de beheerder). */
+.face-enroll-hint {
+  color:var(--muted)
+}
 .face-enrolled {
   display:inline-flex;
   align-items:center;

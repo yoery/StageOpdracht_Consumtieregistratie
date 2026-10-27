@@ -363,7 +363,7 @@ test("teksten: per soort startscherm, met de uitleg voor een schermlezer", async
   let texts = app.startScreenTexts();
   assert.equal(texts.mode, "badge");
   assert.equal(texts.status, "Houd je pas tegen de lezer");
-  assert.equal(texts.hint, "Gezichtsherkenning stel je in na een passcan of in je productvenster.");
+  assert.equal(texts.hint, "Gezichtsherkenning stel je in na een passcan of via de beheerder.");
   assert.equal(texts.help, "Startscherm. Begin zo: houd je pas tegen de lezer of kies Handmatig zoeken om je naam in de lijst te zoeken.");
 
   enrollInModel(app, model);
@@ -475,7 +475,7 @@ test("camera: niet nodig als niemand een gezicht heeft ingesteld, met FACE_DEMO 
     assert.equal(app.startScreenMode(), "badge");
     stop(app);
   }
-  assert.equal(noFaces.app.startScreenTexts().hint, "Gezichtsherkenning stel je in na een passcan of in je productvenster.");
+  assert.equal(noFaces.app.startScreenTexts().hint, "Gezichtsherkenning stel je in na een passcan of via de beheerder.");
   assert.equal(noCamera.app.startScreenTexts().hint, "", "zonder camera geen uitleg over instellen");
 });
 
