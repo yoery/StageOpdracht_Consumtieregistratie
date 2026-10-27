@@ -1,4 +1,5 @@
 import { FACE_DEMO } from "./config.js";
+import { FaceLiveness } from "./FaceLiveness.js";
 
 /**
  * FaceRecognitionDemo — een demo van gezichtsherkenning met de camera van de tablet of laptop.
@@ -23,7 +24,9 @@ import { FACE_DEMO } from "./config.js";
  *   - van het camerabeeld een descriptor maken;
  *   - op het startscherm alleen gezichten zoeken (detectFaces, zonder kenmerken) en pas na de
  *     intentie-drempel de descriptor van dat ene gezicht maken (describeFace);
- *   - gezichten van medewerkers in het geheugen houden en een gezicht herkennen.
+ *   - gezichten van medewerkers in het geheugen houden en een gezicht herkennen;
+ *   - de stille controle op een levend gezicht (checkLiveness, met FaceLiveness), zodat een foto van een
+ *     collega niet als die collega wordt herkend.
  *
  * Verbonden met:
  *   - config.js: FACE_DEMO (adres van de bibliotheek en modellen, drempelwaarde, tijdslimiet);
@@ -44,6 +47,8 @@ export class FaceRecognitionDemo {
     this.lastCandidate = null;    // voor confirm(): wie het laatst is gevonden
     this.streak = 0;              // voor confirm(): hoe vaak achter elkaar
     this.hasCamera = null;        // heeft de tablet een camera? null = nog niet bekend (zie detectCamera)
+    this.lastLandmarks = null;    // de 68 gezichtspunten van de laatste describeFace, tot checkLiveness ze ophaalt
+    this.liveness = new FaceLiveness({ ...FACE_DEMO.liveness, ...settings.liveness });
   }
 
   // Staat de demo aan en heeft deze browser een camera-functie?
@@ -180,7 +185,10 @@ export class FaceRecognitionDemo {
   // beeld rond dit gezicht gaat naar de herkenning, zodat andere gezichten in beeld geen kenmerken
   // krijgen. Dat stuk staat even in een canvas in het geheugen en wordt daarna meteen leeggemaakt. Geeft
   // de descriptor terug, of null als er in dat stuk geen gezicht wordt gevonden.
+  // De 68 gezichtspunten die de herkenning daarvoor toch al berekent, staan daarna in lastLandmarks, voor
+  // de controle op een levend gezicht (checkLiveness). Ze worden niet bewaard.
   async describeFace(video, face) {
+    this.lastLandmarks = null;
     if (!this.faceapi || !face || typeof globalThis.document?.createElement !== "function") return null;
     const margin = 0.3;
     const sx = Math.max(0, Math.floor(face.x - face.width * margin));
@@ -196,7 +204,9 @@ export class FaceRecognitionDemo {
       canvas.getContext("2d").drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
       const options = new this.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
       const result = await this.faceapi.detectSingleFace(canvas, options).withFaceLandmarks(true).withFaceDescriptor();
-      return result ? Array.from(result.descriptor) : null;
+      if (!result) return null;
+      this.lastLandmarks = result.landmarks?.positions?.map(({ x, y }) => ({ x, y })) ?? null;
+      return Array.from(result.descriptor);
     } catch (error) {
       return null;
     } finally {
@@ -295,9 +305,24 @@ export class FaceRecognitionDemo {
     return this.streak >= required ? employeeId : null;
   }
 
-  // Begint opnieuw met tellen (bij iedere nieuwe herkenningspoging).
+  // Begint opnieuw met tellen (bij iedere nieuwe herkenningspoging). De controle op een levend gezicht
+  // begint dan ook opnieuw en de gezichtspunten gaan uit het geheugen.
   resetConfirmation() {
     this.lastCandidate = null;
     this.streak = 0;
+    this.lastLandmarks = null;
+    this.liveness.reset();
+  }
+
+  // De stille controle op een levend gezicht (FaceLiveness), na iedere readFace of describeFace. Geeft
+  // "alive", "checking" of "failed" terug (zie FaceLiveness). De gezichtspunten van de laatste berekening
+  // worden doorgegeven en daarna hier vergeten. Is de bibliotheek niet geladen, dan is de herkenning
+  // nagebootst (alleen in de unit tests) en telt de controle niet mee. In de app wordt deze methode
+  // alleen aangeroepen na herkennen, dus altijd met de bibliotheek geladen.
+  checkLiveness(now = Date.now()) {
+    const points = this.lastLandmarks;
+    this.lastLandmarks = null;
+    if (!this.faceapi && !points) return "alive";
+    return this.liveness.check(points, now);
   }
 }

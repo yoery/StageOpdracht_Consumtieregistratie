@@ -24,7 +24,9 @@ import { FaceIntent } from "../FaceIntent.js";
  *      in het ovaal, dat ongeveer een seconde stil staat. Het ovaal wordt groen met "Even stil blijven…";
  *   3. pas dan worden de kenmerken van dat ene gezicht berekend (FaceRecognitionDemo.describeFace) en
  *      vergeleken met de actieve medewerkers. Dezelfde medewerker moet twee keer achter elkaar worden
- *      gevonden (FaceRecognitionDemo.confirm);
+ *      gevonden (FaceRecognitionDemo.confirm) en het gezicht moet leven: de stille controle van
+ *      FaceLiveness (FaceRecognitionDemo.checkLiveness) heeft een knipper of een vervorming gezien. Een
+ *      foto beweegt als één plat geheel en wordt na liveness.maxMs behandeld als "niet herkend";
  *   4. herkend: de camera gaat uit, het ovaal toont de begroeting ("Goedemorgen Lotte.") en na
  *      autoScan.greetingMs opent RecognitionController de koelkast of het productvenster;
  *   5. na autoScan.attempts vergelijkingen zonder resultaat, terwijl het gezicht in het ovaal blijft:
@@ -37,7 +39,7 @@ import { FaceIntent } from "../FaceIntent.js";
  *   - RegistrationApp: maakt deze class en geeft de methodes en velden door;
  *   - StandbyController (via RegistrationApp): standbyActive, standbyTimer en refreshStartScreen;
  *   - FaceIntent: de intentie-drempel;
- *   - FaceRecognitionDemo: camera, detectFaces, describeFace, findMatch en confirm;
+ *   - FaceRecognitionDemo: camera, detectFaces, describeFace, findMatch, confirm en checkLiveness;
  *   - FaceController (via RegistrationApp): hasActiveFace en expireFaces;
  *   - RecognitionController (via RegistrationApp): continueAfterRecognition na herkennen;
  *   - RegistrationView: setStartScreenCamera en setStartScreenState (het ovaal en de tekst eronder);
@@ -242,16 +244,23 @@ export class AutoScanController {
     this.descriptorCount += 1;
     const descriptor = await this.faceDemo.describeFace(this.view.$("#startVideo"), face);
     if (session !== this.scanSession) return;
+    const live = this.faceDemo.checkLiveness(this.clock.now());
 
     const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
     const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
     const candidate = match && this.model.findEmployee(match)?.active ? match : null;
     const employeeId = this.faceDemo.confirm(candidate);
-    if (employeeId) {
+    if (employeeId && live === "alive") {
       this.greet(employeeId);
       return;
     }
-    if (candidate) return; // één keer gevonden: bij de volgende keer kijken telt de bevestiging
+    // Geen levend gezicht gezien binnen liveness.maxMs (bijvoorbeeld een foto): dezelfde vriendelijke
+    // melding als bij niet herkend, zonder te zeggen waarom.
+    if (live === "failed") {
+      this.pauseAfterUnknown();
+      return;
+    }
+    if (candidate) return; // gevonden: bij de volgende keer kijken telt de bevestiging en de controle op een levend gezicht
 
     this.scanAttempts += 1;
     if (this.scanAttempts >= this.autoSettings.attempts) this.pauseAfterUnknown();

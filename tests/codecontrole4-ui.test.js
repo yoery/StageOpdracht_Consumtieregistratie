@@ -162,6 +162,8 @@ const createControlledDemo = ({ cameraFails = false } = {}) => {
     startCamera: () => (cameraFails ? Promise.reject(new Error("geen camera")) : Promise.resolve(true)),
     stopCamera() {},
     readFace: async () => [0.1, 0.2],
+    resetConfirmation() {},
+    checkLiveness: () => "alive",
     enroll: (id, descriptor) => demo.enrolled.push(id),
     isAvailable: () => true,
     isEnrolled: () => false

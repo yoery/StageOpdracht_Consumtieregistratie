@@ -440,14 +440,17 @@ export class FaceController {
     while (session === this.faceSession && Date.now() < deadline) {
       const descriptor = await this.faceDemo.readFace(video);
       if (session !== this.faceSession) return;
+      const live = this.faceDemo.checkLiveness();
 
       // Alleen gezichten van actieve medewerkers die nog bestaan, doen mee (zie findMatch).
-      // Pas als dezelfde actieve medewerker twee keer achter elkaar is gevonden, telt het.
+      // Pas als dezelfde actieve medewerker twee keer achter elkaar is gevonden, telt het. En pas als
+      // de stille controle een levend gezicht heeft gezien (FaceLiveness): een foto blijft zoeken tot
+      // de tijd om is en wordt dan behandeld als niet herkend.
       const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
       const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
       const candidate = match && this.model.findEmployee(match)?.active ? match : null;
       const employeeId = this.faceDemo.confirm(candidate);
-      if (employeeId) {
+      if (employeeId && live === "alive") {
         this.closeFaceModal();
         this.app.continueAfterRecognition(employeeId, "face");
         return;
@@ -605,19 +608,24 @@ export class FaceController {
     this.view.showToast(`Gezichtsherkenning staat aan voor ${name}. Na een jaar wordt het vanzelf gewist.`, { tone: "success", duration: 4000 });
   }
 
-  // Probeert een paar keer een gezicht te lezen voor het instellen. Geeft de descriptor terug,
-  // of null als er geen gezicht is gevonden of als het venster intussen is gesloten.
+  // Leest een gezicht voor het instellen, tot er een levend gezicht is gezien (de stille controle van
+  // FaceLiveness) of de controle na liveness.maxMs stopt. Zo kan er geen foto als gezicht worden
+  // ingesteld. Geeft de descriptor van de laatste lezing terug, of null als er geen (levend) gezicht is
+  // gevonden of als het venster intussen is gesloten. Na vijf lezingen zonder gezicht stopt het ook.
   async readFaceForEnrollment(session) {
     const video = this.view.$("#faceVideo");
+    this.faceDemo.resetConfirmation();
+    let misses = 0;
 
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    for (;;) {
       const descriptor = await this.faceDemo.readFace(video);
       if (session !== this.faceSession) return null;
-      if (descriptor) return descriptor;
+      const live = this.faceDemo.checkLiveness();
+      if (descriptor && live === "alive") return descriptor;
+      if (live === "failed") return null;
+      if (!descriptor && (misses += 1) >= 5) return null;
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
-
-    return null;
   }
 
   // Sluit het cameravenster en zet de camera uit. Een lopende zoektocht stopt vanzelf,

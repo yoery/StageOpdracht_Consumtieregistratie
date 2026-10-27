@@ -20,7 +20,8 @@
  *   - StandbyController: STANDBY, wanneer het startscherm (weer) verschijnt;
  *   - AutoScanController en FaceIntent: FACE_DEMO.scanMode en FACE_DEMO.autoScan, het automatisch
  *     scannen op het startscherm met de intentie-drempel;
- *   - DataStore en RegistrationModel: FACE_DEMO.validityDays (verlopen van een gezichtsinstelling).
+ *   - DataStore en RegistrationModel: FACE_DEMO.validityDays (verlopen van een gezichtsinstelling);
+ *   - FaceLiveness: FACE_DEMO.liveness, de stille controle op een levend gezicht.
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -139,6 +140,31 @@ export const FACE_DEMO = {
     greetingMs: 1200,
     videoWidth: 320,
     videoHeight: 240
+  },
+  // De stille controle op een levend gezicht (zie FaceLiveness, sinds versie 3.23). Een foto van een
+  // collega mag niet als die collega worden herkend. Tijdens het herkennen kijkt de demo, zonder opdracht
+  // aan de medewerker, of het gezicht knippert of licht vervormt (een foto beweegt altijd als één plat
+  // geheel). Pas dan telt de herkenning: bij het automatisch scannen, bij de scan na een tik, bij
+  // "Herken mij" en bij het instellen. Dit houdt een geprinte of stilstaande foto tegen, geen video.
+  //   - enabled: zet op false om de controle uit te zetten (niet aan te raden);
+  //   - windowMs: over zo veel milliseconden aan beelden wordt gekeken;
+  //   - maxMs: zo lang (ms) mag de controle duren. Daarna telt het als niet herkend;
+  //   - blinkRatio: een knipper telt als de ooghoogte onder dit deel van de gewone ooghoogte zakt (0.6);
+  //   - minDeformation: zo veel moet het gezicht afwijken van een plat vlak, als deel van de afstand
+  //     tussen de ogen (0.03 = 3 procent, ongeveer wat een hoofd geeft dat 7 graden draait). Te hoog en
+  //     echte mensen worden niet herkend, te laag en de ruis van de camera laat ook een foto door. Stel
+  //     dit af op de tablet met debug (zie TO bijlage B, proefplan);
+  //   - minFrames: in zo veel beelden moet die afwijking worden gezien;
+  //   - debug: zet op true om per beeld de gemeten waarden in de console te zien (voor het afstellen
+  //     op de tablet, zie TO bijlage B).
+  liveness: {
+    enabled: true,
+    windowMs: 3000,
+    maxMs: 5000,
+    blinkRatio: 0.6,
+    minDeformation: 0.03,
+    minFrames: 2,
+    debug: false
   },
   // Na zo veel dagen verloopt een gezichtsinstelling: de kenmerken worden gewist en bij de volgende
   // passcan komt de vraag "Je gezichtsherkenning is verlopen. Opnieuw instellen?" (mensen veranderen).

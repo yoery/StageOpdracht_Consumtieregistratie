@@ -19,6 +19,7 @@ import { AutoScanController } from "../assets/js/controllers/AutoScanController.
 import { StandbyController } from "../assets/js/controllers/StandbyController.js";
 import { SMART_FRIDGE, STANDBY, FACE_DEMO } from "../assets/js/config.js";
 import { createModel, addEmployee, createRecordingView, createFakeElement } from "./helpers.js";
+import { face3d, project, photo } from "./helpers-gezicht.js";
 
 const START = Date.UTC(2026, 9, 26, 8, 0);
 const TICK = FACE_DEMO.autoScan.detectIntervalMs;
@@ -765,6 +766,52 @@ test("niet herkend: wie wegloopt, begint opnieuw met tellen", async () => {
   scene.frame = frame();
   await run(clock, TICK);
   assert.equal(app.scanAttempts, 0);
+  stop(app);
+});
+
+// Versie 3.23: de stille controle op een levend gezicht (FaceLiveness). De bibliotheek telt als geladen
+// en describeFace geeft bij ieder gezicht de volgende gezichtspunten uit `frames` (een foto of een hoofd).
+const withLandmarks = (demo, frames) => {
+  demo.faceapi = {};
+  const describe = demo.describeFace;
+  let index = 0;
+  demo.describeFace = async (video, box) => {
+    const result = await describe(video, box);
+    demo.lastLandmarks = frames[Math.min(index, frames.length - 1)];
+    index += 1;
+    return result;
+  };
+};
+
+test("levend gezicht: een foto van een collega in het ovaal opent niets en geeft na maxMs 'niet herkend'", async () => {
+  const { app, model, scene, clock, view, demo } = createApp();
+  enrollInModel(app, model);
+  const still = project(face3d());
+  withLandmarks(demo, Array.from({ length: 40 }, (_, index) => photo(still, { dx: index, angle: index, scale: 1 + index * 0.01 })));
+  await startOnStartScreen(app);
+
+  scene.frame = frame(NEAR_IN_OVAL);
+  await run(clock, FIRST_DESCRIPTOR_MS + FACE_DEMO.liveness.maxMs + TICK);
+
+  assert.equal(app.greetingFor, null);
+  assert.equal(app.fridgePhase, "closed");
+  assert.equal(app.standbyActive, true);
+  assert.deepEqual(lastState(view), ["unknown", "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig."]);
+  stop(app);
+});
+
+test("levend gezicht: een echt hoofd dat licht beweegt wordt herkend, zonder opdracht en zonder extra tekst", async () => {
+  const { app, model, scene, clock, view, demo } = createApp();
+  enrollInModel(app, model);
+  withLandmarks(demo, Array.from({ length: 40 }, (_, index) => project(face3d(), { yaw: index % 2 ? 8 : -4 })));
+  await startOnStartScreen(app);
+
+  scene.frame = frame(NEAR_IN_OVAL);
+  await run(clock, FIRST_DESCRIPTOR_MS + 3 * TICK);
+
+  assert.equal(app.greetingFor, "employee-1");
+  const texts = calls(view, "setStartScreenState").map(([, text]) => text);
+  assert.equal(texts.some((text) => /knipper|draai|beweeg/i.test(text)), false);
   stop(app);
 });
 

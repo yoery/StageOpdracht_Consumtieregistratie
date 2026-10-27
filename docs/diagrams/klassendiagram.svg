@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1960" height="4380" viewBox="0 0 1960 4380" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="2420" height="4380" viewBox="0 0 2420 4380" role="img" aria-labelledby="title desc">
   <title id="title">Klassendiagram JavaScript</title>
-  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de twaalf onderdelen van de controller (ModalManager, EmployeeController, AdminController, FaceController, BadgeController, CorrectionController, StockController, FormController, FridgeController, RecognitionController, StandbyController voor het startscherm en AutoScanController voor het automatisch scannen), FaceIntent (de intentie-drempel), FridgeView, de slimme koelkast (SmartFridge met de interfaces FridgeLock en ShelfScale en de nagebootste SimulatedLock en SimulatedShelfScale) en de modules main.js, config.js, ids.js en icons.js.</desc>
+  <desc id="desc">UML-klassendiagram van DataStore, RegistrationModel, RegistrationView, RegistrationApp, CsvExport, ThemeManager, FaceRecognitionDemo en BadgeReader, met de twaalf onderdelen van de controller (ModalManager, EmployeeController, AdminController, FaceController, BadgeController, CorrectionController, StockController, FormController, FridgeController, RecognitionController, StandbyController voor het startscherm en AutoScanController voor het automatisch scannen), FaceIntent (de intentie-drempel), FaceLiveness (de stille controle op een levend gezicht), FridgeView, de slimme koelkast (SmartFridge met de interfaces FridgeLock en ShelfScale en de nagebootste SimulatedLock en SimulatedShelfScale) en de modules main.js, config.js, ids.js en icons.js.</desc>
   <defs>
     <style>
       text { font-family: "DM Sans", sans-serif; fill: #163540; }
@@ -19,7 +19,7 @@
       <path d="M1,1 L11,6 L1,11" fill="none" stroke="#163540" stroke-width="1.5"/>
     </marker>
   </defs>
-  <rect width="1960" height="4380" fill="#ffffff"/>
+  <rect width="2420" height="4380" fill="#ffffff"/>
 <text x="40" y="50" font-size="28" class="kop">Klassendiagram – JavaScript van de demo</text>
 <text x="40" y="78" font-size="15" class="sub">Classes met de belangrijkste attributen en methodes (selectie) en hun onderlinge relaties</text>
 <g>
@@ -121,7 +121,7 @@
 <text x="952" y="953" font-size="13">+ … doorgeefmethodes en -velden (DELEGATES)</text>
 </g>
 <g>
-<rect x="1520" y="250" width="400" height="488" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<rect x="1520" y="250" width="400" height="545" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
 <path d="M1526,250 H1914 A6,6 0 0 1 1920,256 V292 H1520 V256 A6,6 0 0 1 1526,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
 <text x="1720" y="278" text-anchor="middle" font-size="17" class="kop">FaceRecognitionDemo</text>
 <text x="1532" y="312" font-size="13">+ settings: object (FACE_DEMO)</text>
@@ -132,21 +132,24 @@
 <text x="1532" y="407" font-size="13">+ lastCandidate: string | null</text>
 <text x="1532" y="426" font-size="13">+ streak: number</text>
 <text x="1532" y="445" font-size="13">+ hasCamera: boolean | null</text>
-<path d="M1520,458 L1920,458" fill="none" stroke="#159a72" stroke-width="1.2"/>
-<text x="1532" y="478" font-size="13">+ isAvailable(): boolean</text>
-<text x="1532" y="497" font-size="13">+ detectCamera(): Promise</text>
-<text x="1532" y="516" font-size="13">+ hasCameraDevice(): boolean</text>
-<text x="1532" y="535" font-size="13">+ load(): Promise</text>
-<text x="1532" y="554" font-size="13">+ startCamera(video, isCurrent, size)</text>
-<text x="1532" y="573" font-size="13">+ stopCamera(video)</text>
-<text x="1532" y="592" font-size="13">+ readFace(video), detectFaces(video)</text>
-<text x="1532" y="611" font-size="13">+ enroll(employeeId, descriptor)</text>
-<text x="1532" y="630" font-size="13">+ loadFaces(entries)</text>
-<text x="1532" y="649" font-size="13">+ describeFace(video, face): Promise</text>
-<text x="1532" y="668" font-size="13">+ isEnrolled(employeeId): boolean</text>
-<text x="1532" y="687" font-size="13">+ findMatch(descriptor, allowedIds)</text>
-<text x="1532" y="706" font-size="13">+ confirm(employeeId, required): boolean</text>
-<text x="1532" y="725" font-size="13">+ resetConfirmation()</text>
+<text x="1532" y="464" font-size="13">+ lastLandmarks: object[] | null</text>
+<text x="1532" y="483" font-size="13">+ liveness: FaceLiveness</text>
+<path d="M1520,496 L1920,496" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1532" y="516" font-size="13">+ isAvailable(): boolean</text>
+<text x="1532" y="535" font-size="13">+ detectCamera(): Promise</text>
+<text x="1532" y="554" font-size="13">+ hasCameraDevice(): boolean</text>
+<text x="1532" y="573" font-size="13">+ load(): Promise</text>
+<text x="1532" y="592" font-size="13">+ startCamera(video, isCurrent, size)</text>
+<text x="1532" y="611" font-size="13">+ stopCamera(video)</text>
+<text x="1532" y="630" font-size="13">+ readFace(video), detectFaces(video)</text>
+<text x="1532" y="649" font-size="13">+ enroll(employeeId, descriptor)</text>
+<text x="1532" y="668" font-size="13">+ loadFaces(entries)</text>
+<text x="1532" y="687" font-size="13">+ describeFace(video, face): Promise</text>
+<text x="1532" y="706" font-size="13">+ isEnrolled(employeeId): boolean</text>
+<text x="1532" y="725" font-size="13">+ findMatch(descriptor, allowedIds)</text>
+<text x="1532" y="744" font-size="13">+ confirm(employeeId, required): boolean</text>
+<text x="1532" y="763" font-size="13">+ resetConfirmation()</text>
+<text x="1532" y="782" font-size="13">+ checkLiveness(now): string</text>
 </g>
 <g>
 <rect x="40" y="840" width="320" height="450" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
@@ -799,4 +802,27 @@
 <text x="58" y="1604" font-size="13">«get» = getter (alleen lezen)</text>
 <text x="58" y="1628" font-size="13">«module» = bestand zonder class</text>
 <text x="58" y="1652" font-size="13" class="sub">Alleen een selectie van de methodes</text>
+<!-- FaceLiveness (3.23) -->
+<g>
+<rect x="1980" y="250" width="400" height="374" rx="6" fill="#ffffff" stroke="#159a72" stroke-width="1.8" class="box"/>
+<path d="M1986,250 H2374 A6,6 0 0 1 2380,256 V292 H1980 V256 A6,6 0 0 1 1986,250 Z" fill="#e8f5ee" stroke="#159a72" stroke-width="1.8"/>
+<text x="2180" y="278" text-anchor="middle" font-size="17" class="kop">FaceLiveness</text>
+<text x="1992" y="312" font-size="13" text-decoration="underline">+ LEFT_EYE, RIGHT_EYE: number[]</text>
+<text x="1992" y="331" font-size="13">+ settings: object (liveness)</text>
+<text x="1992" y="350" font-size="13">+ frames: object[]</text>
+<text x="1992" y="369" font-size="13">+ startedAt: number | null</text>
+<text x="1992" y="388" font-size="13">+ alive: boolean</text>
+<path d="M1980,401 L2380,401" fill="none" stroke="#159a72" stroke-width="1.2"/>
+<text x="1992" y="421" font-size="13" text-decoration="underline">+ eyesRatio(points): number</text>
+<text x="1992" y="440" font-size="13" text-decoration="underline">+ eyeDistance(points): number</text>
+<text x="1992" y="459" font-size="13" text-decoration="underline">+ deformation(reference, points): number</text>
+<text x="1992" y="478" font-size="13">+ check(points, now): string</text>
+<text x="1992" y="497" font-size="13">+ sawBlink(): boolean</text>
+<text x="1992" y="516" font-size="13">+ sawDeformation(): boolean</text>
+<text x="1992" y="535" font-size="13">+ measurements(): object</text>
+<text x="1992" y="554" font-size="13">+ reset()</text>
+<text x="1992" y="583" font-size="13" class="sub">Stille controle op een levend gezicht (3.23):</text>
+<text x="1992" y="602" font-size="13" class="sub">een knipper of een vervorming. Een foto is plat.</text>
+</g>
+<path d="M1920,437 L1978,437" class="lijn" marker-end="url(#open)"/>
 </svg>
