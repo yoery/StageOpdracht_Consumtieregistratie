@@ -1,8 +1,8 @@
 # Technisch Ontwerp - Blikjesregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.24
-**Datum:** 29 oktober 2026
+**Versie:** 3.25
+**Datum:** 30 oktober 2026
 **Status:** frontend-demo met productieschema voor PostgreSQL
 
 Dit document is het enige ontwerpdocument van het project. Het bevat zowel de functionele kant (aanleiding, gebruikersrollen, eisen, use cases, wireframes en acceptatiecriteria) als de technische uitwerking (architectuur, database, interfaces, beveiliging en tests). Het eerdere functioneel ontwerp is hierin opgenomen.
@@ -39,6 +39,7 @@ De versies hieronder komen uit de git-historie van dit bestand (`git log --follo
 | 3.22 | 27 oktober 2026 | Gezichtsherkenning veilig instellen (demo, besluit optie C). Tot en met versie 3.21 stond de link `Gezichtsherkenning instellen (demo)` in ieder productvenster, ook na een tik op de naam van een collega. Zo kon iemand zijn eigen gezicht onder de naam van een collega instellen, waarna de koelkast voor hem opende als die collega en alles op het loon van die collega kwam. (1) Zelf instellen kan alleen na herkenning met de pas: via de vraag na een passcan, of via de link in het productvenster als dat venster opende na de pas. Na kiezen op naam staat er geen link, maar "Gezichtsherkenning instellen? Houd je pas tegen de lezer of vraag het de beheerder.", en weigert de controller het instellen ook als de methode toch wordt aangeroepen (FR-87). (2) Zelf `Uitzetten` kan alleen na herkenning met de pas of de camera, niet na kiezen op naam (FR-87). (3) De beheerder kan in het tabblad `Medewerkers` per actieve medewerker `Gezichtsherkenning instellen` en `Uitzetten`, met "Gezichtsherkenning ingesteld tot 27-10-2027" in de lijst. Hij ziet wie er voor de camera staat, de medewerker zet zelf het toestemmingsvinkje. Logboekregels "Gezichtsherkenning ingesteld door beheerder" en "Gezichtsherkenning uitgezet door beheerder" met de naam, zonder kenmerken. Zonder camera is de knop uitgeschakeld met "Geen camera gevonden. Instellen kan alleen met een camera." (FR-88, nieuwe UC-23). (4) Na een jaar verloopt een instelling (zoals sinds 3.17). Opnieuw instellen kan alleen na de pas of via de beheerder, altijd met een nieuw vinkje. Bij iedere instelling staat nu het moment van toestemming (`consentAt`, gecontroleerd bij het laden, oudere instellingen krijgen `enrolledAt`), en het logboek zegt dan "Gezichtsherkenning opnieuw ingesteld" (FR-82). FR-51, FR-81, FR-82 en UC-03, UC-04, UC-05, UC-10, UC-22 bijgewerkt, nieuwe eisen FR-87 en FR-88, UC-23, US-87 tot en met US-89 en AC-141 tot en met AC-147. Hoofdstuk 3, 8, 9 (notities bij W07, W12, W14, W35, W47 en W21), 13, 14, 15, 16, bijlage A en bijlage B (punt 8 van [Afweging, advies en besluiten](#afweging-advies-en-besluiten)) bijgewerkt. Nieuw testbestand `tests/gezicht-instellen-veilig.test.js` (28 tests) en een nieuwe browsertest. 874 unit tests en 34 browsertests in totaal. Op 27 oktober 2026 zijn de screenshots W07, W08, W11, W12, W21 tot en met W24, W35 en W38 opnieuw gemaakt, zodat ze de nieuwe regel in het productvenster, de knop `Gezichtsherkenning instellen` in het beheer en het instellen na de pas laten zien, en staat UC-23 in het use-casediagram. |
 | 3.23 | 27 oktober 2026 | Stille controle op een levend gezicht (demo, besluit punt 9 in bijlage B). De opmerking was: "mensen kunnen een foto van me maken en dan logt het systeem als mij in, en ze kunnen ook een foto registreren." Tot en met versie 3.22 kon een foto van een collega, geprint of op een telefoon, als die collega worden herkend en als gezicht worden ingesteld. (1) Nieuwe class `FaceLiveness` (`FaceLiveness.js`): tijdens het herkennen kijkt de demo, zonder opdracht aan de medewerker, of het gezicht knippert of licht vervormt. Daarvoor gebruikt hij de 68 gezichtspunten die de herkenning toch al berekent. Een foto beweegt altijd als één plat geheel en geeft geen vervorming. (2) Herkennen telt alleen als het gezicht levend is: bij het automatisch scannen, bij de scan na een tik en bij `Herken mij`. Wordt er binnen 5 seconden geen levend gezicht gezien, dan volgt dezelfde vriendelijke melding als bij niet herkend, zonder te zeggen waarom. (3) Instellen (zelf en door de beheerder) legt alleen een levend gezicht vast. Een foto geeft "Geen gezicht gevonden. Plaats je gezicht binnen het kader en probeer het opnieuw." (4) De drempels staan in `FACE_DEMO.liveness` in `config.js` en moeten op de tablet worden afgesteld (met `debug`). De gezichtspunten staan alleen in het geheugen, hooguit 3 seconden. Dit houdt een geprinte en een stilstaande foto tegen, geen video. De pas blijft het advies voor productie, en een infraroodcamera met diepte is het advies als gezichtsherkenning echt gebruikt gaat worden. Nieuwe eis FR-89, UC-03, UC-04, UC-22 en UC-23 bijgewerkt, nieuwe US-90 en AC-148 tot en met AC-152. Hoofdstuk 4, 6, 10, 13, 14, 15, 16, bijlage A en bijlage B (de paragraaf [Controle op een levend gezicht (versie 3.23)](#controle-op-een-levend-gezicht-versie-323) en punt 9 van [Afweging, advies en besluiten](#afweging-advies-en-besluiten)) bijgewerkt. Nieuw testbestand `tests/levend-gezicht.test.js` (15 tests) met het hulpbestand `tests/helpers-gezicht.js`, en 2 nieuwe tests in `tests/startscherm.test.js`. 891 unit tests en 34 browsertests in totaal. |
 | 3.24 | 29 oktober 2026 | Uitkomst van de navraag over de passen verwerkt (alleen documentatie, de code is niet gewijzigd). Er is geen centraal systeem met pasnummers: de passen worden nu bij de printers gebruikt, waar een medewerker na de eerste keer printen een code per e-mail krijgt en daarmee zelf zijn pas toevoegt. Het pasnummer kan dus niet uit AFAS of een toegangssysteem komen, zoals tot nu toe werd aangenomen. Een andere contactpersoon kan de serienummers van de passen waarschijnlijk leveren, maar dat is nog niet zeker. Nieuwe paragraaf [Herkomst van het pasnummer](#herkomst-van-het-pasnummer) in hoofdstuk 11 met drie routes voor productie: (A) de serienummers eenmalig inlezen, na een controle of die gelijk zijn aan wat de lezer leest, (B) de pas zelf koppelen met een eenmalige code per e-mail, zoals bij de printer, en (C) koppelen met een centraal passensysteem met opslag van de serienummers. Mede door deze vragen gaat TVB onderzoeken of zo'n systeem er kan komen. Route C is dan het advies, A en B tot het er is. Hoofdstuk 8 (`badge_id`), 11 (veldtabel en GetConnector van AFAS), 13 ([Beveiliging van herkennen met de pas](#beveiliging-van-herkennen-met-de-pas)), 16 (het idee QR-code of medewerkerspas) en bijlage B (punt 5 van het vervolgonderzoek, "Eerst intern vragen" en de pas als sleutel) bijgewerkt. |
+| 3.25 | 30 oktober 2026 | Alle wireframes bijgewerkt naar de website van nu (alleen documentatie, de code is niet gewijzigd). De afbeeldingen lieten nog niet zien hoe de website sinds versie 3.21 begint (het zwarte startscherm) en wat er sinds versie 3.14 bij is gekomen (de slimme koelkast, de vraag na een passcan en gezichtsherkenning instellen door de beheerder). (1) Low- en mid-fidelity: L01 tot en met L15 en M01 tot en met M15 opnieuw gemaakt van de huidige website, met dezelfde schermen en afmetingen. Nieuw zijn L16 tot en met L21 en M16 tot en met M21: het startscherm, het startscherm bij "Even stil blijven…", de koelkast dicht en open, de vraag na een passcan en het tabblad Koelkast. Twee nieuwe tekens in de legenda (een kader met schuine arceerlijnen voor een zwart vlak, en een ovaal met een tweede rand voor iemand die stil in het ovaal staat). De iteraties en de eerste schetsen zijn bewust niet opnieuw gemaakt, want die laten de ontwerpgeschiedenis zien. (2) High-fidelity: 34 screenshots opnieuw gemaakt (W01 tot en met W06, W09, W10, W13, W14, W16 tot en met W20, W25 tot en met W34, W36, W37, W39 tot en met W41 en W46) en vier nieuwe: W52 (startscherm na herkennen, "Goedemorgen Lotte."), W53 (beheer: tabblad Koelkast), W54 (startscherm met tikken, `scanMode` "tap") en W55 (de open koelkast na een passcan, met de link naar het productvenster). W45 (het gedimde standby-scherm van versie 3.17) bestaat niet meer en blijft alleen als geschiedenis staan. (3) Tekst in hoofdstuk 9 (de pas opent sinds versie 3.17 de koelkast) en in bijlage B ("Het proces in de demo" beschrijft versie 3.17) rechtgezet. (4) De browsertests startten lokaal niet meer na een update van Edge naar versie 156. Die start zichzelf opnieuw op, waarbij het eerste proces stopt met code 0. `tests/e2e/browser.js` ziet code 0 nu niet meer als fout en een mislukt opruimen van het tijdelijke profiel verbergt geen testfout meer. Weer 34 van 34 browsertests geslaagd. |
 
 ## Inhoudsopgave
 
@@ -1010,7 +1011,7 @@ Onderaan het schema staan als voorbeeld (in commentaar):
 
 ### Medewerkersscherm
 
-Sinds versie 3.21 opent de website op het **startscherm** (W48 tot en met W51, FR-83): zwart, met het TVB-logo, een ovaal voor het gezicht, een korte tekst en de knop `Handmatig zoeken`. Een medewerker begint met zijn pas, met zijn gezicht in het ovaal (FR-84) of met `Handmatig zoeken`. Die knop toont de beginpagina hieronder. Na afloop komt het startscherm terug (FR-85).
+Sinds versie 3.21 opent de website op het **startscherm** (W48 tot en met W52, en W54 met tikken, FR-83): zwart, met het TVB-logo, een ovaal voor het gezicht, een korte tekst en de knop `Handmatig zoeken`. Een medewerker begint met zijn pas, met zijn gezicht in het ovaal (FR-84) of met `Handmatig zoeken`. Die knop toont de beginpagina hieronder. Na afloop komt het startscherm terug (FR-85).
 
 Op dit scherm staan:
 
@@ -1027,9 +1028,9 @@ Op dit scherm staan:
 
 Het productvenster sluit vanzelf als het 75 seconden niet wordt gebruikt. In de laatste 10 seconden staat boven de knop "Venster sluit zo. Tik om door te gaan." (FR-70).
 
-Voor de pasjeslezer is geen knop nodig. Houdt een medewerker de pas tegen de lezer terwijl er geen venster open is, dan opent het eigen productvenster met "Je bent herkend met je pas." achter de begroeting (FR-65, UC-20). Staat het productvenster van een collega nog open, dan vervangt de pas dat venster (FR-71).
+Voor de pasjeslezer is geen knop nodig. Houdt een medewerker de pas tegen de lezer terwijl er geen venster open is, dan gaat sinds versie 3.17 de koelkast voor hem open (FR-80, UC-21, W55). Staat de koelkast uit, heeft het consumptiepunt geen schapindeling of staat `RECOGNITION_TARGET` op `"products"`, dan opent het eigen productvenster met "Je bent herkend met je pas." achter de begroeting (FR-65, UC-20). Staat het productvenster van een collega nog open, dan vervangt de pas dat venster (FR-71).
 
-De knop `Slimme koelkast (demo)` opent het koelkastvenster (FR-72 tot en met FR-75, UC-21): eerst de gesloten koelkast met "Houd je pas tegen de lezer om de koelkast te openen" (W42), na de pas de open koelkast met de schappen, "In je hand" en de knop `Deur dicht` (W43), en na het sluiten het overzicht "Je hebt gepakt: …" met `Klaar` (W44).
+De knop `Slimme koelkast (demo)` opent het koelkastvenster (FR-72 tot en met FR-75, UC-21): eerst de gesloten koelkast met "Houd je pas tegen de lezer om de koelkast te openen" (W42), na de pas de open koelkast met de schappen, "In je hand" en de knop `Deur dicht` (W55 en W43), en na het sluiten het overzicht "Je hebt gepakt: …" met `Klaar` (W44).
 
 Een medewerker ziet geen persoonlijke aantallen of kosten. De `−`-knop in het productvenster verlaagt alleen de keuze die nog niet is opgeslagen. Een opgeslagen registratie verlagen kan alleen de beheerder.
 
@@ -1054,7 +1055,7 @@ Het beheerscherm heeft zes tabbladen, en als de slimme koelkast aan staat zeven:
 - **Producten:** producten en prijzen beheren.
 - **Bedrijven:** bedrijven en consumptiepunten beheren en per punt het aanbod aan- of uitzetten.
 - **Voorraad:** de bijbestellijst, de voorraad per consumptiepunt, leveringen boeken en minimums instellen.
-- **Koelkast (demo, sinds versie 3.14):** per consumptiepunt welk product op welk schap ligt en het gewicht van één stuk (`Indeling opslaan`), en de laatste 10 openingen met datum en tijd, medewerker, wat er is gepakt en de status (FR-76). Registraties van de koelkast hebben in de registratietabel het label `Koelkast`.
+- **Koelkast (demo, sinds versie 3.14):** per consumptiepunt welk product op welk schap ligt en het gewicht van één stuk (`Indeling opslaan`), en de laatste 10 openingen met datum en tijd, medewerker, wat er is gepakt en de status (FR-76, W53). Registraties van de koelkast hebben in de registratietabel het label `Koelkast`.
 - **Logboek:** alle administratieve wijzigingen, en daaronder de knop `Alle gegevens wissen`.
 
 ### Licht en donker thema
@@ -1089,15 +1090,17 @@ Een wireframe kan op drie niveaus worden uitgewerkt:
 | Mid-fidelity | De indeling met de echte teksten, labels en volgorde, in grijstinten en met één lettertype. Nog zonder huisstijl. Met twee iteraties (ontwerpvarianten). | [Mid-fidelity wireframes](#mid-fidelity-wireframes) |
 | High-fidelity | Het eindontwerp met de kleuren, lettertypes, iconen en afbeeldingen van TVB. Met twee iteraties (ontwerpvarianten). | [High-fidelity wireframe](#high-fidelity-wireframe) en [Wireframes](#wireframes) (de screenshots van de website) |
 
-**Hoe de low- en mid-fidelity wireframes zijn gemaakt.** Aan het begin van het project zijn de twee schetsen hieronder gemaakt ("Eerste schets" en "Eerste uitwerking"). De website is daarna flink veranderd, dus die schetsen laten niet meer zien hoe de website nu is. Daarom zijn de low- en mid-fidelity wireframes in dit hoofdstuk opnieuw gemaakt **vanuit de huidige website**, zodat ze precies overeenkomen met de echte schermen. Dat is gedaan met Microsoft Edge zonder venster (headless), met dezelfde demogegevens als de high-fidelity screenshots (ingevoerd via de website zelf).
+**Hoe de low- en mid-fidelity wireframes zijn gemaakt.** Aan het begin van het project zijn de twee schetsen hieronder gemaakt ("Eerste schets" en "Eerste uitwerking"). De website is daarna flink veranderd, dus die schetsen laten niet meer zien hoe de website nu is. Daarom zijn de low- en mid-fidelity wireframes in dit hoofdstuk opnieuw gemaakt **vanuit de huidige website**, zodat ze precies overeenkomen met de echte schermen. Dat is gedaan met Microsoft Edge zonder venster (headless).
 
-- **Mid-fidelity:** de meeste zijn gemaakt op 1 oktober 2026. Een paar zijn later op dezelfde manier en met dezelfde stappen opnieuw gemaakt, omdat de website op die plek was veranderd: M07 (Registraties) en M15 (Logboek) op 2 oktober 2026, omdat het datumveld `Datum bij toevoegen (+)` en de knop `Alle gegevens wissen` zijn bijgekomen, en M12 (Bedrijven) op 6 oktober 2026, omdat er nu "1 medewerker" staat in plaats van "1 medewerkers".
-- **Low-fidelity:** alle vijftien zijn op 12 oktober 2026 opnieuw gemaakt in een echte schetsstijl. De eerdere versie (van 1, 2 en 6 oktober) had zwarte kaders met grijze balken en de meeste echte teksten, en leek daardoor te veel op een mid-fidelity wireframe. De schermen, de indeling en de afmetingen zijn gelijk gebleven.
+- **Eerdere versies:** de mid-fidelity wireframes zijn eerst gemaakt op 1 oktober 2026 (M07 en M15 opnieuw op 2 oktober, M12 op 6 oktober). De low-fidelity wireframes zijn op 12 oktober 2026 opnieuw gemaakt in een echte schetsstijl. De versie daarvoor had zwarte kaders met grijze balken en de meeste echte teksten, en leek daardoor te veel op een mid-fidelity wireframe.
+- **Huidige versie (30 oktober 2026):** daarna is de website op een paar plekken veranderd: de slimme koelkast (versie 3.14), de vraag over gezichtsherkenning na een passcan (3.17), het startscherm (3.21) en het instellen van het gezicht alleen na de pas of door de beheerder (3.22). Daarom zijn L01 tot en met L15 en M01 tot en met M15 op 30 oktober 2026 opnieuw gemaakt, met dezelfde schermen, dezelfde schermmaten en dezelfde bestandsnamen. Er zijn zes schermen bijgekomen: het startscherm (L16 en M16), het startscherm met "Even stil blijven…" (L17 en M17), de koelkast dicht (L18 en M18) en open (L19 en M19), de vraag na een passcan (L20 en M20) en het tabblad Koelkast in het beheer (L21 en M21).
 
-Een klein script verandert alleen de weergave van de pagina. De indeling, de plaats en de grootte van alles blijven gelijk. Dit script en de hulpscripts voor de screenshots staan niet in de repository. De afbeeldingen zijn dus niet met één opdracht opnieuw te maken. Het script werkt per niveau zo:
+De demogegevens zijn ingevoerd via de website zelf. Drie medewerkers hebben iets geregistreerd. In het beheer zijn de consumptiepunten Kantine IT (bij IT Supervision, met Blikje en Glas melk) en Kantine Klik (bij Klik, nog zonder aanbod) toegevoegd. Tom de Groot en Eva Meijer zijn naar die punten verplaatst, Lotte van Dijk en Mark Jansen hebben een pas gekregen en van drie producten is de voorraad geteld. Met een nagebootste pasjeslezer heeft Lotte daarna de koelkast geopend en twee blikjes gepakt. Ook een camera en een ingesteld gezicht zijn nagebootst: Edge kreeg een nepcamera met een bewegend testbeeld en Mark Jansen een nagebootste gezichtsinstelling, zodat het startscherm de camera gebruikt. In het testbeeld zit geen gezicht. Daarom zijn voor L17 en M17 alleen de tekst en de stand van het ovaal in de geladen pagina op "Even stil blijven…" gezet, zoals de website dat doet als iemand stil in het ovaal staat. Tijdens het maken stond de muis buiten beeld (dan licht geen rij op) en waren meldingen onderaan (zoals "Voorraad bijgewerkt") verborgen.
 
-- **Low-fidelity:** het script meet in de echte pagina de plaats en grootte van ieder vlak, iedere knop, ieder veld, ieder icoon en ieder woord. Daarna tekent het de hele pagina opnieuw als schets (in SVG) over de pagina heen, met dunne zwarte lijnen op wit en zonder kleuren of schaduwen. De lijnen zijn met opzet een klein beetje ongelijk, zodat het eruitziet als een schets en niet als een af scherm. Lopende tekst, namen, labels en details zijn krabbellijnen: golvende lijnen met de lengte van het woord (een dikkere lijn is een grotere of vette tekst, zoals een kop). Alleen korte koppen, tabbladen, knopteksten en getallen staan er als echte tekst in, in een handschriftachtig lettertype (Segoe Print), omdat het scherm zonder die woorden niet te begrijpen is. Ieder plaatje, icoon en logo (ook het TVB-logo) is een rechthoek met een kruis van hoek tot hoek, een avatar is een cirkel met een kruis. Alleen de tekens `+`, `−` en `×` op de ronde knoppen en de sluitknop en de pijl van een keuzelijst zijn getekend, omdat die knoppen zonder hun teken geen betekenis hebben.
-- **Mid-fidelity:** de pagina staat in grijstinten, alles gebruikt één lettertype (Arial) en schaduwen en kleurverlopen zijn weg. De banner is een grijs vlak. De lichte cirkels die als versiering in de banner staan, blijven zichtbaar. Alle echte teksten staan erin. Het camerabeeld is een grijs vlak met de tekst "Camerabeeld" en het ovale kader.
+Een klein script verandert alleen de weergave van de pagina. De indeling, de plaats en de grootte van alles blijven gelijk. Het script van 12 oktober is niet bewaard. Voor de versie van 30 oktober is het daarom opnieuw geschreven volgens de beschrijving hieronder, en de nieuwe afbeeldingen zijn naast de oude gelegd, zodat de stijl gelijk is gebleven. Ook dit script en de hulpscripts voor de screenshots staan niet in de repository. De afbeeldingen zijn dus niet met één opdracht opnieuw te maken. Het script werkt per niveau zo:
+
+- **Low-fidelity:** het script meet in de echte pagina de plaats en grootte van ieder vlak, iedere knop, ieder veld, ieder icoon en ieder woord. Daarna tekent het de hele pagina opnieuw als schets (in SVG) over de pagina heen, met dunne zwarte lijnen op wit en zonder kleuren of schaduwen. De lijnen zijn met opzet een klein beetje ongelijk, zodat het eruitziet als een schets en niet als een af scherm. Lopende tekst, namen, labels en details zijn krabbellijnen: golvende lijnen met de lengte van het woord (een dikkere lijn is een grotere of vette tekst, zoals een kop). Alleen korte koppen, tabbladen, knopteksten en getallen staan er als echte tekst in, in een handschriftachtig lettertype (Segoe Print), omdat het scherm zonder die woorden niet te begrijpen is. Ieder plaatje, icoon en logo (ook het TVB-logo) is een rechthoek met een kruis van hoek tot hoek, een avatar is een cirkel met een kruis. Alleen de tekens `+`, `−` en `×` op de ronde knoppen en de sluitknop en de pijl van een keuzelijst zijn getekend, omdat die knoppen zonder hun teken geen betekenis hebben. Het zwarte startscherm is een kader met schuine arceerlijnen, zoals een schetser een donker vlak arceert. Rond het logo, het ovaal, de teksten en de knop blijft het wit, zodat die leesbaar blijven. Het ovaal voor het gezicht is gestippeld. Staat de camera aan, dan staat er een kruis in het ovaal (het camerabeeld). Bij "Even stil blijven…" heeft het ovaal een tweede, dikkere rand.
+- **Mid-fidelity:** de pagina staat in grijstinten, alles gebruikt één lettertype (Arial) en schaduwen en kleurverlopen zijn weg. De banner is een grijs vlak. De lichte cirkels die als versiering in de banner staan, blijven zichtbaar. Alle echte teksten staan erin. Het camerabeeld is een grijs vlak met de tekst "Camerabeeld" en het ovale kader. Het zwarte startscherm is een donkergrijs vlak. Bij "Even stil blijven…" heeft het ovaal een lichte rand eromheen.
 
 Bij schermen met een venster (zoals het productvenster of het beheer) is de pagina erachter ook te zien, net als op de website. In de low-fidelity wireframes is die pagina met lichtgrijze lijnen getekend, in de mid-fidelity wireframes is hij gedimd.
 
@@ -1111,7 +1114,9 @@ Bij schermen met een venster (zoals het productvenster of het beheer) is de pagi
 | Rechthoek met een kruis | Afbeelding, icoon, logo of camerabeeld |
 | Cirkel met een kruis | Avatar van een medewerker of van de beheerder |
 | Vierkantje, met of zonder vinkje | Vinkje (aan of uit) |
-| Gestippeld ovaal | Kader voor het gezicht bij de gezichtsherkenning |
+| Gestippeld ovaal | Kader voor het gezicht, op het startscherm en bij het instellen van de gezichtsherkenning. Met een kruis erin: het camerabeeld |
+| Ovaal met een tweede, dikkere rand | Iemand staat goed in het ovaal ("Even stil blijven…") |
+| Kader met schuine arceerlijnen | Zwart vlak, zoals het startscherm. Wat erop staat, heeft een witte achtergrond |
 | Lichtgrijze lijnen | De pagina achter een open venster |
 
 ### Low-fidelity wireframes
@@ -1137,7 +1142,7 @@ Bij deze eerste schets ging het vooral om de grote indeling van het scherm: een 
 
 ![L01 – Beginpagina op een tablet (low-fidelity)](wireframes/lofi-01-beginpagina-tablet.jpg)
 
-Bovenaan de bovenbalk met links het logo (rechthoek met kruis) en de naam, en rechts de themakeuze (slider en twee knoppen), de status en de admin-knop. Daaronder de banner met de vraag als grote kop (dikke krabbellijnen) en rechts een afbeelding. Daaronder één grote kaart met een kop, een teller, een brede knop voor de camera, het zoekveld, het bedrijfsfilter en de lijst met medewerkers onder een bedrijfsnaam: per medewerker een avatar (cirkel met kruis) met twee regels tekst. Uitgewerkt in [W01](#w01--beginpagina-op-een-tablet).
+Bovenaan de bovenbalk met links het logo (rechthoek met kruis) en de naam, en rechts de themakeuze (slider en twee knoppen), de status en de admin-knop. Daaronder de banner met de vraag als grote kop (dikke krabbellijnen) en rechts een afbeelding. Daaronder één grote kaart met een kop en rechts een korte tekst en een teller, een regel met een icoon en de hint voor de pas, rechts daaronder twee knoppen voor de demo's (camera en koelkast), het zoekveld en het bedrijfsfilter naast elkaar en de lijst met medewerkers onder een bedrijfsnaam: per medewerker een avatar (cirkel met kruis) met twee regels tekst. Sinds versie 3.21 komt een medewerker hier na `Handmatig zoeken` op het startscherm ([L16](#l16--startscherm)). Uitgewerkt in [W01](#w01--beginpagina-op-een-tablet).
 
 #### L02 – Beginpagina op een groot scherm
 
@@ -1149,19 +1154,19 @@ Dezelfde onderdelen in twee kolommen: links de kaart met medewerkers (nu onder d
 
 ![L03 – Beginpagina op een telefoon (low-fidelity)](wireframes/lofi-03-beginpagina-telefoon.jpg)
 
-Alles staat in één kolom. In de bovenbalk blijven alleen het logo, de themakeuze en de admin-knop over. De afbeelding in de banner schuift achter de kop. Uitgewerkt in [W03](#w03--beginpagina-op-een-telefoon).
+Alles staat in één kolom. In de bovenbalk blijven alleen het logo, de themakeuze en de admin-knop over. De afbeelding in de banner schuift achter de kop. De twee demoknoppen staan onder elkaar over de hele breedte. Uitgewerkt in [W03](#w03--beginpagina-op-een-telefoon).
 
 #### L04 – Productvenster
 
 ![L04 – Productvenster (low-fidelity)](wireframes/lofi-04-productvenster.jpg)
 
-Een venster boven de beginpagina met bovenaan de kop met de naam van de medewerker en een sluitknop. Daaronder een vak met het voorstel en de knop `Zelfde als vorige keer`, een korte uitleg en een lijst met even grote productrijen: links naam en prijs, rechts een ronde `−`-knop, het aantal en een ronde `+`-knop. Bij een product dat op 0 staat, is de `−`-knop gestippeld (uitgeschakeld). Onderaan links de link voor de gezichtsherkenning en rechts de knop `Registreren (3)`, met een dikker kader omdat het de hoofdknop is. Uitgewerkt in [W07](#w07--productvenster-eerste-keer) tot en met [W10](#w10--productvenster-met-zelfde-als-vorige-keer).
+Een venster boven de beginpagina met bovenaan de kop met de naam van de medewerker, een sluitknop en daaronder de begroeting (dikke krabbellijn). Daaronder een vak met het voorstel en de knop `Zelfde als vorige keer`, een korte uitleg en een lijst met even grote productrijen: links naam en prijs, rechts een ronde `−`-knop, het aantal en een ronde `+`-knop. Bij een product dat op 0 staat, is de `−`-knop gestippeld (uitgeschakeld). Onder de lijst de link voor de gezichtsherkenning en onderaan, over de volle breedte, de knop `Registreren (3)`, met een dikker kader omdat het de hoofdknop is. Het voorstel staat er alleen na herkennen met de pas of de camera. Hier is het venster geopend met de pas, via de koelkast en de link "Liever brood of beleg? Open het productvenster". Uitgewerkt in [W07](#w07--productvenster-eerste-keer) tot en met [W10](#w10--productvenster-met-zelfde-als-vorige-keer).
 
 #### L05 – Gezichtsherkenning instellen (demo)
 
 ![L05 – Gezichtsherkenning instellen (low-fidelity)](wireframes/lofi-05-gezichtsherkenning-instellen.jpg)
 
-Een tweede venster boven het productvenster. Het grootste deel is het camerabeeld (kader met kruis) met daarin het ovale kader voor het gezicht. Daaronder een statusregel, een vinkje met de toestemmingstekst, de knoppen `Annuleren` en `Gezicht vastleggen` en een regel met een slot-icoon. Uitgewerkt in [W12](#w12--gezichtsherkenning-instellen-demo).
+Een venster boven de beginpagina. Sinds versie 3.22 opent het na een passcan met `Ja, instellen` ([L20](#l20--vraag-na-een-passcan)) of vanuit het beheer, en niet meer na een tik op de naam. Het grootste deel is het camerabeeld (kader met kruis) met daarin het gestippelde ovaal voor het gezicht. Daaronder een statusregel, een vinkje met de toestemmingstekst, de knoppen `Annuleren` en `Gezicht vastleggen` (gestippeld, want uitgeschakeld zolang het vinkje uit staat) en een regel met een slot-icoon. Uitgewerkt in [W12](#w12--gezichtsherkenning-instellen-demo).
 
 #### L06 – Inloggen als beheerder
 
@@ -1173,19 +1178,19 @@ Een venster met een icoon, een kop, een korte uitleg, twee velden onder elkaar m
 
 ![L07 – Beheer: Registraties (low-fidelity)](wireframes/lofi-07-registraties.jpg)
 
-Het beheervenster met bovenaan de kop `Overzicht` en de knop `Uitloggen`, daaronder een rij met zes tabbladen. Op dit tabblad: twee keuzelijsten en een exportknop op één regel, een zoekveld, een datumveld, een lijst met per medewerker links een naam en rechts een totaal, en daaronder een tabel met vier kolommen. Uitgewerkt in [W18](#w18--beheer-registraties).
+Het beheervenster met bovenaan de kop `Overzicht` en de knop `Uitloggen`, daaronder een rij met zeven tabbladen (`Koelkast` is erbij gekomen in versie 3.14). Op dit tabblad: twee keuzelijsten en een exportknop op één regel, een zoekveld, een datumveld, een lijst met per medewerker links een naam en rechts een totaal, en daaronder een tabel met vier kolommen. Uitgewerkt in [W18](#w18--beheer-registraties).
 
 #### L08 – Beheer: Medewerkers
 
 ![L08 – Beheer: Medewerkers (low-fidelity)](wireframes/lofi-08-medewerkers.jpg)
 
-Een knop om een medewerker toe te voegen, een zoekveld met label en een lijst met rijen: links twee regels tekst, rechts de knoppen `Deactiveren` en `Wijzigen`. Uitgewerkt in [W21](#w21--beheer-medewerkers).
+Een knop om een medewerker toe te voegen, een zoekveld met label en een lijst met rijen: links twee regels tekst (bij een gekoppelde pas met een label achter de naam, bij een ingesteld gezicht met een derde regel), rechts drie knoppen. De eerste is sinds versie 3.22 de knop om de gezichtsherkenning in te stellen (een krabbellijn, want de tekst is lang), of `Uitzetten` als het gezicht al is ingesteld. Daarna volgen `Deactiveren` en `Wijzigen`. Uitgewerkt in [W21](#w21--beheer-medewerkers).
 
 #### L09 – Medewerker toevoegen
 
 ![L09 – Medewerker toevoegen (low-fidelity)](wireframes/lofi-09-medewerker-toevoegen.jpg)
 
-Een formulier in een venster boven het beheer, met de velden in twee kolommen en het label boven ieder veld, een hint naast het laatste veld en rechtsonder drie knoppen. Uitgewerkt in [W22](#w22--medewerker-toevoegen).
+Een formulier in een venster boven het beheer, met de velden in twee kolommen en het label boven ieder veld, een hint naast de laatste twee velden (werkgevernummer en pasnummer) en rechtsonder drie knoppen. Uitgewerkt in [W22](#w22--medewerker-toevoegen).
 
 #### L10 – Beheer: Producten
 
@@ -1209,7 +1214,7 @@ Een knop om een bedrijf toe te voegen en per bedrijf een blok: bovenin de bedrij
 
 ![L13 – Consumptiepunt toevoegen (low-fidelity)](wireframes/lofi-13-consumptiepunt-toevoegen.jpg)
 
-Een formulier met twee velden naast elkaar en een omkaderd blok `Aanbod` met een vinkje per product in drie kolommen, en daaronder twee knoppen. Uitgewerkt in [W30](#w30--consumptiepunt-toevoegen-met-aanbod).
+Een formulier met twee velden naast elkaar en een omkaderd blok `Aanbod` met een vinkje per product in drie kolommen (twee staan aan), en daaronder twee knoppen. Uitgewerkt in [W30](#w30--consumptiepunt-toevoegen-met-aanbod).
 
 #### L14 – Beheer: Voorraad
 
@@ -1222,6 +1227,42 @@ Bovenaan een blok `Bijbestellen (3)` met per regel een label, een link naar het 
 ![L15 – Beheer: Logboek (low-fidelity)](wireframes/lofi-15-logboek.jpg)
 
 Een tabel met drie kolommen: actie, details en datum en tijd. Daaronder twee regels tekst (krabbellijnen) en één knop `Alle gegevens wissen`, los van de tabel. Uitgewerkt in [W33](#w33--beheer-logboek).
+
+#### L16 – Startscherm
+
+![L16 – Startscherm (low-fidelity)](wireframes/lofi-16-startscherm.jpg)
+
+Het scherm waarop de website sinds versie 3.21 opent, op een staande tablet. Het hele scherm is zwart en daarom een kader met schuine arceerlijnen. Bovenaan het logo (rechthoek met kruis) en de naam. In het midden het gestippelde ovaal voor het gezicht, met een kruis omdat de camera aan staat. Daaronder de korte kop "Kijk in het ovaal" in handschrift, een regel tekst en de knop `Handmatig zoeken` met een dikker kader. Onderaan een regel met een slot-icoon. Zonder camera staat in het ovaal een pas-icoon en is de kop "Houd je pas tegen de lezer". Uitgewerkt in [W48](#w48--startscherm-zonder-camera-pas-en-handmatig-zoeken) en [W49](#w49--startscherm-met-de-camera-kijk-in-het-ovaal-demo).
+
+#### L17 – Startscherm: "Even stil blijven…"
+
+![L17 – Startscherm: Even stil blijven (low-fidelity)](wireframes/lofi-17-startscherm-even-stil.jpg)
+
+Hetzelfde scherm als iemand stil in het ovaal staat. Het ovaal krijgt een tweede, dikkere rand en de kop is "Even stil blijven…". Na herkennen staat hier kort de begroeting en daarna opent de koelkast of het productvenster. De stille controle op een levend gezicht (versie 3.23) is niet te zien. Uitgewerkt in [W50](#w50--startscherm-even-stil-blijven-demo).
+
+#### L18 – Koelkast dicht
+
+![L18 – Koelkast dicht (low-fidelity)](wireframes/lofi-18-koelkast-dicht.jpg)
+
+Het koelkastvenster na de knop `Slimme koelkast (demo)` op de beginpagina. Onder de kop een tekening van de dichte koelkast met een label (slot-icoon en tekst). Daaronder een regel met een icoon en de uitleg, een gestippeld vak voor de demo zonder pasjeslezer (een keuzelijst en een gestippelde, uitgeschakelde knop) en onderaan de privacyregels. Uitgewerkt in [W42](#w42--slimme-koelkast-deur-dicht-demo).
+
+#### L19 – Koelkast open
+
+![L19 – Koelkast open (low-fidelity)](wireframes/lofi-19-koelkast-open.jpg)
+
+De koelkast na de pas, met de kop "De deur is open", de begroeting en twee regels uitleg. Daaronder de drie schappen in één kader: links een smalle strook met het slot-icoon, en per schap een kop, het aantal en een vak met de producten (cirkels met een icoon). Bij het schap waar iets van is gepakt, staat de knop `Terugleggen`. Daaronder het vak "In je hand", een link en de hoofdknop `Deur dicht` over de volle breedte. Uitgewerkt in [W43](#w43--slimme-koelkast-deur-open-met-de-schappen-demo).
+
+#### L20 – Vraag na een passcan
+
+![L20 – Vraag na een passcan (low-fidelity)](wireframes/lofi-20-vraag-gezichtsherkenning.jpg)
+
+Een klein venster boven de beginpagina. Het verschijnt sinds versie 3.17 na de pas van een medewerker die nog geen gezicht heeft ingesteld. Een kop van twee regels (de vraag), de begroeting, een korte uitleg, de knoppen `Nee` en `Ja, instellen` (de hoofdknop, met een dikker kader) en een regel met een slot-icoon. `Ja, instellen` opent [L05](#l05--gezichtsherkenning-instellen-demo), `Nee` opent de koelkast of het productvenster. Uitgewerkt in [W47](#w47--vraag-na-een-passcan-gezichtsherkenning-nog-niet-ingesteld-wil-je-dit-demo).
+
+#### L21 – Beheer: Koelkast
+
+![L21 – Beheer: Koelkast (low-fidelity)](wireframes/lofi-21-koelkast-beheer.jpg)
+
+Het zevende tabblad, sinds versie 3.14. Bovenaan de kop "Indeling van de schappen" met een regel uitleg, een keuzelijst voor het consumptiepunt en per schap een vak met een keuzelijst (het product) en een invoerveld (het gewicht van één stuk). Daaronder de hoofdknop `Indeling opslaan` en de kop "Laatste openingen" met een tabel met vier kolommen, met in de laatste kolom een statuslabel. Beschreven bij het [Beheerscherm](#beheerscherm), met de screenshot [W53](#w53--beheer-koelkast-demo).
 
 ### Mid-fidelity wireframes
 
@@ -1249,31 +1290,31 @@ Hier waren de kaarten, knoppen en informatie al duidelijker uitgewerkt. In de ui
 
 ![M01 – Beginpagina op een tablet (mid-fidelity)](wireframes/midfi-01-beginpagina-tablet.jpg)
 
-De indeling van L01 met de echte teksten: de datum en de vraag in de banner, de kop `Registreer je consumptie`, de teller `8 totaal`, de voorbeeldtekst in het zoekveld met `Ctrl K`, `Alle bedrijven` in het filter en de namen met initialen. De hiërarchie is al zichtbaar door grootte en dikte van de letters, zonder huiskleuren. Uitgewerkt in [W01](#w01--beginpagina-op-een-tablet).
+De indeling van L01 met de echte teksten: de datum en de vraag in de banner, de kop `Registreer je consumptie` met "Tik op je naam" en de teller `8 totaal`, de hint "Houd je pas tegen de lezer, of zoek je naam", de knoppen `Herken mij met de camera (demo)` en `Slimme koelkast (demo)`, de voorbeeldtekst in het zoekveld met `Ctrl K`, `Alle bedrijven` in het filter en de namen met initialen en "Tik om te kiezen", onder IT Supervision, Klik en TVB. De hiërarchie is al zichtbaar door grootte en dikte van de letters, zonder huiskleuren. Uitgewerkt in [W01](#w01--beginpagina-op-een-tablet).
 
 #### M02 – Beginpagina op een groot scherm
 
 ![M02 – Beginpagina op een groot scherm (mid-fidelity)](wireframes/midfi-02-beginpagina-desktop.jpg)
 
-Twee kolommen met rechts de totalen (`Vandaag geregistreerd`, `Deze maand`) en de tipkaart `Goed bezig!`. Links de medewerkers onder IT Supervision, Klik en TVB. Uitgewerkt in [W02](#w02--beginpagina-op-een-groot-scherm).
+Twee kolommen met rechts de totalen (`Vandaag geregistreerd` en `Deze maand`, hier allebei 10 producten) en de tipkaart `Goed bezig!`. Links de medewerkers onder IT Supervision, Klik en TVB. Uitgewerkt in [W02](#w02--beginpagina-op-een-groot-scherm).
 
 #### M03 – Beginpagina op een telefoon
 
 ![M03 – Beginpagina op een telefoon (mid-fidelity)](wireframes/midfi-03-beginpagina-telefoon.jpg)
 
-Eén kolom met dezelfde teksten. Hier is ook te zien dat de voorbeeldtekst in het zoekveld op een telefoon net niet past en dat de teller "8 totaal" over twee regels breekt (een beperking, zie W03). Uitgewerkt in [W03](#w03--beginpagina-op-een-telefoon).
+Eén kolom met dezelfde teksten. "Tik op je naam" en de teller `8 totaal` staan rechts onder elkaar en de twee demoknoppen onder elkaar. Hier is ook te zien dat de voorbeeldtekst in het zoekveld op een telefoon net niet past (een beperking, zie W03). Uitgewerkt in [W03](#w03--beginpagina-op-een-telefoon).
 
 #### M04 – Productvenster
 
 ![M04 – Productvenster (mid-fidelity)](wireframes/midfi-04-productvenster.jpg)
 
-Met de echte inhoud: de begroeting "Goedemiddag Lotte, welkom terug.", het voorstel "Vorige keer koos je 2× Blikje en 1× Ei.", de productnamen met prijzen, de aantallen (2 en 1 na `Zelfde als vorige keer`) en `Registreren (3)`. De `+`-knoppen en `Registreren` zijn donker, de uitgeschakelde `−`-knoppen licht: het verschil tussen hoofdactie en uitgeschakeld is al zonder kleur te zien. Uitgewerkt in [W07](#w07--productvenster-eerste-keer) tot en met [W10](#w10--productvenster-met-zelfde-als-vorige-keer).
+Met de echte inhoud: de begroeting "Goedemorgen Lotte, welkom terug. Je bent herkend met je pas.", het voorstel "Vorige keer koos je 2× Blikje en 1× Ei.", de productnamen met prijzen, de aantallen (2 en 1 na `Zelfde als vorige keer`), de link `Gezichtsherkenning instellen (demo)` en `Registreren (3)`. De rijen met een keuze hebben een donkerder rand en een lichtgrijze achtergrond. De `+`-knoppen en `Registreren` zijn donker, de uitgeschakelde `−`-knoppen licht: het verschil tussen hoofdactie en uitgeschakeld is al zonder kleur te zien. Uitgewerkt in [W07](#w07--productvenster-eerste-keer) tot en met [W10](#w10--productvenster-met-zelfde-als-vorige-keer).
 
 #### M05 – Gezichtsherkenning instellen (demo)
 
 ![M05 – Gezichtsherkenning instellen (mid-fidelity)](wireframes/midfi-05-gezichtsherkenning-instellen.jpg)
 
-Het camerabeeld als grijs vlak met de tekst "Camerabeeld" en het ovale kader, de status `Camera staat aan.`, de volledige toestemmingstekst, de lichte (uitgeschakelde) knop `Gezicht vastleggen` en de privacyregel. Uitgewerkt in [W12](#w12--gezichtsherkenning-instellen-demo).
+De kop "Gezichtsherkenning instellen voor Lotte van Dijk", het camerabeeld als grijs vlak met de tekst "Camerabeeld" en het ovale kader, de status `Camera staat aan.`, de volledige toestemmingstekst, de lichte (uitgeschakelde) knop `Gezicht vastleggen` en de privacyregel. De pagina erachter is nu de beginpagina, omdat het venster na de vraag van M20 opent. Uitgewerkt in [W12](#w12--gezichtsherkenning-instellen-demo).
 
 #### M06 – Inloggen als beheerder
 
@@ -1285,19 +1326,19 @@ Het loginvenster met `Beheerdersomgeving`, `Welkom terug`, het ingevulde e-maila
 
 ![M07 – Beheer: Registraties (mid-fidelity)](wireframes/midfi-07-registraties.jpg)
 
-De tabbladen met het actieve tabblad onderstreept, de filters `Alle medewerkers` en `Alle maanden`, `CSV exporteren`, het zoekveld, het datumveld `Datum bij toevoegen (+)`, de totalen per medewerker (bijvoorbeeld "3 producten · € 1,80") en de tabel met de nieuwste registratie bovenaan. Uitgewerkt in [W18](#w18--beheer-registraties).
+De zeven tabbladen met het actieve tabblad onderstreept, de filters `Alle medewerkers` en `Alle maanden`, `CSV exporteren`, het zoekveld, het datumveld `Datum bij toevoegen (+)`, de totalen per medewerker (bijvoorbeeld "5 producten · € 3,10") en de tabel met de nieuwste registratie bovenaan. Die komt uit de koelkast en heeft het label `Koelkast`. Uitgewerkt in [W18](#w18--beheer-registraties).
 
 #### M08 – Beheer: Medewerkers
 
 ![M08 – Beheer: Medewerkers (mid-fidelity)](wireframes/midfi-08-medewerkers.jpg)
 
-De lijst met per medewerker de naam en "Actief · TVB · Hoofdkantoor · Geen personeelsnummer", en de knoppen `Deactiveren` en `Wijzigen`. Uitgewerkt in [W21](#w21--beheer-medewerkers).
+De lijst met per medewerker de naam en bijvoorbeeld "Actief · TVB · Hoofdkantoor · Geen personeelsnummer", en de knoppen `Gezichtsherkenning instellen`, `Deactiveren` en `Wijzigen`. Lotte van Dijk en Mark Jansen hebben het label `Pas gekoppeld`. Bij Mark staat "Gezichtsherkenning ingesteld tot 30-10-2027" en de knop `Uitzetten`. Uitgewerkt in [W21](#w21--beheer-medewerkers).
 
 #### M09 – Medewerker toevoegen
 
 ![M09 – Medewerker toevoegen (mid-fidelity)](wireframes/midfi-09-medewerker-toevoegen.jpg)
 
-Het formulier met alle labels, de keuzelijsten `Kies een bedrijf` en `Geen consumptiepunt bij dit bedrijf`, de hint bij het werkgevernummer en de knoppen `Annuleren`, `Opslaan` en (donker) `Opslaan + opnieuw`. Uitgewerkt in [W22](#w22--medewerker-toevoegen).
+Het formulier met alle labels, de keuzelijsten `Kies een bedrijf` en `Geen consumptiepunt bij dit bedrijf`, de hints bij het werkgevernummer en het pasnummer en de knoppen `Annuleren`, `Opslaan` en (donker) `Opslaan + opnieuw`. Uitgewerkt in [W22](#w22--medewerker-toevoegen).
 
 #### M10 – Beheer: Producten
 
@@ -1327,19 +1368,55 @@ De uitleg over het aanbod, de naam `Kantine IT`, het bedrijf `IT Supervision` en
 
 ![M14 – Beheer: Voorraad (mid-fidelity)](wireframes/midfi-14-voorraad.jpg)
 
-De bijbestellijst met de labels `Bijbestellen` en `Op` en de teksten (bijvoorbeeld "Blikje: 4 (minimum 6)"), en de tabel van Hoofdkantoor met de getallen, de statuslabels `Bijbestellen` en `Op voorraad` en de velden `Aantal` met `Toevoegen`. Zonder kleur zijn de labels alleen nog aan hun tekst te herkennen. In het eindontwerp helpen kleuren hierbij. Uitgewerkt in [W31](#w31--beheer-voorraad).
+De bijbestellijst met de labels `Bijbestellen` en `Leeg` en de teksten (bijvoorbeeld "Blikje: 4 (minimum 6)"), en de tabel van Hoofdkantoor met de getallen, de statuslabels `Bijbestellen` en `Op voorraad` en de velden `Aantal` met `Toevoegen`. Zonder kleur zijn de labels alleen nog aan hun tekst te herkennen. In het eindontwerp helpen kleuren hierbij. Uitgewerkt in [W31](#w31--beheer-voorraad).
 
 #### M15 – Beheer: Logboek
 
 ![M15 – Beheer: Logboek (mid-fidelity)](wireframes/midfi-15-logboek.jpg)
 
-Het logboek met de echte regels, zoals "Consumptiepunt toegevoegd" en "Voorraad geteld", met de details en de datum en tijd (hier "02 okt, 14:35"). Onder de tabel staat de uitleg "Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug." en de knop `Alle gegevens wissen`. Zonder kleur lijkt die knop op een gewone knop. In het eindontwerp is hij rood. Uitgewerkt in [W33](#w33--beheer-logboek).
+Het logboek met de echte regels, zoals "Voorraad geteld", "Koelkast geopend", "Medewerker gewijzigd" en "Consumptiepunt toegevoegd", met de details en de datum en tijd (hier "30 okt, 09:20"). Een wijziging van het pasnummer staat er bewust niet in. Onder de tabel staat de uitleg "Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug." en de knop `Alle gegevens wissen`. Zonder kleur lijkt die knop op een gewone knop. In het eindontwerp is hij rood. Uitgewerkt in [W33](#w33--beheer-logboek).
+
+#### M16 – Startscherm
+
+![M16 – Startscherm (mid-fidelity)](wireframes/midfi-16-startscherm.jpg)
+
+Het startscherm als donkergrijs vlak met de echte teksten: bovenaan het logo en "Consumptieregistratie", in het ovaal het camerabeeld als lichtgrijs vlak met "Camerabeeld", daaronder de grote kop "Kijk in het ovaal", de regel "Of houd je pas tegen de lezer." en de knop `Handmatig zoeken`. Onderaan de privacyregel "De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard of verstuurd." Het ovaal en de kop zijn het grootst, zodat al zonder kleur duidelijk is wat een medewerker moet doen. Uitgewerkt in [W48](#w48--startscherm-zonder-camera-pas-en-handmatig-zoeken) en [W49](#w49--startscherm-met-de-camera-kijk-in-het-ovaal-demo).
+
+#### M17 – Startscherm: "Even stil blijven…"
+
+![M17 – Startscherm: Even stil blijven (mid-fidelity)](wireframes/midfi-17-startscherm-even-stil.jpg)
+
+Hetzelfde scherm met de kop "Even stil blijven…" en een lichte rand om het ovaal. In het eindontwerp wordt het ovaal groen. Uitgewerkt in [W50](#w50--startscherm-even-stil-blijven-demo).
+
+#### M18 – Koelkast dicht
+
+![M18 – Koelkast dicht (mid-fidelity)](wireframes/midfi-18-koelkast-dicht.jpg)
+
+Het koelkastvenster met "Slimme koelkast (demo)", de kop "Koelkast openen", de dichte koelkast met het label `Op slot`, de uitleg "Houd je pas tegen de lezer om de koelkast te openen", het vak "Demo zonder pasjeslezer" met de keuzelijst `Kies een medewerker` en de lichte (uitgeschakelde) knop `Openen (demo)`, en de privacyregels. Uitgewerkt in [W42](#w42--slimme-koelkast-deur-dicht-demo).
+
+#### M19 – Koelkast open
+
+![M19 – Koelkast open (mid-fidelity)](wireframes/midfi-19-koelkast-open.jpg)
+
+De open koelkast met "De deur is open", de begroeting "Goedemorgen Lotte. Je bent herkend met je pas. Pak wat je wilt en sluit de deur.", "Alles wat je nu pakt, staat op naam van Lotte van Dijk.", de drie schappen (Blikje, Yoghurt en Ei) met het aantal op het schap, het slot-icoon met "Open", de knop `Terugleggen`, "In je hand: 2× Blikje" en de donkere knop `Deur dicht`. Uitgewerkt in [W43](#w43--slimme-koelkast-deur-open-met-de-schappen-demo).
+
+#### M20 – Vraag na een passcan
+
+![M20 – Vraag na een passcan (mid-fidelity)](wireframes/midfi-20-vraag-gezichtsherkenning.jpg)
+
+De vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?", de begroeting "Goedemorgen Lotte. Je bent herkend met je pas.", de uitleg dat het vrijwillig is, dat alleen kenmerken (geen foto) op de tablet worden bewaard en na een jaar vanzelf worden gewist en dat de pas altijd blijft werken, de lichte knop `Nee`, de donkere knop `Ja, instellen` en de privacyregel. Uitgewerkt in [W47](#w47--vraag-na-een-passcan-gezichtsherkenning-nog-niet-ingesteld-wil-je-dit-demo).
+
+#### M21 – Beheer: Koelkast
+
+![M21 – Beheer: Koelkast (mid-fidelity)](wireframes/midfi-21-koelkast-beheer.jpg)
+
+Het tabblad Koelkast met "Indeling van de schappen" en de uitleg, het consumptiepunt `Hoofdkantoor`, per schap het product (Blikje, Yoghurt en Ei) en het gewicht per stuk in gram, de donkere knop `Indeling opslaan` en onder "Laatste openingen" de opening van Lotte van Dijk met "2× Blikje" en de status `Geregistreerd`. Beschreven bij het [Beheerscherm](#beheerscherm), met de screenshot [W53](#w53--beheer-koelkast-demo).
 
 #### Iteraties
 
 Een ontwerp ontstaat niet in één keer. Voor de twee schermen die een medewerker het vaakst gebruikt, de beginpagina en het productvenster, zijn naast het definitieve ontwerp (M01 en M04) andere indelingen uitgewerkt en afgewogen. Hieronder staan twee van die ontwerpvarianten als mid-fidelity wireframe. Per iteratie staat wat er anders is dan het definitieve ontwerp, wat het voordeel en het nadeel is en waarom het definitieve ontwerp is gekozen. De codes H1 tot en met H10 zijn de heuristieken van Nielsen (zie [De tien heuristieken van Nielsen](#de-tien-heuristieken-van-nielsen)).
 
-**Hoe de iteraties zijn gemaakt.** De afbeeldingen zijn op 12 oktober 2026 gemaakt, op dezelfde manier als de andere mid-fidelity wireframes: de echte website is geladen in Microsoft Edge zonder venster, met dezelfde demogegevens. Daarna is de variant alleen in de geladen pagina nagebouwd door tijdelijk extra CSS en HTML toe te voegen. De bestanden van de website zelf zijn niet veranderd. Tot slot heeft hetzelfde script als bij M01 tot en met M15 de pagina in grijstinten en met één lettertype gezet. Omdat de afbeeldingen 's ochtends zijn gemaakt, staat in iteratie 2 "Goedemorgen" in plaats van "Goedemiddag".
+**Hoe de iteraties zijn gemaakt.** De afbeeldingen zijn op 12 oktober 2026 gemaakt, op dezelfde manier als de andere mid-fidelity wireframes: de echte website is geladen in Microsoft Edge zonder venster, met dezelfde demogegevens. Daarna is de variant alleen in de geladen pagina nagebouwd door tijdelijk extra CSS en HTML toe te voegen. De bestanden van de website zelf zijn niet veranderd. Tot slot heeft hetzelfde script als bij M01 tot en met M15 de pagina in grijstinten en met één lettertype gezet. Omdat de afbeeldingen 's ochtends zijn gemaakt, staat in iteratie 2 "Goedemorgen" in plaats van "Goedemiddag". De iteraties zijn op 30 oktober 2026 niet opnieuw gemaakt, omdat ze een afweging van toen laten zien. Ze vergelijken dus met de beginpagina en het productvenster van 12 oktober, nog zonder de hint voor de pas en de knop `Slimme koelkast (demo)`.
 
 #### Mid-fidelity iteratie 1 – Beginpagina met een alfabetische lijst en de zoekbalk onderaan
 
@@ -1471,27 +1548,31 @@ Deze paragraaf laat ieder scherm van de website zien zoals het nu werkt. Per sch
 
 **15 oktober 2026: alle screenshots opnieuw gemaakt.** De eerste screenshots zijn op 1 oktober 2026 gemaakt en daarna per scherm opnieuw gemaakt als de website op die plek veranderde (op 2, 6 en 12 oktober). Na de verbeteringen uit de [UX-review van oktober 2026](#ux-review-oktober-2026) (versie 3.12) zag geen enkel scherm er nog hetzelfde uit. Op de beginpagina, die ook achter ieder venster te zien is, staan nu "Tik op je naam", de hint voor de pas, het zoekveld naast het bedrijfsfilter en "Tik om te kiezen". Het productvenster heeft een knopbalk met een brede knop `Registreren`, de correctieknoppen in het beheer zijn groter, de voorraad zegt "Leeg" in plaats van "Op" en in ieder venster is het kleine kopje boven de titel donkergroen. Daarom zijn W01 tot en met W41 op 15 oktober 2026 's ochtends (tussen 9:45 en 10:00 uur) allemaal opnieuw gemaakt. Op die screenshots staat dus `Vandaag · 15 oktober 2026` en in het productvenster "Goedemorgen" (behalve op de screenshots die later opnieuw zijn gemaakt, zie hieronder). De afmetingen en het bestandsformaat (JPEG) zijn gelijk gebleven.
 
+**30 oktober 2026: screenshots opnieuw gemaakt na versie 3.24.** Sinds 15 oktober is de website op een paar plekken zichtbaar veranderd. Op de beginpagina staat de knop `Slimme koelkast (demo)` (versie 3.14). Daardoor staan op een tablet de twee demoknoppen op een eigen regel onder de hint voor de pas. In het beheer is het tabblad `Koelkast` erbij. Sinds versie 3.17 opent een pas standaard de koelkast, en sinds versie 3.21 opent de website op het zwarte startscherm, dat ook na iedere registratie terugkomt. Daarom is iedere screenshot vergeleken met hetzelfde scherm in de huidige website (versie 3.24), met dezelfde stappen en demogegevens. Opnieuw gemaakt zijn W01 tot en met W06, W09, W10, W13, W14, W16 tot en met W20, W25 tot en met W34, W36, W37, W39 tot en met W41 en W46. Dat is gebeurd op 30 oktober 2026 's ochtends (tussen 9:00 en 9:20 uur), dus op die screenshots staat `Vandaag · 30 oktober 2026` en "Goedemorgen". Nieuw zijn W52 tot en met W55 (zie het overzicht). De andere screenshots kloppen nog met de huidige website. Alleen de datum in de banner zou anders zijn. Ze zijn daarom niet opnieuw gemaakt: W07, W08, W11, W12, W21 tot en met W24, W35 en W38 (27 oktober 2026, versie 3.22), W48 tot en met W51 (26 oktober 2026, versie 3.21), W42 tot en met W44 en W47 (21 oktober 2026) en W15. W45 is een uitzondering: dat scherm bestaat sinds versie 3.21 niet meer (zie W45). De afmetingen en het bestandsformaat (JPEG, kwaliteit 88) zijn gelijk gebleven. Bij deze reeks stond in de browser "minder beweging" aan, zodat er geen half geopend venster op een screenshot staat.
+
 Daarbij zijn dezelfde stappen en demogegevens gebruikt als bij de eerdere screenshots. De demogegevens zijn via de website zelf ingevoerd: Lotte van Dijk registreerde 2× Blikje en 1× Ei, Sophie de Boer 1× Yoghurt en 1× Glas melk, en Daan Smit 2× Sneetje brood en 1× Beleg. Daarna zijn in het beheer het consumptiepunt Kantine IT (IT Supervision, alleen Blikje en Glas melk) en Kantine Klik (Klik, geen producten) aangemaakt, is Tom de Groot naar Kantine IT en Eva Meijer naar Kantine Klik verplaatst en is de voorraad Blikje op Hoofdkantoor op 4 gezet. Bij het verplaatsen moesten de verplichte velden looncode en personeelsnummer worden ingevuld. Tom kreeg personeelsnummer 1 en Eva personeelsnummer 2, omdat een personeelsnummer uniek moet zijn. Of een screenshot vóór of na die beheerstappen is gemaakt, hangt af van wat het scherm moet laten zien. In de screenshots van vóór de beheerstappen (zoals W01 en W05) staan alle medewerkers onder TVB. In de screenshots erna (zoals W02, W04, W11, W28 en W31) staan Tom de Groot onder IT Supervision en Eva Meijer onder Klik. Voor een paar schermen is een aparte, nieuwe sessie gebruikt zonder de beheerstappen, zodat daar alle medewerkers onder TVB staan:
 
-- **W10:** na de drie registraties heeft de beheerder bij Lotte van Dijk een pas gekoppeld (veld `Pasnummer`) en daarna is op de beginpagina die pas gescand.
-- **W12 tot en met W15:** de schermen van de camera (zie hieronder) en de waarschuwing bij openen als los bestand, zonder registraties. Voor W12 heeft de beheerder eerst bij Lotte van Dijk een pas gekoppeld (met looncode 101 en personeelsnummer 5001). Daarna is die pas gescand en is bij de vraag na de passcan `Ja, instellen` gekozen.
-- **W35 tot en met W40:** alleen de drie registraties. Voor W38 zijn daarna Mark Jansen en Daan Smit op inactief gezet. Voor W35 heeft de beheerder daarna bij Lotte van Dijk een pas gekoppeld, op dezelfde manier als voor W12, en is bij de vraag na de passcan `Ja, instellen` gekozen.
+- **W10 en W55:** na de drie registraties heeft de beheerder bij Lotte van Dijk een pas gekoppeld (veld `Pasnummer`) en daarna is die pas gescand. Sinds versie 3.17 opent de pas de koelkast (W55). Daarin is op `Liever brood of beleg? Open het productvenster` getikt (W10). In deze sessie had de browser geen camera, zodat de vraag na de passcan (W47) niet kwam.
+- **W12 en W15:** het instellen met de camera (zie hieronder) en de waarschuwing bij openen als los bestand, zonder registraties. Voor W12 heeft de beheerder eerst bij Lotte van Dijk een pas gekoppeld (met looncode 101 en personeelsnummer 5001). Daarna is die pas gescand en is bij de vraag na de passcan `Ja, instellen` gekozen.
+- **W13, W14 en W52:** een nieuwe sessie met één registratie (Daan Smit, 1× Blikje). Daarna kreeg Lotte van Dijk in de opslag van de browser een pas en een (nagebootste) gezichtsinstelling, net als voor W49 tot en met W51.
+- **W35 tot en met W40:** alleen de drie registraties. Voor W38 zijn daarna Mark Jansen en Daan Smit op inactief gezet. Voor W35 heeft de beheerder daarna bij Lotte van Dijk een pas gekoppeld, op dezelfde manier als voor W12, en is bij de vraag na de passcan `Ja, instellen` gekozen. W36, W37, W39 en W40 zijn op 30 oktober 2026 in een eigen sessie met alleen de drie registraties gemaakt, samen met W41.
 - **W41:** na de drie registraties heeft de beheerder met `+` een Blikje op 14 september toegevoegd voor Lotte van Dijk.
+- **W46 en W54:** een sessie met `FACE_DEMO.scanMode = "tap"`. Die waarde is alleen aangepast in de `config.js` die de testserver aan de browser gaf. De bestanden van de website zelf zijn niet veranderd. Verder zoals bij W13: één registratie en een (nagebootste) gezichtsinstelling voor Lotte.
 
 Een paar dingen om te weten:
 
-- **Camera.** Bij de schermen van de gezichtsherkenning (W12 en W13) gebruikt de browser zijn eigen testbeeld als camera (een groen vlak met een draaiende cirkel en een teller). Er staan dus geen echte gezichten in dit document. Het beeld is gespiegeld, net als bij een echte camera aan de voorkant.
+- **Camera.** Bij de schermen van de gezichtsherkenning (W12, W13, W46 en W49) gebruikt de browser zijn eigen testbeeld als camera (een groen vlak met een draaiende cirkel en een teller). Er staan dus geen echte gezichten in dit document. Het beeld is gespiegeld, net als bij een echte camera aan de voorkant.
 - **W13.** Het venster `Herken mij` opent alleen als er minstens één gezicht is ingesteld. Met het testbeeld kan geen gezicht worden vastgelegd. Alleen voor deze screenshot is daarom nagebootst dat er iemand is ingesteld. Het venster zelf is ongewijzigd.
-- **W14.** Hier is echt herkend: als camerabeeld is een voorbeeldfoto gebruikt. De screenshot is gemaakt nadat het cameravenster vanzelf was gesloten, dus de foto staat er niet op.
+- **W14 en W52.** Tot en met versie 3.22 is voor W14 echt herkend, met een voorbeeldfoto als camerabeeld. Sinds versie 3.23 herkent de demo geen foto meer (de stille controle op een levend gezicht), en de headless browser heeft geen echt gezicht. Daarom is de herkenning voor W52 en W14 nagebootst. Het script heeft in de pagina dezelfde begroeting van de app gestart die na een herkenning op het startscherm komt (W52), en daarna het vervolg dat de app na herkennen met de camera uitvoert. De koelkast ging open met "Je bent herkend met de camera." en daarin is op `Liever brood of beleg? Open het productvenster` getikt (W14). Daarvoor gaf de testserver de pagina één regel extra in `main.js`, zodat het script bij de app kon. De bestanden van de website zelf zijn niet veranderd. Alles wat in beeld staat, tekent de app zelf.
 - **W35.** Hier weigert de browser de camera (de toestemming voor de camera staat in de browser op "geweigerd"). De foutmelding komt dus uit de echte code. Er is niets nagebootst.
-- **W36.** Voor deze screenshot is in de opslag van de browser (localStorage) één registratie met een kapotte datum gezet, en daarna is de pagina opnieuw geladen. De melding komt uit de echte controle bij het laden.
+- **W36.** Voor deze screenshot is in de opslag van de browser (localStorage) één registratie met een kapotte datum gezet, en daarna is de pagina opnieuw geladen. De melding komt uit de echte controle bij het laden. Sinds versie 3.21 staat ze boven het startscherm.
 - **Bevestigingsvragen.** Bij het verwijderen van een medewerker, product ("Product <naam> verwijderen?"), bedrijf of consumptiepunt, bij een correctie met `−` op een registratie uit een andere maand, bij een correctie met `+` op een datum in een eerdere maand en bij `Alle gegevens wissen` vraagt de browser om bevestiging met een eigen venster (`window.confirm`). Dat venster hoort bij de browser en niet bij de website en staat daarom niet tussen de screenshots.
 - **Schermformaten.** De medewerkerskant is vastgelegd op een staande tablet (810 × 1080 pixels), omdat de website op een tablet bij het consumptiepunt wordt gebruikt. Het beheer is vastgelegd op een laptopscherm (1280 × 900). W02 en W03 tonen de beginpagina op een groot scherm (1440 × 900) en een telefoon (390 × 844), W40 het beheer op een telefoon (390 × 844). W15 (waarschuwing bij openen als los bestand) is vastgelegd op 1280 × 800.
 - **Thema.** Alle screenshots staan in het lichte thema, behalve W04, W39 en W44 (donker thema).
-- **Slimme koelkast (W42 tot en met W44).** Deze drie screenshots zijn eerst op 19 oktober 2026 gemaakt, met versie 3.14. Op 21 oktober 2026 zijn ze met versie 3.16 opnieuw gemaakt, op dezelfde manier en op een staande tablet (810 × 1080), zodat de lege keuze "Kies een medewerker" (W42) en de regel "Alles wat je nu pakt, staat op naam van Lotte van Dijk." (W43) erop staan. Daarvoor heeft de beheerder bij Lotte van Dijk via het formulier een pas gekoppeld (met looncode 101 en personeelsnummer 5001). Daarna is de pas gescand. Het slot en de weegschalen zijn nagebootst. Op de screenshots W01 tot en met W41, gemaakt op 15 oktober 2026, staan de knop `Slimme koelkast (demo)` op de beginpagina en het tabblad Koelkast in het beheer nog niet (zie de bekende beperkingen in hoofdstuk 16). Alleen W33 en de screenshots die op 27 oktober 2026 opnieuw zijn gemaakt (zie hieronder) zijn daarop een uitzondering.
-- **Logboek (W33).** Sinds versie 3.16 staan bij een telling de verwachte voorraad, de getelde voorraad en het verschil in het logboek, en bij een gewijzigde medewerker de oude en de nieuwe looncode en het personeelsnummer. Daarom is W33 op 21 oktober 2026 om 9:03 uur opnieuw gemaakt, met dezelfde stappen en demogegevens als op 15 oktober. Op die screenshot staat het tabblad Koelkast wel.
+- **Slimme koelkast (W42 tot en met W44).** Deze drie screenshots zijn eerst op 19 oktober 2026 gemaakt, met versie 3.14. Op 21 oktober 2026 zijn ze met versie 3.16 opnieuw gemaakt, op dezelfde manier en op een staande tablet (810 × 1080), zodat de lege keuze "Kies een medewerker" (W42) en de regel "Alles wat je nu pakt, staat op naam van Lotte van Dijk." (W43) erop staan. Daarvoor heeft de beheerder bij Lotte van Dijk via het formulier een pas gekoppeld (met looncode 101 en personeelsnummer 5001). Daarna is de pas gescand. Het slot en de weegschalen zijn nagebootst. Sinds 30 oktober 2026 staan de knop `Slimme koelkast (demo)` op de beginpagina en het tabblad Koelkast in het beheer op alle screenshots van de beginpagina en het beheer (zie hierboven). W53 (het tabblad Koelkast) is op 30 oktober 2026 op dezelfde manier gemaakt als W42 tot en met W44, en W55 in de sessie van W10.
+- **Logboek (W33).** Sinds versie 3.16 staan bij een telling de verwachte voorraad, de getelde voorraad en het verschil in het logboek, en bij een gewijzigde medewerker de oude en de nieuwe looncode en het personeelsnummer. Daarom is W33 op 21 oktober 2026 om 9:03 uur opnieuw gemaakt, met dezelfde stappen en demogegevens als op 15 oktober. Op 30 oktober 2026 is W33 met de andere beheerschermen nog een keer gemaakt.
 - **27 oktober 2026 (versie 3.22).** Sinds versie 3.22 staat in het productvenster na kiezen op naam geen link `Gezichtsherkenning instellen (demo)` meer, maar de regel "Gezichtsherkenning instellen? Houd je pas tegen de lezer of vraag het de beheerder.", en staat in het tabblad `Medewerkers` bij iedere actieve medewerker de knop `Gezichtsherkenning instellen`. Daarom zijn W07, W08, W11, W12, W21, W22, W23, W24, W35 en W38 op 27 oktober 2026 's ochtends opnieuw gemaakt met versie 3.22, met dezelfde stappen, demogegevens en schermformaten als hierboven (staande tablet 810 × 1080 voor W07, W08, W11, W12 en W35, laptopscherm 1280 × 900 voor W21 tot en met W24 en W38, JPEG). W22 tot en met W24 zijn ook opnieuw gemaakt, omdat de lijst met de nieuwe knoppen achter het formulier te zien is. Sinds versie 3.21 opent de website op het startscherm, daarom is in het script eerst op `Handmatig zoeken` getikt. Op deze screenshots staan dus `Vandaag · 27 oktober 2026`, "Goedemorgen", de knop `Slimme koelkast (demo)` op de beginpagina en het tabblad Koelkast in het beheer. De browser had bij deze screenshots een (nagebootste) camera, zodat de knop `Gezichtsherkenning instellen` niet is uitgeschakeld. Hoe W12 en W35 tot stand kwamen, staat hierboven. De andere screenshots zijn niet door versie 3.22 veranderd en zijn niet opnieuw gemaakt.
-- **Productvenster.** "Welkom terug" en de keuze van de vorige keer verschijnen alleen na herkenning met de pas of de camera (FR-49, FR-50), daarom is W10 gemaakt na een scan van de pas van Lotte. De pasjeslezer werkt als een toetsenbord. Daardoor laat de browser op W10 de focus zien: de eerste `+`-knop heeft een donkere rand. Het productvenster sluit na 75 seconden zonder tik of toets vanzelf (FR-70). Iedere screenshot van het productvenster is binnen die tijd gemaakt en de klok van de browser is niet aangepast. De waarschuwing "Venster sluit zo. Tik om door te gaan." staat daarom op geen enkele screenshot.
+- **Productvenster.** "Welkom terug" en de keuze van de vorige keer verschijnen alleen na herkenning met de pas of de camera (FR-49, FR-50), daarom is W10 gemaakt na een scan van de pas van Lotte (via de koelkast, zie hierboven). De pasjeslezer werkt als een toetsenbord. Daardoor laat de browser op W10 de focus zien: de eerste `+`-knop heeft een donkere rand. Het productvenster sluit na 75 seconden zonder tik of toets vanzelf (FR-70). Iedere screenshot van het productvenster is binnen die tijd gemaakt en de klok van de browser is niet aangepast. De waarschuwing "Venster sluit zo. Tik om door te gaan." staat daarom op geen enkele screenshot.
 - **Focus.** De screenshots zijn gemaakt met klikken vanuit een script en niet met een vinger. Na het sluiten van een venster zet de website de focus terug op de rij of knop waarmee het venster werd geopend. Voor W02 tot en met W05 is die focus weggehaald, zoals na een tik ergens anders op de pagina, zodat er geen focusrand in beeld staat.
 
 #### Gebruikte UI-principes
@@ -1529,7 +1610,7 @@ De codes H1 tot en met H10 verwijzen naar de tien heuristieken van Nielsen (1994
 
 #### Overzicht
 
-W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, zodat de nummers van de andere screenshots (en verwijzingen ernaar) niet veranderen, en staan in de lijst en in deze paragraaf direct naast het scherm waar ze bij horen (bijvoorbeeld W35 na de andere schermen van de camera, W41 en W37 na W19, W42 tot en met W44 van de slimme koelkast na de schermen van de camera, en W45 tot en met W47 van de standby en de vraag na een passcan (versie 3.17, gemaakt op 21 oktober 2026) daarna). W48 tot en met W51 van het startscherm (versie 3.21, gemaakt op 26 oktober 2026) staan direct na W47.
+W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, zodat de nummers van de andere screenshots (en verwijzingen ernaar) niet veranderen, en staan in de lijst en in deze paragraaf direct naast het scherm waar ze bij horen (bijvoorbeeld W35 na de andere schermen van de camera, W41 en W37 na W19, W42 tot en met W44 van de slimme koelkast na de schermen van de camera, en W45 tot en met W47 van de standby en de vraag na een passcan (versie 3.17, gemaakt op 21 oktober 2026) daarna). W48 tot en met W51 van het startscherm (versie 3.21, gemaakt op 26 oktober 2026) staan direct na W47. W52 tot en met W55 zijn op 30 oktober 2026 toegevoegd (versie 3.24): W55 (koelkast na een passcan) na W42, W54 (startscherm met tikken) na W45, W52 (startscherm na herkennen) na W51 en W53 (beheer: Koelkast) na W32.
 
 | Nr. | Naam | Wie |
 |---|---|---|
@@ -1549,15 +1630,18 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 | W14 | Herkend met de camera (demo) | Medewerker |
 | W35 | Camera zonder toegang (demo) | Medewerker |
 | W42 | Slimme koelkast: deur dicht (demo) | Medewerker |
+| W55 | Slimme koelkast: open na een passcan, met "Liever brood of beleg?" (demo) | Medewerker |
 | W43 | Slimme koelkast: deur open met de schappen (demo) | Medewerker |
 | W44 | Slimme koelkast: overzicht na sluiten, donker thema (demo) | Medewerker |
-| W45 | Standby: "Tik op het scherm om te beginnen" | Medewerker |
+| W45 | Standby: "Tik op het scherm om te beginnen" (tot en met versie 3.20) | Medewerker |
+| W54 | Startscherm met tikken: "Tik op het ovaal om je gezicht te laten scannen" (demo) | Medewerker |
 | W46 | Korte scan na een tik (demo) | Medewerker |
 | W47 | Vraag na een passcan: "Gezichtsherkenning nog niet ingesteld. Wil je dit?" (demo) | Medewerker |
 | W48 | Startscherm zonder camera: pas en Handmatig zoeken | Medewerker |
 | W49 | Startscherm met de camera: "Kijk in het ovaal" (demo) | Medewerker |
 | W50 | Startscherm: "Even stil blijven…" (demo) | Medewerker |
 | W51 | Startscherm: niet herkend (demo) | Medewerker |
+| W52 | Startscherm: herkend, "Goedemorgen Lotte." (demo) | Medewerker |
 | W15 | Waarschuwing bij openen als los bestand | Iedereen |
 | W36 | Melding bij beschadigde opgeslagen gegevens | Iedereen |
 | W16 | Inloggen als beheerder | Beheerder |
@@ -1580,6 +1664,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 | W30 | Consumptiepunt toevoegen met aanbod | Beheerder |
 | W31 | Beheer: Voorraad | Beheerder |
 | W32 | Voorraad van een punt zonder aanbod | Beheerder |
+| W53 | Beheer: Koelkast (demo) | Beheerder |
 | W33 | Beheer: Logboek | Beheerder |
 | W34 | Foutmelding bij een levering | Beheerder |
 | W39 | Beheer in het donkere thema | Beheerder |
@@ -1589,7 +1674,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W01 – Beginpagina op een tablet](wireframes/w01-beginpagina-tablet.jpg)
 
-**Omschrijving.** Dit is het eerste scherm dat een medewerker op de tablet bij het consumptiepunt ziet. Bovenaan staat de bovenbalk met het TVB-logo, de naam `Consumptieregistratie`, de themakeuze (slider met zon en maan, en de knoppen `Systeem` en `Auto`), de status `Systeem actief` en de knop `Admin login`. Daaronder staat de banner met de datum (`Vandaag · 15 oktober 2026`) en de vraag "Wat heb je vandaag gegeten of gedronken?". Op een staande tablet is deze banner compacter, zodat de lijst hoger begint. In de kaart `Registreer je consumptie` staan rechts in de kop één keer "Tik op je naam" en het aantal medewerkers (`8 totaal`). Daaronder staan op één regel de hint "Houd je pas tegen de lezer, of zoek je naam" met een icoon (alleen als de pasjeslezer aan staat) en de knop `Herken mij met de camera (demo)`. Weer daaronder staan het zoekveld met de sneltoets `Ctrl K` en het bedrijfsfilter naast elkaar. De medewerkers staan per bedrijf (hier alleen TVB), met een gekleurde avatar met initialen en de korte tekst "Tik om te kiezen". Alle acht demonamen staan in beeld. De themaknoppen en `Admin login` zijn 44 pixels hoog en het kleine kopje `MEDEWERKERS` is donkergroen. De totalen van vandaag en deze maand staan op de tablet onder de lijst (zie W06).
+**Omschrijving.** Dit is de beginpagina die een medewerker op de tablet bij het consumptiepunt ziet na `Handmatig zoeken` op het startscherm (W48). Bovenaan staat de bovenbalk met het TVB-logo, de naam `Consumptieregistratie`, de themakeuze (slider met zon en maan, en de knoppen `Systeem` en `Auto`), de status `Systeem actief` en de knop `Admin login`. Daaronder staat de banner met de datum (`Vandaag · 30 oktober 2026`) en de vraag "Wat heb je vandaag gegeten of gedronken?". Op een staande tablet is deze banner compacter, zodat de lijst hoger begint. In de kaart `Registreer je consumptie` staan rechts in de kop één keer "Tik op je naam" en het aantal medewerkers (`8 totaal`). Daaronder staat de hint "Houd je pas tegen de lezer, of zoek je naam" met een icoon (alleen als de pasjeslezer aan staat). De demoknoppen `Herken mij met de camera (demo)` en `Slimme koelkast (demo)` passen er op een tablet niet naast en staan samen rechts op de regel eronder. Weer daaronder staan het zoekveld met de sneltoets `Ctrl K` en het bedrijfsfilter naast elkaar. De medewerkers staan per bedrijf (hier alleen TVB), met een gekleurde avatar met initialen en de korte tekst "Tik om te kiezen". Alle acht demonamen staan in beeld. De themaknoppen en `Admin login` zijn 44 pixels hoog en het kleine kopje `MEDEWERKERS` is donkergroen. De totalen van vandaag en deze maand staan op de tablet onder de lijst (zie W06). Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Visuele hiërarchie:* de grote vraag in de banner en de kop van de kaart zijn het eerst te zien. De uitleg is kleiner en lichter.
@@ -1610,7 +1695,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W02 – Beginpagina op een groot scherm](wireframes/w02-beginpagina-desktop.jpg)
 
-**Omschrijving.** Dezelfde beginpagina op een scherm van 1440 × 900 pixels. De inhoud blijft binnen een vaste paginabreedte in het midden. Omdat het scherm niet hoger is dan 900 pixels, is de banner compact (dezelfde regel als op een liggende tablet) en staat de uitleg in de banner op één regel. Links staat de kaart met medewerkers, met dezelfde kop, hint, cameraknop, zoekveld en bedrijfsfilter als in W01. De medewerkers zijn nu verdeeld over IT Supervision (Tom de Groot), Klik (Eva Meijer) en TVB. Rechts staan de kaarten `Vandaag geregistreerd` (8 producten) en `Deze maand` (8 producten totaal) en een tipkaart `Goed bezig!` met de tekst "Elke registratie helpt ons bewuster om te gaan met verbruik."
+**Omschrijving.** Dezelfde beginpagina op een scherm van 1440 × 900 pixels. De inhoud blijft binnen een vaste paginabreedte in het midden. Omdat het scherm niet hoger is dan 900 pixels, is de banner compact (dezelfde regel als op een liggende tablet) en staat de uitleg in de banner op één regel. Links staat de kaart met medewerkers, met dezelfde kop, hint, demoknoppen, zoekveld en bedrijfsfilter als in W01. Ook hier staan de twee demoknoppen rechts op een eigen regel onder de hint. De medewerkers zijn nu verdeeld over IT Supervision (Tom de Groot), Klik (Eva Meijer) en TVB. Rechts staan de kaarten `Vandaag geregistreerd` (8 producten) en `Deze maand` (8 producten totaal) en een tipkaart `Goed bezig!` met de tekst "Elke registratie helpt ons bewuster om te gaan met verbruik." Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Uitlijning:* bovenbalk, banner, kaarten en footer hebben dezelfde linker- en rechterrand.
@@ -1628,7 +1713,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W03 – Beginpagina op een telefoon](wireframes/w03-beginpagina-telefoon.jpg)
 
-**Omschrijving.** De beginpagina op een telefoon van 390 pixels breed. In de bovenbalk vervallen de naam naast het logo, de status en de icoontjes naast de slider. De themaknoppen en de admin-knop (alleen de letter `A`) blijven staan. Banner, kaart en lijst staan onder elkaar over de volle breedte. Rechts naast de kop staan "Tik op je naam" en daaronder `8 totaal`. De kop `Registreer je consumptie` loopt daardoor over twee regels. De hint "Houd je pas tegen de lezer, of zoek je naam" loopt ook over twee regels, en daaronder staat de knop `Herken mij met de camera (demo)` over de volle breedte. Het zoekveld en het bedrijfsfilter staan op een telefoon onder elkaar. De voorbeeldtekst in het zoekveld past niet helemaal en wordt afgekapt ("Zoek op voor- of achtern").
+**Omschrijving.** De beginpagina op een telefoon van 390 pixels breed. In de bovenbalk vervallen de naam naast het logo, de status en de icoontjes naast de slider. De themaknoppen en de admin-knop (alleen de letter `A`) blijven staan. Banner, kaart en lijst staan onder elkaar over de volle breedte. Rechts naast de kop staan "Tik op je naam" en daaronder `8 totaal`. De kop `Registreer je consumptie` loopt daardoor over twee regels. De hint "Houd je pas tegen de lezer, of zoek je naam" loopt ook over twee regels, en daaronder staan de knoppen `Herken mij met de camera (demo)` en `Slimme koelkast (demo)` onder elkaar, allebei over de volle breedte. Het zoekveld en het bedrijfsfilter staan op een telefoon onder elkaar. De voorbeeldtekst in het zoekveld past niet helemaal en wordt afgekapt ("Zoek op voor- of achtern"). Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Responsief ontwerp:* alles staat in één kolom. Er is geen horizontaal scrollen.
@@ -1638,13 +1723,13 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 **Nielsen-heuristieken:**
 - *H4:* de onderdelen zien er hetzelfde uit als op de andere schermen.
 - *H8:* op het kleine scherm is alleen het noodzakelijke overgebleven.
-- *Beperking:* op 390 pixels breed is de voorbeeldtekst in het zoekveld te lang en wordt hij afgekapt. Door de hint, de cameraknop en de kop over twee regels staat de eerste naam pas onderaan het scherm, zodat er zonder scrollen maar één naam in beeld is. Alles blijft bruikbaar, maar op een telefoon moet de medewerker eerder scrollen of zoeken. De tegels met de totalen staan op een telefoon onder de lijst en vallen buiten deze screenshot.
+- *Beperking:* op 390 pixels breed is de voorbeeldtekst in het zoekveld te lang en wordt hij afgekapt. Door de hint, de twee demoknoppen en de kop over twee regels begint de lijst pas onderaan het scherm, zodat er zonder scrollen geen naam helemaal in beeld is. Alles blijft bruikbaar, maar op een telefoon moet de medewerker eerder scrollen of zoeken. De tegels met de totalen staan op een telefoon onder de lijst en vallen buiten deze screenshot.
 
 #### W04 – Beginpagina in het donkere thema
 
 ![W04 – Beginpagina in het donkere thema](wireframes/w04-beginpagina-donker.jpg)
 
-**Omschrijving.** De beginpagina op de tablet als het apparaat op donker staat. `Systeem` is gekozen, dus de website volgt het apparaat. De slider staat daarom naar de maan. De achtergrond en kaarten zijn donker, de huiskleuren blijven en koppen en namen krijgen een lichtere tint van het huisgroen, zodat ze goed leesbaar zijn. De voorbeeldteksten in het zoekveld en het bedrijfsfilter staan in `--muted` (zie W39). Deze screenshot is gemaakt na de beheerstappen, dus net als in W02 staat Tom de Groot onder IT Supervision en Eva Meijer onder Klik.
+**Omschrijving.** De beginpagina op de tablet als het apparaat op donker staat. `Systeem` is gekozen, dus de website volgt het apparaat. De slider staat daarom naar de maan. De achtergrond en kaarten zijn donker, de huiskleuren blijven en koppen en namen krijgen een lichtere tint van het huisgroen, zodat ze goed leesbaar zijn. De voorbeeldteksten in het zoekveld en het bedrijfsfilter staan in `--muted` (zie W39). Deze screenshot is gemaakt na de beheerstappen, dus net als in W02 staat Tom de Groot onder IT Supervision en Eva Meijer onder Klik. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Kleur met betekenis:* groen blijft de kleur van koppen en acties, ook in het donker.
@@ -1659,7 +1744,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W05 – Bedrijfsfilter geopend](wireframes/w05-bedrijfsfilter-open.jpg)
 
-**Omschrijving.** Het bedrijfsfilter rechts naast het zoekveld is uitgeklapt. Het is een keuzelijst waarin je ook kunt typen. De lijst toont `Alle bedrijven` en alleen de bedrijven waar actieve medewerkers bij horen. Op dit moment is dat alleen TVB. Iedere optie is 44 pixels hoog en de pijlknop is 40 × 40 pixels.
+**Omschrijving.** Het bedrijfsfilter rechts naast het zoekveld is uitgeklapt. Het is een keuzelijst waarin je ook kunt typen. De lijst toont `Alle bedrijven` en alleen de bedrijven waar actieve medewerkers bij horen. Op dit moment is dat alleen TVB. Iedere optie is 44 pixels hoog en de pijlknop is 40 × 40 pixels. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Affordance:* het pijltje rechts laat zien dat het veld uitklapt.
@@ -1676,7 +1761,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W06 – Zoeken zonder resultaat](wireframes/w06-zoeken-zonder-resultaat.jpg)
 
-**Omschrijving.** Er is gezocht op "Willem", maar die medewerker bestaat niet. De teller springt naar `0 totaal`, "Tik op je naam" verdwijnt (er is geen naam om op te tikken) en in de kaart staat een lege toestand: een icoon, de tekst "Geen medewerker gevonden", de uitleg "Probeer een andere zoekterm of kies een ander bedrijf." en de knop `Zoekopdracht wissen`. Onder de kaart staan de totalen naast elkaar (8 producten vandaag, 8 deze maand) met daaronder de tipkaart.
+**Omschrijving.** Er is gezocht op "Willem", maar die medewerker bestaat niet. De teller springt naar `0 totaal`, "Tik op je naam" verdwijnt (er is geen naam om op te tikken) en in de kaart staat een lege toestand: een icoon, de tekst "Geen medewerker gevonden", de uitleg "Probeer een andere zoekterm of kies een ander bedrijf." en de knop `Zoekopdracht wissen`. Onder de kaart staan de totalen naast elkaar (8 producten vandaag, 8 deze maand) met daaronder de tipkaart. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de teller en de lege toestand laten direct zien dat er niets is gevonden.
@@ -1728,12 +1813,12 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W09 – Bevestiging na registreren](wireframes/w09-bevestiging-na-registreren.jpg)
 
-**Omschrijving.** Na `Registreren` sluit het productvenster en verschijnt onderaan in het midden een melding met een vinkje: "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd". De tekst van de melding is 16 pixels. De melding blijft 4 seconden staan en een tik gaat erdoorheen naar wat eronder ligt. Het zoekveld en het bedrijfsfilter zijn leeg en de lijst staat bovenaan, dus de pagina is direct weer klaar voor de volgende medewerker (FR-48).
+**Omschrijving.** Na `Registreren` sluit het productvenster en komt het startscherm terug (sinds versie 3.21, FR-85), zodat de volgende medewerker daar begint. Boven het startscherm staat onderaan in het midden een melding met een vinkje: "Lotte van Dijk: 2× Blikje, 1× Ei geregistreerd". De tekst van de melding is 16 pixels. De melding blijft 4 seconden staan en een tik gaat erdoorheen naar wat eronder ligt. Het zoekveld en het bedrijfsfilter op de beginpagina zijn leeggemaakt en de lijst staat weer bovenaan (FR-48). De browser had een (nagebootste) camera, maar nog niemand had een gezicht ingesteld. Daarom toont het startscherm de pas, de regel "Gezichtsherkenning stel je in na een passcan of via de beheerder." en `Handmatig zoeken` (zie W48). De focus staat op `Handmatig zoeken`. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de melding bevestigt wat er is opgeslagen.
 - *Toegankelijkheid:* het vinkje toont dat het gelukt is. Bij een fout heeft de melding dezelfde donkere achtergrond maar een ander icoon: een uitroepteken in een cirkel (zie W34). Het verschil zit dus in de vorm van het icoon en niet alleen in kleur.
-- *Witruimte en eenvoud:* de melding bedekt de lijst nauwelijks en verdwijnt vanzelf.
+- *Witruimte en eenvoud:* de melding bedekt het startscherm nauwelijks en verdwijnt vanzelf.
 
 **Nielsen-heuristieken:**
 - *H1:* de melding noemt de naam en de producten, zodat op een gedeelde tablet duidelijk is wat er voor wie is opgeslagen.
@@ -1743,7 +1828,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W10 – Productvenster met "Zelfde als vorige keer"](wireframes/w10-productvenster-vorige-keer.jpg)
 
-**Omschrijving.** Lotte heeft eerder 2× Blikje en 1× Ei geregistreerd en houdt nu haar pas bij de lezer op de beginpagina. Het productvenster van Lotte opent met de begroeting "Goedemorgen Lotte, welkom terug. Je bent herkend met je pas." Daaronder staat een groen vak met een icoon: "Vorige keer koos je 2× Blikje en 1× Ei." met de knop `Zelfde als vorige keer`. Onderaan staat dezelfde knopbalk als in W07, met "Kies eerst een product met +" en de uitgeschakelde knop `Registreren`. Door het extra vak past het venster niet helemaal op het scherm. De knopbalk blijft onderaan in beeld en de regel over de inhouding op het loon komt pas in beeld als het venster omlaag scrolt. De eerste `+`-knop heeft een donkere focusrand, omdat de pasjeslezer als toetsenbord werkt en de focus bij het openen op die knop wordt gezet. Het vak met de vorige keuze en "welkom terug" verschijnen alleen na herkenning met de pas of de camera. Na een tik op de naam staat er alleen "Goedemorgen Lotte." en geen voorstel, zoals in W07. De reden: iedereen kan op de naam van een collega tikken, en dan zou te zien zijn of die collega al eens iets registreerde en wat (zie hoofdstuk 13). Die knop vult de aantallen in. Opslaan gebeurt pas met `Registreren`. Het voorstel bestaat uit de laatste registratie en alles wat binnen 60 seconden daarvoor is geregistreerd, en bevat alleen producten die het punt nu aanbiedt. Correcties van de beheerder tellen niet mee.
+**Omschrijving.** Lotte heeft eerder 2× Blikje en 1× Ei geregistreerd en houdt nu haar pas bij de lezer. Sinds versie 3.17 opent de pas de koelkast (W55). Daar tikt Lotte op `Liever brood of beleg? Open het productvenster`. Dan opent haar productvenster met de begroeting "Goedemorgen Lotte, welkom terug. Je bent herkend met je pas." Daaronder staat een groen vak met een icoon: "Vorige keer koos je 2× Blikje en 1× Ei." met de knop `Zelfde als vorige keer`. Onderaan staat dezelfde knopbalk als in W07, met "Kies eerst een product met +" en de uitgeschakelde knop `Registreren`. Door het extra vak past het venster niet helemaal op het scherm. De knopbalk blijft onderaan in beeld en de regel over de inhouding op het loon komt pas in beeld als het venster omlaag scrolt. De eerste `+`-knop heeft een donkere focusrand, omdat de pasjeslezer als toetsenbord werkt en de focus bij het openen op die knop wordt gezet. Het vak met de vorige keuze en "welkom terug" verschijnen alleen na herkenning met de pas of de camera. Na een tik op de naam staat er alleen "Goedemorgen Lotte." en geen voorstel, zoals in W07. De reden: iedereen kan op de naam van een collega tikken, en dan zou te zien zijn of die collega al eens iets registreerde en wat (zie hoofdstuk 13). Die knop vult de aantallen in. Opslaan gebeurt pas met `Registreren`. Het voorstel bestaat uit de laatste registratie en alles wat binnen 60 seconden daarvoor is geregistreerd, en bevat alleen producten die het punt nu aanbiedt. Correcties van de beheerder tellen niet mee. Zonder schapindeling op het consumptiepunt, of met `RECOGNITION_TARGET = "products"`, opent de pas meteen dit venster. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Visuele hiërarchie:* het voorstel staat boven de productlijst en valt op door de lichtgroene achtergrond.
@@ -1793,7 +1878,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W13 – Herken mij met de camera (demo)](wireframes/w13-gezicht-herkennen.jpg)
 
-**Omschrijving.** Na een klik op `Herken mij met de camera (demo)` op de beginpagina opent dit venster: `Herken mij`, met de uitleg "Plaats je gezicht binnen het kader en kijk recht in de camera." De status is hier "Geen gezicht in beeld. Plaats je gezicht binnen het kader." Andere statussen zijn "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken." en "Bijna herkend. Blijf even rustig in het kader kijken." Pas als dezelfde actieve medewerker twee keer achter elkaar wordt herkend, telt het. Lukt het na 20 seconden niet, dan gaat de camera uit en staat er "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst." Is er nog niemand ingesteld, dan opent het venster niet en verschijnt sinds versie 3.22 "Er is nog niemand ingesteld voor gezichtsherkenning. Houd je pas tegen de lezer of vraag het de beheerder." (tot en met 3.21: "… Kies je naam en zet het aan in het productvenster.", maar dat kan sinds 3.22 niet meer, FR-87).
+**Omschrijving.** Na een klik op `Herken mij met de camera (demo)` op de beginpagina opent dit venster: `Herken mij`, met de uitleg "Plaats je gezicht binnen het kader en kijk recht in de camera." De status is hier "Geen gezicht in beeld. Plaats je gezicht binnen het kader." Andere statussen zijn "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken." en "Bijna herkend. Blijf even rustig in het kader kijken." Pas als dezelfde actieve medewerker twee keer achter elkaar wordt herkend, telt het. Lukt het na 20 seconden niet, dan gaat de camera uit en staat er "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst." Is er nog niemand ingesteld, dan opent het venster niet en verschijnt sinds versie 3.22 "Er is nog niemand ingesteld voor gezichtsherkenning. Houd je pas tegen de lezer of vraag het de beheerder." (tot en met 3.21: "… Kies je naam en zet het aan in het productvenster.", maar dat kan sinds 3.22 niet meer, FR-87). Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de status verandert terwijl de camera zoekt.
@@ -1810,7 +1895,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W14 – Herkend met de camera (demo)](wireframes/w14-gezicht-herkend.jpg)
 
-**Omschrijving.** Lotte is herkend. Het cameravenster sluit vanzelf en het productvenster van Lotte opent met de begroeting "Goedemorgen Lotte. Je bent herkend met de camera." Sinds versie 3.17 opent na herkenning standaard de koelkast (FR-80, zoals W43 met "Je bent herkend met de camera."). Dit productvenster verschijnt met `RECOGNITION_TARGET = "products"`, als het consumptiepunt geen schapindeling heeft, of na de knop "Liever brood of beleg? Open het productvenster" in de koelkast. Onder de productlijst staat op een eigen regel met een vinkje "Gezichtsherkenning staat aan (demo)" en de link `Uitzetten`, op de plek van de regel "Gezichtsherkenning instellen? …" uit W07. Sinds versie 3.22 staat `Uitzetten` er alleen na herkenning met de pas of de camera, zoals hier (FR-87). Na kiezen op naam staat er alleen "Gezichtsherkenning instellen? Houd je pas tegen de lezer of vraag het de beheerder." Daaronder staan dezelfde knopbalk en loonregel als in W07. Het venster is net iets hoger dan het scherm, maar opent bovenaan: het kruisje, `Persoonlijke registratie` en de titel staan helemaal in beeld en de focus staat op de eerste `+`. Verder werkt het venster hetzelfde als in W07.
+**Omschrijving.** Lotte is herkend met de camera, op het startscherm (W52) of in het venster `Herken mij` (W13). Sinds versie 3.17 opent na herkenning standaard de koelkast (FR-80, zoals W55, maar met "Je bent herkend met de camera."). Daar heeft Lotte op `Liever brood of beleg? Open het productvenster` getikt. Dan opent dit productvenster met de begroeting "Goedemorgen Lotte. Je bent herkend met de camera." Het venster opent ook meteen na herkenning met `RECOGNITION_TARGET = "products"` of als het consumptiepunt geen schapindeling heeft. Onder de productlijst staat op een eigen regel met een vinkje "Gezichtsherkenning staat aan (demo)" en de link `Uitzetten`, op de plek van de regel "Gezichtsherkenning instellen? …" uit W07. Sinds versie 3.22 staat `Uitzetten` er alleen na herkenning met de pas of de camera, zoals hier (FR-87). Na kiezen op naam staat er alleen "Gezichtsherkenning instellen? Houd je pas tegen de lezer of vraag het de beheerder." Daaronder staan dezelfde knopbalk en loonregel als in W07. Het venster past op een staande tablet precies op het scherm en opent bovenaan, met de focus op de eerste `+` (op de screenshot weggehaald). Verder werkt het venster hetzelfde als in W07. De herkenning zelf is voor deze screenshot nagebootst (zie hierboven). Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de begroeting zegt dat de camera de medewerker heeft herkend.
@@ -1855,6 +1940,22 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 - *H2:* "Houd je pas tegen de lezer" en "Op slot" zijn woorden uit de praktijk.
 - *H10:* de privacyregel zegt wat de koelkast vastlegt en dat er geen beelden worden gemaakt.
 
+#### W55 – Slimme koelkast: open na een passcan, met "Liever brood of beleg?" (demo)
+
+![W55 – Slimme koelkast: open na een passcan (demo)](wireframes/w55-koelkast-na-pas.jpg)
+
+**Omschrijving.** Staande tablet (810 × 1080), in de sessie van W10. Lotte van Dijk heeft haar pas tegen de lezer gehouden terwijl er geen venster open stond. Sinds versie 3.17 opent de pas meteen de koelkast (FR-80, `RECOGNITION_TARGET = "fridge"`). De tablet had geen camera, dus de vraag over gezichtsherkenning (W47) kwam niet. De titel is "De deur is open", met in groen "Goedemorgen Lotte. Je bent herkend met je pas. Pak wat je wilt en sluit de deur." Daaronder staan, net als in W43, op wiens naam alles komt, de uitleg en de drie schappen: "Schap 1 · Blikje" met "22 op het schap" en "Schap 2 · Yoghurt" en "Schap 3 · Ei" met elk "23 op het schap" (er is al geregistreerd). In het lichtgroene vak staat "In je hand: Nog niets". Zolang er niets in de hand is, staat daaronder de link `Liever brood of beleg? Open het productvenster` met een pakketicoon. Die sluit de deur zonder iets te registreren en opent het productvenster van dezelfde medewerker, met dezelfde herkenning (W10). Na het pakken van een product verdwijnt de link (W43). Onderaan staan `Deur dicht` en de regel over wat de koelkast vastlegt. Opgenomen op 30 oktober 2026 met versie 3.24.
+
+**UI-principes:**
+- *Progressieve onthulling:* de link naar het productvenster staat er alleen zolang hij zin heeft, dus zolang er niets in de hand is.
+- *Consistentie:* dezelfde begroeting met "Je bent herkend met je pas." als in het productvenster (W10).
+- *Visuele hiërarchie:* de schappen en `Deur dicht` vallen het meest op. De link is een gewone tekstlink.
+
+**Nielsen-heuristieken:**
+- *H1:* de begroeting zegt wie er is herkend en hoe.
+- *H3:* wie iets wil dat niet in de koelkast ligt, gaat met één tik naar het productvenster zonder dat er iets wordt geregistreerd.
+- *H7:* voor de meeste medewerkers is de pas genoeg: deur open, pakken, deur dicht.
+
 #### W43 – Slimme koelkast: deur open met de schappen (demo)
 
 ![W43 – Slimme koelkast: deur open met de schappen (demo)](wireframes/w43-koelkast-open.jpg)
@@ -1892,7 +1993,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W45 – Standby: "Tik op het scherm om te beginnen"](wireframes/w45-standby.jpg)
 
-**Omschrijving.** Sinds versie 3.21 vervangen door het startscherm (W48). Deze screenshot toont het standby-scherm van versie 3.17 tot en met 3.20. Staande tablet (810 × 1080), licht thema. De beginpagina is 2 minuten niet gebruikt en er staat geen venster open (FR-78). Over de hele pagina ligt een bijna dekkende laag in de donkere huiskleur van de banner (`--hero-start`). De beginpagina is er nog vaag doorheen te zien, zodat duidelijk is dat de tablet gewoon aan staat. In het midden staan het groene TVB-logo, in grote witte letters "Tik op het scherm om te beginnen" en daaronder "Na de tik kijkt de camera hooguit 10 seconden of hij je herkent. Alles blijft op deze tablet. Je kunt ook je pas tegen de lezer houden." Die tweede regel staat er omdat Lotte haar gezicht heeft ingesteld. Heeft niemand een gezicht ingesteld, dan staat er alleen "Je kunt ook meteen je pas tegen de lezer houden." Het hele scherm is één knop met de focus: een tik, Enter of spatie maakt wakker. De pagina eronder is `inert`, dus niet met Tab of een schermlezer te bereiken. Het zoekveld en het bedrijfsfilter zijn leeggemaakt. Bij "minder beweging" verschijnt het scherm zonder fade.
+**Omschrijving.** Sinds versie 3.21 vervangen door het startscherm (W48). Deze screenshot toont het standby-scherm van versie 3.17 tot en met 3.20. Dit scherm bestaat in de huidige website niet meer, ook niet met een andere instelling. Met `FACE_DEMO.scanMode = "tap"` toont het startscherm een ovaal om op te tikken (W54), en dat doet nu wat dit scherm deed. De screenshot blijft staan omdat W45 elders in dit document wordt genoemd. Staande tablet (810 × 1080), licht thema. De beginpagina is 2 minuten niet gebruikt en er staat geen venster open (FR-78). Over de hele pagina ligt een bijna dekkende laag in de donkere huiskleur van de banner (`--hero-start`). De beginpagina is er nog vaag doorheen te zien, zodat duidelijk is dat de tablet gewoon aan staat. In het midden staan het groene TVB-logo, in grote witte letters "Tik op het scherm om te beginnen" en daaronder "Na de tik kijkt de camera hooguit 10 seconden of hij je herkent. Alles blijft op deze tablet. Je kunt ook je pas tegen de lezer houden." Die tweede regel staat er omdat Lotte haar gezicht heeft ingesteld. Heeft niemand een gezicht ingesteld, dan staat er alleen "Je kunt ook meteen je pas tegen de lezer houden." Het hele scherm is één knop met de focus: een tik, Enter of spatie maakt wakker. De pagina eronder is `inert`, dus niet met Tab of een schermlezer te bereiken. Het zoekveld en het bedrijfsfilter zijn leeggemaakt. Bij "minder beweging" verschijnt het scherm zonder fade.
 
 **UI-principes:**
 - *Duidelijkheid:* één tekst en één handeling. Er is niets anders om op te tikken.
@@ -1904,11 +2005,27 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 - *H5:* de tik valt op het standby-scherm zelf en drukt geen knop eronder in. Een klik die de browser binnen 500 ms daarna stuurt, telt niet.
 - *H7:* wie zijn pas heeft, hoeft niet eerst te tikken: een passcan maakt wakker en wordt meteen verwerkt.
 
+#### W54 – Startscherm met tikken: "Tik op het ovaal om je gezicht te laten scannen" (demo)
+
+![W54 – Startscherm met tikken (demo)](wireframes/w54-startscherm-tikken.jpg)
+
+**Omschrijving.** Staande tablet (810 × 1080). Dit is het startscherm met `FACE_DEMO.scanMode = "tap"`, de instelling voor wie niet wil dat de camera de hele tijd meekijkt (zie de bekende beperking "De camera ziet voorbijgangers" in hoofdstuk 16). Standaard staat `scanMode` op "auto" (W49). De tablet heeft een (nagebootste) camera en Lotte van Dijk heeft een gezicht ingesteld, maar de camera staat uit. In het ovaal staat het icoon van de gezichtsscan, en het hele ovaal is een knop (voor een schermlezer "Tik om je gezicht te laten scannen"). Eronder staat in grote letters "Tik op het ovaal om je gezicht te laten scannen", met daaronder "Of houd je pas tegen de lezer." en de knop `Handmatig zoeken`. Onderaan staat met een slotje "Na de tik kijkt de camera hooguit 10 seconden. Alles blijft op deze tablet." Een tik op het ovaal opent het venster "Even kijken wie je bent" (W46). Zo doet dit startscherm wat het standby-scherm van versie 3.17 tot en met 3.20 (W45) deed: eerst een tik, dan pas de camera. Opgenomen op 30 oktober 2026 met versie 3.24.
+
+**UI-principes:**
+- *Openheid:* vóór de tik staat er al dat de camera daarna even kijkt, hoe lang en dat alles op de tablet blijft.
+- *Consistentie:* hetzelfde zwarte startscherm, ovaal en dezelfde knop als in W48 en W49. Alleen de tekst en het icoon verschillen.
+- *Affordance:* het ovaal met het icoon is het grote tikdoel.
+
+**Nielsen-heuristieken:**
+- *H1:* de tekst zegt wat een tik doet.
+- *H3:* de camera gaat alleen aan als de medewerker daar zelf voor kiest.
+- *H7:* de pas en `Handmatig zoeken` blijven andere wegen.
+
 #### W46 – Korte scan na een tik (demo)
 
 ![W46 – Korte scan na een tik (demo)](wireframes/w46-scan-na-tik.jpg)
 
-**Omschrijving.** Sinds versie 3.21 verschijnt dit venster alleen met `FACE_DEMO.scanMode = "tap"`, na een tik op het ovaal van het startscherm. De screenshot is gemaakt in versie 3.17, na een tik op het standby-scherm van W45. Het cameravenster opent in een smallere vorm (FR-79). Kicker "Demo gezichtsherkenning", titel "Even kijken wie je bent" en de uitleg "Kijk in de camera. Na hooguit 10 seconden gaat de camera weer uit. Alles blijft op deze tablet." Het camerabeeld is hier het testbeeld van de browser (`--use-fake-device-for-media-stream`), dus de status is "Geen gezicht in beeld. Plaats je gezicht binnen het kader." De knop heet hier `Stoppen` in plaats van `Annuleren` en heeft bij het openen de focus (op de screenshot weggehaald). Onderaan staat met een slotje "Er worden geen foto's gemaakt of bewaard. Alles gebeurt op dit apparaat." Het venster verschijnt alleen als de demo aan staat, er een camera is en minstens één actieve medewerker een geldige gezichtsinstelling heeft. Wordt Lotte twee keer achter elkaar herkend, dan gaat de camera uit, sluit het venster en gaat de koelkast open met "Goedemorgen Lotte. Je bent herkend met de camera. Pak wat je wilt en sluit de deur." (zoals W43). Na 10 seconden zonder herkenning gaat de camera uit, sluit het venster en staat op de beginpagina "Je bent niet herkend. Kies je naam in de lijst of houd je pas tegen de lezer." De herkenning zelf is hier nagebootst: in de headless browser is geen echt gezicht in beeld, en de gezichtsinstelling van Lotte is voor deze screenshot in de opslag gezet.
+**Omschrijving.** Sinds versie 3.21 verschijnt dit venster alleen met `FACE_DEMO.scanMode = "tap"`, na een tik op het ovaal van het startscherm (W54). Tot en met versie 3.20 kwam het na een tik op het standby-scherm (W45). Deze screenshot is op 30 oktober 2026 gemaakt met versie 3.24 en `scanMode` "tap", na een tik op het ovaal van W54. Het cameravenster opent in een smallere vorm (FR-79). Kicker "Demo gezichtsherkenning", titel "Even kijken wie je bent" en de uitleg "Kijk in de camera. Na hooguit 10 seconden gaat de camera weer uit. Alles blijft op deze tablet." Het camerabeeld is hier het testbeeld van de browser (`--use-fake-device-for-media-stream`), dus de status is "Geen gezicht in beeld. Plaats je gezicht binnen het kader." De knop heet hier `Stoppen` in plaats van `Annuleren` en heeft bij het openen de focus (op de screenshot weggehaald). Onderaan staat met een slotje "Er worden geen foto's gemaakt of bewaard. Alles gebeurt op dit apparaat." Het venster verschijnt alleen als de demo aan staat, er een camera is en minstens één actieve medewerker een geldige gezichtsinstelling heeft. Wordt Lotte twee keer achter elkaar herkend, dan gaat de camera uit, sluit het venster en gaat de koelkast open met "Goedemorgen Lotte. Je bent herkend met de camera. Pak wat je wilt en sluit de deur." (zoals W43). Na 10 seconden zonder herkenning gaat de camera uit, sluit het venster en staat op de beginpagina "Je bent niet herkend. Kies je naam in de lijst of houd je pas tegen de lezer." Er wordt hier niemand herkend: in de headless browser is geen echt gezicht in beeld. De gezichtsinstelling van Lotte is voor deze screenshot in de opslag gezet, anders verschijnt het venster niet.
 
 **UI-principes:**
 - *Feedback:* de status onder het beeld zegt wat de camera ziet.
@@ -1993,6 +2110,20 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 - *H9:* een vriendelijke melding met twee uitwegen (pas en handmatig).
 - *H3:* `Handmatig zoeken` blijft altijd bereikbaar.
 
+#### W52 – Startscherm: herkend, "Goedemorgen Lotte." (demo)
+
+![W52 – Startscherm: herkend](wireframes/w52-startscherm-herkend.jpg)
+
+**Omschrijving.** Staande tablet (810 × 1080). Lotte is op het startscherm herkend (FR-84). De camera gaat meteen uit: in het ovaal staat weer het icoon van de gezichtsscan in plaats van het camerabeeld. De rand van het ovaal is groen (`--start-screen-accent`) met een brede lichte gloed, en eronder staat in grote letters "Goedemorgen Lotte." De regel "Of houd je pas tegen de lezer." is verborgen, maar houdt zijn plek, zodat `Handmatig zoeken` niet verspringt. Onderaan blijft de privacyregel staan. Na ongeveer 1,2 seconden (`FACE_DEMO.autoScan.greetingMs`) verdwijnt het startscherm en gaat de koelkast open met "Je bent herkend met de camera." (FR-80), of het productvenster (W14). De herkenning is voor deze screenshot nagebootst (zie hierboven). De begroeting komt uit de app zelf en bleef voor de screenshot langer dan 1,2 seconden staan. Opgenomen op 30 oktober 2026 met versie 3.24.
+
+**UI-principes:**
+- *Feedback:* de groene rand en de naam laten zien dat de herkenning is gelukt en voor wie.
+- *Consistentie:* dezelfde begroeting als in het productvenster en de koelkast.
+
+**Nielsen-heuristieken:**
+- *H1:* de medewerker ziet wie de tablet heeft herkend, nog voordat de koelkast opengaat.
+- *H5:* een verkeerde naam is te zien voordat er iets wordt gepakt. In de koelkast staat daarna ook op wiens naam alles komt (W43).
+
 #### W15 – Waarschuwing bij openen als los bestand
 
 ![W15 – Waarschuwing bij openen als los bestand](wireframes/w15-los-bestand-waarschuwing.jpg)
@@ -2012,7 +2143,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W36 – Melding bij beschadigde opgeslagen gegevens](wireframes/w36-melding-beschadigde-gegevens.jpg)
 
-**Omschrijving.** De beginpagina op de tablet direct na het laden, terwijl er in de opslag van de browser een registratie met een kapotte datum stond. De website slaat die ene registratie over, laadt de rest gewoon en bewaart de oorspronkelijke gegevens als reservekopie in de browser. Onderaan in het midden staat een melding met een uitroepteken in een cirkel: "Een deel van de opgeslagen gegevens was beschadigd en is overgeslagen. Er staat een reservekopie in de browser." De melding heeft tekst van 16 pixels en loopt daardoor over drie regels. Ze blijft 8 seconden staan, langer dan een gewone melding. De rest van de pagina is normaal: de datum (`Vandaag · 15 oktober 2026`), "Tik op je naam", `8 totaal` en de medewerkers onder TVB. Zijn de gegevens helemaal onleesbaar, dan start de demo opnieuw met de melding "De opgeslagen gegevens waren onleesbaar. De demo is opnieuw gestart. Er staat een reservekopie in de browser."
+**Omschrijving.** Het startscherm op de tablet direct na het laden (sinds versie 3.21 opent de website daarop), terwijl er in de opslag van de browser een registratie met een kapotte datum stond. De website slaat die ene registratie over, laadt de rest gewoon en bewaart de oorspronkelijke gegevens als reservekopie in de browser. Onderaan in het midden staat een melding met een uitroepteken in een cirkel: "Een deel van de opgeslagen gegevens was beschadigd en is overgeslagen. Er staat een reservekopie in de browser." De melding heeft tekst van 16 pixels en loopt daardoor over drie regels. Ze blijft 8 seconden staan, langer dan een gewone melding. De rest werkt gewoon: het startscherm toont de pas, de regel "Gezichtsherkenning stel je in na een passcan of via de beheerder." en `Handmatig zoeken`, en daarachter staat de beginpagina met de medewerkers onder TVB. Zijn de gegevens helemaal onleesbaar, dan start de demo opnieuw met de melding "De opgeslagen gegevens waren onleesbaar. De demo is opnieuw gestart. Er staat een reservekopie in de browser." Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de gebruiker merkt dat er iets mis was met de opgeslagen gegevens, ook al werkt de pagina gewoon.
@@ -2028,7 +2159,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W16 – Inloggen als beheerder](wireframes/w16-inloggen.jpg)
 
-**Omschrijving.** Na `Admin login` opent het loginvenster met een slot-icoon, `Beheerdersomgeving`, de titel `Welkom terug` en "Log in om registraties en medewerkers te beheren." Het e-mailadres staat al ingevuld (`admin@tvb.nl`). Het wachtwoordveld is leeg (de puntjes zijn voorbeeldtekst). Onder het wachtwoord staat "Demo: elk ingevuld wachtwoord werkt." en daaronder de knop `Inloggen` met een pijl.
+**Omschrijving.** Na `Admin login` opent het loginvenster met een slot-icoon, `Beheerdersomgeving`, de titel `Welkom terug` en "Log in om registraties en medewerkers te beheren." Het e-mailadres staat al ingevuld (`admin@tvb.nl`). Het wachtwoordveld is leeg (de puntjes zijn voorbeeldtekst). Onder het wachtwoord staat "Demo: elk ingevuld wachtwoord werkt." en daaronder de knop `Inloggen` met een pijl. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Consistentie:* labels staan boven de velden, net als in alle andere formulieren.
@@ -2044,7 +2175,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W17 – Inloggen met een foutmelding](wireframes/w17-inloggen-foutmelding.jpg)
 
-**Omschrijving.** Er is op `Inloggen` geklikt zonder wachtwoord. Onder de knop staat in rood: "Vul een e-mailadres en wachtwoord in." Het venster blijft open.
+**Omschrijving.** Er is op `Inloggen` geklikt zonder wachtwoord. Onder de knop staat in rood: "Vul een e-mailadres en wachtwoord in." Het venster blijft open. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de fout wordt in het venster zelf getoond, onder de knop.
@@ -2058,7 +2189,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W18 – Beheer: Registraties](wireframes/w18-registraties.jpg)
 
-**Omschrijving.** Na inloggen opent het beheer (`Beheer` / `Overzicht`) met de knop `Uitloggen` en zes tabbladen: Registraties, Medewerkers, Producten, Bedrijven, Voorraad en Logboek. Het actieve tabblad is groen en onderstreept. Op `Registraties` staan de filters `Medewerker` en `Maand` en de knop `CSV exporteren`. Onder `Medewerker corrigeren` staan een zoekveld, het datumveld `Datum bij toevoegen (+)` (standaard vandaag: 15-10-2026) en per medewerker het aantal producten en het bedrag (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80). Daaronder staat de tabel met Medewerker, Product, Aantal en Datum & tijd, met de nieuwste registratie bovenaan (in de screenshot staan alleen de kolomkoppen net boven de rand).
+**Omschrijving.** Na inloggen opent het beheer (`Beheer` / `Overzicht`) met de knop `Uitloggen` en zeven tabbladen: Registraties, Medewerkers, Producten, Bedrijven, Voorraad, Koelkast (sinds versie 3.14, alleen als de slimme koelkast aan staat, zie W53) en Logboek. Het actieve tabblad is groen en onderstreept. Op `Registraties` staan de filters `Medewerker` en `Maand` en de knop `CSV exporteren`. Onder `Medewerker corrigeren` staan een zoekveld, het datumveld `Datum bij toevoegen (+)` (standaard vandaag: 30-10-2026) en per medewerker het aantal producten en het bedrag (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80). Daaronder staat de tabel met Medewerker, Product, Aantal en Datum & tijd, met de nieuwste registratie bovenaan (in de screenshot staan alleen de kolomkoppen net boven de rand). Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Groeperen:* filters en export staan samen boven de lijst. Correcties en de tabel zijn aparte blokken.
@@ -2077,7 +2208,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W19 – Beheer: registratie corrigeren](wireframes/w19-registraties-correctie.jpg)
 
-**Omschrijving.** De rij van Lotte van Dijk is opengeklapt. Per product staan een lichtrode `−`-knop, het aantal (Blikje 2, Ei 1, de rest 0) en een lichtgroene `+`-knop, allebei 44 × 44 pixels. `−` opent het venster `Registratie verwijderen` (W41), waarin de beheerder kiest welke registratie weg moet. `+` voegt er één toe op de datum uit `Datum bij toevoegen (+)`. Valt die datum in een eerdere maand, dan vraagt de browser eerst "Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Is bij `−` de gekozen registratie uit een andere maand dan de huidige, dan vraagt de browser eerst "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (met de naam van de maand). Iedere correctie geeft een melding en komt in het logboek. De correctie en de logboekregel worden in één keer opgeslagen.
+**Omschrijving.** De rij van Lotte van Dijk is opengeklapt. Per product staan een lichtrode `−`-knop, het aantal (Blikje 2, Ei 1, de rest 0) en een lichtgroene `+`-knop, allebei 44 × 44 pixels. `−` opent het venster `Registratie verwijderen` (W41), waarin de beheerder kiest welke registratie weg moet. `+` voegt er één toe op de datum uit `Datum bij toevoegen (+)`. Valt die datum in een eerdere maand, dan vraagt de browser eerst "Deze registratie komt in … Die loonmaand is mogelijk al verwerkt. Toch toevoegen?". Is bij `−` de gekozen registratie uit een andere maand dan de huidige, dan vraagt de browser eerst "Deze registratie is van … Die loonmaand is mogelijk al verwerkt. Toch verwijderen?" (met de naam van de maand). Iedere correctie geeft een melding en komt in het logboek. De correctie en de logboekregel worden in één keer opgeslagen. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Progressieve onthulling:* de producten van een medewerker zijn pas zichtbaar na openklappen.
@@ -2094,7 +2225,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W41 – Beheer: registratie kiezen bij `−`](wireframes/w41-registratie-verwijderen.jpg)
 
-**Omschrijving.** Bij Lotte van Dijk is op `−` naast Blikje geklikt. Boven het beheer opent het venster `Correctie` / `Registratie verwijderen` met de uitleg "Blikje van Lotte van Dijk. Kies welke registratie weg moet. De nieuwste staat bovenaan." In één kader staat per registratie een rij met de datum en tijd (vetgedrukt), daaronder het product en het aantal ("Blikje · aantal 1") en rechts een lichtrode knop `Verwijderen`. Er zijn drie registraties: twee van vandaag (15 okt, 09:53) en een vergeten blikje dat de beheerder met `+` op 14 september heeft toegevoegd. Bij die laatste staat "toegevoegd door beheerder". Onderaan staat `Annuleren`. Bij het openen staat de focus op de eerste knop `Verwijderen`. Tab blijft binnen het venster, en `Annuleren`, het kruisje, een klik naast het venster of Escape sluiten het venster zonder iets te veranderen. Na `Verwijderen` sluit het venster, verschijnt "Blikje registratie verwijderd" en staat de focus weer op de `−`. Is de gekozen registratie uit een andere maand, dan vraagt de browser eerst "Deze registratie is van september 2026. Die loonmaand is mogelijk al verwerkt. Toch verwijderen?". Het venster verschijnt ook als er maar één registratie is, zodat `−` altijd op dezelfde manier werkt.
+**Omschrijving.** Bij Lotte van Dijk is op `−` naast Blikje geklikt. Boven het beheer opent het venster `Correctie` / `Registratie verwijderen` met de uitleg "Blikje van Lotte van Dijk. Kies welke registratie weg moet. De nieuwste staat bovenaan." In één kader staat per registratie een rij met de datum en tijd (vetgedrukt), daaronder het product en het aantal ("Blikje · aantal 1") en rechts een lichtrode knop `Verwijderen`. Er zijn drie registraties: twee van vandaag (30 okt, 09:09) en een vergeten blikje dat de beheerder met `+` op 14 september heeft toegevoegd. Bij die laatste staat "toegevoegd door beheerder". Onderaan staat `Annuleren`. Bij het openen staat de focus op de eerste knop `Verwijderen`. Tab blijft binnen het venster, en `Annuleren`, het kruisje, een klik naast het venster of Escape sluiten het venster zonder iets te veranderen. Na `Verwijderen` sluit het venster, verschijnt "Blikje registratie verwijderd" en staat de focus weer op de `−`. Is de gekozen registratie uit een andere maand, dan vraagt de browser eerst "Deze registratie is van september 2026. Die loonmaand is mogelijk al verwerkt. Toch verwijderen?". Het venster verschijnt ook als er maar één registratie is, zodat `−` altijd op dezelfde manier werkt. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Progressieve onthulling:* de losse registraties verschijnen pas als de beheerder er een wil verwijderen.
@@ -2112,7 +2243,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W37 – Beheer: correctiedatum met foutmelding](wireframes/w37-correctiedatum-foutmelding.jpg)
 
-**Omschrijving.** In het veld `Datum bij toevoegen (+)` is een datum na vandaag ingetypt (18-10-2026, terwijl het 15 oktober is) en daarna is bij Lotte van Dijk op `+` naast Blikje geklikt. In de kalender van het veld kan geen datum na vandaag worden gekozen, maar intypen kan wel. Daarom controleert de website de datum ook zelf. Het veld krijgt een rode rand en eronder staat met een waarschuwingsteken: "Kies een geldige datum, niet later dan vandaag." De focus springt naar het datumveld. Er is niets opgeslagen: bij Blikje staat nog steeds 2. Dezelfde melding verschijnt bij een datum die niet bestaat of van vóór 2000 is. Zodra de beheerder de datum verandert, verdwijnt de melding.
+**Omschrijving.** In het veld `Datum bij toevoegen (+)` is een datum na vandaag ingetypt (02-11-2026, terwijl het 30 oktober is) en daarna is bij Lotte van Dijk op `+` naast Blikje geklikt. In de kalender van het veld kan geen datum na vandaag worden gekozen, maar intypen kan wel. Daarom controleert de website de datum ook zelf. Het veld krijgt een rode rand en eronder staat met een waarschuwingsteken: "Kies een geldige datum, niet later dan vandaag." De focus springt naar het datumveld. Er is niets opgeslagen: bij Blikje staat nog steeds 2. Dezelfde melding verschijnt bij een datum die niet bestaat of van vóór 2000 is. Zodra de beheerder de datum verandert, verdwijnt de melding. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de fout staat direct onder het veld waar hij bij hoort, niet bij de knop waarop is geklikt.
@@ -2128,7 +2259,7 @@ W35 tot en met W47 zijn later toegevoegd. Ze hebben een nieuw nummer gekregen, z
 
 ![W20 – Beheer: filter zonder registraties](wireframes/w20-registraties-geen-resultaat.jpg)
 
-**Omschrijving.** Bij het filter `Mark Jansen` zijn er geen registraties. In de tabel staat een lege toestand met een icoon en "Geen registraties voor deze filters.", gevolgd door de uitleg "Kies een andere medewerker of maand, of kies weer voor alle medewerkers en maanden." Voor deze screenshot is het venster naar beneden gescrold, zodat de lege toestand helemaal zichtbaar is. Met dit filter geeft `CSV exporteren` de melding "Geen registraties om te exporteren voor deze filters."
+**Omschrijving.** Bij het filter `Mark Jansen` zijn er geen registraties. In de tabel staat een lege toestand met een icoon en "Geen registraties voor deze filters.", gevolgd door de uitleg "Kies een andere medewerker of maand, of kies weer voor alle medewerkers en maanden." Voor deze screenshot is het venster naar beneden gescrold, zodat de lege toestand helemaal zichtbaar is. Met dit filter geeft `CSV exporteren` de melding "Geen registraties om te exporteren voor deze filters." Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* een lege tabel krijgt een uitleg in plaats van alleen kolomkoppen.
@@ -2226,7 +2357,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W25 – Beheer: Producten](wireframes/w25-producten.jpg)
 
-**Omschrijving.** Het tabblad `Producten` met de knop `Product toevoegen` en de lijst van acht producten met hun prijs (van Blikje € 0,65 tot Yoghurt € 0,50). Per product staan de knoppen `Wijzigen` (groen) en `Verwijderen` (rood). Een product dat al eens is geregistreerd, kan niet worden verwijderd. Dan verschijnt de melding "Dit product wordt al gebruikt en kan niet worden verwijderd".
+**Omschrijving.** Het tabblad `Producten` met de knop `Product toevoegen` en de lijst van acht producten met hun prijs (van Blikje € 0,65 tot Yoghurt € 0,50). Per product staan de knoppen `Wijzigen` (groen) en `Verwijderen` (rood). Een product dat al eens is geregistreerd, kan niet worden verwijderd. Dan verschijnt de melding "Dit product wordt al gebruikt en kan niet worden verwijderd". Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Kleur met betekenis:* rood voor verwijderen, groen voor wijzigen.
@@ -2242,7 +2373,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W26 – Product toevoegen](wireframes/w26-product-toevoegen.jpg)
 
-**Omschrijving.** Het formulier `Product toevoegen` met de velden `Productnaam` (voorbeeld "bijv. Soep") en `Prijs in euro` (voorbeeld "bijv. 0.65") en de knoppen `Annuleren`, `Opslaan` en `Opslaan + opnieuw`.
+**Omschrijving.** Het formulier `Product toevoegen` met de velden `Productnaam` (voorbeeld "bijv. Soep") en `Prijs in euro` (voorbeeld "bijv. 0.65") en de knoppen `Annuleren`, `Opslaan` en `Opslaan + opnieuw`. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Witruimte en eenvoud:* maar twee velden.
@@ -2258,7 +2389,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W27 – Product met een bestaande naam](wireframes/w27-product-dubbele-naam.jpg)
 
-**Omschrijving.** Er is geprobeerd een nieuw product "Blikje" op te slaan. Omdat die naam al bestaat, krijgt het veld een rode rand en staat eronder "Er bestaat al een product met deze naam." Het venster blijft open en er is niets opgeslagen.
+**Omschrijving.** Er is geprobeerd een nieuw product "Blikje" op te slaan. Omdat die naam al bestaat, krijgt het veld een rode rand en staat eronder "Er bestaat al een product met deze naam." Het venster blijft open en er is niets opgeslagen. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de fout staat direct onder het veld.
@@ -2272,7 +2403,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W28 – Beheer: Bedrijven en consumptiepunten](wireframes/w28-bedrijven.jpg)
 
-**Omschrijving.** Het tabblad `Bedrijven` met de knop `Bedrijf toevoegen` en de bedrijven op alfabetische volgorde (E-Control, Home Service Nederland, IT Supervision, Klik, MVIE, …). Ieder bedrijf is een blok met het werkgevernummer en het aantal medewerkers ("0 medewerkers", of "1 medewerker" bij IT Supervision en Klik), en de knoppen `Consumptiepunt` (met plusteken), `Wijzigen` en `Verwijderen`. Daaronder staan de consumptiepunten van dat bedrijf, met hoeveel producten er worden aangeboden en het aantal medewerkers (bijvoorbeeld Kantine IT: "2 van 8 producten · 1 medewerker"), en de knoppen `Aanbod wijzigen` en `Verwijderen`. Zonder punt staat er "Nog geen consumptiepunt."
+**Omschrijving.** Het tabblad `Bedrijven` met de knop `Bedrijf toevoegen` en de bedrijven op alfabetische volgorde (E-Control, Home Service Nederland, IT Supervision, Klik, MVIE, …). Ieder bedrijf is een blok met het werkgevernummer en het aantal medewerkers ("0 medewerkers", of "1 medewerker" bij IT Supervision en Klik), en de knoppen `Consumptiepunt` (met plusteken), `Wijzigen` en `Verwijderen`. Daaronder staan de consumptiepunten van dat bedrijf, met hoeveel producten er worden aangeboden en het aantal medewerkers (bijvoorbeeld Kantine IT: "2 van 8 producten · 1 medewerker"), en de knoppen `Aanbod wijzigen` en `Verwijderen`. Zonder punt staat er "Nog geen consumptiepunt." Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Groeperen:* de consumptiepunten staan ingesprongen onder hun bedrijf, in hetzelfde blok.
@@ -2288,7 +2419,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W29 – Bedrijf wijzigen](wireframes/w29-bedrijf-wijzigen.jpg)
 
-**Omschrijving.** Het formulier `Bedrijf wijzigen` voor IT Supervision met de uitleg "Het werkgevernummer komt in de CSV-export bij de medewerkers van dit bedrijf, behalve bij wie een afwijkend nummer heeft." en de velden `Bedrijfsnaam` en `Werkgevernummer` (nog leeg).
+**Omschrijving.** Het formulier `Bedrijf wijzigen` voor IT Supervision met de uitleg "Het werkgevernummer komt in de CSV-export bij de medewerkers van dit bedrijf, behalve bij wie een afwijkend nummer heeft." en de velden `Bedrijfsnaam` en `Werkgevernummer` (nog leeg). Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Witruimte en eenvoud:* twee velden en twee knoppen.
@@ -2303,7 +2434,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W30 – Consumptiepunt toevoegen met aanbod](wireframes/w30-consumptiepunt-aanbod.jpg)
 
-**Omschrijving.** Het formulier `Consumptiepunt toevoegen`, geopend via `Consumptiepunt` bij IT Supervision. De uitleg is "Zet aan welke producten hier worden aangeboden. Medewerkers van dit punt zien alleen deze producten." Er zijn velden voor `Naam` (Kantine IT) en `Bedrijf` (IT Supervision staat al gekozen) en een blok `Aanbod` met een vinkje per product. Hier zijn Blikje en Glas melk aangevinkt.
+**Omschrijving.** Het formulier `Consumptiepunt toevoegen`, geopend via `Consumptiepunt` bij IT Supervision. De uitleg is "Zet aan welke producten hier worden aangeboden. Medewerkers van dit punt zien alleen deze producten." Er zijn velden voor `Naam` (Kantine IT) en `Bedrijf` (IT Supervision staat al gekozen) en een blok `Aanbod` met een vinkje per product. Hier zijn Blikje en Glas melk aangevinkt. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Groeperen:* de producten staan samen in een omkaderd blok `Aanbod`.
@@ -2319,7 +2450,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W31 – Beheer: Voorraad](wireframes/w31-voorraad.jpg)
 
-**Omschrijving.** Het tabblad `Voorraad`. Bovenaan staat een oranje blok `Bijbestellen (3)` met alle aangeboden producten die op zijn of bijna op zijn, over alle punten: een oranje label `Bijbestellen` bij "TVB · Hoofdkantoor — Blikje: 4 (minimum 6)" en twee rode labels `Leeg` bij Kantine IT (nieuw punt, nog voorraad 0). De naam van het punt is een link die de voorraad van dat punt opent. Daaronder kiest de beheerder een consumptiepunt (de lijst is per bedrijf gegroepeerd) en ziet een tabel met Product, Voorraad, Minimum, Status en Levering. Voorraad en minimum zijn direct aan te passen (een heel getal van 0 tot en met 100.000). Bij Levering vult de beheerder een aantal in (1 tot en met 100.000) en klikt op `Toevoegen`. Een tweede tik op dezelfde knop `Toevoegen` binnen 800 milliseconden na een geboekte levering wordt genegeerd, zodat een dubbele tik op de tablet geen onterechte foutmelding geeft. De status is `Leeg` bij 0 (tot versie 3.12 `Op`), `Bijbestellen` bij een voorraad op of onder het minimum en anders `Op voorraad`.
+**Omschrijving.** Het tabblad `Voorraad`. Bovenaan staat een oranje blok `Bijbestellen (3)` met alle aangeboden producten die op zijn of bijna op zijn, over alle punten: een oranje label `Bijbestellen` bij "TVB · Hoofdkantoor — Blikje: 4 (minimum 6)" en twee rode labels `Leeg` bij Kantine IT (nieuw punt, nog voorraad 0). De naam van het punt is een link die de voorraad van dat punt opent. Daaronder kiest de beheerder een consumptiepunt (de lijst is per bedrijf gegroepeerd) en ziet een tabel met Product, Voorraad, Minimum, Status en Levering. Voorraad en minimum zijn direct aan te passen (een heel getal van 0 tot en met 100.000). Bij Levering vult de beheerder een aantal in (1 tot en met 100.000) en klikt op `Toevoegen`. Een tweede tik op dezelfde knop `Toevoegen` binnen 800 milliseconden na een geboekte levering wordt genegeerd, zodat een dubbele tik op de tablet geen onterechte foutmelding geeft. De status is `Leeg` bij 0 (tot versie 3.12 `Op`), `Bijbestellen` bij een voorraad op of onder het minimum en anders `Op voorraad`. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Visuele hiërarchie:* wat aandacht nodig heeft, staat bovenaan in een opvallend blok.
@@ -2337,7 +2468,7 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 
 ![W32 – Voorraad van een punt zonder aanbod](wireframes/w32-voorraad-punt-zonder-aanbod.jpg)
 
-**Omschrijving.** In de voorraad is Kantine Klik gekozen. Dit punt biedt nog niets aan, dus de tabel toont een lege toestand met een pakket-icoon: "Dit consumptiepunt biedt nog geen producten aan.", "Zet producten aan via Bedrijven en dan Aanbod wijzigen." en de knop `Naar Bedrijven`, die direct naar dat tabblad gaat.
+**Omschrijving.** In de voorraad is Kantine Klik gekozen. Dit punt biedt nog niets aan, dus de tabel toont een lege toestand met een pakket-icoon: "Dit consumptiepunt biedt nog geen producten aan.", "Zet producten aan via Bedrijven en dan Aanbod wijzigen." en de knop `Naar Bedrijven`, die direct naar dat tabblad gaat. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de lege tabel legt uit waarom hij leeg is.
@@ -2349,11 +2480,27 @@ Sinds versie 3.6 heeft het formulier ook het optionele veld "Pasnummer" (`#newEm
 - *H10:* de uitleg noemt de stappen (Bedrijven, dan Aanbod wijzigen).
 - *H7:* `Naar Bedrijven` scheelt zoeken naar het juiste tabblad.
 
+#### W53 – Beheer: Koelkast (demo)
+
+![W53 – Beheer: Koelkast (demo)](wireframes/w53-koelkast-beheer.jpg)
+
+**Omschrijving.** Laptopscherm (1280 × 900), in een sessie zoals die van W42 tot en met W44: Lotte van Dijk heeft één keer de koelkast geopend en 2× Blikje gepakt. Het tabblad `Koelkast` staat tussen `Voorraad` en `Logboek` en is er alleen als de slimme koelkast aan staat (`SMART_FRIDGE.enabled`, sinds versie 3.14). Het venster is een stukje naar beneden gescrold, zodat beide delen van het tabblad in beeld staan. Bovenaan staat `Indeling van de schappen` met de uitleg "Op ieder schap ligt één soort product. Met het gewicht van één stuk rekent de koelkast uit hoeveel er is gepakt." Daaronder staan een keuzelijst `Consumptiepunt` (hier Hoofdkantoor) en per schap een blok met een keuzelijst `Product` en het veld `Gewicht per stuk (gram)`: schap 1 Blikje (350), schap 2 Yoghurt (150) en schap 3 Ei (60). Dat is de standaardindeling (`SMART_FRIDGE.defaultShelves`). De groene knop `Indeling opslaan` slaat de indeling op. Daaronder staat `Laatste openingen`: een tabel met Datum & tijd, Medewerker, Gepakt en Status, met de laatste 10 openingen (FR-76). Hier staat één opening: "30 okt, 09:15", Lotte van Dijk, "2× Blikje" en het groene label `Geregistreerd`. Klopt er iets niet, bijvoorbeeld het gewicht van een schap of een deur die te lang open stond, dan is de status `Controle nodig`. Zonder openingen staat er "Nog geen openingen." Opgenomen op 30 oktober 2026 met versie 3.24.
+
+**UI-principes:**
+- *Groeperen:* per schap staan product en gewicht samen in één blok. De indeling en de openingen zijn twee delen met een eigen kop.
+- *Consistentie:* dezelfde keuzelijsten, velden, groene hoofdknop en tabel als op de andere tabbladen (W31 en W33).
+- *Kleur met betekenis:* een groen label voor een opening die gewoon is geregistreerd, met de tekst erbij.
+
+**Nielsen-heuristieken:**
+- *H1:* de beheerder ziet wie de koelkast heeft geopend, wanneer, wat er is geregistreerd en of er iets moet worden gecontroleerd.
+- *H2:* "schap", "gewicht per stuk" en "gepakt" zijn woorden uit de praktijk.
+- *H5:* een product dat het consumptiepunt niet aanbiedt, telt als leeg schap, zodat de koelkast niets registreert wat op dat punt niet wordt aangeboden.
+
 #### W33 – Beheer: Logboek
 
 ![W33 – Beheer: Logboek](wireframes/w33-logboek.jpg)
 
-**Omschrijving.** Het tabblad `Logboek` op 21 oktober 2026 (versie 3.16), met een tabel van Actie, Details en Datum & tijd, nieuwste bovenaan. De rij met tabbladen heeft nu ook Koelkast. Hier staan de vijf acties die in de beheer-screenshots zijn gedaan: "Voorraad geteld" met "Blikje op TVB · Hoofdkantoor: verwacht 22, geteld 4, verschil -18", "Medewerker gewijzigd" met "Eva Meijer: looncode van leeg naar 1, personeelsnummer van leeg naar 2" en "Tom de Groot: looncode van leeg naar 1, personeelsnummer van leeg naar 1", en "Consumptiepunt toegevoegd" voor Kantine Klik (Klik, 0 producten aangeboden) en Kantine IT (IT Supervision, 2 producten aangeboden). Lange details breken af over twee regels, zodat de tabel in de breedte van het venster past en de kolom Datum & tijd ("21 okt, 09:05") altijd zichtbaar blijft. Het pasnummer staat nooit in het logboek. Het logboek toont 20 regels per keer. Als er meer zijn, verschijnt `Meer laden`. Het logboek bevat de wijzigingen van de beheerder. De registraties die medewerkers zelf doen, staan op het tabblad Registraties.
+**Omschrijving.** Het tabblad `Logboek` op 30 oktober 2026 (versie 3.24), met een tabel van Actie, Details en Datum & tijd, nieuwste bovenaan. De rij met tabbladen heeft nu ook Koelkast. Hier staan de vijf acties die in de beheer-screenshots zijn gedaan: "Voorraad geteld" met "Blikje op TVB · Hoofdkantoor: verwacht 22, geteld 4, verschil -18", "Medewerker gewijzigd" met "Eva Meijer: looncode van leeg naar 1, personeelsnummer van leeg naar 2" en "Tom de Groot: looncode van leeg naar 1, personeelsnummer van leeg naar 1", en "Consumptiepunt toegevoegd" voor Kantine Klik (Klik, 0 producten aangeboden) en Kantine IT (IT Supervision, 2 producten aangeboden). Lange details breken af over twee regels, zodat de tabel in de breedte van het venster past en de kolom Datum & tijd ("30 okt, 09:06") altijd zichtbaar blijft. Het pasnummer staat nooit in het logboek. Het logboek toont 20 regels per keer. Als er meer zijn, verschijnt `Meer laden`. Het logboek bevat de wijzigingen van de beheerder. De registraties die medewerkers zelf doen, staan op het tabblad Registraties.
 
 Onder de tabel staat in grijze tekst "Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug." met daaronder de knop `Alle gegevens wissen`: rode tekst op een lichtrode achtergrond, dezelfde stijl als de andere verwijderknoppen. Na een klik vraagt de browser twee keer om bevestiging ("Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?" en "Weet je het zeker? Dit kan niet ongedaan worden gemaakt."). Na twee keer OK worden alle gegevens, beide reservekopieën en de ingestelde gezichten van de demo gewist, wordt de beheerder uitgelogd (het beheervenster sluit) en staan de demogegevens er weer. De melding is dan "Alle gegevens zijn gewist. De demogegevens staan er weer." Bij `Annuleren` op een van de twee vragen verandert er niets. De knop is bedoeld voor het recht op vergetelheid uit de AVG, bijvoorbeeld als de tablet ergens anders wordt gebruikt.
 
@@ -2373,7 +2520,7 @@ Onder de tabel staat in grijze tekst "Wist alle medewerkers, registraties, produ
 
 ![W34 – Foutmelding bij een levering](wireframes/w34-foutmelding.jpg)
 
-**Omschrijving.** In de voorraad is op `Toevoegen` geklikt zonder een geleverd aantal in te vullen. Onderaan verschijnt een melding met een waarschuwingsteken: "Vul een geleverd aantal van minimaal 1 in". De voorraad is niet veranderd.
+**Omschrijving.** In de voorraad is op `Toevoegen` geklikt zonder een geleverd aantal in te vullen. Onderaan verschijnt een melding met een waarschuwingsteken: "Vul een geleverd aantal van minimaal 1 in". De voorraad is niet veranderd. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Feedback:* de actie geeft direct een reactie, ook als hij niet lukt.
@@ -2390,7 +2537,7 @@ Onder de tabel staat in grijze tekst "Wist alle medewerkers, registraties, produ
 
 ![W39 – Beheer in het donkere thema](wireframes/w39-beheer-donker.jpg)
 
-**Omschrijving.** Het tabblad `Registraties` (zoals W18) terwijl het apparaat op donker staat. `Systeem` is gekozen, dus de slider staat naar de maan. Het beheervenster heeft een donkere achtergrond. De kop `Overzicht`, het actieve tabblad, de labels van de velden en de namen van de medewerkers zijn lichtgroen. Het zoekveld `Zoek een medewerker...` (de placeholdertekst in `--muted`), het datumveld (15-10-2026) en de twee keuzelijsten `Alle medewerkers` en `Alle maanden` zijn donker met lichte tekst. `Uitloggen` en `CSV exporteren` zijn donkerblauw met lichtblauwe tekst. Onder het datumveld staan de totalen per medewerker (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80) en onderaan de kolomkoppen van de tabel. De pagina achter het venster is donker en gedimd.
+**Omschrijving.** Het tabblad `Registraties` (zoals W18) terwijl het apparaat op donker staat. `Systeem` is gekozen, dus de slider staat naar de maan. Het beheervenster heeft een donkere achtergrond. De kop `Overzicht`, het actieve tabblad, de labels van de velden en de namen van de medewerkers zijn lichtgroen. Het zoekveld `Zoek een medewerker...` (de placeholdertekst in `--muted`), het datumveld (30-10-2026) en de twee keuzelijsten `Alle medewerkers` en `Alle maanden` zijn donker met lichte tekst. `Uitloggen` en `CSV exporteren` zijn donkerblauw met lichtblauwe tekst. Onder het datumveld staan de totalen per medewerker (bijvoorbeeld Lotte van Dijk: 3 producten · € 1,80) en onderaan de kolomkoppen van de tabel. De pagina achter het venster is donker en gedimd. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Consistentie:* de indeling is precies gelijk aan het lichte thema (W18). Alleen de kleuren wisselen, ook die van de keuzelijsten.
@@ -2422,7 +2569,7 @@ De keuzelijsten zelf voldoen in beide thema's en zijn niet aangepast. De placeho
 
 ![W40 – Beheer op een telefoon](wireframes/w40-beheer-telefoon.jpg)
 
-**Omschrijving.** Het tabblad `Registraties` op een telefoon van 390 pixels breed. Het beheervenster is bijna zo breed als het scherm. De rij met tabbladen past niet helemaal: `Registraties`, `Medewerkers` en `Producten` zijn te zien en het volgende tabblad wordt afgesneden. De rij is opzij te scrollen. De filters `Medewerker` en `Maand` staan onder elkaar over de volle breedte, met daaronder `CSV exporteren`, ook over de volle breedte. Alles past binnen het venster. Daaronder staan het zoekveld, het datumveld en de totalen per medewerker.
+**Omschrijving.** Het tabblad `Registraties` op een telefoon van 390 pixels breed. Het beheervenster is bijna zo breed als het scherm. De rij met tabbladen past niet helemaal: `Registraties`, `Medewerkers` en `Producten` zijn te zien en het volgende tabblad wordt afgesneden. De rij is opzij te scrollen. De filters `Medewerker` en `Maand` staan onder elkaar over de volle breedte, met daaronder `CSV exporteren`, ook over de volle breedte. Alles past binnen het venster. Daaronder staan het zoekveld, het datumveld en de totalen per medewerker. Opgenomen op 30 oktober 2026 met versie 3.24.
 
 **UI-principes:**
 - *Responsief ontwerp:* het venster, de filters, de exportknop en de lijsten passen zich aan de smalle breedte aan.
@@ -2432,7 +2579,7 @@ De keuzelijsten zelf voldoen in beide thema's en zijn niet aangepast. De placeho
 **Nielsen-heuristieken:**
 - *H4:* het beheer werkt op een telefoon op dezelfde manier als op een laptop.
 - *H8:* alles staat onder elkaar, zonder extra onderdelen.
-- *H6 (beperking):* de rij met tabbladen past niet in de breedte. Dat die rij opzij scrollt, is alleen te zien aan het afgesneden tabblad rechts. De beheerder moet zelf bedenken dat er rechts nog tabbladen (Bedrijven, Voorraad en Logboek) zijn. Het beheer is vooral bedoeld voor een laptop of tablet.
+- *H6 (beperking):* de rij met tabbladen past niet in de breedte. Dat die rij opzij scrollt, is alleen te zien aan het afgesneden tabblad rechts. De beheerder moet zelf bedenken dat er rechts nog tabbladen (Bedrijven, Voorraad, Koelkast en Logboek) zijn. Het beheer is vooral bedoeld voor een laptop of tablet.
 
 ## 10. Use cases en procesbeschrijvingen
 
@@ -4643,7 +4790,7 @@ Zolang er geen backend is, blijven de gegevens per browser in `localStorage`. Ee
 | Privacyverklaring nog niet vastgesteld | Het productvenster verwijst naar de privacyverklaring voor medewerkers (FR-69), maar die is er nog niet of de verwerking staat er nog niet in. Daarom heeft de tekst geen link. | TVB stelt de privacyverklaring vast (zie [AVG-verantwoording (productie)](#avg-verantwoording-productie)). Daarna een link naar de vindplaats toevoegen. |
 | Pasnummer blijft staan na deactiveren | Zet de beheerder een medewerker op inactief, dan blijft het pasnummer gekoppeld tot de beheerder het veld leegmaakt. Een pas van een inactieve medewerker werkt wel niet meer (FR-65). | In productie het pasnummer leegmaken bij uit dienst (synchronisatie met AFAS, zie de bewaartermijnen in hoofdstuk 13). |
 | Slimme koelkast is een simulatie | Het slot en de weegschalen bestaan alleen in de browser. De nagebootste schappen worden bij iedere opening gevuld met de voorraad van het consumptiepunt, dus een verschil tussen de voorraad in het systeem en wat er echt ligt, is in de demo niet te zien. De deur gaat in de demo direct open na het slot, dus het vanzelf dichtgaan van het slot is alleen in de unit tests te zien. De tolerantie (15 procent) en de gewichten per stuk zijn schattingen. In het vak "Demo zonder pasjeslezer" kan iedereen iedere actieve medewerker kiezen. | Voor productie de ontwerpschets uit bijlage B volgen: de backend stuurt het slot en de weegcellen aan, met een pas met cryptografische controle. De tolerantie bepalen in de proef met één schap, en het demovak weghalen. |
-| De screenshots W01 t/m W41 tonen de knop van de koelkast nog niet | Die screenshots zijn op 15 oktober 2026 gemaakt, vóór versie 3.14. Op de beginpagina staat nu naast `Herken mij met de camera (demo)` de knop `Slimme koelkast (demo)`, en op een tablet staan de twee demoknoppen op een eigen regel onder de hint voor de pas. In het beheer is het tabblad Koelkast erbij. W42 t/m W44 tonen de koelkast. Alleen W33 is op 21 oktober 2026 opnieuw gemaakt (W33 toont het tabblad Koelkast), en W07, W08, W11, W12, W21 tot en met W24, W35 en W38 zijn op 27 oktober 2026 met versie 3.22 opnieuw gemaakt (met de knop en het tabblad van de koelkast). W10 en W14 tonen het productvenster na herkenning. Sinds versie 3.17 opent na herkenning standaard de koelkast (FR-80). | De screenshots opnieuw maken bij de volgende grote wijziging van de schermen, of de koelkast uitzetten (`SMART_FRIDGE.enabled`) als de demo zonder koelkast wordt getoond. |
+| Niet alle screenshots zijn van dezelfde dag | Op 30 oktober 2026 zijn de screenshots die niet meer klopten met versie 3.24 opnieuw gemaakt (zie [Wireframes](#wireframes) in hoofdstuk 9). Screenshots die nog klopten, zijn blijven staan met een eerdere datum in de banner, zoals W07 en W21 (27 oktober). W45 toont het standby-scherm van versie 3.17 tot en met 3.20, dat sinds versie 3.21 niet meer bestaat (zie W54). In W14 en W50 tot en met W52 is de herkenning nagebootst, omdat de headless browser geen echt gezicht heeft. | De screenshots opnieuw maken bij de volgende wijziging van de schermen, en beslissen of W45 blijft als geschiedenis of wordt vervangen door W54. |
 | Gezichtskenmerken op de tablet (demo, sinds versie 3.17) | Om "jaarlijks opnieuw instellen" te laten zien, staan de kenmerken van ingestelde gezichten (128 getallen per medewerker) een jaar lang onversleuteld in `localStorage`. Dat is een bewuste afwijking van "alleen in het geheugen" (hoofdstuk 8 en 13). De tik om te scannen, de stille controle op een levend gezicht (sinds versie 3.23) en het risico van een foto of video zijn niet met echte gebruikers getest. | Alleen voor de demo. Voor productie de pas (bijlage B, [Afweging, advies en besluiten](#afweging-advies-en-besluiten)). Wordt de demo niet getoond, dan `FACE_DEMO.enabled = false` en eventueel `Alle gegevens wissen`. |
 | Startscherm niet op een echte tablet getest | Het startscherm, `Handmatig zoeken` zonder klik-door, het automatisch scannen en de scan na een tik zijn getest in de unit tests en in headless Edge en Chrome (zonder echt gezicht), niet op de tablet van TVB met aanraakscherm, camera en kioskmodus. Of de tablet zelf ook dimt of het scherm uitzet, staat los van de app. | Een handmatige test op de tablet (AC-125 tot en met AC-128 en AC-133 tot en met AC-140), en in kioskmodus de schermbeveiliging van het apparaat zo instellen dat die het startscherm niet in de weg zit. |
 | De camera ziet voorbijgangers (demo, sinds versie 3.21) | Met `scanMode = "auto"` kijkt de camera de hele tijd op het startscherm en ziet iedereen die langsloopt. Er worden van hen geen kenmerken berekend, maar het blijft een verwerking van beelden van personen (zie hoofdstuk 13). Dit is een bewuste keuze op verzoek van de opdrachtgever en draait het besluit uit versie 3.17 om. | Voor een demo een bordje bij de tablet. Wil TVB dit niet, dan `scanMode = "tap"`. Voor productie de pas (bijlage B). |
@@ -5253,6 +5400,8 @@ De medewerker zou in productie kunnen worden herkend met de foto uit AFAS. Die f
 
 #### Het proces in de demo
 
+Deze paragraaf beschrijft het ontwerp van versie 3.17. Sinds versie 3.21 opent de website op het zwarte startscherm en scant de camera daar automatisch, met een intentie-drempel (zie [Automatisch scannen met een intentie-drempel (versie 3.21)](#automatisch-scannen-met-een-intentie-drempel-versie-321)). Het gedimde standby-scherm van punt 1 bestaat niet meer. Tikken om te scannen (punt 2) kan nog met `scanMode = "tap"` (W54 en W46).
+
 1. Na 2 minuten zonder gebruik gaat de tablet in standby: het scherm wordt donkerder met "Tik op het scherm om te beginnen" (FR-78, W45).
 2. Eén tik maakt de tablet wakker. Pas dan start de camera voor hooguit 10 seconden in het venster "Even kijken wie je bent", met de knop `Stoppen` (FR-79, W46).
 3. Wordt de medewerker herkend, dan gaat de camera uit en gaat de koelkast open voor hem met "Goedemorgen Lotte. Je bent herkend met de camera." (FR-80). Niet herkend: de camera gaat uit en de medewerker kiest zijn naam of gebruikt zijn pas.
@@ -5292,10 +5441,10 @@ De tik maakt de demo beter, maar lost de juridische en technische bezwaren tegen
 1. De website opent op het zwarte startscherm (W48, W49). Zolang dat in beeld is, de demo aan staat, er een camera is en minstens één actieve medewerker een gezicht heeft ingesteld, staat de camera aan in 320 × 240 pixels.
 2. De camera zoekt drie keer per seconde alleen naar gezichten: waar ze zijn en hoe groot. Er worden geen kenmerken berekend, ook niet van voorbijgangers.
 3. Kenmerken worden pas berekend boven de intentie-drempel: precies één gezicht dichtbij (minstens 45 procent van de breedte van het ovaal), met het midden binnen het ovaal, dat een seconde stil staat (het midden verschuift niet meer dan 12 procent van de breedte van het ovaal). Het ovaal wordt dan groen met "Even stil blijven…" (W50). Alleen het uitgesneden stuk beeld rond dat ene gezicht gaat naar de herkenning.
-4. Is het twee keer achter elkaar dezelfde actieve medewerker, dan gaat de camera uit, staat er 1,2 seconden "Goedemorgen Lotte." in het ovaal en gaat de koelkast open (of het productvenster).
+4. Is het twee keer achter elkaar dezelfde actieve medewerker, dan gaat de camera uit, staat er 1,2 seconden "Goedemorgen Lotte." in het ovaal (W52) en gaat de koelkast open (of het productvenster).
 5. Na drie pogingen zonder resultaat, terwijl het gezicht in het ovaal blijft: "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig." en vijf seconden pauze (W51).
 6. De camera staat alleen aan op het startscherm. Bij `Handmatig zoeken`, ieder venster, het beheer en een verborgen tabblad gaat hij uit. Na afloop van een registratie of koelkastopening komt het startscherm terug en gaat hij weer aan.
-7. Met één instelling (`FACE_DEMO.scanMode = "tap"`) werkt het weer zoals in versie 3.17. Alle drempels staan in `config.js` (`FACE_DEMO.autoScan`).
+7. Met één instelling (`FACE_DEMO.scanMode = "tap"`) werkt het weer zoals in versie 3.17 (W54 en W46). Alle drempels staan in `config.js` (`FACE_DEMO.autoScan`).
 
 **Wat de drempel oplost.** Een collega die op afstand langsloopt of naast de tablet staat, wordt niet herkend en de koelkast gaat niet op zijn naam open. Er wordt pas herkend als iemand bewust dichtbij in het ovaal stilstaat: dat is de intentie die eerst de tik was. De medewerker hoeft niets aan te raken.
 
