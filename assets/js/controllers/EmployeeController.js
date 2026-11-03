@@ -1,5 +1,5 @@
 import { cssAttributeValue } from "../RegistrationView.js";
-import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS } from "../config.js";
+import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS, MAX_PER_PRODUCT } from "../config.js";
 
 /**
  * EmployeeController — wat een medewerker op de beginpagina doet: zoeken, filteren op bedrijf,
@@ -50,6 +50,7 @@ export class EmployeeController {
     this.lastProductActivity = null;  // tijdstip (ms) van de laatste invoer in het open productvenster
     this.productIdleTimer = null;     // timer die regelmatig closeProductWindowIfIdle aanroept
     this.idleWarningShown = false;    // staat de regel "Venster sluit zo." nu in het venster?
+    this.maxPerProduct = MAX_PER_PRODUCT; // hooguit zo vaak één product in één keer (pentest PT-03)
   }
 
   // De echte klok van de browser: Date.now() en setInterval/clearInterval (zoals AdminController).
@@ -249,7 +250,11 @@ export class EmployeeController {
   // naam, dan gebeurt er niets, zodat de vorige keuze van een collega niet zichtbaar wordt.
   repeatLastSelection() {
     if (!this.app.recognizedBy) return;
-    this.app.selectedProducts = { ...this.model.lastSelection(this.app.selectedEmployeeId) };
+    // Nooit meer dan MAX_PER_PRODUCT per product, ook niet als de vorige keer meer was (pentest PT-03).
+    const last = this.model.lastSelection(this.app.selectedEmployeeId);
+    this.app.selectedProducts = Object.fromEntries(
+      Object.entries(last).map(([productId, amount]) => [productId, Math.min(amount, this.maxPerProduct)])
+    );
     this.renderProductWindow();
     this.focusProductWindowAction();
   }
@@ -257,8 +262,18 @@ export class EmployeeController {
   // Telt één stuk op bij een gekozen product (de "+"-knop in het productvenster).
   // Een schermlezer leest daarna het nieuwe aantal voor, bijvoorbeeld "Blikje: 2" (de vaste live
   // region #productLiveStatus, zie RegistrationView.announce).
+  // Sinds versie 3.26 (pentest PT-03) kan één product hooguit MAX_PER_PRODUCT (10) keer in één keer worden
+  // gekozen. Bij de grens verandert er niets en verschijnt "Je kunt hooguit 10 per product tegelijk
+  // registreren." Zonder grens kon iemand met een vastgehouden Enter honderden producten kiezen.
   incrementProduct(productId) {
-    this.app.selectedProducts[productId] = (this.app.selectedProducts[productId] || 0) + 1;
+    const current = this.app.selectedProducts[productId] || 0;
+    if (current >= this.maxPerProduct) {
+      const message = EmployeeController.maxMessage(this.maxPerProduct);
+      this.view.announce?.(message);
+      this.view.showToast(message, { tone: "error", duration: 4000 });
+      return;
+    }
+    this.app.selectedProducts[productId] = current + 1;
     this.renderProductWindow();
     this.view.announce?.(`${this.model.productName(productId)}: ${this.app.selectedProducts[productId]}`);
   }
@@ -396,6 +411,20 @@ export class EmployeeController {
     return now - this.productWindowClosedAt < EmployeeController.GHOST_CLICK_MS;
   }
 
+  // Een ingedrukt gehouden Enter of spatie op "+" of "−" in het productvenster telt maar één keer (sinds
+  // versie 3.26, pentest PT-03). De browser maakt van iedere herhaling een gewone klik, zonder kenmerk dat
+  // het een herhaling is. Daarom wordt de herhaalde toets hier, bij keydown, tegengehouden.
+  ignoreHeldProductKey(event) {
+    if (!event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+    if (!event.target?.closest?.("[data-product-increment], [data-product-decrement]")) return;
+    event.preventDefault();
+  }
+
+  // De melding bij de grens per product, bijvoorbeeld "Je kunt hooguit 10 per product tegelijk registreren."
+  static maxMessage(max) {
+    return `Je kunt hooguit ${max} per product tegelijk registreren.`;
+  }
+
   // Enter of spatie op een medewerkerrij (role="button") opent het productvenster. Een ingedrukt
   // gehouden toets (event.repeat) telt niet: anders opent het venster opnieuw zodra het na
   // "Registreren" sluit en de focus terug op de rij staat.
@@ -435,13 +464,13 @@ export class EmployeeController {
     // De samenvatting wordt vóór het opslaan gemaakt, omdat de keuze daarna wordt gewist.
     const message = `${this.app.employeeLabel(this.app.selectedEmployeeId)}: ${this.selectionSummary()} geregistreerd`;
 
-    const saved = this.app.persist(() => {
-      for (const [productId, amount] of Object.entries(this.app.selectedProducts)) {
-        for (let count = 0; count < amount; count += 1) {
-          this.model.addRegistration(this.app.selectedEmployeeId, productId);
-        }
-      }
-    });
+    // Het model controleert de hele keuze nog een keer (addSelection, met de grens per product). Komt er
+    // toch een te groot aantal binnen, dan wordt er niets opgeslagen.
+    if (amounts.some((amount) => amount > this.maxPerProduct)) {
+      this.view.showToast(EmployeeController.maxMessage(this.maxPerProduct), { tone: "error", duration: 4000 });
+      return;
+    }
+    const saved = this.app.persist(() => this.model.addSelection(this.app.selectedEmployeeId, this.app.selectedProducts, this.maxPerProduct));
     if (!saved) return;
 
     // Onthouden vóór het sluiten: daarna zijn de medewerker en de opener vergeten.

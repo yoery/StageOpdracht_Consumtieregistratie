@@ -244,12 +244,14 @@ export class AutoScanController {
     this.descriptorCount += 1;
     const descriptor = await this.faceDemo.describeFace(this.view.$("#startVideo"), face);
     if (session !== this.scanSession) return;
-    const live = this.faceDemo.checkLiveness(this.clock.now());
 
+    // Eerst de kandidaat (confirm), dan de controle op een levend gezicht: bij een andere kandidaat begint
+    // die controle opnieuw, zodat een knipper van iemand anders niet meetelt (pentest PT-01).
     const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
     const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
     const candidate = match && this.model.findEmployee(match)?.active ? match : null;
     const employeeId = this.faceDemo.confirm(candidate);
+    const live = this.faceDemo.checkLiveness(this.clock.now());
     if (employeeId && live === "alive") {
       this.greet(employeeId);
       return;

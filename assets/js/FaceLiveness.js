@@ -19,9 +19,15 @@ import { FACE_DEMO } from "./config.js";
  *      beelden boven minDeformation liggen.
  * Wordt er binnen maxMs na het eerste beeld niets gezien, dan is de uitkomst "failed".
  *
- * Wat dit wel en niet tegenhoudt: een geprinte foto en een stilstaande foto op een telefoon worden
- * tegengehouden. Een video van iemand op een telefoon kan erdoorheen komen. Echt veilig is alleen een
- * camera die diepte meet (infrarood, zoals Face ID en Windows Hello) of de pas (zie TO bijlage B).
+ * Wat dit wel en niet tegenhoudt: een platte geprinte foto en een stilstaande foto op een telefoon worden
+ * tegengehouden. Een video van iemand op een telefoon kan erdoorheen komen, en ook een print die langs de
+ * neus is gevouwen en wordt gedraaid (twee vlakken in plaats van één), of twee prints die elkaar afwisselen
+ * (ogen open en ogen dicht, dat lijkt een knipper). Dat bleek uit de pentest van november 2026 (RB-01).
+ * Strengere drempels helpen daar niet: die laten vooral echte medewerkers mislukken. Echt veilig is alleen
+ * een camera die diepte meet (infrarood, zoals Face ID en Windows Hello) of de pas (zie TO bijlage B).
+ *
+ * Sinds versie 3.26 (pentest PT-01) geldt de uitkomst alleen voor het gezicht dat wordt herkend:
+ * FaceRecognitionDemo.confirm begint de controle opnieuw zodra er een ander gezicht voor de camera staat.
  *
  * Privacy: de gezichtspunten staan alleen in het geheugen, hooguit windowMs lang, en worden gewist bij
  * reset (na herkennen, na een pauze en als het gezicht weg is). Ze worden nooit opgeslagen of verstuurd.

@@ -4,9 +4,11 @@ import {
   DEFAULT_PRODUCTS,
   DEFAULT_COMPANIES,
   SMART_FRIDGE,
-  FACE_DEMO
+  FACE_DEMO,
+  MAX_PER_PRODUCT
 } from "./config.js";
 import { createId } from "./ids.js";
+import { MAX_FUTURE_MS } from "./DataStore.js";
 
 // Voorraadstatus van één product op een consumptiepunt, met de tekst die op het scherm staat.
 // "Leeg" (eerder "Op"): "Op" leek te veel op "Op voorraad" en werd daardoor verkeerd gelezen.
@@ -279,6 +281,7 @@ export class RegistrationModel {
   //   - `source: "fridge"` en `openingId` betekenen dat de registratie automatisch is gemaakt door
   //     de slimme koelkast (demo), bij de opening met die id (zie addFridgeOpening). Zo'n registratie
   //     telt verder mee zoals iedere andere (totalen, export, voorraad).
+  // Een keuze uit het productvenster gaat via addSelection (met een grens per product).
   addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date(), source = null, openingId = null } = {}) {
     const employee = this.findEmployee(employeeId);
     const point = this.findPoint(employee?.pointId);
@@ -425,6 +428,37 @@ export class RegistrationModel {
     }
 
     return total;
+  }
+
+  // Slaat een keuze uit het productvenster op, bijvoorbeeld { blikje: 2, ei: 1 }: per gekozen stuk één
+  // registratie (addRegistration). Sinds versie 3.26 (pentest PT-03) controleert het model de hele keuze:
+  // ieder aantal is een heel getal van 1 tot en met `max` (MAX_PER_PRODUCT, 10), het product bestaat en er
+  // is minstens één product gekozen. Klopt dat niet, dan wordt er niets opgeslagen en geeft de methode false
+  // terug. Zo zet niemand met een vastgehouden toets honderden producten op naam van een collega.
+  // De slimme koelkast gebruikt deze methode niet (die heeft een eigen grens, zie addFridgeOpening).
+  addSelection(employeeId, selection, max = MAX_PER_PRODUCT) {
+    if (!this.findEmployee(employeeId) || !selection || typeof selection !== "object") return false;
+    const entries = Object.entries(selection).filter(([, amount]) => amount !== 0);
+    const valid = entries.length > 0 && entries.every(([productId, amount]) =>
+      Number.isInteger(amount) && amount >= 1 && amount <= max && Boolean(this.findProduct(productId)));
+    if (!valid) return false;
+
+    for (const [productId, amount] of entries) {
+      for (let count = 0; count < amount; count += 1) this.addRegistration(employeeId, productId);
+    }
+    return true;
+  }
+
+  // Hoeveel registraties, koelkastopeningen en logboekregels hebben een tijdstip meer dan een dag na `now`
+  // (MAX_FUTURE_MS)? Sinds versie 3.26 (pentest PT-04 en RB-02) worden die bij het laden niet meer
+  // overgeslagen. Zo'n tijdstip komt bijna altijd door een klok die voorliep of achterloopt. De beheerder
+  // krijgt dan een melding (AdminController.futureTimesMessage) en er komt één regel in het logboek.
+  futureItemCount(now = new Date()) {
+    const latest = now.getTime() + MAX_FUTURE_MS;
+    const later = (value) => Date.parse(value) > latest;
+    return this.registrations.filter(({ createdAt }) => later(createdAt)).length +
+      this.fridgeOpenings.filter(({ closedAt }) => later(closedAt)).length +
+      this.auditLog.filter(({ createdAt }) => later(createdAt)).length;
   }
 
   // Telt registraties die op dezelfde kalenderdag zijn gemaakt.

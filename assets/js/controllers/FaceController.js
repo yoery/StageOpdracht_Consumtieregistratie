@@ -440,16 +440,18 @@ export class FaceController {
     while (session === this.faceSession && Date.now() < deadline) {
       const descriptor = await this.faceDemo.readFace(video);
       if (session !== this.faceSession) return;
-      const live = this.faceDemo.checkLiveness();
 
       // Alleen gezichten van actieve medewerkers die nog bestaan, doen mee (zie findMatch).
       // Pas als dezelfde actieve medewerker twee keer achter elkaar is gevonden, telt het. En pas als
-      // de stille controle een levend gezicht heeft gezien (FaceLiveness): een foto blijft zoeken tot
-      // de tijd om is en wordt dan behandeld als niet herkend.
+      // de stille controle een levend gezicht heeft gezien (FaceLiveness): een platte foto blijft zoeken
+      // tot de tijd om is en wordt dan behandeld als niet herkend. Eerst confirm, dan de controle: bij
+      // een andere kandidaat begint de controle opnieuw, zodat een knipper van iemand anders niet meetelt
+      // (pentest PT-01). checkLiveness wordt altijd aangeroepen, zodat de gezichtspunten worden vergeten.
       const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
       const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
       const candidate = match && this.model.findEmployee(match)?.active ? match : null;
       const employeeId = this.faceDemo.confirm(candidate);
+      const live = this.faceDemo.checkLiveness();
       if (employeeId && live === "alive") {
         this.closeFaceModal();
         this.app.continueAfterRecognition(employeeId, "face");
@@ -612,14 +614,24 @@ export class FaceController {
   // FaceLiveness) of de controle na liveness.maxMs stopt. Zo kan er geen foto als gezicht worden
   // ingesteld. Geeft de descriptor van de laatste lezing terug, of null als er geen (levend) gezicht is
   // gevonden of als het venster intussen is gesloten. Na vijf lezingen zonder gezicht stopt het ook.
+  // Het levende gezicht moet hetzelfde gezicht blijven (sinds versie 3.26, pentest PT-01): wijkt een
+  // lezing af van de eerste (een ander gezicht voor de camera), dan begint de controle opnieuw.
   async readFaceForEnrollment(session) {
     const video = this.view.$("#faceVideo");
     this.faceDemo.resetConfirmation();
     let misses = 0;
+    let first = null;
 
     for (;;) {
       const descriptor = await this.faceDemo.readFace(video);
       if (session !== this.faceSession) return null;
+      if (descriptor) {
+        if (first && this.faceDemo.isSameFace?.(first, descriptor) === false) {
+          this.faceDemo.liveness?.reset();
+          first = null;
+        }
+        first ??= descriptor;
+      }
       const live = this.faceDemo.checkLiveness();
       if (descriptor && live === "alive") return descriptor;
       if (live === "failed") return null;

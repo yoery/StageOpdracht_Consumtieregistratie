@@ -34,6 +34,9 @@ export class AdminController {
   // Zo vaak kijkt de app of de beheerder te lang niets heeft gedaan (zie startIdleWatch).
   static IDLE_CHECK_MS = 10 * 1000;
 
+  // De actie in het logboek bij regels met een tijdstip in de toekomst (zie noteFutureTimes).
+  static FUTURE_ACTION = "Tijdstip in de toekomst";
+
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   // `clock` levert de tijd en de timer voor het automatisch uitloggen. Die kan worden meegegeven,
   // zodat de unit tests met een nep-klok kunnen werken in plaats van vijf minuten te wachten
@@ -182,6 +185,7 @@ export class AdminController {
     this.app.adminLoggedIn = false;
     this.lastAdminActivity = null;
     this.view.$("#loginPassword").value = "";
+    this.view.clearAdminLists?.(); // geen gegevens van het beheer in de verborgen pagina (pentest PT-06)
     this.showLogin();
   }
 
@@ -189,7 +193,9 @@ export class AdminController {
   // beheerder uit. Op een gedeelde tablet kan de volgende gebruiker anders zonder wachtwoord
   // in het beheerscherm komen. Bij het volgende openen verschijnt dus het loginformulier.
   // Het dashboard wordt ook verborgen, zodat het niet zichtbaar blijft binnen het gesloten venster
-  // (bijvoorbeeld als iemand het venster via de ontwikkelaarstools weer zichtbaar maakt).
+  // (bijvoorbeeld als iemand het venster via de ontwikkelaarstools weer zichtbaar maakt). Sinds versie 3.26
+  // (pentest PT-06) worden de lijsten en tabellen ook leeggemaakt: verbergen alleen was met de
+  // ontwikkelaarstools ongedaan te maken. Automatisch uitloggen (logoutIfIdle) gaat ook via deze methode.
   closeAdmin() {
     // Een open venster "Registratie verwijderen" hoort bij het beheer en gaat dus ook dicht.
     if (this.app.removalTarget) this.app.closeRemoveRegistration();
@@ -200,6 +206,7 @@ export class AdminController {
     this.lastAdminActivity = null;
     this.view.$("#loginPassword").value = "";
     this.app.hide("#adminView");
+    this.view.clearAdminLists?.();
     this.app.closeModal("#adminModal");
   }
 
@@ -279,6 +286,30 @@ export class AdminController {
     this.view.renderStock();
     this.renderAuditLog();
     this.view.renderFridgeAdmin();
+    // Liggen er regels meer dan een dag in de toekomst, dan klopt de klok van de tablet waarschijnlijk
+    // niet (pentest PT-04 en RB-02). De beheerder krijgt dat bij ieder openen van het beheer te zien.
+    const future = this.model.futureItemCount?.() ?? 0;
+    if (future > 0) this.view.showToast(AdminController.futureTimesMessage(future), { tone: "error", duration: 8000 });
+  }
+
+  // De melding (en de tekst in het logboek) als er regels met een tijdstip in de toekomst zijn, bijvoorbeeld
+  // "Er zijn 3 registraties, openingen of logboekregels met een tijdstip meer dan een dag in de toekomst.
+  // Klopt de klok van deze tablet?" Sinds versie 3.26 worden zulke regels niet meer overgeslagen.
+  static futureTimesMessage(count) {
+    const subject = count === 1 ? "is 1 registratie, opening of logboekregel" : `zijn ${count} registraties, openingen of logboekregels`;
+    return `Er ${subject} met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?`;
+  }
+
+  // Zet bij het starten één regel "Tijdstip in de toekomst" in het logboek als er regels met een tijdstip
+  // meer dan een dag in de toekomst zijn. Staat dezelfde regel (met hetzelfde aantal) er al als laatste
+  // regel van die soort, dan niet nog een keer. Geeft true terug als er een regel bij kwam.
+  noteFutureTimes() {
+    const count = this.model.futureItemCount?.() ?? 0;
+    if (count === 0) return false;
+    const details = AdminController.futureTimesMessage(count);
+    const last = [...this.model.auditLog].reverse().find((entry) => entry.action === AdminController.FUTURE_ACTION);
+    if (last?.details === details) return false;
+    return this.app.persist(() => {}, { action: AdminController.FUTURE_ACTION, details });
   }
 
   // Wisselt naar een ander tabblad in het dashboard. Het tabblad Koelkast (slimme koelkast, demo)
@@ -346,17 +377,10 @@ export class AdminController {
     // Ingestelde gezichten (demo) horen ook bij de persoonsgegevens en worden vergeten. De opgeslagen
     // kenmerken en antwoorden zijn met wipeAll al uit de opslag gewist.
     this.faceDemo.enrolledIds().forEach((employeeId) => this.faceDemo.forget(employeeId));
+    // De beheerder is na het wissen uitgelogd: alleen de openbare pagina wordt opnieuw getekend. De
+    // lijsten van het beheer zijn leeg (closeAdmin) en worden pas na inloggen weer getekend (pentest PT-06).
     this.closeAdmin();
     this.view.renderAll();
-    this.view.populateFilters();
-    this.view.renderAdmin();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdminEmployees();
-    this.view.renderAdminProducts();
-    this.view.renderAdminCompanies();
-    this.view.renderStock();
-    this.renderAuditLog();
-    this.view.renderFridgeAdmin();
     if (saved) {
       this.view.showToast("Alle gegevens zijn gewist. De demogegevens staan er weer.", { tone: "success", duration: 4000 });
     } else {

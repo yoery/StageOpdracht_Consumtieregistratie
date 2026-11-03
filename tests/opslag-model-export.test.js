@@ -34,8 +34,10 @@ test("er zijn hooguit twee reservekopieën, hoe vaak er ook beschadigde gegevens
     new DataStore("test").load();
   }
 
-  const backupKeys = new Set(keys.filter((key) => key.startsWith("test-backup")));
+  // Sinds versie 3.26 (pentest PT-02) staat bij iedere kopie ook het moment van maken ("-datum").
+  const backupKeys = new Set(keys.filter((key) => key.startsWith("test-backup") && !key.endsWith("-datum")));
   assert.deepEqual([...backupKeys].sort(), ["test-backup", "test-backup-laatste"]);
+  assert.notEqual(localStorage.getItem("test-backup-datum"), null);
   assert.equal(localStorage.getItem("test-backup"), "{kapot 1");
   assert.equal(localStorage.getItem("test-backup-laatste"), "{kapot 3");
 });

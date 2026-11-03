@@ -48,6 +48,8 @@ export class FaceRecognitionDemo {
     this.streak = 0;              // voor confirm(): hoe vaak achter elkaar
     this.hasCamera = null;        // heeft de tablet een camera? null = nog niet bekend (zie detectCamera)
     this.lastLandmarks = null;    // de 68 gezichtspunten van de laatste describeFace, tot checkLiveness ze ophaalt
+    this.livenessCandidate = null; // bij welke medewerker de controle op een levend gezicht nu hoort (zie confirm)
+    this.frameHasCandidate = true; // had het laatste beeld een kandidaat? Zo niet, dan telt het niet mee (zie confirm)
     this.liveness = new FaceLiveness({ ...FACE_DEMO.liveness, ...settings.liveness });
   }
 
@@ -294,6 +296,15 @@ export class FaceRecognitionDemo {
   // achter elkaar is gevonden. Eén misser (bijv. iets wat even op een gezicht lijkt) leidt
   // dan nooit tot de verkeerde medewerker. Geeft de employeeId terug zodra het genoeg keer
   // achter elkaar dezelfde is, en anders null.
+  // De controle op een levend gezicht hoort bij één medewerker (sinds versie 3.26, pentest PT-01 en de
+  // hertest HB-02). Een knipper of vervorming telt alleen voor het gezicht dat wordt herkend. Anders kon
+  // iemand eerst zelf knipperen en daarna een foto van een collega voorhouden. Daarom:
+  //   - komt er een ANDERE medewerker in beeld dan bij wie de controle liep, dan begint de controle opnieuw;
+  //   - een beeld zonder kandidaat (een gemist beeld, of een gezicht dat op niemand lijkt) reset de controle
+  //     niet, maar telt ook niet mee: checkLiveness gooit de gezichtspunten van dat beeld weg en kijkt
+  //     alleen naar de tijd. Zo verliest een echte medewerker zijn voortgang niet door één gemist beeld, en
+  //     telt de knipper van een aanvaller die zelf niet wordt herkend nooit mee.
+  // Roep daarom eerst confirm aan en daarna checkLiveness.
   confirm(employeeId, required = 2) {
     if (employeeId && employeeId === this.lastCandidate) {
       this.streak += 1;
@@ -301,6 +312,11 @@ export class FaceRecognitionDemo {
       this.lastCandidate = employeeId;
       this.streak = employeeId ? 1 : 0;
     }
+    if (employeeId && employeeId !== this.livenessCandidate) {
+      this.liveness.reset();
+      this.livenessCandidate = employeeId;
+    }
+    this.frameHasCandidate = Boolean(employeeId);
 
     return this.streak >= required ? employeeId : null;
   }
@@ -311,6 +327,8 @@ export class FaceRecognitionDemo {
     this.lastCandidate = null;
     this.streak = 0;
     this.lastLandmarks = null;
+    this.livenessCandidate = null;
+    this.frameHasCandidate = true;
     this.liveness.reset();
   }
 
@@ -319,10 +337,18 @@ export class FaceRecognitionDemo {
   // worden doorgegeven en daarna hier vergeten. Is de bibliotheek niet geladen, dan is de herkenning
   // nagebootst (alleen in de unit tests) en telt de controle niet mee. In de app wordt deze methode
   // alleen aangeroepen na herkennen, dus altijd met de bibliotheek geladen.
+  // Had het beeld geen kandidaat (zie confirm), dan tellen de gezichtspunten niet mee: de controle kijkt dan
+  // alleen naar de tijd, zodat een platte foto van iemand die niet is ingesteld na maxMs op "failed" uitkomt.
   checkLiveness(now = Date.now()) {
     const points = this.lastLandmarks;
     this.lastLandmarks = null;
     if (!this.faceapi && !points) return "alive";
-    return this.liveness.check(points, now);
+    return this.liveness.check(this.frameHasCandidate ? points : null, now);
+  }
+
+  // Horen twee descriptors bij hetzelfde gezicht (afstand onder de drempel van findMatch)? Wordt bij het
+  // instellen gebruikt: een knipper of vervorming telt alleen als het hetzelfde gezicht blijft.
+  isSameFace(a, b) {
+    return Boolean(a && b) && this.distance(a, b) < this.settings.matchThreshold;
   }
 }

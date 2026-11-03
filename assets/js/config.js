@@ -12,6 +12,8 @@
  *   - FaceRecognitionDemo en FaceController: FACE_DEMO, de instellingen van de demo;
  *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer);
  *   - AdminController: ADMIN_IDLE_LOGOUT_MS, na hoeveel tijd zonder invoer de beheerder wordt uitgelogd;
+ *   - EmployeeController en RegistrationModel: MAX_PER_PRODUCT, hoe vaak één product in één keer kan worden gekozen;
+ *   - DataStore: BACKUP_RETENTION_DAYS, hoe lang een reservekopie bewaard blijft;
  *   - EmployeeController: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS, na hoeveel tijd zonder
  *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt;
  *   - SmartFridge, FridgeController en RegistrationModel: SMART_FRIDGE, de instellingen van de
@@ -234,6 +236,19 @@ export const EMPLOYEE_IDLE_CLOSE_MS = 75 * 1000;
 // "Venster sluit zo. Tik om door te gaan." Iedere tik of toets begint de tijd opnieuw.
 // In milliseconden: de laatste 10 seconden.
 export const EMPLOYEE_IDLE_WARNING_MS = 10 * 1000;
+
+// Hoe vaak een medewerker één product in het productvenster in één keer kan kiezen (sinds versie 3.26,
+// pentest PT-03). Zonder grens kon iemand met een ingedrukte Enter honderden producten op naam van een
+// collega zetten en de opslag laten vollopen. Wie meer nodig heeft, registreert twee keer. De slimme
+// koelkast heeft een eigen grens (wat er op het schap ligt) en valt hier niet onder.
+export const MAX_PER_PRODUCT = 10;
+
+// Hoe lang een reservekopie van beschadigde gegevens bewaard blijft (sinds versie 3.26, pentest PT-02).
+// Daarna wist DataStore de kopie, bij het laden of bij de dagwissel. Een leesbare reservekopie bevat geen
+// gezichtskenmerken. Onleesbare tekst wordt letterlijk bewaard (ook als er nog kenmerken in staan) en verdwijnt
+// net als iedere kopie na deze termijn.
+// In dagen: 30.
+export const BACKUP_RETENTION_DAYS = 30;
 
 // Slimme koelkast (demo), zie SmartFridge.js en TO bijlage B (optie C: een slot en weegschalen per
 // schap, met de pas als sleutel). De demo simuleert het slot en de weegschalen in de browser. In

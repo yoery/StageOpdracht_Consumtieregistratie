@@ -165,6 +165,8 @@ export class RegistrationApp {
     this.showRecognitionOptions();
     this.view.renderAll();
     this.showLoadProblem();
+    // Regels met een tijdstip meer dan een dag in de toekomst: één regel in het logboek (pentest PT-04 en RB-02).
+    this.noteFutureTimes();
 
     this.expireFaces();
     this.loadSavedFaces();
@@ -206,6 +208,9 @@ export class RegistrationApp {
 
     this.currentDay = today;
     this.renderTodayLabel(now);
+    // Een kiosktablet herlaadt de pagina misschien wekenlang niet. Daarom worden oude reservekopieën ook bij
+    // de dagwissel opgeruimd, niet alleen bij het laden (hertest HB-03, FR-91).
+    this.model.store?.pruneBackups?.(now);
     this.view.renderStats();
     // Morgen is nu vandaag: de laatste mogelijke datum schuift een dag op. Stond het datumveld op
     // de oude laatste datum (gisteren, de standaard), dan gaat het ook naar vandaag. Een datum die
@@ -263,8 +268,11 @@ export class RegistrationApp {
 
     // Alles opnieuw tekenen. Had een knop in een lijst de focus, dan krijgt de nieuwe knop met
     // dezelfde id die focus terug (zie ModalManager.preserveFocus).
+    // De lijsten van het beheer alleen als de beheerder is ingelogd (sinds versie 3.26, pentest PT-06):
+    // anders zouden namen en nummers in de verborgen pagina komen te staan.
     this.preserveFocus(() => {
       this.view.renderAll();
+      if (!this.adminLoggedIn) return;
       this.view.populateFilters();
       this.view.renderAdmin();
       this.view.renderCorrectionEmployees();
@@ -324,18 +332,11 @@ export class RegistrationApp {
       this.editingCopies.delete(formSelector);
       close();
     }
+    // closeAdmin logt uit en maakt de lijsten van het beheer leeg. Alleen de openbare pagina wordt
+    // opnieuw getekend (pentest PT-06).
     this.closeAdmin();
 
     this.view.renderAll();
-    this.view.populateFilters();
-    this.view.renderAdmin();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdminEmployees();
-    this.view.renderAdminProducts();
-    this.view.renderAdminCompanies();
-    this.view.renderStock();
-    this.renderAuditLog();
-    this.view.renderFridgeAdmin();
     this.view.showToast("De gegevens zijn in een ander venster gewist.", { tone: "error", duration: 5000 });
   }
 
@@ -510,6 +511,9 @@ export class RegistrationApp {
     for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
       productModal.addEventListener(type, () => this.noteProductActivity(), { capture: true, passive: true });
     }
+    // Een vastgehouden Enter of spatie op "+" of "−" telt maar één keer (pentest PT-03). De lijst met
+    // producten blijft staan (alleen de inhoud wordt opnieuw getekend), dus de listener blijft werken.
+    this.view.$("#employeeProductList")?.addEventListener?.("keydown", (event) => this.ignoreHeldProductKey(event));
 
     // Demo gezichtsherkenning
     this.onClick("#faceRecognizeButton", () => this.startFaceRecognition());
@@ -749,9 +753,9 @@ const DELEGATES = {
       "incrementProduct", "decrementProduct", "selectionSummary", "closeEmployeeProducts", "dismissEmployeeProducts",
       "startProductIdleWatch", "stopProductIdleWatch", "noteProductActivity", "closeProductWindowIfIdle", "setIdleWarning",
       "registerSelectedProducts", "focusEmployeeRow", "focusProductWindowAction",
-      "isGhostRowClick", "handleEmployeeRowKey"
+      "isGhostRowClick", "handleEmployeeRowKey", "ignoreHeldProductKey"
     ],
-    fields: ["productWindowClosedAt", "lastProductActivity", "productIdleTimer", "idleCloseMs", "idleWarningMs", "idleWarningShown"]
+    fields: ["productWindowClosedAt", "lastProductActivity", "productIdleTimer", "idleCloseMs", "idleWarningMs", "idleWarningShown", "maxPerProduct"]
   },
   badge: {
     methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "restoreOtherFieldAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge", "replaceProductWindow"],
@@ -796,7 +800,7 @@ const DELEGATES = {
       "requireAdmin", "showMissing", "finishAdminChange", "renderAuditLog",
       "openAdmin", "showLogin", "login", "logout", "closeAdmin", "showDashboard", "switchTab",
       "startIdleWatch", "stopIdleWatch", "noteAdminActivity", "logoutIfIdle", "idleLogoutMessage",
-      "loadMoreAudit", "exportCsv", "wipeAllData",
+      "loadMoreAudit", "exportCsv", "wipeAllData", "noteFutureTimes",
       "toggleEmployee", "removeEmployee", "removeProduct", "removeCompany", "removePoint"
     ],
     fields: ["auditLogLimit", "lastAdminActivity", "idleTimer", "idleLogoutMs"]

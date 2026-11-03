@@ -1074,6 +1074,23 @@ export class RegistrationView {
     );
   }
 
+  // Maakt alle lijsten en tabellen van het beheer leeg (sinds versie 3.26, pentest PT-06). Wordt aangeroepen
+  // bij uitloggen, bij het sluiten van het beheer en bij automatisch uitloggen. Zo staan er daarna geen
+  // namen, personeelsnummers, registraties of logboekregels meer in de verborgen pagina, ook niet voor wie
+  // het beheervenster via de ontwikkelaarstools weer zichtbaar maakt. Na inloggen tekent showDashboard
+  // alles opnieuw.
+  clearAdminLists() {
+    const containers = [
+      "#adminTableBody", "#adminCorrectionList", "#removeRegistrationList", "#filterEmployee", "#filterMonth",
+      "#adminEmployeeList", "#adminProductList", "#adminCompanyList", "#stockAlerts", "#stockPointSelect",
+      "#stockTableBody", "#auditTableBody", "#fridgePointSelect", "#fridgeShelfFields", "#fridgeOpeningsBody"
+    ];
+    for (const selector of containers) {
+      const element = this.$(selector);
+      if (element) element.innerHTML = "";
+    }
+  }
+
   // Tekent de openbare pagina opnieuw: bedrijfsfilter, medewerkerlijst en totalen.
   renderAll() {
     this.populateCompanyFilter();

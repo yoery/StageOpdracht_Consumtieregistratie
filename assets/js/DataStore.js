@@ -1,4 +1,4 @@
-import { DEFAULT_PRODUCTS, DEFAULT_COMPANIES, COLORS } from "./config.js";
+import { DEFAULT_PRODUCTS, DEFAULT_COMPANIES, COLORS, BACKUP_RETENTION_DAYS } from "./config.js";
 import { createId } from "./ids.js";
 
 // Oude product-id's uit een eerdere versie en hun nieuwe naam.
@@ -49,10 +49,13 @@ const MIN_DATE_MS = Date.UTC(2000, 0, 1);
 // typefout of geknoeide gegevens.
 const MAX_PRICE = 1000;
 
-// Hoe ver een registratie in de toekomst mag liggen ten opzichte van het moment van laden:
-// één dag (in milliseconden). Een klein verschil kan ontstaan doordat de klok van een tablet
-// iets afwijkt; een registratie die meer dan een dag later ligt, is vrijwel zeker geknoeid.
-const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+// Hoe ver een tijdstip in de toekomst mag liggen ten opzichte van het moment van laden: één dag (in
+// milliseconden). Sinds versie 3.26 (pentest PT-04 en RB-02) geldt dit alleen nog voor gezichtsinstellingen
+// en antwoorden op de vraag na een passcan. Registraties, koelkastopeningen en logboekregels met een
+// tijdstip verder in de toekomst worden wél geladen: zo'n tijdstip ontstaat vooral door een klok die
+// voorliep of achterloopt, en overslaan liet echte registraties voor de loonadministratie verdwijnen.
+// RegistrationModel.futureItemCount telt ze, en de beheerder krijgt een melding.
+export const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 
 // Slimme koelkast (demo): de geldige statussen van een opening (gelijk aan FRIDGE_STATUS in
 // RegistrationModel.js), de markeringen per schap (zie SmartFridge.countShelf) en grenzen voor de
@@ -128,13 +131,14 @@ export class DataStore {
 
   // Leest de opgeslagen gegevens. Geeft null terug als er niets is opgeslagen of als de
   // gegevens helemaal onleesbaar zijn; het model start dan met demogegevens.
-  // Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum, een
-  // registratie van meer dan een dag in de toekomst of een tweede regel met dezelfde id) worden
+  // Losse beschadigde regels (bijvoorbeeld een registratie met een kapotte datum of een tweede regel
+  // met dezelfde id) worden
   // overgeslagen, zodat niet alle andere gegevens verloren gaan.
   // `now` is het moment van laden; de datums worden daarmee vergeleken. Het is mee te geven,
   // zodat dit met vaste datums te testen is.
   load(now = new Date()) {
     this.loadProblem = null;
+    this.pruneBackups(now);
 
     let value;
     try {
@@ -156,14 +160,14 @@ export class DataStore {
       const skipped = this.countSkipped(parsed, data) + this.repairedBadges;
 
       if (skipped > 0) {
-        this.keepBackup(value);
+        this.keepBackup(value, now);
         this.loadProblem = "skipped";
         console.warn(`${skipped} beschadigde regel(s) in de opgeslagen gegevens overgeslagen; er is een reservekopie gemaakt.`);
       }
 
       return data;
     } catch (error) {
-      this.keepBackup(value);
+      this.keepBackup(value, now);
       this.loadProblem = "unreadable";
       console.warn("Opgeslagen gegevens konden niet worden gelezen; de demo wordt opnieuw gestart. Er is een reservekopie gemaakt.", error);
       return null;
@@ -176,21 +180,89 @@ export class DataStore {
   //   "<sleutel>-backup"         = de eerste kopie; die wordt nooit overschreven;
   //   "<sleutel>-backup-laatste" = de nieuwste andere kopie; die wordt steeds vervangen.
   // Staat dezelfde kopie er al als eerste kopie, dan gebeurt er niets.
-  keepBackup(value) {
+  // Sinds versie 3.26 (pentest PT-02) bevat een leesbare kopie geen gezichtskenmerken (zie withoutFaces), en
+  // krijgt iedere kopie het moment van maken onder een eigen sleutel ("<kopie>-datum"). Onleesbare tekst wordt
+  // letterlijk bewaard, ook als er nog kenmerken in staan (hertest HB-04). Na BACKUP_RETENTION_DAYS (30 dagen)
+  // wist pruneBackups iedere kopie, bij het laden of bij de dagwissel. Zo blijven er geen biometrische
+  // gegevens of gegevens van verwijderde medewerkers onbeperkt op de tablet staan.
+  keepBackup(value, now = new Date()) {
     try {
+      const copy = this.withoutFaces(value);
       const [firstKey, latestKey] = this.backupKeys();
       const existing = localStorage.getItem(firstKey);
-      if (existing === value) return;
+      if (existing === copy) return;
 
-      localStorage.setItem(existing === null ? firstKey : latestKey, value);
+      const key = existing === null ? firstKey : latestKey;
+      localStorage.setItem(key, copy);
+      localStorage.setItem(this.backupDateKey(key), now.toISOString());
     } catch (error) {
       // Geen ruimte voor een reservekopie: dan blijft alleen de melding in de console.
+    }
+  }
+
+  // De tekst voor een reservekopie zonder gezichtskenmerken. Is de tekst geldige JSON met een niet-lege
+  // lijst (of iets anders) bij "faceEnrollments", dan valt die weg en blijft de rest gelijk. Zonder
+  // gezichten, of bij onleesbare tekst, blijft de tekst precies zoals hij is. Onleesbare tekst (bijvoorbeeld
+  // afgekapte JSON) kan nog kenmerken bevatten, maar juist dan is de kopie de enige plek waar de
+  // registraties nog staan. Ook zo'n kopie verdwijnt na de bewaartermijn (pruneBackups).
+  withoutFaces(value) {
+    try {
+      const data = JSON.parse(value);
+      if (!this.isObject(data) || !Object.hasOwn(data, "faceEnrollments")) return value;
+      if (Array.isArray(data.faceEnrollments) && data.faceEnrollments.length === 0) return value;
+      delete data.faceEnrollments;
+      return JSON.stringify(data);
+    } catch (error) {
+      return value;
     }
   }
 
   // De twee sleutels van de reservekopieën: de eerste en de laatste.
   backupKeys() {
     return [`${this.key}-backup`, `${this.key}-backup-laatste`];
+  }
+
+  // De sleutel met het moment waarop een reservekopie is gemaakt, bijvoorbeeld
+  // "tvb-blikjesregistratie-backup-datum".
+  backupDateKey(backupKey) {
+    return `${backupKey}-datum`;
+  }
+
+  // Ruimt de reservekopieën op (bij ieder laden en bij de dagwissel, zie RegistrationApp.refreshIfNewDay):
+  //   - een kopie ouder dan BACKUP_RETENTION_DAYS wordt gewist, met zijn datum;
+  //   - een kopie zonder geldige datum (van vóór versie 3.26) krijgt de datum van nu, zodat ook die na de
+  //     termijn verdwijnt, en verliest zijn gezichtskenmerken (als de tekst leesbaar is);
+  //   - een datum meer dan MAX_FUTURE_MS (een dag) in de toekomst telt ook als ongeldig (hertest HB-01). Die
+  //     ontstaat als de klok voorliep toen de kopie werd gemaakt. Anders bleef de kopie maanden te lang staan;
+  //   - een oude kopie met een tijdstempel in de naam (uit een eerdere versie) wordt na de termijn gewist.
+  // Lukt het niet (geblokkeerde opslag), dan gebeurt er niets.
+  pruneBackups(now = new Date(), days = BACKUP_RETENTION_DAYS) {
+    const maxAge = days * 24 * 60 * 60 * 1000;
+    try {
+      for (const key of this.backupKeys()) {
+        const dateKey = this.backupDateKey(key);
+        const value = localStorage.getItem(key);
+        if (value === null || value === undefined) {
+          if (localStorage.getItem(dateKey) !== null && localStorage.getItem(dateKey) !== undefined) localStorage.removeItem(dateKey);
+          continue;
+        }
+        const savedAt = Date.parse(localStorage.getItem(dateKey) ?? "");
+        if (Number.isNaN(savedAt) || savedAt > now.getTime() + MAX_FUTURE_MS) {
+          const copy = this.withoutFaces(value);
+          if (copy !== value) localStorage.setItem(key, copy);
+          localStorage.setItem(dateKey, now.toISOString());
+        } else if (now.getTime() - savedAt > maxAge) {
+          localStorage.removeItem(key);
+          localStorage.removeItem(dateKey);
+        }
+      }
+      for (const key of this.oldBackupKeys()) {
+        const stamp = Number(key.slice(`${this.key}-backup-`.length));
+        if (now.getTime() - stamp > maxAge) localStorage.removeItem(key);
+      }
+    } catch (error) {
+      // Geen toegang tot de opslag: niets op te ruimen.
+    }
   }
 
   // Wist alle gegevens van deze applicatie uit de browser: de gegevens zelf, beide
@@ -200,7 +272,8 @@ export class DataStore {
   // sleutels gewist.
   clearAll() {
     try {
-      const keys = [this.key, ...this.backupKeys(), ...this.oldBackupKeys()];
+      const backups = this.backupKeys();
+      const keys = [this.key, ...backups, ...backups.map((key) => this.backupDateKey(key)), ...this.oldBackupKeys()];
       for (const key of keys) localStorage.removeItem(key);
       this.lastSeen = null;
       return true;
@@ -486,10 +559,11 @@ export class DataStore {
   // (`openingId`). Beide zijn optioneel; een andere bron dan "fridge" is ongeldig.
   // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
   // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
-  // Het tijdstip (`createdAt`) moet een ISO-tijdstip vanaf 1 januari 2000 zijn en mag hooguit
-  // één dag na `now` (het moment van laden) liggen (zie isValidDateTime en MAX_FUTURE_MS). Een
-  // registratie ver in de toekomst of ver in het verleden is geknoeid en zou anders in een
-  // verkeerde loonmaand in de CSV-export terechtkomen.
+  // Het tijdstip (`createdAt`) moet een ISO-tijdstip vanaf 1 januari 2000 zijn (zie isValidDateTime).
+  // Tot en met versie 3.25 mocht het hooguit één dag na `now` liggen. Sinds versie 3.26 (pentest PT-04 en
+  // RB-02) wordt een registratie verder in de toekomst wél geladen: zo'n tijdstip komt vooral door een klok
+  // die voorliep, en overslaan liet echte registraties verdwijnen. De beheerder krijgt een melding
+  // (RegistrationModel.futureItemCount). `now` blijft als parameter, zodat de aanroepen gelijk blijven.
   isValidRegistration(registration, now = new Date()) {
     const hasValidPrice = registration?.price === undefined || this.isValidPrice(registration.price);
     const hasValidEmployerNumber =
@@ -501,7 +575,7 @@ export class DataStore {
       this.isSafeId(registration.employeeId) &&
       this.isSafeId(registration.productId) &&
       this.isSafeOptionalId(registration.pointId) &&
-      this.isValidDateTime(registration.createdAt, now.getTime() + MAX_FUTURE_MS) &&
+      this.isValidDateTime(registration.createdAt, Infinity) &&
       hasValidPrice &&
       hasValidEmployerNumber &&
       (registration.source === undefined || registration.source === "fridge") &&
@@ -524,11 +598,12 @@ export class DataStore {
   }
 
   // Eén opening van de slimme koelkast: een veilige id, medewerker en (optioneel) consumptiepunt, een
-  // geldig tijdstip van openen en sluiten (sluiten niet vóór openen en hooguit één dag na `now`), een
+  // geldig tijdstip van openen en sluiten (sluiten niet vóór openen, sinds versie 3.26 zonder grens in de toekomst), een
   // bekende status en per schap het gewicht voor en na, het berekende aantal en een eventuele markering.
   // Een opening die halverwege is afgebroken (bijvoorbeeld door herladen) wordt nooit opgeslagen.
   isValidFridgeOpening(opening, now = new Date()) {
-    const latest = now.getTime() + MAX_FUTURE_MS;
+    // Geen grens in de toekomst meer (sinds versie 3.26, zie MAX_FUTURE_MS).
+    const latest = Infinity;
     return (
       this.isSafeId(opening?.id) &&
       this.isSafeId(opening.employeeId) &&
@@ -871,13 +946,13 @@ export class DataStore {
   // De id is optioneel (heel oude regels hebben er geen), maar als die er staat moet het een
   // veilige id zijn, net als bij de andere gegevens.
   // Voor het tijdstip gelden dezelfde regels als bij een registratie: een ISO-tijdstip vanaf
-  // 1 januari 2000 en hooguit één dag na `now` (het moment van laden, zie MAX_FUTURE_MS).
+  // 1 januari 2000, sinds versie 3.26 zonder grens in de toekomst (zie MAX_FUTURE_MS).
   isValidAuditEntry(entry, now = new Date()) {
     return (
       this.isSafeOptionalId(entry?.id) &&
       this.isText(entry?.action, MAX_AUDIT_TEXT) &&
       this.isText(entry.details, MAX_AUDIT_TEXT) &&
-      this.isValidDateTime(entry.createdAt, now.getTime() + MAX_FUTURE_MS)
+      this.isValidDateTime(entry.createdAt, Infinity)
     );
   }
 

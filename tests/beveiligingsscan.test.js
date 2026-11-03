@@ -354,7 +354,9 @@ test("scan 4: bij het laden wordt een code als getal tekst, en een medewerker me
   assert.equal(store.loadProblem, "skipped");
 });
 
-test("scan 4: een registratie heeft een ISO-tijdstip vanaf 2000 en hooguit een dag in de toekomst", () => {
+// Sinds versie 3.26 (pentest PT-04 en RB-02) is een registratie ver in de toekomst niet meer ongeldig: zo'n
+// tijdstip komt door een verkeerde klok, en overslaan liet echte registraties verdwijnen.
+test("scan 4: een registratie heeft een ISO-tijdstip vanaf 2000 (een tijdstip in de toekomst telt sinds 3.26 als geldig)", () => {
   const store = new DataStore("test");
   const now = new Date("2026-10-09T12:00:00.000Z");
   const registration = (createdAt) => ({ id: "r1", employeeId: "e1", productId: "blikje", pointId: null, createdAt });
@@ -362,19 +364,20 @@ test("scan 4: een registratie heeft een ISO-tijdstip vanaf 2000 en hooguit een d
   for (const createdAt of ["2026-10-09T10:00:00.000Z", "2026-10-09T10:00:00", "2026-10-09T10:00", "2026-10-09T10:00:00+02:00", "2000-01-01T00:00:00.000Z"]) {
     assert.equal(store.isValidRegistration(registration(createdAt), now), true, createdAt);
   }
-  for (const createdAt of ["1", "10/9/2026", "2026-10-09", "1999-12-31T23:59:59.000Z", "-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z", "2026-10-11T12:00:00.000Z", 1728468000000]) {
+  for (const createdAt of ["1", "10/9/2026", "2026-10-09", "1999-12-31T23:59:59.000Z", "-271821-04-20T00:00:00Z", "+275760-09-13T00:00:00Z", 1728468000000]) {
     assert.equal(store.isValidRegistration(registration(createdAt), now), false, String(createdAt));
   }
+  assert.equal(store.isValidRegistration(registration("2026-10-11T12:00:00.000Z"), now), true, "twee dagen in de toekomst: geladen, met een melding voor de beheerder");
 });
 
-test("scan 4: een logboekregel ver in de toekomst of vóór 2000 wordt bij het laden overgeslagen", () => {
+test("scan 4: een logboekregel vóór 2000 wordt bij het laden overgeslagen, een in de toekomst sinds 3.26 niet meer", () => {
   const store = new DataStore("test");
   const now = new Date("2026-10-09T12:00:00.000Z");
   const entry = (createdAt) => ({ id: "a1", action: "Product verwijderd", details: "Blikje", createdAt });
 
   assert.equal(store.isValidAuditEntry(entry("2026-10-09T11:00:00.000Z"), now), true);
   assert.equal(store.isValidAuditEntry(entry("2026-10-10T11:00:00.000Z"), now), true, "binnen een dag mag (klok van de tablet)");
-  assert.equal(store.isValidAuditEntry(entry("9999-01-01T00:00:00.000Z"), now), false);
+  assert.equal(store.isValidAuditEntry(entry("9999-01-01T00:00:00.000Z"), now), true, "in de toekomst: geladen (pentest PT-04 en RB-02)");
   assert.equal(store.isValidAuditEntry(entry("1970-01-01T00:00:00.000Z"), now), false);
   assert.equal(store.isValidAuditEntry(entry("1"), now), false);
 });

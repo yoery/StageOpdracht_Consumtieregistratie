@@ -1332,4 +1332,96 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
     }
   });
+  // ------------------------------------------------------------------
+  // Pentest november 2026 (versie 3.26, docs/PENTESTRAPPORT.md)
+  // ------------------------------------------------------------------
+
+  // Herlaadt de pagina met de huidige opslag (zonder die te wissen) en tikt op "Handmatig zoeken".
+  const reloadApp = async () => {
+    await browser.send("Page.navigate", { url: `${browser.baseUrl}/index.html` });
+    await browser.waitFor(`document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.manualSearch();
+  };
+  const login = async () => {
+    await browser.click("#adminOpenButton");
+    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
+    await browser.click("#loginPassword");
+    await browser.insertText("demo-wachtwoord");
+    await browser.click("#loginForm button[type=submit]");
+    await browser.waitFor(`!document.querySelector("#adminView").classList.contains("hidden")`);
+  };
+
+  scenario("PT-03: een vastgehouden Enter op '+' telt één keer, en meer dan 10 per product kan niet", async () => {
+    await browser.click(row("Lotte van Dijk"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.evaluate(`document.querySelector('[data-product-increment="blikje"]').focus()`);
+    // Eén keer indrukken en daarna 30 herhalingen van dezelfde ingedrukte toets.
+    const enter = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" };
+    await browser.send("Input.dispatchKeyEvent", { type: "keyDown", ...enter });
+    for (let count = 0; count < 30; count += 1) await browser.send("Input.dispatchKeyEvent", { type: "keyDown", ...enter, autoRepeat: true });
+    await browser.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    await sleep(200);
+    assert.equal(await text("#registerSelectedProductsButton"), "Registreren (1)");
+
+    // Twaalf keer tikken: bij 10 stopt het, met een melding.
+    for (let count = 0; count < 11; count += 1) await browser.click(`[data-product-increment="blikje"]`);
+    assert.equal(await text("#registerSelectedProductsButton"), "Registreren (10)");
+    await waitForToast("Je kunt hooguit 10 per product tegelijk registreren.");
+    await browser.click("#registerSelectedProductsButton");
+    await waitForToast("Lotte van Dijk: 10× Blikje geregistreerd");
+    const stored = await browser.storedData();
+    assert.equal(stored.registrations.length, 10);
+  });
+
+  scenario("PT-06: na sluiten van het beheer staan er geen namen, registraties of logboekregels meer in de pagina", async () => {
+    await registerProduct("Sophie de Boer", "ei", 1);
+    await waitForToast("Sophie de Boer: 1× Ei geregistreerd");
+    await browser.manualSearch();
+    await login();
+    assert.ok((await browser.evaluate(`document.querySelectorAll("#adminTableBody tr").length`)) > 0);
+
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#adminModal").classList.contains("hidden")`);
+    const left = await browser.evaluate(`["#adminTableBody", "#adminEmployeeList", "#auditTableBody", "#adminCorrectionList", "#stockTableBody", "#filterEmployee"]
+      .map((selector) => document.querySelector(selector).textContent.trim()).join("")`);
+    assert.equal(left, "");
+
+    // Opnieuw inloggen tekent alles weer.
+    await login();
+    const rows = await browser.evaluate(`[...document.querySelectorAll("#adminTableBody tr")].map((tr) => tr.cells[0].textContent.trim())`);
+    assert.deepEqual(rows, ["Sophie de Boer"]);
+  });
+
+  scenario("PT-02 en PT-04: een registratie in de toekomst wordt geladen met een melding, en een reservekopie bevat geen gezichten", async () => {
+    await registerProduct("Sophie de Boer", "ei", 1);
+    await waitForToast("Sophie de Boer: 1× Ei geregistreerd");
+    // Opslag aanpassen: een registratie drie dagen in de toekomst, een gezichtsinstelling en één kapotte registratie.
+    await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      const employee = data.employees.find(({ name }) => name === "Sophie de Boer");
+      const later = new Date(Date.now() + 3 * 24 * 3600e3).toISOString();
+      const earlier = new Date(Date.now() - 3600e3).toISOString();
+      data.registrations.push({ ...data.registrations[0], id: "toekomst-1", createdAt: later });
+      data.registrations.push({ ...data.registrations[0], id: "kapot-1", createdAt: "kapot" });
+      data.faceEnrollments = [{ id: "f1", employeeId: employee.id, descriptor: new Array(128).fill(0.1), enrolledAt: earlier, consentAt: earlier }];
+      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
+    })()`);
+    await reloadApp();
+
+    const result = await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      const copy = JSON.parse(localStorage.getItem("tvb-blikjesregistratie-backup"));
+      return {
+        loaded: data.registrations.map(({ id }) => id).filter((id) => id === "toekomst-1"),
+        audit: data.auditLog.filter(({ action }) => action === "Tijdstip in de toekomst").length,
+        copyHasFaces: "faceEnrollments" in copy,
+        copyHasBroken: copy.registrations.some(({ id }) => id === "kapot-1"),
+        copyDate: Boolean(Date.parse(localStorage.getItem("tvb-blikjesregistratie-backup-datum")))
+      };
+    })()`);
+    assert.deepEqual(result, { loaded: ["toekomst-1"], audit: 1, copyHasFaces: false, copyHasBroken: true, copyDate: true });
+
+    await login();
+    await waitForToast("Er is 1 registratie, opening of logboekregel met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?");
+  });
 });

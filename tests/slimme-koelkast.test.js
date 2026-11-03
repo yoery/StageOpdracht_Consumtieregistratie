@@ -468,6 +468,7 @@ test("DataStore: geldige openingen, indelingen en registraties van de koelkast b
   assert.equal(data.registrations[0].source, "fridge");
 });
 
+// Sinds versie 3.26 (pentest PT-04 en RB-02) wordt een opening in de toekomst (o7) wel geladen.
 test("DataStore: beschadigde openingen en indelingen worden overgeslagen met een reservekopie", () => {
   const base = storedState();
   const employee = base.employees[0];
@@ -498,7 +499,7 @@ test("DataStore: beschadigde openingen en indelingen worden overgeslagen met een
 
   const data = store.load(new Date("2026-10-19T12:00:00Z"));
   assert.deepEqual(data.fridgeShelves, []);
-  assert.deepEqual(data.fridgeOpenings.map(({ id }) => id), ["opening-1"]);
+  assert.deepEqual(data.fridgeOpenings.map(({ id }) => id), ["opening-1", "o7"]);
   assert.deepEqual(data.registrations, []);
   assert.equal(store.loadProblem, "skipped");
 });
