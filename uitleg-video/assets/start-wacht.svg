@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 647" width="960" height="647">
+  <rect width="960" height="647" fill="#1A2645"/>
+  <rect x="381" y="22" width="34" height="34" rx="8" fill="#38B5A8"/>
+  <text x="398" y="44" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">TVB</text>
+  <text x="427" y="45" font-size="17" font-weight="600" fill="#CAD1E9">Consumptieregistratie</text>
+  <ellipse cx="480" cy="250" rx="122" ry="160" fill="#222D4F"/>
+  <g transform="translate(450 220)" fill="none" stroke="#CAD1E9" stroke-width="5" stroke-linecap="round"><path d="M0 16V8a8 8 0 0 1 8-8h8M44 0h8a8 8 0 0 1 8 8v8M60 44v8a8 8 0 0 1-8 8h-8M16 60H8a8 8 0 0 1-8-8v-8"/><path d="M20 20v4M40 20v4M20 40c6 6 14 6 20 0"/></g>
+  <ellipse cx="480" cy="250" rx="122" ry="160" fill="none" stroke="#8A94B2" stroke-width="3"/>
+  <text x="480" y="463" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">Kijk in het ovaal</text>
+  <text x="480" y="495" text-anchor="middle" font-size="17" fill="#CAD1E9">Of houd je pas tegen de lezer.</text>
+  <rect x="360" y="520" width="240" height="46" rx="10" fill="#38B5A8"/>
+  <g transform="translate(388 534)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M13 13l5 5"/></g>
+  <text x="418" y="550" font-size="17" font-weight="700" fill="#fff">Handmatig zoeken</text>
+  <text x="480" y="618" text-anchor="middle" font-size="14" fill="#CAD1E9">De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard.</text>
+</svg>

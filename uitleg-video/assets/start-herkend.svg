@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 647" width="960" height="647">
+  <rect width="960" height="647" fill="#1A2645"/>
+  <rect x="381" y="22" width="34" height="34" rx="8" fill="#38B5A8"/>
+  <text x="398" y="44" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">TVB</text>
+  <text x="427" y="45" font-size="17" font-weight="600" fill="#CAD1E9">Consumptieregistratie</text>
+  <ellipse cx="480" cy="250" rx="122" ry="160" fill="#222D4F"/>
+  <g>
+  <clipPath id="ovalclip"><ellipse cx="480" cy="250" rx="122" ry="160"/></clipPath>
+  <g clip-path="url(#ovalclip)">
+    <rect x="358" y="90" width="244" height="320" fill="#2E3B62"/>
+    <path d="M330 425 C 360 345, 600 345, 630 425 Z" fill="#38B5A8" opacity=".9"/>
+    <rect x="460" y="300" width="40" height="45" fill="#E8B48F"/>
+    <path d="M414 220 C 406 130, 554 130, 546 220 L 550 280 L 410 280 Z" fill="#6B3F2A"/>
+    <ellipse cx="480" cy="245" rx="56" ry="70" fill="#F2C29F"/>
+    <path d="M422 220 C 440 165, 520 165, 538 220 C 510 195, 460 205, 422 220 Z" fill="#6B3F2A"/>
+    <ellipse cx="459" cy="242" rx="6" ry="7" fill="#1A2645"/>
+    <ellipse cx="501" cy="242" rx="6" ry="7" fill="#1A2645"/>
+    <path d="M476 254 q 4 14 8 0" fill="none" stroke="#C98E6B" stroke-width="3" stroke-linecap="round"/>
+    <path d="M460 280 q 20 16 40 0" fill="none" stroke="#B4554A" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</g>
+  <ellipse cx="480" cy="250" rx="131" ry="169" fill="none" stroke="#38B5A8" stroke-opacity=".35" stroke-width="12"/><ellipse cx="480" cy="250" rx="122" ry="160" fill="none" stroke="#38B5A8" stroke-width="4"/>
+  <text x="480" y="463" text-anchor="middle" font-size="28" font-weight="700" fill="#fff">Goedemiddag Fleur.</text>
+  
+  <rect x="360" y="520" width="240" height="46" rx="10" fill="#38B5A8"/>
+  <g transform="translate(388 534)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M13 13l5 5"/></g>
+  <text x="418" y="550" font-size="17" font-weight="700" fill="#fff">Handmatig zoeken</text>
+  <text x="480" y="618" text-anchor="middle" font-size="14" fill="#CAD1E9">De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard.</text>
+</svg>
