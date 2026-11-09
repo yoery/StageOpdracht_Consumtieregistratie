@@ -89,6 +89,9 @@ tests/
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
+uitleg-video/
+  video.json                # Script van het uitlegfilmpje voor de bedrijvenmarkt (59 s, verzonnen namen)
+  assets/                   # Nagetekende schermen voor het filmpje (SVG). Het mp4-bestand staat niet in Git
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
   app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
