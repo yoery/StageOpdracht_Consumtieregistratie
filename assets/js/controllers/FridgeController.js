@@ -527,7 +527,7 @@ export class FridgeController {
       .filter(({ flag }) => flag)
       .map((shelf) => SmartFridge.issueText(shelf, shelf.productId ? this.model.productName(shelf.productId) : null));
     if (result.longOpen) issues.push("deur stond lang open");
-    if (result.otherBadge) issues.push("pas van een collega gescand terwijl de deur open stond");
+    if (result.otherBadge) issues.push("pas van een collega gescand terwijl de deur openstond");
 
     const what = taken ? `${taken} geregistreerd` : "niets gepakt";
     const extra = issues.length ? `. Controle nodig: ${issues.join(", ")}` : "";

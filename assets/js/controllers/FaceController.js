@@ -63,7 +63,7 @@ export class FaceController {
   static SETUP_MESSAGES = {
     enrollNotAllowed: "Gezichtsherkenning instellen kan alleen na herkenning met je pas, of via de beheerder.",
     forgetNotAllowed: "Uitzetten kan alleen na herkenning met je pas of de camera, of via de beheerder.",
-    demoOff: "De demo gezichtsherkenning staat uit.",
+    demoOff: "De demo-gezichtsherkenning staat uit.",
     noCamera: "Geen camera gevonden op deze tablet. Instellen kan alleen met een camera.",
     adminLoggedOut: "Je bent uitgelogd als beheerder. Er is niets ingesteld."
   };

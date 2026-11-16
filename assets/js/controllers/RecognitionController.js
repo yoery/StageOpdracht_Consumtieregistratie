@@ -45,7 +45,7 @@ export class RecognitionController {
     expired: "Je gezichtsherkenning is verlopen. Opnieuw instellen?"
   };
 
-  static OFFER_HELP = "Het is vrijwillig, alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist, en je pas blijft altijd werken.";
+  static OFFER_HELP = "Het is vrijwillig. Alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist. Je pas blijft altijd werken.";
 
   // `app` is de controller (RegistrationApp). `clock` levert de tijd (dezelfde klok als de andere
   // onderdelen). `target` is RECOGNITION_TARGET uit config.js.

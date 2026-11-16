@@ -981,7 +981,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.click("#fridgeCloseDoorButton");
       await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
       assert.match(await text("#fridgeBody"), /Dit is geregistreerd op naam van Lotte van Dijk\./);
-      assert.match(await text("#fridgeBody"), /Er is een andere pas gescand terwijl de deur open stond\./);
+      assert.match(await text("#fridgeBody"), /Er is een andere pas gescand terwijl de deur openstond\./);
 
       const stored = await browser.storedData();
       assert.equal(stored.fridgeOpenings[0].status, "check");
@@ -1200,7 +1200,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.waitFor(`!document.querySelector("#faceOfferModal").classList.contains("hidden")`);
       assert.equal(await text("#faceOfferTitle"), "Gezichtsherkenning nog niet ingesteld. Wil je dit?");
       assert.match(await text("#faceOfferGreeting"), /Lotte\. Je bent herkend met je pas\.$/);
-      assert.equal(await text("#faceOfferHelp"), "Het is vrijwillig, alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist, en je pas blijft altijd werken.");
+      assert.equal(await text("#faceOfferHelp"), "Het is vrijwillig. Alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist. Je pas blijft altijd werken.");
       assert.equal(await browser.evaluate(`document.activeElement?.id`), "faceOfferNoButton");
       assert.equal(await isHidden("#fridgeModal"), true, "de koelkast opent pas na het antwoord");
 
@@ -1324,8 +1324,11 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
         const style = getComputedStyle(field);
         const context = document.createElement("canvas").getContext("2d");
         context.font = style.font;
-        // Ruimte voor de tekst: binnenbreedte min de binnenruimte en de pijltjes van een getalveld (ongeveer 15 pixels).
-        return { text: context.measureText(field.placeholder).width, room: field.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 15 };
+        // Ruimte voor de tekst: buitenbreedte min de randen, de binnenruimte en de pijltjes van een getalveld
+        // (ongeveer 15 pixels). Niet clientWidth: sinds Edge 157 telt die de pijltjes al niet mee, en dan
+        // zouden ze twee keer worden afgetrokken.
+        const border = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+        return { text: context.measureText(field.placeholder).width, room: field.offsetWidth - border - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 15 };
       })()`);
       assert.ok(room.text <= room.room, `"Aantal" is ${Math.round(room.text)} pixels breed, er is ${Math.round(room.room)} pixels ruimte`);
     } finally {

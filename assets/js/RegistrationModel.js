@@ -520,7 +520,7 @@ export class RegistrationModel {
   // Mag een medewerker aan dit bedrijf en dit consumptiepunt worden gekoppeld?
   //   - geen bedrijf (null of leeg) mag; een opgegeven bedrijf moet nog bestaan;
   //   - geen consumptiepunt mag; een opgegeven punt moet nog bestaan én bij dat bedrijf horen.
-  // Een formulier dat al open stond, kan een bedrijf of punt bevatten dat een ander tabblad
+  // Een formulier dat al openstond, kan een bedrijf of punt bevatten dat een ander tabblad
   // intussen heeft verwijderd. Zonder deze controle zou de medewerker naar iets wijzen dat er
   // niet meer is (en dus geen producten meer kunnen kiezen).
   isValidAssignment(companyId, pointId) {

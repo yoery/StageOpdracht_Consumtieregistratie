@@ -326,7 +326,7 @@ test("beheerder: zonder camera, met de demo uit of voor een inactieve medewerker
   off.app.adminLoggedIn = true;
   assert.equal(off.app.faceSetupState(), "off");
   assert.equal(off.app.startAdminFaceEnrollment("employee-1"), false);
-  assert.equal(toastTexts(off.view).at(-1), "De demo gezichtsherkenning staat uit.");
+  assert.equal(toastTexts(off.view).at(-1), "De demo-gezichtsherkenning staat uit.");
 
   const inactive = await createApp();
   inactive.app.adminLoggedIn = true;

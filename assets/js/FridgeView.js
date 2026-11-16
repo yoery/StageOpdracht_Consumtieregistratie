@@ -189,7 +189,7 @@ export class FridgeView {
       .filter(({ flag }) => flag)
       .map((shelf) => `Bij schap ${shelf.shelf} klopt het gewicht niet. Dat schap is niet geregistreerd.`);
     if (result?.longOpen) issues.push("De deur stond lang open.");
-    if (result?.otherBadge) issues.push("Er is een andere pas gescand terwijl de deur open stond.");
+    if (result?.otherBadge) issues.push("Er is een andere pas gescand terwijl de deur openstond.");
 
     const heading = anything ? `Je hebt gepakt: ${this.view.describeSelection(taken)}` : "Je hebt niets gepakt";
     const text = anything
@@ -301,7 +301,7 @@ export class FridgeView {
           .filter(({ flag }) => flag)
           .map((shelf) => SmartFridge.issueText(shelf, shelf.productId ? this.model.productName(shelf.productId) : null));
         if (opening.longOpen) issues.push("deur stond lang open");
-        if (opening.otherBadge) issues.push("pas van een collega gescand terwijl de deur open stond");
+        if (opening.otherBadge) issues.push("pas van een collega gescand terwijl de deur openstond");
         const status = FRIDGE_STATUS[opening.status] || opening.status;
 
         return `<tr>
