@@ -11,10 +11,11 @@
 //   $w = "$env:TEMP\tvb-docs"; New-Item -ItemType Directory -Force $w
 //   Add-Type -AssemblyName System.IO.Compression.FileSystem
 //   [System.IO.Compression.ZipFile]::ExtractToDirectory("<pad naar>\tvbsjabloon.docx", "$w\sjabloon")
-//   node tools\md-to-docx.cjs "$w\sjabloon" docs\TO-BLIKJESREGISTRATIE.md "$w\to" "Technisch ontwerp" "Blikjesregistratie TVB"
-//   & .\tools\word-bijwerken.ps1 -Map "$w\to" -Docx "$w\TO-BLIKJESREGISTRATIE.docx" -Pdf "$w\TO-BLIKJESREGISTRATIE.pdf"
-//   Copy-Item "$w\TO-BLIKJESREGISTRATIE.*" docs\
-// Voor de documentatie: docs\DOCUMENTATIE.md met titel "Documentatie" en ondertitel "Consumptieregistratie TVB".
+//   node tools\md-to-docx.cjs "$w\sjabloon" docs\TO-CONSUMPTIEREGISTRATIE.md "$w\to" "Technisch ontwerp" "Consumptieregistratie TVB"
+//   & .\tools\word-bijwerken.ps1 -Map "$w\to" -Docx "$w\TO-CONSUMPTIEREGISTRATIE.docx" -Pdf "$w\TO-CONSUMPTIEREGISTRATIE.pdf"
+//   Copy-Item "$w\TO-CONSUMPTIEREGISTRATIE.*" docs\
+// Voor de documentatie: docs\DOCUMENTATIE.md met titel "Documentatie en handleiding" en ondertitel "Consumptieregistratie TVB".
+// Voor het pentestrapport: docs\PENTESTRAPPORT.md met titel "Pentestrapport" en ondertitel "Consumptieregistratie TVB".
 // Let op: de .md is de bron; een wijziging die alleen in de .docx staat, is weg na de volgende keer maken.
 const fs = require("fs");
 const path = require("path");
@@ -282,6 +283,9 @@ for (let i = 0; i < lines.length; ) {
     continue;
   }
   if (skipSection) { i++; continue; }
+  // Een scheidingslijn (---) wordt overgeslagen: de koppen scheiden de onderdelen al, en anders
+  // kwam er een losse alinea "---" in Word.
+  if (/^\s*(-\s*){3,}$/.test(line)) { i++; continue; }
 
   if (!introOpen && body.length === 0 && line.trim() !== "") {
     body.push(heading(1, "Over dit document", false));
@@ -342,7 +346,8 @@ if (meta.Versie || meta.Datum) {
   cover += `<w:p><w:pPr><w:spacing w:before="120" w:line="360" w:lineRule="auto"/></w:pPr>${run(metaText, { color: "FFFFFF", sz: 24 })}</w:p>`;
 }
 
-const tocHeading = `<w:p><w:pPr><w:pStyle w:val="Kop1"/><w:pageBreakBefore/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="0"/></w:numPr></w:pPr>${run("INHOUDSOPGAVE.", {})}</w:p>`;
+// Stijl "Kop van inhoudsopgave" van het sjabloon: ziet eruit als kop 1, maar staat zelf niet in de inhoudsopgave.
+const tocHeading = `<w:p><w:pPr><w:pStyle w:val="Kopvaninhoudsopgave"/><w:pageBreakBefore/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="0"/></w:numPr><w:outlineLvl w:val="9"/></w:pPr>${run("INHOUDSOPGAVE.", {})}</w:p>`;
 const toc = `<w:p><w:pPr><w:pStyle w:val="Inhopg1"/><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="${PAGE_WIDTH}"/></w:tabs></w:pPr>` +
   `<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-2" \\h \\z \\u </w:instrText></w:r>` +
   `<w:r><w:fldChar w:fldCharType="separate"/></w:r>${run("De inhoudsopgave wordt bijgewerkt als het document in Word wordt geopend.", { i: true })}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`;

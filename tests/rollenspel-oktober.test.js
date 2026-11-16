@@ -38,7 +38,7 @@ const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const css = readAllCss();
 const appSource = read("../assets/js/RegistrationApp.js");
 const schema = read("../docs/DATABASE-SCHEMA.sql").replace(/\r\n/g, "\n");
-const to = read("../docs/TO-BLIKJESREGISTRATIE.md");
+const to = read("../docs/TO-CONSUMPTIEREGISTRATIE.md");
 
 // Instellingen zoals in config.js, maar zonder afwijking per product (de gewichten zijn dan precies).
 const SETTINGS = { ...SMART_FRIDGE, weightVariation: 0 };

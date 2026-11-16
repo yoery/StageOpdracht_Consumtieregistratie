@@ -75,7 +75,7 @@ assets/
   vendor/
     face-api/               # face-api 1.7.15 en de drie modellen voor de demo (MIT, met TensorFlow.js onder Apache 2.0, ca. 8 MB, niet meer onderhouden en dus alleen voor de demo)
 docs/
-  TO-BLIKJESREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
+  TO-CONSUMPTIEREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
   DATABASE-SCHEMA.sql       # PostgreSQL-schema voor productie
   PENTESTRAPPORT.md         # Pentest van november 2026: bevindingen, oplossingen en status
@@ -132,7 +132,7 @@ archief/
 - Slimme koelkast (demo, uit te zetten met `SMART_FRIDGE` in `config.js`): de koelkast opent met de pas, de medewerker pakt van de schappen en sluit de deur, en het gewichtsverschil per schap wordt vanzelf als registratie opgeslagen (met voorraad en logboekregel). Een verschil dat niet klopt, wordt gemarkeerd voor de beheerder. Het slot en de weegschalen zijn nagebootst. In productie stuurt alleen de backend ze aan. In het beheer staan de indeling van de schappen en de laatste openingen. Zie het TO, bijlage B.
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en in de TVB-huisstijl als [`docs/DOCUMENTATIE.docx`](./docs/DOCUMENTATIE.docx) en [`docs/DOCUMENTATIE.pdf`](./docs/DOCUMENTATIE.pdf).
-- Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.
+- Technisch ontwerp in [`docs/TO-CONSUMPTIEREGISTRATIE.md`](./docs/TO-CONSUMPTIEREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.
 - Pentestrapport van november 2026 in [`docs/PENTESTRAPPORT.md`](./docs/PENTESTRAPPORT.md): wat er is getest, de bevindingen met hun ernst en per bevinding de status (opgelost, gedocumenteerd of geaccepteerd).
 - Productiegericht PostgreSQL-schema in [`docs/DATABASE-SCHEMA.sql`](./docs/DATABASE-SCHEMA.sql).
-- Het technisch ontwerp in de TVB-huisstijl als [`docs/TO-BLIKJESREGISTRATIE.docx`](./docs/TO-BLIKJESREGISTRATIE.docx) en [`docs/TO-BLIKJESREGISTRATIE.pdf`](./docs/TO-BLIKJESREGISTRATIE.pdf). De `.md`-bestanden zijn de bron; de Word- en PDF-versies worden gemaakt met `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` (zie het voorbeeld bovenin `md-to-docx.cjs`).
+- Het technisch ontwerp in de TVB-huisstijl als [`docs/TO-CONSUMPTIEREGISTRATIE.docx`](./docs/TO-CONSUMPTIEREGISTRATIE.docx) en [`docs/TO-CONSUMPTIEREGISTRATIE.pdf`](./docs/TO-CONSUMPTIEREGISTRATIE.pdf). De `.md`-bestanden zijn de bron; de Word- en PDF-versies worden gemaakt met `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` (zie het voorbeeld bovenin `md-to-docx.cjs`).

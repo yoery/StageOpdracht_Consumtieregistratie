@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1850" height="1200" viewBox="0 0 1850 1200" role="img" aria-labelledby="title desc">
-  <title id="title">Use-casediagram Blikjesregistratie TVB</title>
+  <title id="title">Use-casediagram Consumptieregistratie TVB</title>
   <desc id="desc">Use cases UC-01 tot en met UC-23 uit hoofdstuk 10: Medewerker UC-01 tot en met UC-06 en UC-20 tot en met UC-22, Beheerder UC-06 tot en met UC-17 en UC-23, Systeem UC-18 en UC-19. UC-03, UC-04, UC-05 en UC-20 breiden UC-02 uit, UC-20 breidt ook UC-21 uit, UC-22 bevat UC-04 en UC-23 breidt UC-10 uit.</desc>
   <defs>
     <style>
@@ -20,10 +20,10 @@
     </marker>
   </defs>
   <rect width="1850" height="1200" fill="#ffffff"/>
-<text x="40" y="50" font-size="28" class="kop">Use-casediagram – Blikjesregistratie TVB</text>
-<text x="40" y="78" font-size="15" class="sub">De use cases UC-01 t/m UC-23 uit hoofdstuk 10 met hun actoren</text>
+<text x="40" y="50" font-size="28" class="kop">Use-casediagram – Consumptieregistratie TVB</text>
+<text x="40" y="78" font-size="15" class="sub">De use cases UC-01 tot en met UC-23 uit hoofdstuk 10 met hun actoren</text>
 <rect x="270" y="105" width="1370" height="1060" rx="18" fill="#f8fbfa" stroke="#159a72" stroke-width="1.8"/>
-<text x="292" y="138" font-size="18" fill="#087252" class="kop">Blikjesregistratie TVB</text>
+<text x="292" y="138" font-size="18" fill="#087252" class="kop">Consumptieregistratie TVB</text>
 <!-- Actoren -->
 <g class="actor" stroke="#163540" stroke-width="2" fill="none" stroke-linecap="round">
     <circle cx="110" cy="573" r="13" fill="#e8f5ee"/>
