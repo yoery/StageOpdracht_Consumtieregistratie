@@ -3631,7 +3631,7 @@ Dit is een ontwerp voor de productieversie (FR-67). De demo heeft geen koppeling
 
 **Werking: REST API met connectoren.** AFAS Profit biedt een REST API met connectoren:
 
-- **GetConnector (ophalen).** De AFAS-beheerder maakt een eigen GetConnector, bijvoorbeeld `TVB_Blikjes_Medewerkers`, met alleen de velden die nodig zijn: personeelsnummer (de sleutel), voornaam, achternaam, werkgever of bedrijf, looncode, datum uit dienst en eventueel het zakelijke e-mailadres (alleen nodig als medewerkers hun pas zelf koppelen met een code, zie [Herkomst van het pasnummer](#herkomst-van-het-pasnummer)). Het pasnummer staat niet in AFAS.
+- **GetConnector (ophalen).** De AFAS-beheerder maakt een eigen GetConnector, bijvoorbeeld `TVB_Consumptie_Medewerkers`, met alleen de gegevens die nodig zijn: personeelsnummer (de sleutel), voornaam, achternaam met voorvoegsel, werkgevernummer, looncode, datum uit dienst en eventueel een afwijkend werkgevernummer en het zakelijke e-mailadres. De tabel **Welke gegevens nodig zijn** hieronder zegt per gegeven waarvoor het nodig is. Het pasnummer staat niet in AFAS.
 - **Dataminimalisatie (AVG).** Velden als adres, geboortedatum en BSN komen niet in de connector. Wat niet wordt opgehaald, kan ook niet uitlekken.
 - **UpdateConnector (later, optioneel).** Later kan de backend de consumpties met een UpdateConnector als variabele looncomponent in AFAS zetten. Tot die tijd blijft de bestaande CSV-export, die de loonadministratie in AFAS inleest (hoofdstuk 12).
 
@@ -3656,19 +3656,20 @@ Dit is een ontwerp voor de productieversie (FR-67). De demo heeft geen koppeling
 8. **Vastleggen.** Alle wijzigingen van één synchronisatie worden in één databasetransactie opgeslagen, met regels in `audit_log` (zonder beheerder, met als details "Gesynchroniseerd uit AFAS"). Mislukt iets, dan wordt de hele synchronisatie teruggedraaid.
 9. **Fouten.** Is AFAS niet bereikbaar, geeft AFAS een fout of is het token verlopen, dan blijven alle bestaande gegevens staan. De fout gaat naar het log van de server en de beheerder ziet in het beheer wanneer de laatste geslaagde synchronisatie was. Een lege of mislukte uitkomst mag nooit alle medewerkers inactief maken.
 
-**Gegevenskoppeling.** De namen van de AFAS-velden hieronder zijn een **voorbeeld, te bepalen** met de AFAS-beheerder van TVB. Ze hangen af van hoe de GetConnector wordt ingericht.
+**Welke gegevens nodig zijn.** De app heeft per medewerker alleen de gegevens hieronder nodig uit AFAS. Hoe die velden in AFAS precies heten, bepaalt de AFAS-beheerder van TVB bij het inrichten van de GetConnector. Andere gegevens, zoals adres, geboortedatum, BSN en salaris, zijn niet nodig en worden niet opgehaald.
 
-| AFAS-veld (voorbeeld, te bepalen) | Kolom in `employees` (`DATABASE-SCHEMA.sql`) | Uitleg |
-|---|---|---|
-| `Personeelsnummer` | `personnel_number` | De sleutel om AFAS en de app te koppelen. Uniek. |
-| `Voornaam` | `first_name` | Verplicht. |
-| `Achternaam` | `last_name` | Verplicht. Hoe AFAS voorvoegsels zoals "van" opslaat (apart veld of in de achternaam), is te bepalen. De app zet het voorvoegsel bij de achternaam ("van Dijk"). |
-| `Werkgever` | `company_id` (via `companies.employer_number`) | Het werkgevernummer uit AFAS wordt gezocht bij de bedrijven. Een onbekend werkgevernummer wordt niet gekoppeld en komt in het log van de synchronisatie. |
-| `Looncode` | `payroll_code` | Welk AFAS-veld de looncode is die nu in de export staat, is te bepalen met de loonadministratie. |
-| `DatumUitDienst` | `active` | Datum voorbij: `active = false`. Leeg of in de toekomst: `active = true`. De datum zelf wordt niet bewaard. |
-| (geen) | `badge_id` | Het pasnummer staat niet in AFAS en ook niet in een ander centraal systeem van TVB (navraag 29 oktober 2026, zie [Herkomst van het pasnummer](#herkomst-van-het-pasnummer)). Het wordt in de app gekoppeld en bij het opslaan gelijkgemaakt, net als in de demo. |
-| (geen) | `employer_number` | Het afwijkende werkgevernummer per medewerker. Of AFAS dit levert, is te bepalen. Zolang dat niet zo is, blijft het leeg en geldt het nummer van het bedrijf. |
-| (geen) | `point_id`, `color` | Het consumptiepunt en de kleur van de avatar blijven in de app. AFAS kent ze niet. |
+| Gegeven | Waarvoor de app het nodig heeft | Verplicht | Kolom in `employees` (`DATABASE-SCHEMA.sql`) |
+|---|---|---|---|
+| Personeelsnummer | De sleutel waarmee een medewerker in AFAS en in de app aan elkaar wordt gekoppeld. Staat ook in de CSV-export. Is uniek. | Ja | `personnel_number` |
+| Voornaam | De naam in de medewerkerslijst, in het beheer en in de CSV-export. | Ja | `first_name` |
+| Achternaam, met voorvoegsel | Net als de voornaam. Staat het voorvoegsel ("van") in AFAS in een apart veld, dan is dat veld ook nodig. De app zet het voorvoegsel bij de achternaam ("van Dijk"). | Ja | `last_name` |
+| Werkgevernummer van het bedrijf waar de medewerker in dienst is | Het bedrijf in de app en het werkgevernummer in de CSV-export. Een onbekend werkgevernummer wordt niet gekoppeld en komt in het log van de synchronisatie. | Ja | `company_id` (via `companies.employer_number`) |
+| Looncode | De looncode in de CSV-export, waarmee de loonadministratie het bedrag op de juiste plek in de salarisverwerking zet. Welk gegeven in AFAS dit is, bepaalt de loonadministratie. | Ja | `payroll_code` |
+| Datum uit dienst | Bepalen of de medewerker actief is. Is de datum voorbij, dan wordt de medewerker inactief. Leeg of in de toekomst betekent actief. De datum zelf wordt niet bewaard. | Ja, leeg zolang de medewerker in dienst is | `active` |
+| Afwijkend werkgevernummer | Alleen als een medewerker in de CSV-export een ander werkgevernummer moet krijgen dan zijn bedrijf. Levert AFAS dit niet, dan geldt het nummer van het bedrijf. | Nee | `employer_number` |
+| Zakelijk e-mailadres | Alleen bij route B uit [Herkomst van het pasnummer](#herkomst-van-het-pasnummer): de medewerker koppelt zijn pas zelf met een code die naar dit adres gaat. | Nee | Nog geen kolom in het schema |
+
+**Niet uit AFAS.** Het pasnummer (`badge_id`) staat niet in AFAS en ook niet in een ander centraal systeem van TVB (navraag 29 oktober 2026). Het wordt in de app gekoppeld en bij het opslaan gelijkgemaakt, net als in de demo. Het consumptiepunt (`point_id`) en de kleur van de avatar (`color`) blijven ook in de app. AFAS kent ze niet.
 
 **Wat verandert er in de app:**
 
@@ -5708,4 +5709,4 @@ Deze bijlage noemt alle versies van dit document met per versie de belangrijkste
 | 3.25 | 30 oktober 2026 | Alle wireframes bijgewerkt naar de huidige website, met het startscherm en de slimme koelkast. L01 tot en met L15 en M01 tot en met M15 opnieuw gemaakt, L16 tot en met L21 en M16 tot en met M21 nieuw. Verder 34 screenshots opnieuw gemaakt en W52 tot en met W55 nieuw. Browsertests werken weer met Edge 156. |
 | 3.26 | 2 november 2026 | Pentest met onafhankelijke review en hertest. Bevindingen opgelost, onder andere: controle op een levend gezicht alleen voor het herkende gezicht (PT-01), reservekopieën zonder gezichtskenmerken die na 30 dagen verdwijnen (PT-02), hooguit 10 per product (PT-03), tijdstippen in de toekomst geladen in plaats van overgeslagen (PT-04) en lege beheerlijsten na uitloggen (PT-06). |
 | 3.27 | 9 november 2026 | Configuratie en geheimen voor productie beschreven. De demo heeft geen `.env` nodig en bevat geen geheimen. Een `.env` of kluis voor geheimen hoort alleen op de server van de backend, nooit in Git. Script van een uitlegfilmpje van 59 seconden voor de bedrijvenmarkt vastgelegd in `uitleg-video/`. De code van de app is niet gewijzigd. |
-| 3.28 | 16 november 2026 | Document nagelopen met de schoolchecklist voor verslagen. Nieuwe naam "Technisch ontwerp Consumptieregistratie TVB" (bestand `docs/TO-CONSUMPTIEREGISTRATIE.md`). Doel, lezers en leeswijzer in hoofdstuk 1, een inleiding bij ieder hoofdstuk, één bronnenlijst in APA-stijl, de versiegeschiedenis in deze bijlage en de taal verbeterd. In bijlage B een weging en een knock-outcriterium in de beslismatrix en een voorwaardelijk advies. Spelling van drie app-teksten verbeterd en W47 opnieuw gemaakt. |
+| 3.28 | 16 november 2026 | Document nagelopen met de schoolchecklist voor verslagen. Nieuwe naam "Technisch ontwerp Consumptieregistratie TVB" (bestand `docs/TO-CONSUMPTIEREGISTRATIE.md`). Doel, lezers en leeswijzer in hoofdstuk 1, een inleiding bij ieder hoofdstuk, één bronnenlijst in APA-stijl, de versiegeschiedenis in deze bijlage en de taal verbeterd. In bijlage B een weging en een knock-outcriterium in de beslismatrix en een voorwaardelijk advies. Spelling van drie app-teksten verbeterd en W47 opnieuw gemaakt. Lijst van de gegevens die uit AFAS nodig zijn. |
