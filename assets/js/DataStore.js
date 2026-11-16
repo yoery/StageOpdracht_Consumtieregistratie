@@ -726,7 +726,7 @@ export class DataStore {
   // alle oorspronkelijke gegevens overschrijven. Alleen een lijst die helemaal ontbreekt (gegevens
   // uit een oudere versie) krijgt een standaardwaarde.
   // `now` is het moment van laden; completePointStock gebruikt het om een telling in de
-  // toekomst weg te laten, en isValidAuditEntry om een logboekregel in de toekomst over te slaan.
+  // toekomst weg te laten. Een logboekregel in de toekomst wordt sinds versie 3.26 wel geladen.
   // De voorraadlijsten van de consumptiepunten worden alleen opgebouwd voor producten die de
   // controle doorstaan (isValidProduct). Een geknoeid product met een id als "constructor" krijgt
   // zo nergens een voorraadregel, ook al valt het product zelf pas later (in removeInvalidItems) af.
