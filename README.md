@@ -79,7 +79,7 @@ docs/
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
   DATABASE-SCHEMA.sql       # PostgreSQL-schema voor productie
   PENTESTRAPPORT.md         # Pentest van november 2026: bevindingen, oplossingen en status
-  *.docx, *.pdf             # Word- en PDF-versies van het TO en de documentatie in de TVB-huisstijl
+  *.docx, *.pdf             # Word- en PDF-versies van het TO, de documentatie en het pentestrapport in de TVB-huisstijl
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests (ook readAllCss: alle CSS in de volgorde van index.html)
