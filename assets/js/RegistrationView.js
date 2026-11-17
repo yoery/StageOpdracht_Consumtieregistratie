@@ -962,11 +962,10 @@ export class RegistrationView {
       : `<p class="stock-all-ok">Alles is op voorraad.</p>`;
   }
 
-  // De keuzelijst met consumptiepunten en de voorraadtabel van het gekozen punt.
-  renderStockTable() {
-    const select = this.$("#stockPointSelect");
+  // Vult een keuzelijst met alle consumptiepunten, gegroepeerd per bedrijf. Het punt dat gekozen
+  // was, blijft gekozen als het nog bestaat. Voor de voorraad en voor het tabblad Koelkast.
+  fillPointSelect(select) {
     const selected = select.value;
-
     select.innerHTML = this.model.sortedCompanies()
       .filter(({ id }) => this.model.pointsForCompany(id).length)
       .map((company) =>
@@ -976,8 +975,13 @@ export class RegistrationView {
           ).join("")
         }</optgroup>`
       ).join("");
-
     if (this.model.findPoint(selected)) select.value = selected;
+  }
+
+  // De keuzelijst met consumptiepunten en de voorraadtabel van het gekozen punt.
+  renderStockTable() {
+    const select = this.$("#stockPointSelect");
+    this.fillPointSelect(select);
 
     const pointId = select.value;
     const products = this.model.offeredProducts(pointId);

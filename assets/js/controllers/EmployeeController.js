@@ -1,5 +1,6 @@
 import { cssAttributeValue } from "../RegistrationView.js";
 import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS, MAX_PER_PRODUCT } from "../config.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * EmployeeController — wat een medewerker op de beginpagina doet: zoeken, filteren op bedrijf,
@@ -28,7 +29,7 @@ import { EMPLOYEE_IDLE_CLOSE_MS, EMPLOYEE_IDLE_WARNING_MS, MAX_PER_PRODUCT } fro
  *   - ModalManager (via RegistrationApp): onthoudt en herstelt de focus bij het productvenster;
  *   - FaceRecognitionDemo: of de demo aan staat en of de medewerker een gezicht heeft ingesteld.
  */
-export class EmployeeController {
+export class EmployeeController extends ControllerPart {
   // Zo lang (in milliseconden) na het sluiten van het productvenster telt een klik op een
   // medewerkerrij niet (zie isGhostRowClick).
   static GHOST_CLICK_MS = 500;
@@ -42,7 +43,7 @@ export class EmployeeController {
   // klok als AdminController). De unit tests geven een nep-klok mee, zodat ze niet 75 seconden
   // hoeven te wachten. `idleCloseMs` en `idleWarningMs` komen uit config.js.
   constructor(app, clock = EmployeeController.realClock(), idleCloseMs = EMPLOYEE_IDLE_CLOSE_MS, idleWarningMs = EMPLOYEE_IDLE_WARNING_MS) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.idleCloseMs = idleCloseMs;
     this.idleWarningMs = idleWarningMs;
@@ -51,29 +52,6 @@ export class EmployeeController {
     this.productIdleTimer = null;     // timer die regelmatig closeProductWindowIfIdle aanroept
     this.idleWarningShown = false;    // staat de regel "Venster sluit zo." nu in het venster?
     this.maxPerProduct = MAX_PER_PRODUCT; // hooguit zo vaak één product in één keer (pentest PT-03)
-  }
-
-  // De echte klok van de browser: Date.now() en setInterval/clearInterval (zoals AdminController).
-  static realClock() {
-    return {
-      now: () => Date.now(),
-      setInterval: (action, delay) => setInterval(action, delay),
-      clearInterval: (timer) => clearInterval(timer)
-    };
-  }
-
-  // Onderdelen van de app die deze class gebruikt (model, view, faceDemo). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
   }
 
   // ------------------------------------------------------------------

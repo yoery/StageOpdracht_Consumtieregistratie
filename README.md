@@ -44,6 +44,7 @@ assets/
     RegistrationView.js     # Weergave (HTML)
     RegistrationApp.js      # Controller: maakt en koppelt de onderdelen hieronder, opslaan (persist), tabbladen synchroniseren
     controllers/            # Onderdelen van de controller (RegistrationApp maakt ze aan en geeft zichzelf mee)
+      ControllerPart.js     # basisclass van de onderdelen: app, model, view, faceDemo en de echte klok
       ModalManager.js       # vensters openen en sluiten, focus
       EmployeeController.js # beginpagina, productvenster, registreren en automatisch sluiten van het productvenster
       BadgeController.js    # herkennen met de pas (koppelt BadgeReader aan de app)

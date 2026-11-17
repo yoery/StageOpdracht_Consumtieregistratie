@@ -1,4 +1,5 @@
 import { ADMIN_IDLE_LOGOUT_MS } from "../config.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * AdminController — het beheerscherm: inloggen en uitloggen, het dashboard met de tabbladen,
@@ -30,7 +31,7 @@ import { ADMIN_IDLE_LOGOUT_MS } from "../config.js";
  *     sluit het venster "Registratie verwijderen" als het beheer sluit;
  *   - ModalManager (via RegistrationApp): opent en sluit het beheervenster.
  */
-export class AdminController {
+export class AdminController extends ControllerPart {
   // Zo vaak kijkt de app of de beheerder te lang niets heeft gedaan (zie startIdleWatch).
   static IDLE_CHECK_MS = 10 * 1000;
 
@@ -42,7 +43,7 @@ export class AdminController {
   // zodat de unit tests met een nep-klok kunnen werken in plaats van vijf minuten te wachten
   // (net als bij BadgeReader). `idleLogoutMs` is de tijd zonder invoer tot het uitloggen.
   constructor(app, clock = AdminController.realClock(), idleLogoutMs = ADMIN_IDLE_LOGOUT_MS) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.idleLogoutMs = idleLogoutMs;
     this.auditLogLimit = 20;       // aantal regels dat het logboek nu toont (zie loadMoreAudit)
@@ -50,29 +51,7 @@ export class AdminController {
     this.idleTimer = null;         // timer die regelmatig logoutIfIdle aanroept
   }
 
-  // De echte klok van de browser: Date.now() en setInterval/clearInterval.
-  static realClock() {
-    return {
-      now: () => Date.now(),
-      setInterval: (action, delay) => setInterval(action, delay),
-      clearInterval: (timer) => clearInterval(timer)
-    };
-  }
-
-  // Onderdelen van de app die deze class gebruikt (model, view, faceDemo, csvExport). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
-  }
-
+  // Ook csvExport komt van RegistrationApp, net als model en view (zie ControllerPart).
   get csvExport() {
     return this.app.csvExport;
   }
@@ -114,17 +93,25 @@ export class AdminController {
   finishAdminChange(message, { redrawStockTable = true } = {}) {
     this.app.preserveFocus(() => {
       this.view.renderAll();
-      this.view.populateFilters();
-      this.view.renderAdmin();
-      this.view.renderAdminEmployees();
-      this.view.renderCorrectionEmployees();
-      this.view.renderAdminProducts();
-      this.view.renderAdminCompanies();
-      if (redrawStockTable) this.view.renderStock();
-      this.renderAuditLog();
-      this.view.renderFridgeAdmin();
+      this.renderAdminLists({ stock: redrawStockTable });
     });
     this.view.showToast(message, { tone: "success" });
+  }
+
+  // Tekent alle lijsten en tabellen van het beheer opnieuw: de filters, de registraties, de
+  // medewerkers, de correctielijst, de producten, de bedrijven, de voorraad, het logboek en het
+  // tabblad Koelkast. Met `stock: false` of `fridge: false` blijft de voorraadtabel of het
+  // koelkastformulier staan, bijvoorbeeld omdat de beheerder daar nog in typt.
+  renderAdminLists({ stock = true, fridge = true } = {}) {
+    this.view.populateFilters();
+    this.view.renderAdmin();
+    this.view.renderAdminEmployees();
+    this.view.renderCorrectionEmployees();
+    this.view.renderAdminProducts();
+    this.view.renderAdminCompanies();
+    if (stock) this.view.renderStock();
+    this.renderAuditLog();
+    if (fridge) this.view.renderFridgeAdmin();
   }
 
   // Tekent het logboek opnieuw met het aantal regels dat de beheerder nu ziet. Zo blijft het
@@ -277,15 +264,7 @@ export class AdminController {
     this.view.$("#adminModal").setAttribute("aria-labelledby", "dashboardTitle");
     this.view.$(".tab.active")?.focus();
     this.app.resetCorrectionDate();
-    this.view.populateFilters();
-    this.view.renderAdmin();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdminEmployees();
-    this.view.renderAdminProducts();
-    this.view.renderAdminCompanies();
-    this.view.renderStock();
-    this.renderAuditLog();
-    this.view.renderFridgeAdmin();
+    this.renderAdminLists();
     // Liggen er regels meer dan een dag in de toekomst, dan klopt de klok van de tablet waarschijnlijk
     // niet (pentest PT-04 en RB-02). De beheerder krijgt dat bij ieder openen van het beheer te zien.
     const future = this.model.futureItemCount?.() ?? 0;
@@ -392,6 +371,19 @@ export class AdminController {
   // Knoppen in de beheerlijsten: (de)activeren en verwijderen
   // ------------------------------------------------------------------
 
+  // Tekent alles opnieuw waar medewerkers in staan, nadat een medewerker actief of inactief is gezet
+  // of is verwijderd. De knop met de focus houdt die (zie ModalManager.preserveFocus).
+  redrawEmployeeLists() {
+    this.app.preserveFocus(() => {
+      this.renderAuditLog();
+      this.view.populateFilters();
+      this.view.renderAdminEmployees();
+      this.view.renderCorrectionEmployees();
+      this.view.renderAdmin();
+      this.view.renderAll();
+    });
+  }
+
   // Zet een medewerker actief of inactief (omgekeerd van wat het nu is).
   // Bestaat de medewerker niet meer (verwijderd in een ander tabblad), dan volgt een melding.
   // Daarna worden ook de correctielijst en de registratietabel opnieuw getekend, zodat de
@@ -416,14 +408,7 @@ export class AdminController {
     this.app.loadSavedFaces();
 
     // De knop krijgt na het tekenen de focus terug (de tekst wisselt tussen Deactiveren en Activeren).
-    this.app.preserveFocus(() => {
-      this.renderAuditLog();
-      this.view.populateFilters();
-      this.view.renderAdminEmployees();
-      this.view.renderCorrectionEmployees();
-      this.view.renderAdmin();
-      this.view.renderAll();
-    });
+    this.redrawEmployeeLists();
     this.view.showToast("Medewerkerstatus gewijzigd", { tone: "success" });
   }
 
@@ -471,14 +456,7 @@ export class AdminController {
     // Een ingesteld gezicht (demo) hoort bij deze medewerker en moet dus ook weg.
     this.faceDemo.forget(employeeId);
     // De knop "Verwijderen" bestaat daarna niet meer; de focus gaat naar "Medewerker toevoegen".
-    this.app.preserveFocus(() => {
-      this.renderAuditLog();
-      this.view.populateFilters();
-      this.view.renderAdminEmployees();
-      this.view.renderCorrectionEmployees();
-      this.view.renderAdmin();
-      this.view.renderAll();
-    });
+    this.redrawEmployeeLists();
     this.view.showToast("Inactieve medewerker definitief verwijderd", { tone: "success" });
   }
 

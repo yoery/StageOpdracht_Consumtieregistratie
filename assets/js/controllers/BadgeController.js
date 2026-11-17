@@ -1,3 +1,5 @@
+import { ControllerPart } from "./ControllerPart.js";
+
 /**
  * BadgeController — herkennen met de pas: verbindt de pasjeslezer (BadgeReader) met de rest
  * van de app.
@@ -24,7 +26,7 @@
  *   - FridgeController (via RegistrationApp): krijgt de scan als het koelkastvenster open is;
  *   - RecognitionController (via RegistrationApp): afterRecognition na een geldige scan op de beginpagina.
  */
-export class BadgeController {
+export class BadgeController extends ControllerPart {
   // Melding als er een pas wordt gescand terwijl een ander venster dan het productvenster open is.
   static CLOSE_WINDOW_FIRST = "Sluit eerst het open venster om je pas te gebruiken.";
 
@@ -33,23 +35,14 @@ export class BadgeController {
   // (recognizeBadge), en bij het begin van een mogelijke scan wordt onthouden waar de focus stond
   // en wat er in het zoekveld en het bedrijfsfilter stond.
   constructor(app) {
-    this.app = app;
+    super(app);
     // Toestand vlak voordat de pasjeslezer begon te typen (zie rememberSearchBeforeScan), of null.
     this.scanStart = null;
     this.badgeReader.onScan = (code) => this.recognizeBadge(code);
     this.badgeReader.onStart = () => this.rememberSearchBeforeScan();
   }
 
-  // Onderdelen van de app die deze class gebruikt (model, view, badgeReader). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
+  // Ook badgeReader komt van RegistrationApp, net als model en view (zie ControllerPart).
   get badgeReader() {
     return this.app.badgeReader;
   }

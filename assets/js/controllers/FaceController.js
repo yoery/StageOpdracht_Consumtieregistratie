@@ -1,3 +1,5 @@
+import { ControllerPart } from "./ControllerPart.js";
+
 /**
  * FaceController — het cameravenster van de demo gezichtsherkenning: herkennen met "Herken mij",
  * de korte scan na een tik op het ovaal van het startscherm (tik om te scannen, FACE_DEMO.scanMode
@@ -42,7 +44,7 @@
  *   - ModalManager (via RegistrationApp): opent en sluit het cameravenster;
  *   - RegistrationView: zoekt de elementen op en toont meldingen.
  */
-export class FaceController {
+export class FaceController extends ControllerPart {
   // Meldingen op de beginpagina na de korte scan (tik om te scannen).
   static WAKE_MESSAGES = {
     notRecognized: "Je bent niet herkend. Kies je naam in de lijst of houd je pas tegen de lezer.",
@@ -77,7 +79,7 @@ export class FaceController {
 
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
-    this.app = app;
+    super(app);
     this.faceSession = 0;          // telt op bij ieder openen en sluiten van het cameravenster
     this.faceMode = null;          // "recognize" (Herken mij), "wake" (scan na een tik) of "enroll" (instellen)
     this.faceEmployeeId = null;    // de medewerker voor wie een gezicht wordt ingesteld
@@ -86,20 +88,6 @@ export class FaceController {
     this.enrollTimer = null;       // time-out die de camera uitzet als er niets wordt vastgelegd (zie scheduleEnrollTimeout)
     this.enrollContinuation = null; // wat er na het instellen verder gaat (na "Ja, instellen" bij de vraag na een passcan)
     this.enrollByAdmin = false;    // stelt de beheerder dit gezicht in (vanuit het tabblad Medewerkers)?
-  }
-
-  // Onderdelen van de app die deze class gebruikt (model, view, faceDemo). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
   }
 
   // Wordt er op dit moment een gezicht vastgelegd in het venster dat nu open is?

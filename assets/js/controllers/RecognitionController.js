@@ -1,4 +1,5 @@
 import { FACE_DEMO, RECOGNITION_TARGET } from "../config.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * RecognitionController — wat er gebeurt nadat een medewerker is herkend, met de pas of met de
@@ -38,7 +39,7 @@ import { FACE_DEMO, RECOGNITION_TARGET } from "../config.js";
  *     opent (wakeFromStandby) en komt terug als de vraag vanzelf sluit (returnToStartScreen);
  *   - config.js: RECOGNITION_TARGET en FACE_DEMO (offerAfterBadge, offerIdleCloseMs).
  */
-export class RecognitionController {
+export class RecognitionController extends ControllerPart {
   // De titels van de vraag na een passcan en de uitleg in één zin.
   static OFFER_TITLES = {
     new: "Gezichtsherkenning nog niet ingesteld. Wil je dit?",
@@ -50,25 +51,13 @@ export class RecognitionController {
   // `app` is de controller (RegistrationApp). `clock` levert de tijd (dezelfde klok als de andere
   // onderdelen). `target` is RECOGNITION_TARGET uit config.js.
   constructor(app, clock, target = RECOGNITION_TARGET) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.recognitionTargetSetting = target;
     this.offerEmployeeId = null;   // voor wie de vraag nu open staat (null = geen vraag open)
     this.offerHow = null;          // hoe die medewerker is herkend ("badge")
     this.offerKind = null;         // "new" of "expired"
     this.lastOfferActivity = null; // tijdstip (ms) van de laatste invoer in het venster van de vraag
-  }
-
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
   }
 
   // De instellingen van de demo gezichtsherkenning (FACE_DEMO): dezelfde als die van FaceRecognitionDemo,

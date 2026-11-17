@@ -273,16 +273,9 @@ export class RegistrationApp {
     this.preserveFocus(() => {
       this.view.renderAll();
       if (!this.adminLoggedIn) return;
-      this.view.populateFilters();
-      this.view.renderAdmin();
-      this.view.renderCorrectionEmployees();
-      this.view.renderAdminEmployees();
-      this.view.renderAdminProducts();
-      this.view.renderAdminCompanies();
-      if (this.isTypingInStockTable()) this.view.renderStockAlerts();
-      else this.view.renderStock();
-      this.renderAuditLog();
-      if (!this.isTypingInFridgeForm()) this.view.renderFridgeAdmin();
+      const typingInStock = this.isTypingInStockTable();
+      this.renderAdminLists({ stock: !typingInStock, fridge: !this.isTypingInFridgeForm() });
+      if (typingInStock) this.view.renderStockAlerts();
     });
 
     this.closeStaleForms();
@@ -797,7 +790,7 @@ const DELEGATES = {
   },
   admin: {
     methods: [
-      "requireAdmin", "showMissing", "finishAdminChange", "renderAuditLog",
+      "requireAdmin", "showMissing", "finishAdminChange", "renderAdminLists", "renderAuditLog",
       "openAdmin", "showLogin", "login", "logout", "closeAdmin", "showDashboard", "switchTab",
       "startIdleWatch", "stopIdleWatch", "noteAdminActivity", "logoutIfIdle", "idleLogoutMessage",
       "loadMoreAudit", "exportCsv", "wipeAllData", "noteFutureTimes",

@@ -1,4 +1,5 @@
 import { STANDBY } from "../config.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * StandbyController — het startscherm van de tablet (sinds versie 3.21). Het startscherm vervangt het
@@ -40,7 +41,7 @@ import { STANDBY } from "../config.js";
  *   - RegistrationView: showStartScreen en renderStartScreen;
  *   - config.js: STANDBY (enabled en idleMs).
  */
-export class StandbyController {
+export class StandbyController extends ControllerPart {
   // Zo vaak (ms) kijkt de timer of het startscherm moet verschijnen.
   static TICK_MS = 1000;
 
@@ -65,7 +66,7 @@ export class StandbyController {
   // `app` is de controller (RegistrationApp). `clock` levert de tijd en de timer (dezelfde klok als de
   // andere onderdelen, in de unit tests een nep-klok). `settings` is STANDBY uit config.js.
   constructor(app, clock, settings = STANDBY) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.standbySettings = settings;
     this.standbyActive = false;           // staat het startscherm nu in beeld?
@@ -74,10 +75,6 @@ export class StandbyController {
     this.standbyWokeAt = -Infinity;       // tijdstip (ms) waarop het startscherm het laatst met een tik verdween
     this.lastExpiryCheck = -Infinity;     // tijdstip (ms) van de laatste controle op verlopen gezichten
     this.renderedStartTexts = null;       // de teksten van het startscherm die nu getekend zijn (als JSON)
-  }
-
-  get view() {
-    return this.app.view;
   }
 
   // Staat het startscherm aan in config.js?

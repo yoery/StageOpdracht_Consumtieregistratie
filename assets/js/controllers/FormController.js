@@ -3,6 +3,7 @@ import { createId } from "../ids.js";
 // Hoogste productprijs (1000 euro). Moet gelijk zijn aan MAX_PRICE in DataStore.js; de constante
 // staat in het model, zodat het model en het productformulier dezelfde grens gebruiken.
 import { MAX_PRICE } from "../RegistrationModel.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * FormController — de vier beheerformulieren: medewerker, product, bedrijf en consumptiepunt
@@ -25,21 +26,11 @@ import { MAX_PRICE } from "../RegistrationModel.js";
  *   - BadgeReader: normalize() voor het pasnummer;
  *   - ids.js: createId() voor de id van een nieuw product (werkt ook zonder https).
  */
-export class FormController {
+export class FormController extends ControllerPart {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
-    this.app = app;
+    super(app);
     this.editingCopies = new Map(); // formulier -> kopie (tekst) van het gegeven bij het openen (zie rememberEditing)
-  }
-
-  // Onderdelen van de app die deze class gebruikt (model, view). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
   }
 
   // ------------------------------------------------------------------
@@ -145,15 +136,49 @@ export class FormController {
   // Formulieren die in een ander tabblad verouderd zijn
   // ------------------------------------------------------------------
 
-  // De vier wijzigformulieren: formulier, venster, hoe het gegeven wordt opgezocht en hoe het
-  // formulier sluit. Wordt gebruikt door closeStaleForms en handleStorageCleared.
+  // De vier wijzigformulieren: formulier, venster, hoe het gegeven wordt opgezocht, hoe het
+  // formulier sluit en hoe het gegeven in een melding heet. Wordt gebruikt door closeStaleForms,
+  // beginSave en handleStorageCleared.
   editForms() {
     return [
-      ["#employeeForm", "#employeeFormModal", (id) => this.model.findEmployee(id), () => this.closeEmployeeForm()],
-      ["#productForm", "#productFormModal", (id) => this.model.findProduct(id), () => this.closeProductForm()],
-      ["#companyForm", "#companyFormModal", (id) => this.model.findCompany(id), () => this.closeCompanyForm()],
-      ["#pointForm", "#pointFormModal", (id) => this.model.findPoint(id), () => this.closePointForm()]
+      ["#employeeForm", "#employeeFormModal", (id) => this.model.findEmployee(id), () => this.closeEmployeeForm(), "Deze medewerker"],
+      ["#productForm", "#productFormModal", (id) => this.model.findProduct(id), () => this.closeProductForm(), "Dit product"],
+      ["#companyForm", "#companyFormModal", (id) => this.model.findCompany(id), () => this.closeCompanyForm(), "Dit bedrijf"],
+      ["#pointForm", "#pointFormModal", (id) => this.model.findPoint(id), () => this.closePointForm(), "Dit consumptiepunt"]
     ];
+  }
+
+  // Maakt een formulier leeg en zet klaar of het om toevoegen of wijzigen gaat. Bij wijzigen
+  // (`record`) onthoudt het formulier de id en een kopie van het gegeven (zie rememberEditing en
+  // closeStaleForms). Geeft het formulier terug.
+  prepareForm(formSelector, record = null) {
+    const form = this.view.$(formSelector);
+    form.reset();
+    this.view.clearFieldErrors(form);
+    if (record) {
+      form.dataset.editingId = record.id;
+      this.rememberEditing(formSelector, record);
+    } else {
+      delete form.dataset.editingId;
+    }
+    return form;
+  }
+
+  // Het begin van opslaan, voor alle vier de formulieren gelijk: de pagina wordt niet verstuurd,
+  // er moet een beheerder zijn ingelogd en het gegeven dat wordt gewijzigd moet nog bestaan (zie
+  // closeStaleForm). Geeft { form, editingId } terug, of null als er niets mag worden opgeslagen.
+  beginSave(event, formSelector) {
+    event.preventDefault();
+    if (!this.app.requireAdmin()) return null;
+
+    const [, , find, close, subject] = this.editForms().find(([selector]) => selector === formSelector);
+    const form = this.view.$(formSelector);
+    const editingId = form.dataset.editingId;
+    if (editingId && !find(editingId)) {
+      this.closeStaleForm(form, subject, close);
+      return null;
+    }
+    return { form, editingId };
   }
 
   // Sluit open wijzigformulieren waarvan het gegeven (medewerker, product, bedrijf of
@@ -228,11 +253,8 @@ export class FormController {
   // Opent een leeg formulier om een medewerker toe te voegen.
   openEmployeeForm() {
     if (!this.app.requireAdmin()) return;
-    const form = this.view.$("#employeeForm");
-    form.reset();
-    this.view.clearFieldErrors(form);
+    this.prepareForm("#employeeForm");
     this.view.populateEmployeeCompanySelects();
-    delete form.dataset.editingId;
 
     this.setSaveButtons("#employeeForm", "#employeeSaveContinueButton", true);
     this.view.$("#employeeFormTitle").textContent = "Medewerker toevoegen";
@@ -286,8 +308,9 @@ export class FormController {
   // Hetzelfde geldt als het gekozen bedrijf of consumptiepunt niet meer bestaat (zie
   // validateEmployeeAssignment).
   saveEmployee(event) {
-    event.preventDefault();
-    if (!this.app.requireAdmin()) return;
+    const editing = this.beginSave(event, "#employeeForm");
+    if (!editing) return;
+    const { form, editingId } = editing;
 
     const employeeData = {
       firstName: this.view.$("#newEmployeeFirstName").value.trim(),
@@ -300,13 +323,6 @@ export class FormController {
       // Het pasnummer wordt genormaliseerd opgeslagen ("04:a1:b2:c3" wordt "04A1B2C3"); leeg = geen pas.
       badgeId: BadgeReader.normalize(this.view.$("#newEmployeeBadgeId").value)
     };
-
-    const form = this.view.$("#employeeForm");
-    const editingId = form.dataset.editingId;
-    if (editingId && !this.model.findEmployee(editingId)) {
-      this.closeStaleForm(form, "Deze medewerker", () => this.closeEmployeeForm());
-      return;
-    }
     if (!this.validateRequiredFields(form)) return;
     if (!this.validateNumberFields(["#newEmployeePayrollCode", "#newEmployeePersonnelNumber", "#newEmployeeEmployerNumber"])) return;
 
@@ -418,10 +434,7 @@ export class FormController {
   // Opent een leeg formulier om een product toe te voegen.
   openProductForm() {
     if (!this.app.requireAdmin()) return;
-    const form = this.view.$("#productForm");
-    form.reset();
-    this.view.clearFieldErrors(form);
-    delete form.dataset.editingId;
+    this.prepareForm("#productForm");
 
     this.setSaveButtons("#productForm", "#consumptionSaveContinueButton", true);
     this.view.$("#productFormTitle").textContent = "Product toevoegen";
@@ -461,15 +474,9 @@ export class FormController {
   // Is het product dat gewijzigd wordt intussen verwijderd, dan wordt er niets opgeslagen
   // (anders zou het met dezelfde id opnieuw worden aangemaakt).
   saveProduct(event) {
-    event.preventDefault();
-    if (!this.app.requireAdmin()) return;
-
-    const form = this.view.$("#productForm");
-    const editingId = form.dataset.editingId;
-    if (editingId && !this.model.findProduct(editingId)) {
-      this.closeStaleForm(form, "Dit product", () => this.closeProductForm());
-      return;
-    }
+    const editing = this.beginSave(event, "#productForm");
+    if (!editing) return;
+    const { form, editingId } = editing;
 
     const productData = {
       id: editingId || createId(),
@@ -529,15 +536,7 @@ export class FormController {
   // Bij wijzigen wordt een kopie van het bedrijf onthouden (zie rememberEditing en closeStaleForms).
   openCompanyForm(company = null) {
     if (!this.app.requireAdmin()) return;
-    const form = this.view.$("#companyForm");
-    form.reset();
-    this.view.clearFieldErrors(form);
-    if (company) {
-      form.dataset.editingId = company.id;
-      this.rememberEditing("#companyForm", company);
-    } else {
-      delete form.dataset.editingId;
-    }
+    this.prepareForm("#companyForm", company);
 
     this.view.$("#companyFormTitle").textContent = company ? "Bedrijf wijzigen" : "Bedrijf toevoegen";
     this.view.$("#companyName").value = company?.name || "";
@@ -568,15 +567,9 @@ export class FormController {
   // Naam en werkgevernummer moeten uniek zijn; een dubbele waarde krijgt een foutmelding bij
   // het veld (showDuplicateNameError) en er wordt niets opgeslagen.
   saveCompany(event) {
-    event.preventDefault();
-    if (!this.app.requireAdmin()) return;
-
-    const form = this.view.$("#companyForm");
-    const editingId = form.dataset.editingId;
-    if (editingId && !this.model.findCompany(editingId)) {
-      this.closeStaleForm(form, "Dit bedrijf", () => this.closeCompanyForm());
-      return;
-    }
+    const editing = this.beginSave(event, "#companyForm");
+    if (!editing) return;
+    const { form, editingId } = editing;
 
     const name = this.view.$("#companyName").value.trim();
     const employerNumber = this.view.$("#companyEmployerNumber").value.trim();
@@ -621,15 +614,7 @@ export class FormController {
   // sluit als een ander tabblad die intussen wijzigt (zie rememberEditing en closeStaleForms).
   openPointForm(point = null, companyId = "") {
     if (!this.app.requireAdmin()) return;
-    const form = this.view.$("#pointForm");
-    form.reset();
-    this.view.clearFieldErrors(form);
-    if (point) {
-      form.dataset.editingId = point.id;
-      this.rememberEditing("#pointForm", point);
-    } else {
-      delete form.dataset.editingId;
-    }
+    this.prepareForm("#pointForm", point);
 
     this.view.$("#pointFormTitle").textContent = point ? "Consumptiepunt wijzigen" : "Consumptiepunt toevoegen";
     this.view.renderPointForm(point, companyId);
@@ -659,15 +644,9 @@ export class FormController {
   // Hetzelfde geldt als het gekozen bedrijf intussen in een ander tabblad is verwijderd: dan
   // krijgt het bedrijfsveld een foutmelding en wordt de keuzelijst opnieuw gevuld.
   savePoint(event) {
-    event.preventDefault();
-    if (!this.app.requireAdmin()) return;
-
-    const form = this.view.$("#pointForm");
-    const editingId = form.dataset.editingId;
-    if (editingId && !this.model.findPoint(editingId)) {
-      this.closeStaleForm(form, "Dit consumptiepunt", () => this.closePointForm());
-      return;
-    }
+    const editing = this.beginSave(event, "#pointForm");
+    if (!editing) return;
+    const { form, editingId } = editing;
 
     const checkedBoxes = form.querySelectorAll('input[name="offeredProduct"]:checked');
     const pointData = {

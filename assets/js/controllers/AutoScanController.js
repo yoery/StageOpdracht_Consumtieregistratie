@@ -1,5 +1,6 @@
 import { FACE_DEMO } from "../config.js";
 import { FaceIntent } from "../FaceIntent.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * AutoScanController — het automatisch scannen op het startscherm (demo gezichtsherkenning,
@@ -45,7 +46,7 @@ import { FaceIntent } from "../FaceIntent.js";
  *   - RegistrationView: setStartScreenCamera en setStartScreenState (het ovaal en de tekst eronder);
  *   - config.js: FACE_DEMO (enabled, scanMode en autoScan).
  */
-export class AutoScanController {
+export class AutoScanController extends ControllerPart {
   // De teksten onder het ovaal tijdens het scannen.
   static MESSAGES = {
     multiple: "Graag één persoon tegelijk",
@@ -57,7 +58,7 @@ export class AutoScanController {
   // `app` is de controller (RegistrationApp). `clock` levert de tijd en de timers (dezelfde klok als de
   // andere onderdelen, in de unit tests een nep-klok).
   constructor(app, clock) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.scanSession = 0;          // telt op bij iedere start en stop van de camera
     this.scanCamera = "off";       // "off", "starting" (camera start), "loading" (camera aan, model laadt) of "on"
@@ -71,18 +72,6 @@ export class AutoScanController {
     this.greetingFor = null;       // de medewerker die nu wordt begroet
     this.descriptorCount = 0;      // hoe vaak er kenmerken zijn berekend (voor de tests en het TO)
     this.intent = new FaceIntent(this.autoSettings);
-  }
-
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
   }
 
   // De instellingen van de demo (FACE_DEMO), aangevuld met de standaardwaarden uit config.js.

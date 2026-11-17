@@ -241,17 +241,7 @@ export class FridgeView {
     const select = this.$("#fridgePointSelect");
     if (!select || !this.$("#fridgeShelfFields")) return;
 
-    const selected = select.value;
-    select.innerHTML = this.model.sortedCompanies()
-      .filter(({ id }) => this.model.pointsForCompany(id).length)
-      .map((company) =>
-        `<optgroup label="${this.escape(company.name)}">${
-          this.model.pointsForCompany(company.id).map(({ id, name }) =>
-            `<option value="${this.escape(id)}">${this.escape(name)}</option>`
-          ).join("")
-        }</optgroup>`
-      ).join("");
-    if (this.model.findPoint(selected)) select.value = selected;
+    this.view.fillPointSelect(select);
 
     this.renderFridgeShelfFields(select.value);
     this.renderFridgeOpenings();
