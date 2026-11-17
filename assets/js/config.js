@@ -12,6 +12,8 @@
  *   - FaceRecognitionDemo en FaceController: FACE_DEMO, de instellingen van de demo;
  *   - BadgeReader: BADGE_READER, de instellingen voor herkennen met de pas (NFC-lezer);
  *   - AdminController: ADMIN_IDLE_LOGOUT_MS, na hoeveel tijd zonder invoer de beheerder wordt uitgelogd;
+ *   - EmployeeController en RegistrationModel: MAX_PER_PRODUCT, hoe vaak één product in één keer kan worden gekozen;
+ *   - DataStore: BACKUP_RETENTION_DAYS, hoe lang een reservekopie bewaard blijft;
  *   - EmployeeController: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS, na hoeveel tijd zonder
  *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt;
  *   - SmartFridge, FridgeController en RegistrationModel: SMART_FRIDGE, de instellingen van de
@@ -20,7 +22,8 @@
  *   - StandbyController: STANDBY, wanneer het startscherm (weer) verschijnt;
  *   - AutoScanController en FaceIntent: FACE_DEMO.scanMode en FACE_DEMO.autoScan, het automatisch
  *     scannen op het startscherm met de intentie-drempel;
- *   - DataStore en RegistrationModel: FACE_DEMO.validityDays (verlopen van een gezichtsinstelling).
+ *   - DataStore en RegistrationModel: FACE_DEMO.validityDays (verlopen van een gezichtsinstelling);
+ *   - FaceLiveness: FACE_DEMO.liveness, de stille controle op een levend gezicht.
  */
 
 // Naam waaronder alle gegevens in localStorage worden bewaard.
@@ -140,6 +143,31 @@ export const FACE_DEMO = {
     videoWidth: 320,
     videoHeight: 240
   },
+  // De stille controle op een levend gezicht (zie FaceLiveness, sinds versie 3.23). Een foto van een
+  // collega mag niet als die collega worden herkend. Tijdens het herkennen kijkt de demo, zonder opdracht
+  // aan de medewerker, of het gezicht knippert of licht vervormt (een foto beweegt altijd als één plat
+  // geheel). Pas dan telt de herkenning: bij het automatisch scannen, bij de scan na een tik, bij
+  // "Herken mij" en bij het instellen. Dit houdt een geprinte of stilstaande foto tegen, geen video.
+  //   - enabled: zet op false om de controle uit te zetten (niet aan te raden);
+  //   - windowMs: over zo veel milliseconden aan beelden wordt gekeken;
+  //   - maxMs: zo lang (ms) mag de controle duren. Daarna telt het als niet herkend;
+  //   - blinkRatio: een knipper telt als de ooghoogte onder dit deel van de gewone ooghoogte zakt (0.6);
+  //   - minDeformation: zo veel moet het gezicht afwijken van een plat vlak, als deel van de afstand
+  //     tussen de ogen (0.03 = 3 procent, ongeveer wat een hoofd geeft dat 7 graden draait). Te hoog en
+  //     echte mensen worden niet herkend, te laag en de ruis van de camera laat ook een foto door. Stel
+  //     dit af op de tablet met debug (zie TO bijlage B, proefplan);
+  //   - minFrames: in zo veel beelden moet die afwijking worden gezien;
+  //   - debug: zet op true om per beeld de gemeten waarden in de console te zien (voor het afstellen
+  //     op de tablet, zie TO bijlage B).
+  liveness: {
+    enabled: true,
+    windowMs: 3000,
+    maxMs: 5000,
+    blinkRatio: 0.6,
+    minDeformation: 0.03,
+    minFrames: 2,
+    debug: false
+  },
   // Na zo veel dagen verloopt een gezichtsinstelling: de kenmerken worden gewist en bij de volgende
   // passcan komt de vraag "Je gezichtsherkenning is verlopen. Opnieuw instellen?" (mensen veranderen).
   validityDays: 365,
@@ -208,6 +236,19 @@ export const EMPLOYEE_IDLE_CLOSE_MS = 75 * 1000;
 // "Venster sluit zo. Tik om door te gaan." Iedere tik of toets begint de tijd opnieuw.
 // In milliseconden: de laatste 10 seconden.
 export const EMPLOYEE_IDLE_WARNING_MS = 10 * 1000;
+
+// Hoe vaak een medewerker één product in het productvenster in één keer kan kiezen (sinds versie 3.26,
+// pentest PT-03). Zonder grens kon iemand met een ingedrukte Enter honderden producten op naam van een
+// collega zetten en de opslag laten vollopen. Wie meer nodig heeft, registreert twee keer. De slimme
+// koelkast heeft een eigen grens (wat er op het schap ligt) en valt hier niet onder.
+export const MAX_PER_PRODUCT = 10;
+
+// Hoe lang een reservekopie van beschadigde gegevens bewaard blijft (sinds versie 3.26, pentest PT-02).
+// Daarna wist DataStore de kopie, bij het laden of bij de dagwissel. Een leesbare reservekopie bevat geen
+// gezichtskenmerken. Onleesbare tekst wordt letterlijk bewaard (ook als er nog kenmerken in staan) en verdwijnt
+// net als iedere kopie na deze termijn.
+// In dagen: 30.
+export const BACKUP_RETENTION_DAYS = 30;
 
 // Slimme koelkast (demo), zie SmartFridge.js en TO bijlage B (optie C: een slot en weegschalen per
 // schap, met de pas als sleutel). De demo simuleert het slot en de weegschalen in de browser. In

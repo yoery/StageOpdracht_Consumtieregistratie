@@ -1,4 +1,5 @@
 import { cssAttributeValue } from "../RegistrationView.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * CorrectionController — correcties door de beheerder ("Medewerker corrigeren" in het tabblad
@@ -18,21 +19,11 @@ import { cssAttributeValue } from "../RegistrationView.js";
  *   - RegistrationView: de correctielijst en de lijst in het venster "Registratie verwijderen";
  *   - ModalManager (via RegistrationApp): opent en sluit dat venster.
  */
-export class CorrectionController {
+export class CorrectionController extends ControllerPart {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
-    this.app = app;
+    super(app);
     this.removalTarget = null; // { employeeId, productId } zolang het venster "Registratie verwijderen" open is
-  }
-
-  // Onderdelen van de app die deze class gebruikt (model, view). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
   }
 
   // Tekent de correctielijst "Medewerker corrigeren" opnieuw. De lijst wordt helemaal opnieuw

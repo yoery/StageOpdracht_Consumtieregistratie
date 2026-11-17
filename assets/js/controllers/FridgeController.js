@@ -1,6 +1,7 @@
 import { SMART_FRIDGE } from "../config.js";
 import { cssAttributeValue } from "../RegistrationView.js";
 import { SmartFridge } from "../fridge/SmartFridge.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * FridgeController — de slimme koelkast (demo): het koelkastvenster voor de medewerker en het
@@ -53,7 +54,7 @@ import { SmartFridge } from "../fridge/SmartFridge.js";
  *   - StandbyController (via RegistrationApp): na het sluiten van het venster komt het startscherm terug;
  *   - config.js: SMART_FRIDGE (de tijden en grenzen).
  */
-export class FridgeController {
+export class FridgeController extends ControllerPart {
   // Zo vaak (ms) kijkt de app of de deur te lang open staat of het venster te lang niet is gebruikt.
   static TICK_MS = 1000;
 
@@ -86,7 +87,7 @@ export class FridgeController {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort. `clock` levert de tijd en de
   // timer (dezelfde klok als AdminController). `settings` zijn de instellingen uit config.js.
   constructor(app, clock = FridgeController.realClock(), settings = SMART_FRIDGE) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.settings = settings;
     this.fridgePhase = "closed";      // "closed", "waiting", "open" of "summary" (zie hierboven)
@@ -118,23 +119,6 @@ export class FridgeController {
     if (!event || !(event.detail > 0)) return false;
     if (event.detail > 1) return true;
     return now - this.fridgePhaseChangedAt < FridgeController.GHOST_CLICK_MS;
-  }
-
-  // De echte klok van de browser (zoals AdminController).
-  static realClock() {
-    return {
-      now: () => Date.now(),
-      setInterval: (action, delay) => setInterval(action, delay),
-      clearInterval: (timer) => clearInterval(timer)
-    };
-  }
-
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
   }
 
   get smartFridge() {
@@ -527,7 +511,7 @@ export class FridgeController {
       .filter(({ flag }) => flag)
       .map((shelf) => SmartFridge.issueText(shelf, shelf.productId ? this.model.productName(shelf.productId) : null));
     if (result.longOpen) issues.push("deur stond lang open");
-    if (result.otherBadge) issues.push("pas van een collega gescand terwijl de deur open stond");
+    if (result.otherBadge) issues.push("pas van een collega gescand terwijl de deur openstond");
 
     const what = taken ? `${taken} geregistreerd` : "niets gepakt";
     const extra = issues.length ? `. Controle nodig: ${issues.join(", ")}` : "";

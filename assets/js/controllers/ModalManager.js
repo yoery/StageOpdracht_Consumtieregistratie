@@ -1,4 +1,5 @@
 import { cssAttributeValue } from "../RegistrationView.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * ModalManager — opent en sluit de vensters (modals) en regelt de focus daarbij.
@@ -29,6 +30,7 @@ const FOCUS_TARGETS = {
   editEmployee: "#addEmployeeButton",
   toggleEmployee: "#addEmployeeButton",
   removeEmployee: "#addEmployeeButton",
+  adminFace: "#addEmployeeButton",
   editProduct: "#addProductButton",
   removeProduct: "#addProductButton",
   addPoint: "#addCompanyButton",
@@ -43,18 +45,12 @@ const FOCUS_TARGETS = {
   stockDelivery: "#stockPointSelect"
 };
 
-export class ModalManager {
+export class ModalManager extends ControllerPart {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
-    this.app = app;
+    super(app);
     this.modalCloseActions = new Map(); // venster -> sluitactie (voor de Escape-toets)
     this.modalOpeners = new Map();      // venster -> element dat de focus had toen het venster openging
-  }
-
-  // Onderdelen van de app die deze class gebruikt (view). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get view() {
-    return this.app.view;
   }
 
   // Toont of verbergt een element op de pagina.

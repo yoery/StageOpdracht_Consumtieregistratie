@@ -13,3 +13,9 @@ desktop.ini
 
 # Schermafdrukken van mislukte browsertests (tests/e2e/browser.js)
 test-results/
+
+# Geheimen van een latere backend (database, AFAS-token, login). Alleen op de server, nooit in Git.
+# Een voorbeeld zonder echte waarden mag wel: .env.example
+.env
+.env.*
+!.env.example

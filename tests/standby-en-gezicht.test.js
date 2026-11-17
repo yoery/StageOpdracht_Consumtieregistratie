@@ -243,7 +243,7 @@ test("startscherm (tap): de tekst zegt vooraf dat de camera na de tik hooguit 10
   const before = app.startScreenTexts();
   assert.equal(before.mode, "badge");
   assert.equal(before.status, "Houd je pas tegen de lezer");
-  assert.equal(before.hint, "Gezichtsherkenning stel je in na een passcan of in je productvenster.");
+  assert.equal(before.hint, "Gezichtsherkenning stel je in na een passcan of via de beheerder.");
 
   enrollInModel(app, model);
   const after = app.startScreenTexts();
@@ -620,7 +620,7 @@ test("verlopen: de standby-timer wist verlopen instellingen eens per minuut", ()
 // Opslag: bewaren na herladen, controle bij het laden, migratie en wissen
 // ------------------------------------------------------------------
 
-test("opslag: de kenmerken blijven na herladen bewaard, als gewone lijst getallen met enrolledAt", () => {
+test("opslag: de kenmerken blijven na herladen bewaard, als gewone lijst getallen met enrolledAt en consentAt", () => {
   fakeLocalStorage();
   const model = new RegistrationModel(new DataStore("test"));
   const employeeId = model.employees[0].id;
@@ -633,7 +633,8 @@ test("opslag: de kenmerken blijven na herladen bewaard, als gewone lijst getalle
   assert.equal(Array.isArray(entry.descriptor), true);
   assert.deepEqual(entry.descriptor, face(0.25));
   assert.match(entry.enrolledAt, /^\d{4}-\d{2}-\d{2}T/);
-  assert.deepEqual(Object.keys(entry).sort(), ["descriptor", "employeeId", "enrolledAt", "id"]);
+  assert.deepEqual(Object.keys(entry).sort(), ["consentAt", "descriptor", "employeeId", "enrolledAt", "id"]);
+  assert.equal(entry.consentAt, entry.enrolledAt, "toestemming en instellen op hetzelfde moment (3.22)");
   assert.equal(reloaded.loadProblem, null);
 });
 
@@ -692,7 +693,7 @@ test("opslag: gegevens van vóór 3.17 krijgen lege lijsten (migratie)", () => {
 test("wissen: Uitzetten wist de kenmerken uit het model met de logboekregel 'Gezichtsherkenning uitgezet'", () => {
   const { app, model, demo } = createApp();
   enrollInModel(app, model);
-  app.openEmployeeProducts("employee-1");
+  app.openEmployeeProducts("employee-1", { recognizedBy: "face" }); // Uitzetten na herkenning met de camera (3.22)
 
   app.forgetFace();
 

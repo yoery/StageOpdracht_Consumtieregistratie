@@ -1,4 +1,5 @@
 import { FACE_DEMO, RECOGNITION_TARGET } from "../config.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * RecognitionController — wat er gebeurt nadat een medewerker is herkend, met de pas of met de
@@ -38,37 +39,25 @@ import { FACE_DEMO, RECOGNITION_TARGET } from "../config.js";
  *     opent (wakeFromStandby) en komt terug als de vraag vanzelf sluit (returnToStartScreen);
  *   - config.js: RECOGNITION_TARGET en FACE_DEMO (offerAfterBadge, offerIdleCloseMs).
  */
-export class RecognitionController {
+export class RecognitionController extends ControllerPart {
   // De titels van de vraag na een passcan en de uitleg in één zin.
   static OFFER_TITLES = {
     new: "Gezichtsherkenning nog niet ingesteld. Wil je dit?",
     expired: "Je gezichtsherkenning is verlopen. Opnieuw instellen?"
   };
 
-  static OFFER_HELP = "Het is vrijwillig, alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist, en je pas blijft altijd werken.";
+  static OFFER_HELP = "Het is vrijwillig. Alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist. Je pas blijft altijd werken.";
 
   // `app` is de controller (RegistrationApp). `clock` levert de tijd (dezelfde klok als de andere
   // onderdelen). `target` is RECOGNITION_TARGET uit config.js.
   constructor(app, clock, target = RECOGNITION_TARGET) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.recognitionTargetSetting = target;
     this.offerEmployeeId = null;   // voor wie de vraag nu open staat (null = geen vraag open)
     this.offerHow = null;          // hoe die medewerker is herkend ("badge")
     this.offerKind = null;         // "new" of "expired"
     this.lastOfferActivity = null; // tijdstip (ms) van de laatste invoer in het venster van de vraag
-  }
-
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
   }
 
   // De instellingen van de demo gezichtsherkenning (FACE_DEMO): dezelfde als die van FaceRecognitionDemo,
@@ -171,7 +160,9 @@ export class RecognitionController {
   acceptFaceOffer() {
     const flow = this.closeFaceOffer();
     if (!flow) return;
-    this.app.startFaceEnrollmentFor(flow.employeeId, () => this.continueAfterRecognition(flow.employeeId, flow.how));
+    // `flow.how` is "badge": de vraag komt alleen na een passcan, en zelf instellen kan alleen na de pas.
+    const continuation = () => this.continueAfterRecognition(flow.employeeId, flow.how);
+    if (this.app.startFaceEnrollmentFor(flow.employeeId, continuation, flow.how) === false) continuation();
   }
 
   // "Nee": onthouden (opgeslagen, zonder logboekregel), daarna gaat de flow verder. Lukt opslaan niet,

@@ -360,7 +360,9 @@ test("punt 6: gegevens zonder dubbele id's geven geen loadProblem", () => {
   assert.equal(localStorage.getItem("test-backup"), null);
 });
 
-test("punt 6: een registratie van meer dan 24 uur na het laden wordt overgeslagen, binnen 24 uur niet", () => {
+// Sinds versie 3.26 (pentest PT-04 en RB-02) worden registraties in de toekomst niet meer overgeslagen, maar
+// geladen en geteld (RegistrationModel.futureItemCount), met een melding voor de beheerder.
+test("punt 6: een registratie meer dan 24 uur na het laden wordt sinds 3.26 geladen en geteld", () => {
   const data = storedData();
   data.registrations.push(
     { id: "r2", employeeId: "e1", productId: "blikje", createdAt: "2026-10-07T12:00:00.000Z" }, // precies 24 uur later
@@ -371,15 +373,15 @@ test("punt 6: een registratie van meer dan 24 uur na het laden wordt overgeslage
 
   const loaded = store.load(LOAD_TIME);
 
-  assert.deepEqual(loaded.registrations.map(({ id }) => id), ["r1", "r2"]);
-  assert.equal(store.loadProblem, "skipped");
+  assert.deepEqual(loaded.registrations.map(({ id }) => id), ["r1", "r2", "r3", "r4"]);
+  assert.equal(store.loadProblem, null);
 });
 
-test("punt 6: isValidRegistration vergelijkt met het moment van laden", () => {
+test("punt 6: isValidRegistration keurt sinds 3.26 een tijdstip in de toekomst niet meer af", () => {
   const store = createDataStore();
   const future = { id: "r9", employeeId: "e1", productId: "blikje", createdAt: "2026-10-08T12:00:00.000Z" };
 
-  assert.equal(store.isValidRegistration(future, LOAD_TIME), false);
+  assert.equal(store.isValidRegistration(future, LOAD_TIME), true);
   assert.equal(store.isValidRegistration(future, new Date("2026-10-07T12:00:00.000Z")), true);
 });
 

@@ -1,0 +1,232 @@
+{
+  "$schema": "../../../../Downloads/uitleg--video-skill-main/uitleg--video-skill/template/video.schema.json",
+  "slug": "consumptieregistratie",
+  "app": {
+    "name": "TVB Consumptieregistratie",
+    "theme": {
+      "primary": "#38B5A8",
+      "primaryDark": "#2B9086",
+      "ink": "#222D4F",
+      "inkDeep": "#1A2645",
+      "line": "#B8C4D2",
+      "canvas": "#E4E7EA"
+    }
+  },
+
+  "scenes": [
+    {
+      "title": ["JEZELF", "AANMELDEN"],
+      "duration": 13,
+      "still": 3.4,
+      "about": "Startscherm van de tablet: ovaal met 'Kijk in het ovaal' en 'Of houd je pas tegen de lezer'. Een pas schuift naar de lezer, het ovaal wordt groen en de app groet: 'Goedemiddag Fleur.' Daarna staat er een getekend gezicht in het ovaal: 'Even stil blijven…' en weer de begroeting.",
+      "steps": [
+        { "at": 0.6, "text": "Houd je pas tegen de lezer." },
+        { "at": 5.5, "text": "Of kijk in de camera. De app herkent je." }
+      ],
+      "screen": "start",
+      "timeline": [
+        { "at": 2.5, "until": 4.9, "show": "start-pas" },
+        { "at": 6.4, "until": 8.0, "show": "start-gezicht" },
+        { "at": 8.0, "show": "start-herkend" },
+        { "animate": "pas", "keys": [[1.1, { "o": 0, "x": 160, "y": 80 }], [2.1, { "o": 1, "x": -40, "y": -20 }, "out"], [2.7, { "o": 1, "x": -40, "y": -20 }], [3.1, { "o": 0, "x": 60, "y": 40 }]] }
+      ]
+    },
+    {
+      "title": ["CONSUMPTIE", "REGISTREREN"],
+      "duration": 13,
+      "still": 5.0,
+      "about": "Productvenster van Fleur Kok: vijf producten met een min- en plusknop. Twee keer plus bij Blikje, één keer bij Ei; de knop wordt 'Registreren (3)'. Na de tik verschijnt een groene bevestiging.",
+      "steps": [
+        { "at": 0.6, "text": "Tik op + bij wat je pakt." },
+        { "at": 5.6, "text": "Tik op Registreren. Klaar." }
+      ],
+      "screen": "producten",
+      "timeline": [
+        { "at": 1.7, "set": "blikje-count", "text": "1" },
+        { "at": 2.4, "set": "blikje-count", "text": "2" },
+        { "at": 3.6, "set": "ei-count", "text": "1" },
+        { "at": 1.7, "show": "blikje-on" },
+        { "at": 3.6, "show": "ei-on" },
+        { "at": 1.7, "set": "registreer", "text": "Registreren (1)" },
+        { "at": 2.4, "set": "registreer", "text": "Registreren (2)" },
+        { "at": 3.6, "set": "registreer", "text": "Registreren (3)" },
+        { "at": 0, "until": 1.7, "disable": "registreer" },
+        { "at": 7.3, "hide": "kiezen" },
+        { "at": 7.3, "show": "klaar" }
+      ],
+      "cursor": {
+        "path": [[0.6, 620, 560], [1.4, "blikje-plus"], [2.6, "blikje-plus"], [3.4, "ei-plus"], [4.2, "ei-plus"], [6.1, 760, 470], [6.8, "registreer"], [7.6, "registreer"]],
+        "clicks": [1.6, 2.3, 3.5, 7.0],
+        "visible": [[0.6, 4.4], [6.0, 7.8]]
+      }
+    },
+    {
+      "title": ["SLIMME", "KOELKAST"],
+      "duration": 13,
+      "still": 7.6,
+      "about": "Koelkastscherm: eerst 'Koelkast openen' met een dichte koelkast. De pas schuift naar de lezer, het slot gaat open: 'De deur is open'. Twee blikjes verdwijnen van schap 1 en 'In je hand' telt mee. Na 'Deur dicht' een groene bevestiging dat het is geregistreerd.",
+      "steps": [
+        { "at": 0.6, "text": "Houd je pas tegen de koelkast. Hij gaat open." },
+        { "at": 5.4, "text": "Wat je pakt, telt de koelkast zelf." }
+      ],
+      "screen": "koelkast",
+      "timeline": [
+        { "at": 2.5, "hide": ["kop-dicht", "kk-dicht"] },
+        { "at": 2.5, "show": ["kop-open", "hand"] },
+        { "at": 2.5, "until": 6.2, "show": "kk-open" },
+        { "at": 6.2, "until": 7.0, "show": "kk-1" },
+        { "at": 7.0, "show": "kk-2" },
+        { "at": 6.2, "set": "in-hand", "text": "1× Blikje" },
+        { "at": 7.0, "set": "in-hand", "text": "2× Blikje" },
+        { "at": 6.2, "until": 7.6, "flash": "hand" },
+        { "at": 0, "until": 2.5, "disable": "deur" },
+        { "at": 9.6, "hide": "venster" },
+        { "at": 9.6, "show": "geregistreerd" },
+        { "animate": "pas", "keys": [[1.1, { "o": 0, "x": 160, "y": 80 }], [2.1, { "o": 1, "x": -40, "y": -20 }, "out"], [2.6, { "o": 1, "x": -40, "y": -20 }], [3.0, { "o": 0, "x": 60, "y": 40 }]] }
+      ],
+      "cursor": {
+        "path": [[7.9, 760, 420], [8.9, "deur"], [9.9, "deur"]],
+        "clicks": [9.3],
+        "visible": [[7.9, 10.2]]
+      }
+    },
+    {
+      "title": ["OVERZICHT", "VOOR BEHEER"],
+      "duration": 13,
+      "still": 9.0,
+      "about": "Beheerscherm, tabblad Registraties: tabel met medewerker, product, aantal en datum. Maand 'Oktober 2026' kiezen, de rijen uit september verdwijnen. Daarna 'CSV exporteren' en de melding van de browser dat het bestand klaarstaat.",
+      "steps": [
+        { "at": 0.6, "text": "Beheer ziet alles per medewerker en maand." },
+        { "at": 5.6, "text": "Zet het overzicht klaar voor de loonadministratie." }
+      ],
+      "screen": "beheer",
+      "timeline": [
+        { "at": 1.9, "until": 3.0, "show": "maand-menu" },
+        { "at": 3.0, "set": "maand-value", "text": "Oktober 2026" },
+        { "at": 3.3, "hide": ["rij-6", "rij-7"] },
+        { "at": 7.3, "set": "export-label", "text": "Exporteren…" },
+        { "at": 7.8, "set": "export-label", "text": "CSV exporteren" },
+        { "animate": "download", "keys": [[7.8, { "o": 0, "y": -10 }], [8.1, { "o": 1, "y": 0 }, "out"], [11.6, { "o": 1, "y": 0 }], [12.0, { "o": 0, "y": 0 }]] }
+      ],
+      "cursor": {
+        "path": [[0.8, 700, 520], [1.6, "maand"], [2.1, "maand"], [2.6, "maand-opt-1"], [3.2, "maand-opt-1"], [4.0, 700, 430], [6.0, 700, 430], [6.9, "export"], [8.2, "export"]],
+        "clicks": [1.8, 2.9, 7.1],
+        "visible": [[0.8, 4.2], [6.0, 8.4]]
+      }
+    }
+  ],
+
+  "outro": {
+    "duration": 7,
+    "still": 4.5,
+    "kicker": "CONSUMPTIEREGISTRATIE",
+    "title": ["SNEL EN", "ZONDER PAPIER"],
+    "lines": ["Voor iedereen die bij TVB iets pakt uit de koelkast.", "En voor beheer: alles staat klaar voor de lonen."]
+  },
+
+  "screens": {
+    "start": {
+      "path": "/",
+      "body": [
+        { "component": "Illustration", "fill": true, "src": "assets/start-wacht.svg" },
+        { "component": "Illustration", "fill": true, "id": "start-pas", "src": "assets/start-pas.svg" },
+        { "component": "Illustration", "fill": true, "id": "start-gezicht", "src": "assets/start-gezicht.svg" },
+        { "component": "Illustration", "fill": true, "id": "start-herkend", "src": "assets/start-herkend.svg" }
+      ],
+      "overlays": [
+        { "component": "Illustration", "fill": true, "id": "pas", "src": "assets/pas.svg" }
+      ]
+    },
+    "producten": {
+      "path": "/",
+      "body": {
+        "component": "TopBar", "id": "screen", "brand": "Consumptieregistratie", "crumb": "Product kiezen",
+        "children": [
+          {
+            "component": "Stack", "id": "kiezen", "gap": "sm",
+            "children": [
+              { "component": "PageHeader", "title": "Product kiezen voor Fleur Kok", "text": "Tik op + bij wat je pakt. Tik daarna op Registreren." },
+              {
+                "component": "CounterList",
+                "items": [
+                  { "id": "blikje", "label": "Blikje", "sub": "€ 0,70" },
+                  { "id": "brood", "label": "Sneetje brood", "sub": "€ 0,15" },
+                  { "id": "melk", "label": "Glas melk", "sub": "€ 0,25" },
+                  { "id": "ei", "label": "Ei", "sub": "€ 0,45" },
+                  { "id": "yoghurt", "label": "Yoghurt", "sub": "€ 0,55" }
+                ]
+              },
+              { "component": "Button", "id": "registreer", "label": "Registreren" }
+            ]
+          },
+          { "component": "Success", "id": "klaar", "hidden": true, "title": "Geregistreerd", "text": "2× Blikje en 1× Ei staan op naam van Fleur Kok." }
+        ]
+      }
+    },
+    "koelkast": {
+      "path": "/",
+      "body": {
+        "component": "TopBar", "id": "screen", "brand": "Consumptieregistratie", "crumb": "Slimme koelkast",
+        "children": [
+          {
+            "component": "Stack", "id": "venster", "gap": "sm",
+            "children": [
+              { "component": "PageHeader", "id": "kop-dicht", "title": "Koelkast openen", "text": "Houd je pas tegen de lezer van de koelkast." },
+              { "component": "PageHeader", "id": "kop-open", "hidden": true, "title": "De deur is open", "text": "Goedemiddag Fleur. Pak wat je wilt en sluit de deur." },
+              {
+                "component": "Stack", "gap": "xs",
+                "children": [
+                  { "component": "Illustration", "id": "kk-dicht", "height": 290, "src": "assets/koelkast-dicht.svg" },
+                  { "component": "Illustration", "id": "kk-open", "height": 290, "src": "assets/koelkast-open.svg" },
+                  { "component": "Illustration", "id": "kk-1", "height": 290, "src": "assets/koelkast-1.svg" },
+                  { "component": "Illustration", "id": "kk-2", "height": 290, "src": "assets/koelkast-2.svg" }
+                ]
+              },
+              { "component": "StatRow", "id": "hand", "hidden": true, "items": [{ "label": "In je hand", "value": "Nog niets", "id": "in-hand" }] },
+              { "component": "Button", "id": "deur", "label": "Deur dicht" }
+            ]
+          },
+          { "component": "Success", "id": "geregistreerd", "hidden": true, "title": "Dit is geregistreerd", "text": "Je hebt gepakt: 2× Blikje. Dit staat op naam van Fleur Kok." }
+        ]
+      },
+      "overlays": [
+        { "component": "Illustration", "fill": true, "id": "pas", "src": "assets/pas.svg" }
+      ]
+    },
+    "beheer": {
+      "path": "/beheer",
+      "body": {
+        "component": "TopBar", "id": "screen", "brand": "Consumptieregistratie", "crumb": "Beheer",
+        "tabs": [
+          { "label": "Registraties", "active": true }, { "label": "Medewerkers" }, { "label": "Producten" },
+          { "label": "Bedrijven" }, { "label": "Voorraad" }, { "label": "Koelkast" }, { "label": "Logboek" }
+        ],
+        "children": [
+          {
+            "component": "Stack", "gap": "sm",
+            "children": [
+              { "component": "PageHeader", "title": "Overzicht", "actions": [{ "label": "CSV exporteren", "icon": "download", "variant": "outline", "id": "export" }] },
+              { "component": "Dropdown", "id": "maand", "label": "Maand", "labelWidth": 60, "value": "Alle maanden", "options": ["Alle maanden", "Oktober 2026", "September 2026"], "hover": 1 },
+              {
+                "component": "Table",
+                "columns": [{ "label": "Medewerker" }, { "label": "Product" }, { "label": "Aantal", "kind": "dim" }, { "label": "Datum & tijd", "kind": "muted" }],
+                "rows": [
+                  { "id": "rij-1", "cells": ["Fleur Kok", "Blikje", "2", "30-10-2026 12:41"] },
+                  { "id": "rij-2", "cells": ["Luuk de Boer", "Sneetje brood", "3", "30-10-2026 12:15"] },
+                  { "id": "rij-3", "cells": ["Anouk Smit", "Yoghurt", "1", "29-10-2026 10:02"] },
+                  { "id": "rij-4", "cells": ["Lisa Visser", "Glas melk", "1", "28-10-2026 12:30"] },
+                  { "id": "rij-5", "cells": ["Iris Mulder", "Ei", "2", "27-10-2026 08:55"] },
+                  { "id": "rij-6", "cells": ["Fleur Kok", "Blikje", "1", "30-09-2026 15:20"] },
+                  { "id": "rij-7", "cells": ["Eva Bos", "Sneetje brood", "2", "29-09-2026 12:05"] }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "overlays": [
+        { "component": "Download", "id": "download", "file": "blikjesregistratie-loonmaand-2026-10.csv", "note": "Download voltooid · 3 kB" }
+      ]
+    }
+  }
+}

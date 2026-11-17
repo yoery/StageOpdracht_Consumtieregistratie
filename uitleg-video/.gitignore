@@ -1,0 +1,5 @@
+# Renders van template/render.mjs; video.json en assets/ horen wel in git.
+*.mp4
+/*.png
+video.html
+stills/

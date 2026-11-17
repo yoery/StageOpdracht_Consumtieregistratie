@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="940" viewBox="0 0 1500 940" role="img" aria-labelledby="title desc">
-  <title id="title">Contextdiagram Blikjesregistratie TVB</title>
+  <title id="title">Contextdiagram Consumptieregistratie TVB</title>
   <desc id="desc">Medewerker en beheerder gebruiken de webapplicatie op een tablet of pc. De demo bewaart gegevens in localStorage, de camera en de pasjeslezer zijn optioneel en de CSV gaat naar de loonadministratie. Later vervangen een webserver en een gedeelde SQL-database de localStorage, en haalt de webserver de medewerkergegevens uit AFAS Profit.</desc>
   <defs>
     <style>
@@ -20,7 +20,7 @@
     </marker>
   </defs>
   <rect width="1500" height="940" fill="#ffffff"/>
-<text x="40" y="50" font-size="28" class="kop">Contextdiagram – Blikjesregistratie TVB</text>
+<text x="40" y="50" font-size="28" class="kop">Contextdiagram – Consumptieregistratie TVB</text>
 <text x="40" y="78" font-size="15" class="sub">Het systeem in zijn omgeving: wie en wat er gegevens mee uitwisselt</text>
 <!-- Apparaat met webbrowser -->
 <rect x="470" y="110" width="620" height="540" rx="18" fill="#f8fbfa" stroke="#159a72" stroke-width="1.6" stroke-dasharray="8 6" class="box"/>
@@ -28,7 +28,7 @@
 <text x="490" y="160" font-size="13" class="sub">(bij het consumptiepunt of op kantoor)</text>
 <!-- Het systeem -->
 <rect x="560" y="185" width="440" height="240" rx="16" fill="#e8f5ee" stroke="#159a72" stroke-width="2.2" class="box"/>
-<text x="780" y="245" text-anchor="middle" font-size="26" class="kop">Blikjesregistratie TVB</text>
+<text x="780" y="245" text-anchor="middle" font-size="26" class="kop">Consumptieregistratie TVB</text>
 <text x="780" y="282" text-anchor="middle" font-size="15">webapplicatie: HTML, CSS en JavaScript</text>
 <text x="780" y="306" text-anchor="middle" font-size="15">medewerkersscherm en beheerscherm</text>
 <text x="780" y="330" text-anchor="middle" font-size="15">draait volledig in de browser</text>

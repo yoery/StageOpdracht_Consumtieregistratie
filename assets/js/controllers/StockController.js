@@ -1,4 +1,5 @@
 import { cssAttributeValue } from "../RegistrationView.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 // Hoogste aantal dat de beheerder bij voorraad, minimum of levering mag invullen. Zo komt een
 // tikfout als "240000" in plaats van "24" niet ongemerkt in de voorraad.
@@ -21,10 +22,10 @@ const MAX_STOCK_AMOUNT = 100000;
  *   - RegistrationModel: stockEntry, changeStock, setStock en setMinimum;
  *   - RegistrationView: renderStock, renderStockAlerts en updateStockStatus.
  */
-export class StockController {
+export class StockController extends ControllerPart {
   // `app` is de controller (RegistrationApp) waar deze class bij hoort.
   constructor(app) {
-    this.app = app;
+    super(app);
     this.lastDelivery = null; // laatst geboekte levering: { productId, time } (zie bookDelivery)
   }
 
@@ -36,16 +37,6 @@ export class StockController {
     const difference = counted - expected;
     const sign = difference > 0 ? "+" : "";
     return `verwacht ${expected}, geteld ${counted}, verschil ${sign}${difference}`;
-  }
-
-  // Onderdelen van de app die deze class gebruikt (model, view). Die komen steeds
-  // van RegistrationApp, zodat er maar één verwijzing naar ieder onderdeel bestaat.
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
   }
 
   // Opent de voorraad van een consumptiepunt (klik op een punt in de bijbestellijst).

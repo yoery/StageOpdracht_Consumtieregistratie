@@ -4,9 +4,11 @@ import {
   DEFAULT_PRODUCTS,
   DEFAULT_COMPANIES,
   SMART_FRIDGE,
-  FACE_DEMO
+  FACE_DEMO,
+  MAX_PER_PRODUCT
 } from "./config.js";
 import { createId } from "./ids.js";
+import { MAX_FUTURE_MS } from "./DataStore.js";
 
 // Voorraadstatus van één product op een consumptiepunt, met de tekst die op het scherm staat.
 // "Leeg" (eerder "Op"): "Op" leek te veel op "Op voorraad" en werd daardoor verkeerd gelezen.
@@ -244,7 +246,8 @@ export class RegistrationModel {
   }
 
   // Demo gezichtsherkenning: de opgeslagen gezichtsinstellingen, per medewerker
-  // { id, employeeId, descriptor (128 getallen), enrolledAt }. Leeg bij gegevens van vóór versie 3.17.
+  // { id, employeeId, descriptor (128 getallen), enrolledAt, consentAt }. Leeg bij gegevens van vóór
+  // versie 3.17. `consentAt` (het moment van toestemming) bestaat sinds versie 3.22.
   get faceEnrollments() {
     return this.state.faceEnrollments ?? [];
   }
@@ -278,6 +281,7 @@ export class RegistrationModel {
   //   - `source: "fridge"` en `openingId` betekenen dat de registratie automatisch is gemaakt door
   //     de slimme koelkast (demo), bij de opening met die id (zie addFridgeOpening). Zo'n registratie
   //     telt verder mee zoals iedere andere (totalen, export, voorraad).
+  // Een keuze uit het productvenster gaat via addSelection (met een grens per product).
   addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date(), source = null, openingId = null } = {}) {
     const employee = this.findEmployee(employeeId);
     const point = this.findPoint(employee?.pointId);
@@ -426,6 +430,37 @@ export class RegistrationModel {
     return total;
   }
 
+  // Slaat een keuze uit het productvenster op, bijvoorbeeld { blikje: 2, ei: 1 }: per gekozen stuk één
+  // registratie (addRegistration). Sinds versie 3.26 (pentest PT-03) controleert het model de hele keuze:
+  // ieder aantal is een heel getal van 1 tot en met `max` (MAX_PER_PRODUCT, 10), het product bestaat en er
+  // is minstens één product gekozen. Klopt dat niet, dan wordt er niets opgeslagen en geeft de methode false
+  // terug. Zo zet niemand met een vastgehouden toets honderden producten op naam van een collega.
+  // De slimme koelkast gebruikt deze methode niet (die heeft een eigen grens, zie addFridgeOpening).
+  addSelection(employeeId, selection, max = MAX_PER_PRODUCT) {
+    if (!this.findEmployee(employeeId) || !selection || typeof selection !== "object") return false;
+    const entries = Object.entries(selection).filter(([, amount]) => amount !== 0);
+    const valid = entries.length > 0 && entries.every(([productId, amount]) =>
+      Number.isInteger(amount) && amount >= 1 && amount <= max && Boolean(this.findProduct(productId)));
+    if (!valid) return false;
+
+    for (const [productId, amount] of entries) {
+      for (let count = 0; count < amount; count += 1) this.addRegistration(employeeId, productId);
+    }
+    return true;
+  }
+
+  // Hoeveel registraties, koelkastopeningen en logboekregels hebben een tijdstip meer dan een dag na `now`
+  // (MAX_FUTURE_MS)? Sinds versie 3.26 (pentest PT-04 en RB-02) worden die bij het laden niet meer
+  // overgeslagen. Zo'n tijdstip komt bijna altijd door een klok die voorliep of achterloopt. De beheerder
+  // krijgt dan een melding (AdminController.futureTimesMessage) en er komt één regel in het logboek.
+  futureItemCount(now = new Date()) {
+    const latest = now.getTime() + MAX_FUTURE_MS;
+    const later = (value) => Date.parse(value) > latest;
+    return this.registrations.filter(({ createdAt }) => later(createdAt)).length +
+      this.fridgeOpenings.filter(({ closedAt }) => later(closedAt)).length +
+      this.auditLog.filter(({ createdAt }) => later(createdAt)).length;
+  }
+
   // Telt registraties die op dezelfde kalenderdag zijn gemaakt.
   countForDate(date) {
     return this.registrations.filter(
@@ -485,7 +520,7 @@ export class RegistrationModel {
   // Mag een medewerker aan dit bedrijf en dit consumptiepunt worden gekoppeld?
   //   - geen bedrijf (null of leeg) mag; een opgegeven bedrijf moet nog bestaan;
   //   - geen consumptiepunt mag; een opgegeven punt moet nog bestaan én bij dat bedrijf horen.
-  // Een formulier dat al open stond, kan een bedrijf of punt bevatten dat een ander tabblad
+  // Een formulier dat al openstond, kan een bedrijf of punt bevatten dat een ander tabblad
   // intussen heeft verwijderd. Zonder deze controle zou de medewerker naar iets wijzen dat er
   // niet meer is (en dus geen producten meer kunnen kiezen).
   isValidAssignment(companyId, pointId) {
@@ -1014,6 +1049,13 @@ export class RegistrationModel {
     return now.getTime() - Date.parse(entry.enrolledAt) >= validityDays * DAY_MS;
   }
 
+  // Tot wanneer geldt de gezichtsinstelling van deze medewerker? Een Date (`validityDays` dagen na
+  // `enrolledAt`), of null zonder instelling. Het beheer toont dit als "Ingesteld tot 27-10-2027".
+  faceEnrollmentValidUntil(employeeId, validityDays = FACE_DEMO.validityDays) {
+    const entry = this.faceEnrollment(employeeId);
+    return entry ? new Date(Date.parse(entry.enrolledAt) + validityDays * DAY_MS) : null;
+  }
+
   // Heeft deze medewerker een geldige gezichtsinstelling: hij is actief en de instelling is niet verlopen?
   hasValidFaceEnrollment(employeeId, now = new Date(), validityDays = FACE_DEMO.validityDays) {
     const entry = this.faceEnrollment(employeeId);
@@ -1049,10 +1091,22 @@ export class RegistrationModel {
   // instelling wordt vervangen en een eerder "Nee" of "verlopen" vervalt (de medewerker heeft het nu
   // zelf ingesteld). Alleen de getallen worden bewaard, als gewone lijst. Geeft false terug (en
   // verandert niets) als de medewerker niet bestaat of niet actief is, of als de descriptor niet klopt.
-  saveFaceEnrollment(employeeId, descriptor, enrolledAt = new Date()) {
+  // `consentAt` is het moment waarop de medewerker toestemming gaf (het vinkje in het cameravenster).
+  // Vastleggen kan alleen terwijl het vinkje staat, dus dat is hetzelfde moment als `enrolledAt`. Zo is
+  // per instelling aantoonbaar wanneer de toestemming is gegeven (zie TO hoofdstuk 13). Na verlopen en
+  // bij opnieuw instellen hoort er dus altijd een nieuwe toestemming bij. Toestemming na het vastleggen
+  // kan niet: dan verandert er niets.
+  saveFaceEnrollment(employeeId, descriptor, enrolledAt = new Date(), consentAt = enrolledAt) {
     if (!this.findEmployee(employeeId)?.active || !this.isValidDescriptor(descriptor)) return false;
+    if (!(consentAt instanceof Date) || Number.isNaN(consentAt.getTime()) || consentAt.getTime() > enrolledAt.getTime()) return false;
 
-    const entry = { id: createId(), employeeId, descriptor: Array.from(descriptor), enrolledAt: enrolledAt.toISOString() };
+    const entry = {
+      id: createId(),
+      employeeId,
+      descriptor: Array.from(descriptor),
+      enrolledAt: enrolledAt.toISOString(),
+      consentAt: consentAt.toISOString()
+    };
     this.state.faceEnrollments = [...this.faceEnrollments.filter((item) => item.employeeId !== employeeId), entry];
     this.state.faceOffers = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);
     return true;
@@ -1065,8 +1119,9 @@ export class RegistrationModel {
     this.state.faceEnrollments = this.faceEnrollments.filter((entry) => entry.employeeId !== employeeId);
   }
 
-  // Knop "Nee" bij de vraag: wordt onthouden, zodat de vraag niet meer komt. De medewerker kan het
-  // later zelf instellen via "Gezichtsherkenning instellen (demo)" in het productvenster.
+  // Knop "Nee" bij de vraag: wordt onthouden, zodat de vraag niet meer komt (ook na "verlopen"). De
+  // medewerker kan het later zelf instellen via "Gezichtsherkenning instellen (demo)" in het
+  // productvenster, maar alleen als dat venster opende na herkenning met zijn pas, of via de beheerder.
   declineFaceOffer(employeeId, answeredAt = new Date()) {
     if (!this.findEmployee(employeeId)) return false;
     this.setFaceOfferAnswer(employeeId, "declined", answeredAt);

@@ -30,7 +30,7 @@ import { SimulatedShelfScale } from "./SimulatedShelfScale.js";
  *   - 120 gram erbij: de markering "added" (er is iets op het schap gelegd).
  * Een schap zonder product (leeg schap) telt nooit mee. Verandert het gewicht daar meer dan
  * emptyShelfToleranceGrams, dan krijgt het de markering "unknown".
- * Een opening met een markering, waarbij de deur langer dan doorAlertMs open stond of waarbij een
+ * Een opening met een markering, waarbij de deur langer dan doorAlertMs openstond of waarbij een
  * collega zijn pas scande terwijl de deur open was (noteOtherBadge), krijgt de status "check"
  * (controle nodig door de beheerder). De schappen die wel kloppen, worden geregistreerd.
  *
@@ -257,7 +257,7 @@ export class SmartFridge {
     return taken;
   }
 
-  // De status van een opening: "check" bij een markering, als de deur te lang open stond of als een
+  // De status van een opening: "check" bij een markering, als de deur te lang openstond of als een
   // collega zijn pas scande terwijl de deur open was, anders "registered" als er iets is gepakt en
   // "nothing" als er niets is gepakt.
   static statusOf(shelves, longOpen = false, otherBadge = false) {

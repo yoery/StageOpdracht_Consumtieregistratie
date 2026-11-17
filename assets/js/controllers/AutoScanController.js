@@ -1,5 +1,6 @@
 import { FACE_DEMO } from "../config.js";
 import { FaceIntent } from "../FaceIntent.js";
+import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * AutoScanController — het automatisch scannen op het startscherm (demo gezichtsherkenning,
@@ -24,7 +25,9 @@ import { FaceIntent } from "../FaceIntent.js";
  *      in het ovaal, dat ongeveer een seconde stil staat. Het ovaal wordt groen met "Even stil blijven…";
  *   3. pas dan worden de kenmerken van dat ene gezicht berekend (FaceRecognitionDemo.describeFace) en
  *      vergeleken met de actieve medewerkers. Dezelfde medewerker moet twee keer achter elkaar worden
- *      gevonden (FaceRecognitionDemo.confirm);
+ *      gevonden (FaceRecognitionDemo.confirm) en het gezicht moet leven: de stille controle van
+ *      FaceLiveness (FaceRecognitionDemo.checkLiveness) heeft een knipper of een vervorming gezien. Een
+ *      foto beweegt als één plat geheel en wordt na liveness.maxMs behandeld als "niet herkend";
  *   4. herkend: de camera gaat uit, het ovaal toont de begroeting ("Goedemorgen Lotte.") en na
  *      autoScan.greetingMs opent RecognitionController de koelkast of het productvenster;
  *   5. na autoScan.attempts vergelijkingen zonder resultaat, terwijl het gezicht in het ovaal blijft:
@@ -37,13 +40,13 @@ import { FaceIntent } from "../FaceIntent.js";
  *   - RegistrationApp: maakt deze class en geeft de methodes en velden door;
  *   - StandbyController (via RegistrationApp): standbyActive, standbyTimer en refreshStartScreen;
  *   - FaceIntent: de intentie-drempel;
- *   - FaceRecognitionDemo: camera, detectFaces, describeFace, findMatch en confirm;
+ *   - FaceRecognitionDemo: camera, detectFaces, describeFace, findMatch, confirm en checkLiveness;
  *   - FaceController (via RegistrationApp): hasActiveFace en expireFaces;
  *   - RecognitionController (via RegistrationApp): continueAfterRecognition na herkennen;
  *   - RegistrationView: setStartScreenCamera en setStartScreenState (het ovaal en de tekst eronder);
  *   - config.js: FACE_DEMO (enabled, scanMode en autoScan).
  */
-export class AutoScanController {
+export class AutoScanController extends ControllerPart {
   // De teksten onder het ovaal tijdens het scannen.
   static MESSAGES = {
     multiple: "Graag één persoon tegelijk",
@@ -55,7 +58,7 @@ export class AutoScanController {
   // `app` is de controller (RegistrationApp). `clock` levert de tijd en de timers (dezelfde klok als de
   // andere onderdelen, in de unit tests een nep-klok).
   constructor(app, clock) {
-    this.app = app;
+    super(app);
     this.clock = clock;
     this.scanSession = 0;          // telt op bij iedere start en stop van de camera
     this.scanCamera = "off";       // "off", "starting" (camera start), "loading" (camera aan, model laadt) of "on"
@@ -69,18 +72,6 @@ export class AutoScanController {
     this.greetingFor = null;       // de medewerker die nu wordt begroet
     this.descriptorCount = 0;      // hoe vaak er kenmerken zijn berekend (voor de tests en het TO)
     this.intent = new FaceIntent(this.autoSettings);
-  }
-
-  get model() {
-    return this.app.model;
-  }
-
-  get view() {
-    return this.app.view;
-  }
-
-  get faceDemo() {
-    return this.app.faceDemo;
   }
 
   // De instellingen van de demo (FACE_DEMO), aangevuld met de standaardwaarden uit config.js.
@@ -243,15 +234,24 @@ export class AutoScanController {
     const descriptor = await this.faceDemo.describeFace(this.view.$("#startVideo"), face);
     if (session !== this.scanSession) return;
 
+    // Eerst de kandidaat (confirm), dan de controle op een levend gezicht: bij een andere kandidaat begint
+    // die controle opnieuw, zodat een knipper van iemand anders niet meetelt (pentest PT-01).
     const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
     const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
     const candidate = match && this.model.findEmployee(match)?.active ? match : null;
     const employeeId = this.faceDemo.confirm(candidate);
-    if (employeeId) {
+    const live = this.faceDemo.checkLiveness(this.clock.now());
+    if (employeeId && live === "alive") {
       this.greet(employeeId);
       return;
     }
-    if (candidate) return; // één keer gevonden: bij de volgende keer kijken telt de bevestiging
+    // Geen levend gezicht gezien binnen liveness.maxMs (bijvoorbeeld een foto): dezelfde vriendelijke
+    // melding als bij niet herkend, zonder te zeggen waarom.
+    if (live === "failed") {
+      this.pauseAfterUnknown();
+      return;
+    }
+    if (candidate) return; // gevonden: bij de volgende keer kijken telt de bevestiging en de controle op een levend gezicht
 
     this.scanAttempts += 1;
     if (this.scanAttempts >= this.autoSettings.attempts) this.pauseAfterUnknown();

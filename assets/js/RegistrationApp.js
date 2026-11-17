@@ -111,6 +111,13 @@ export class RegistrationApp {
     this.recognition = new RecognitionController(this, clock);
     this.standby = new StandbyController(this, clock);
     this.autoScan = new AutoScanController(this, clock);
+
+    // De view kent de demo gezichtsherkenning niet. Voor de knoppen "Gezichtsherkenning instellen" en
+    // "Uitzetten" in het tabblad Medewerkers vraagt hij hier of instellen kan ("ready", "noCamera" of
+    // "off") en hoe lang een instelling geldt (zie RegistrationView.renderAdminEmployees).
+    if (view && typeof view === "object") {
+      view.faceSetup = () => ({ state: this.faceSetupState(), validityDays: this.faceDemo.settings?.validityDays });
+    }
   }
 
   // Is de medewerker in het productvenster herkend met de camera (demo gezichtsherkenning)?
@@ -158,6 +165,8 @@ export class RegistrationApp {
     this.showRecognitionOptions();
     this.view.renderAll();
     this.showLoadProblem();
+    // Regels met een tijdstip meer dan een dag in de toekomst: één regel in het logboek (pentest PT-04 en RB-02).
+    this.noteFutureTimes();
 
     this.expireFaces();
     this.loadSavedFaces();
@@ -199,6 +208,9 @@ export class RegistrationApp {
 
     this.currentDay = today;
     this.renderTodayLabel(now);
+    // Een kiosktablet herlaadt de pagina misschien wekenlang niet. Daarom worden oude reservekopieën ook bij
+    // de dagwissel opgeruimd, niet alleen bij het laden (hertest HB-03, FR-91).
+    this.model.store?.pruneBackups?.(now);
     this.view.renderStats();
     // Morgen is nu vandaag: de laatste mogelijke datum schuift een dag op. Stond het datumveld op
     // de oude laatste datum (gisteren, de standaard), dan gaat het ook naar vandaag. Een datum die
@@ -256,18 +268,14 @@ export class RegistrationApp {
 
     // Alles opnieuw tekenen. Had een knop in een lijst de focus, dan krijgt de nieuwe knop met
     // dezelfde id die focus terug (zie ModalManager.preserveFocus).
+    // De lijsten van het beheer alleen als de beheerder is ingelogd (sinds versie 3.26, pentest PT-06):
+    // anders zouden namen en nummers in de verborgen pagina komen te staan.
     this.preserveFocus(() => {
       this.view.renderAll();
-      this.view.populateFilters();
-      this.view.renderAdmin();
-      this.view.renderCorrectionEmployees();
-      this.view.renderAdminEmployees();
-      this.view.renderAdminProducts();
-      this.view.renderAdminCompanies();
-      if (this.isTypingInStockTable()) this.view.renderStockAlerts();
-      else this.view.renderStock();
-      this.renderAuditLog();
-      if (!this.isTypingInFridgeForm()) this.view.renderFridgeAdmin();
+      if (!this.adminLoggedIn) return;
+      const typingInStock = this.isTypingInStockTable();
+      this.renderAdminLists({ stock: !typingInStock, fridge: !this.isTypingInFridgeForm() });
+      if (typingInStock) this.view.renderStockAlerts();
     });
 
     this.closeStaleForms();
@@ -317,18 +325,11 @@ export class RegistrationApp {
       this.editingCopies.delete(formSelector);
       close();
     }
+    // closeAdmin logt uit en maakt de lijsten van het beheer leeg. Alleen de openbare pagina wordt
+    // opnieuw getekend (pentest PT-06).
     this.closeAdmin();
 
     this.view.renderAll();
-    this.view.populateFilters();
-    this.view.renderAdmin();
-    this.view.renderCorrectionEmployees();
-    this.view.renderAdminEmployees();
-    this.view.renderAdminProducts();
-    this.view.renderAdminCompanies();
-    this.view.renderStock();
-    this.renderAuditLog();
-    this.view.renderFridgeAdmin();
     this.view.showToast("De gegevens zijn in een ander venster gewist.", { tone: "error", duration: 5000 });
   }
 
@@ -441,6 +442,10 @@ export class RegistrationApp {
       ["[data-repeat-last]", () => this.repeatLastSelection()],
       ["[data-face-enroll]", () => this.startFaceEnrollment()],
       ["[data-face-forget]", () => this.forgetFace()],
+      // Beheer, tabblad Medewerkers: gezichtsherkenning instellen of uitzetten door de beheerder.
+      ["[data-admin-face]", (button) => (button.dataset.adminFaceAction === "forget"
+        ? this.adminForgetFace(button.dataset.adminFace)
+        : this.startAdminFaceEnrollment(button.dataset.adminFace))],
       // Slimme koelkast (demo)
       ["[data-fridge-take]", (button) => this.takeFromShelf(button.dataset.fridgeTake)],
       ["[data-fridge-return]", (button) => this.returnToShelf(button.dataset.fridgeReturn)],
@@ -499,6 +504,9 @@ export class RegistrationApp {
     for (const type of ["pointerdown", "keydown", "touchstart", "wheel", "scroll"]) {
       productModal.addEventListener(type, () => this.noteProductActivity(), { capture: true, passive: true });
     }
+    // Een vastgehouden Enter of spatie op "+" of "−" telt maar één keer (pentest PT-03). De lijst met
+    // producten blijft staan (alleen de inhoud wordt opnieuw getekend), dus de listener blijft werken.
+    this.view.$("#employeeProductList")?.addEventListener?.("keydown", (event) => this.ignoreHeldProductKey(event));
 
     // Demo gezichtsherkenning
     this.onClick("#faceRecognizeButton", () => this.startFaceRecognition());
@@ -738,9 +746,9 @@ const DELEGATES = {
       "incrementProduct", "decrementProduct", "selectionSummary", "closeEmployeeProducts", "dismissEmployeeProducts",
       "startProductIdleWatch", "stopProductIdleWatch", "noteProductActivity", "closeProductWindowIfIdle", "setIdleWarning",
       "registerSelectedProducts", "focusEmployeeRow", "focusProductWindowAction",
-      "isGhostRowClick", "handleEmployeeRowKey"
+      "isGhostRowClick", "handleEmployeeRowKey", "ignoreHeldProductKey"
     ],
-    fields: ["productWindowClosedAt", "lastProductActivity", "productIdleTimer", "idleCloseMs", "idleWarningMs", "idleWarningShown"]
+    fields: ["productWindowClosedAt", "lastProductActivity", "productIdleTimer", "idleCloseMs", "idleWarningMs", "idleWarningShown", "maxPerProduct"]
   },
   badge: {
     methods: ["handleBadgeKey", "rememberSearchBeforeScan", "restoreSearchAfterScan", "restoreOtherFieldAfterScan", "fillBadgeFieldAfterScan", "recognizeBadge", "replaceProductWindow"],
@@ -749,11 +757,12 @@ const DELEGATES = {
   face: {
     methods: [
       "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "forgetFace", "setFaceStatus",
+      "faceSetupState", "canSelfEnroll", "canSelfForget", "startAdminFaceEnrollment", "adminForgetFace", "renderAdminFaceChange",
       "faceTexts", "openFaceModal", "hasActiveFace", "loadSavedFaces", "expireFaces",
       "updateEnrollButton", "scanForFace", "endWakeScan", "stopCameraAfterTimeout", "scheduleEnrollTimeout",
       "captureEnrollment", "readFaceForEnrollment", "closeFaceModal"
     ],
-    fields: ["faceSession", "faceMode", "faceEmployeeId", "cameraReady", "captureSession", "enrollTimer", "enrollContinuation", "capturing"]
+    fields: ["faceSession", "faceMode", "faceEmployeeId", "cameraReady", "captureSession", "enrollTimer", "enrollContinuation", "enrollByAdmin", "capturing"]
   },
   recognition: {
     methods: [
@@ -781,10 +790,10 @@ const DELEGATES = {
   },
   admin: {
     methods: [
-      "requireAdmin", "showMissing", "finishAdminChange", "renderAuditLog",
+      "requireAdmin", "showMissing", "finishAdminChange", "renderAdminLists", "renderAuditLog",
       "openAdmin", "showLogin", "login", "logout", "closeAdmin", "showDashboard", "switchTab",
       "startIdleWatch", "stopIdleWatch", "noteAdminActivity", "logoutIfIdle", "idleLogoutMessage",
-      "loadMoreAudit", "exportCsv", "wipeAllData",
+      "loadMoreAudit", "exportCsv", "wipeAllData", "noteFutureTimes",
       "toggleEmployee", "removeEmployee", "removeProduct", "removeCompany", "removePoint"
     ],
     fields: ["auditLogLimit", "lastAdminActivity", "idleTimer", "idleLogoutMs"]

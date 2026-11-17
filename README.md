@@ -44,10 +44,11 @@ assets/
     RegistrationView.js     # Weergave (HTML)
     RegistrationApp.js      # Controller: maakt en koppelt de onderdelen hieronder, opslaan (persist), tabbladen synchroniseren
     controllers/            # Onderdelen van de controller (RegistrationApp maakt ze aan en geeft zichzelf mee)
+      ControllerPart.js     # basisclass van de onderdelen: app, model, view, faceDemo en de echte klok
       ModalManager.js       # vensters openen en sluiten, focus
       EmployeeController.js # beginpagina, productvenster, registreren en automatisch sluiten van het productvenster
       BadgeController.js    # herkennen met de pas (koppelt BadgeReader aan de app)
-      FaceController.js     # cameravenster van de demo gezichtsherkenning, scan na een tik op het ovaal, opgeslagen gezichten en verlopen
+      FaceController.js     # cameravenster van de demo gezichtsherkenning, scan na een tik op het ovaal, opgeslagen gezichten en verlopen, instellen alleen na de pas of door de beheerder
       AdminController.js    # inloggen, dashboard, logboek, export, wissen, verwijderen
       CorrectionController.js # correcties + en − (registratie verwijderen)
       StockController.js    # voorraad, leveringen en minimum
@@ -69,23 +70,29 @@ assets/
     ids.js                  # createId(): unieke id's, ook zonder https
     FaceRecognitionDemo.js  # Demo gezichtsherkenning (uit te zetten in config.js)
     FaceIntent.js           # Intentie-drempel: alleen kenmerken van één gezicht dichtbij, in het ovaal en stil
+    FaceLiveness.js         # Stille controle op een levend gezicht: een foto van een collega wordt niet herkend of ingesteld
     BadgeReader.js          # Herkennen met de pas via een USB-NFC-lezer (uit te zetten in config.js)
   fonts/                    # Lettertypes DM Sans en Space Grotesk (zelf gehost, SIL OFL, zie LICENSE.txt)
   vendor/
     face-api/               # face-api 1.7.15 en de drie modellen voor de demo (MIT, met TensorFlow.js onder Apache 2.0, ca. 8 MB, niet meer onderhouden en dus alleen voor de demo)
 docs/
-  TO-BLIKJESREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
+  TO-CONSUMPTIEREGISTRATIE.md  # Technisch ontwerp (enige ontwerpdocument)
   DOCUMENTATIE.md           # Uitleg van de code en gebruikershandleiding
   DATABASE-SCHEMA.sql       # PostgreSQL-schema voor productie
-  *.docx, *.pdf             # Word- en PDF-versies van het TO en de documentatie in de TVB-huisstijl
+  PENTESTRAPPORT.md         # Pentest van november 2026: bevindingen, oplossingen en status
+  *.docx, *.pdf             # Word- en PDF-versies van het TO, de documentatie en het pentestrapport in de TVB-huisstijl
   wireframes/               # Low-, mid- en high-fidelity wireframes van de schermen (gebruikt in het TO)
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests (ook readAllCss: alle CSS in de volgorde van index.html)
-  e2e/                      # 33 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
-  *.test.js                 # 846 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm)
+  helpers-gezicht.js        # Nagebootst gezicht van 68 punten, een foto als plat vlak en ruis (voor de controle op een levend gezicht)
+  e2e/                      # 37 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
+  *.test.js                 # 931 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm, gezicht-instellen-veilig, levend-gezicht, pentest-november)
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
+uitleg-video/
+  video.json                # Script van het uitlegfilmpje voor de bedrijvenmarkt (59 s, verzonnen namen)
+  assets/                   # Nagetekende schermen voor het filmpje (SVG). Het mp4-bestand staat niet in Git
 archief/
   app.js                    # Originele versie van de app in één bestand (back-up, wordt niet geladen)
   app.test.js               # Oude tests bij die versie (back-up, wordt niet uitgevoerd)
@@ -113,10 +120,11 @@ archief/
 - Administratief logboek voor wijzigingen, met maximaal 20 regels tegelijk en `Meer laden`.
 - Persoonlijk welkom in het productvenster. Na herkenning met de pas of de camera ook "welkom terug" en een knop "Zelfde als vorige keer" met de keuze van de vorige keer. Wie op een naam tikt, ziet die niet, zodat collega's niet kunnen zien wat iemand eerder koos.
 - Onder in het productvenster een korte uitleg dat registraties maandelijks op het loon worden ingehouden, met een verwijzing naar de privacyverklaring voor medewerkers.
-- De beheerder wordt automatisch uitgelogd als het beheer 5 minuten niet is gebruikt (`ADMIN_IDLE_LOGOUT_MS` in `config.js`).
+- De beheerder wordt automatisch uitgelogd als het beheer 5 minuten niet is gebruikt (`ADMIN_IDLE_LOGOUT_MS` in `config.js`). Na uitloggen staan er geen gegevens van het beheer meer in de pagina.
+- Hooguit 10 van één product in één keer (`MAX_PER_PRODUCT` in `config.js`), ook met een ingedrukt gehouden toets. Een leesbare reservekopie van beschadigde gegevens bevat geen gezichtskenmerken, en iedere kopie verdwijnt na 30 dagen (`BACKUP_RETENTION_DAYS`). Een registratie met een tijdstip in de toekomst (een klok die niet klopt) wordt bewaard, met een melding voor de beheerder. Zie [docs/PENTESTRAPPORT.md](./docs/PENTESTRAPPORT.md) (pentest november 2026).
 - Het productvenster sluit vanzelf zonder op te slaan als het 75 seconden niet wordt gebruikt, met in de laatste 10 seconden "Venster sluit zo. Tik om door te gaan." (`EMPLOYEE_IDLE_CLOSE_MS` in `config.js`). Een pas van een collega vervangt een open productvenster. Na registreren zijn het zoekveld en het bedrijfsfilter weer leeg.
 - Gemaakt voor een tablet: de knop `Registreren` blijft onderaan het productvenster in beeld (over de volle breedte), zonder keuze is hij uitgeschakeld met de uitleg "Kies eerst een product met +", een gekozen product krijgt een lichtgroene achtergrond en knoppen zijn minstens 44 pixels hoog. Een schermlezer hoort na zoeken alleen het aantal medewerkers en leest de meldingen voor. Zie de paragraaf "UX-review oktober 2026" in het TO (hoofdstuk 9).
-- Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`). Er worden geen foto's gemaakt. Sinds versie 3.17 worden alleen de kenmerken (128 getallen) met een datum op de tablet bewaard en na een jaar vanzelf gewist. Uit te zetten in `config.js`. Zie het TO (hoofdstuk 13 en bijlage B) voor de privacy-afweging. Voor productie is het advies de pas.
+- Demo gezichtsherkenning met de camera van tablet of laptop: vrijwillig per medewerker, alles op het apparaat (bibliotheek en modellen in `assets/vendor/face-api/`). Er worden geen foto's gemaakt. Sinds versie 3.17 worden alleen de kenmerken (128 getallen) met een datum op de tablet bewaard en na een jaar vanzelf gewist. Sinds versie 3.22 kan een medewerker zijn gezicht alleen zelf instellen na herkenning met zijn pas, of stelt de beheerder het in (tabblad Medewerkers, met de medewerker voor de camera). Na kiezen op naam staat er geen link en geen `Uitzetten`, zodat niemand zijn gezicht onder de naam van een collega kan zetten. Bij iedere instelling staat het moment van toestemming, en opnieuw instellen na een jaar vraagt weer de pas of de beheerder en een nieuw vinkje. Sinds versie 3.23 kijkt een stille controle tijdens het herkennen of het gezicht knippert of licht vervormt (`FACE_DEMO.liveness` in `config.js`, met `debug` om af te stellen op de tablet). Zo wordt een geprinte foto of een foto op een telefoon niet herkend en niet ingesteld, zonder opdracht aan de medewerker. Een video op een telefoon houdt dit niet tegen. Uit te zetten in `config.js`. Zie het TO (hoofdstuk 13 en bijlage B) voor de privacy-afweging. Voor productie is het advies de pas.
 - Startscherm (sinds versie 3.21, `STANDBY` in `config.js`): de website opent op een zwart scherm met het TVB-logo, een ovaal voor het gezicht en de knop `Handmatig zoeken`. Beginnen kan met de pas, het gezicht of `Handmatig zoeken` (de lijst). Het startscherm komt terug na een registratie of koelkastopening en na 2 minuten zonder gebruik. `Admin login` staat op de beginpagina na `Handmatig zoeken`.
 - Automatisch scannen met een intentie-drempel (demo, `FACE_DEMO.scanMode = "auto"`): zolang het startscherm in beeld is, zoekt de camera drie keer per seconde alleen naar gezichten (320 × 240, geen kenmerken). Pas als er één gezicht dichtbij in het ovaal een seconde stil staat, wordt het vergeleken. Herkend: begroeting en daarna de koelkast of het productvenster. Niet herkend: een melding en een korte pauze. De camera staat alleen aan op het startscherm. Met `scanMode = "tap"` werkt het zoals in versie 3.17: de camera gaat pas aan na een tik op het ovaal. De camera ziet in "auto" ook voorbijgangers. Zie het TO, bijlage B, voor de afweging. Voor productie blijft het advies de pas.
 - Vraag na een passcan (demo): wie met de pas wordt herkend en nog geen gezichtsherkenning heeft, krijgt "Gezichtsherkenning nog niet ingesteld. Wil je dit?" met `Ja, instellen` en `Nee`. `Nee` wordt onthouden.
@@ -125,6 +133,7 @@ archief/
 - Slimme koelkast (demo, uit te zetten met `SMART_FRIDGE` in `config.js`): de koelkast opent met de pas, de medewerker pakt van de schappen en sluit de deur, en het gewichtsverschil per schap wordt vanzelf als registratie opgeslagen (met voorraad en logboekregel). Een verschil dat niet klopt, wordt gemarkeerd voor de beheerder. Het slot en de weegschalen zijn nagebootst. In productie stuurt alleen de backend ze aan. In het beheer staan de indeling van de schappen en de laatste openingen. Zie het TO, bijlage B.
 - Licht en donker thema: standaard volgt de website de instelling van het apparaat ("Systeem"). Met de slider in de bovenbalk kies je zelf licht of donker, en met "Auto" is het overdag licht en na zonsondergang donker. In donkere modus blijft de huisstijl behouden en wordt de tekst groen.
 - Uitgebreide documentatie in [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md) en in de TVB-huisstijl als [`docs/DOCUMENTATIE.docx`](./docs/DOCUMENTATIE.docx) en [`docs/DOCUMENTATIE.pdf`](./docs/DOCUMENTATIE.pdf).
-- Technisch ontwerp in [`docs/TO-BLIKJESREGISTRATIE.md`](./docs/TO-BLIKJESREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.
+- Technisch ontwerp in [`docs/TO-CONSUMPTIEREGISTRATIE.md`](./docs/TO-CONSUMPTIEREGISTRATIE.md): het enige ontwerpdocument, met aanleiding, gebruikersrollen, functionele eisen, use cases, low-, mid- en high-fidelity wireframes (een screenshot van ieder scherm met UI-principes en Nielsen-heuristieken), OOP-architectuur, databasespecificatie en acceptatiecriteria.
+- Pentestrapport van november 2026 in [`docs/PENTESTRAPPORT.md`](./docs/PENTESTRAPPORT.md): wat er is getest, de bevindingen met hun ernst en per bevinding de status (opgelost, gedocumenteerd of geaccepteerd).
 - Productiegericht PostgreSQL-schema in [`docs/DATABASE-SCHEMA.sql`](./docs/DATABASE-SCHEMA.sql).
-- Het technisch ontwerp in de TVB-huisstijl als [`docs/TO-BLIKJESREGISTRATIE.docx`](./docs/TO-BLIKJESREGISTRATIE.docx) en [`docs/TO-BLIKJESREGISTRATIE.pdf`](./docs/TO-BLIKJESREGISTRATIE.pdf). De `.md`-bestanden zijn de bron; de Word- en PDF-versies worden gemaakt met `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` (zie het voorbeeld bovenin `md-to-docx.cjs`).
+- Het technisch ontwerp in de TVB-huisstijl als [`docs/TO-CONSUMPTIEREGISTRATIE.docx`](./docs/TO-CONSUMPTIEREGISTRATIE.docx) en [`docs/TO-CONSUMPTIEREGISTRATIE.pdf`](./docs/TO-CONSUMPTIEREGISTRATIE.pdf). De `.md`-bestanden zijn de bron; de Word- en PDF-versies worden gemaakt met `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` (zie het voorbeeld bovenin `md-to-docx.cjs`).

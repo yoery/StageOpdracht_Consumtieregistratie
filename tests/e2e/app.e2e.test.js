@@ -981,7 +981,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.click("#fridgeCloseDoorButton");
       await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
       assert.match(await text("#fridgeBody"), /Dit is geregistreerd op naam van Lotte van Dijk\./);
-      assert.match(await text("#fridgeBody"), /Er is een andere pas gescand terwijl de deur open stond\./);
+      assert.match(await text("#fridgeBody"), /Er is een andere pas gescand terwijl de deur openstond\./);
 
       const stored = await browser.storedData();
       assert.equal(stored.fridgeOpenings[0].status, "check");
@@ -1200,7 +1200,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       await browser.waitFor(`!document.querySelector("#faceOfferModal").classList.contains("hidden")`);
       assert.equal(await text("#faceOfferTitle"), "Gezichtsherkenning nog niet ingesteld. Wil je dit?");
       assert.match(await text("#faceOfferGreeting"), /Lotte\. Je bent herkend met je pas\.$/);
-      assert.equal(await text("#faceOfferHelp"), "Het is vrijwillig, alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist, en je pas blijft altijd werken.");
+      assert.equal(await text("#faceOfferHelp"), "Het is vrijwillig. Alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist. Je pas blijft altijd werken.");
       assert.equal(await browser.evaluate(`document.activeElement?.id`), "faceOfferNoButton");
       assert.equal(await isHidden("#fridgeModal"), true, "de koelkast opent pas na het antwoord");
 
@@ -1246,6 +1246,54 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     });
   });
 
+  scenario("gezicht veilig instellen (3.22): na Handmatig zoeken en een naam geen link, in het beheer de knop (zonder camera uitgeschakeld)", async () => {
+    // Met camera: na kiezen op naam geen link en geen Uitzetten, wel de uitleg.
+    await withPageScripts([FAKE_CAMERA], async () => {
+      await browser.click(row("Mark Jansen"));
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      assert.equal(await browser.evaluate(`document.querySelector("#faceEnrollArea [data-face-enroll], #faceEnrollArea [data-face-forget]")`), null);
+      assert.equal(await text("#faceEnrollArea"), "Gezichtsherkenning instellen? Houd je pas tegen de lezer of vraag het de beheerder.");
+      await browser.press("Escape");
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+      // In het beheer: de knop opent het instelvenster boven het beheer, met het vinkje uit.
+      await loginAsAdmin();
+      await browser.click(`.tab[data-tab="employees"]`);
+      const lotte = `#adminEmployeeList [data-admin-face][aria-label="Gezichtsherkenning instellen voor Lotte van Dijk"]`;
+      await browser.waitFor(`document.querySelector(${JSON.stringify(lotte)})`);
+      assert.equal(await browser.evaluate(`document.querySelector(${JSON.stringify(lotte)}).getAttribute("aria-disabled")`), null);
+      await browser.click(lotte);
+      await browser.waitFor(`!document.querySelector("#faceModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["adminModal", "faceModal"]);
+      assert.equal(await text("#faceTitle"), "Gezichtsherkenning instellen voor Lotte van Dijk");
+      assert.equal(await text("#faceHelp"), "Laat Lotte van Dijk zelf in de camera kijken en het vinkje zetten. Klik daarna op Gezicht vastleggen.");
+      assert.equal(await browser.evaluate(`document.querySelector("#faceConsent").checked`), false);
+      await browser.click("#faceModal .employee-form-actions [data-close-face-modal]");
+      await browser.waitFor(`document.querySelector("#faceModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["adminModal"]);
+      const stored = await browser.storedData();
+      assert.deepEqual(stored?.faceEnrollments ?? [], []);
+    });
+
+    // Zonder camera (standaard in de browsertest): geen uitleg in het productvenster en in het beheer
+    // een uitgeschakelde knop met de reden.
+    await browser.openApp();
+    await browser.click(row("Mark Jansen"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    // De app weet na het laden dat er geen camera is (enumerateDevices geeft niets, zie browser.js).
+    await browser.waitFor(`document.querySelector("#faceEnrollArea").classList.contains("hidden")`);
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await loginAsAdmin();
+    await browser.click(`.tab[data-tab="employees"]`);
+    const disabled = `#adminEmployeeList [data-admin-face="${await browser.evaluate(`[...document.querySelectorAll("#adminEmployeeList [data-admin-face]")][0]?.dataset.adminFace`)}"]`;
+    assert.equal(await browser.evaluate(`document.querySelector(${JSON.stringify(disabled)}).getAttribute("aria-disabled")`), "true");
+    assert.equal(await browser.evaluate(`document.getElementById(document.querySelector(${JSON.stringify(disabled)}).getAttribute("aria-describedby")).textContent`), "Geen camera gevonden. Instellen kan alleen met een camera.");
+    await browser.click(disabled);
+    await waitForToast("Geen camera gevonden op deze tablet. Instellen kan alleen met een camera.");
+    assert.deepEqual(await openModalIds(), ["adminModal"]);
+  });
+
   scenario("generale repetitie: een pas in het inlogvenster of een zoekveld van het beheer laat geen pasnummer achter, en 'Aantal' past op een tablet", async () => {
     // Pas in het e-mailveld van het inloggen: het e-mailadres blijft staan, er komt een melding.
     await browser.click("#adminOpenButton");
@@ -1276,12 +1324,107 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
         const style = getComputedStyle(field);
         const context = document.createElement("canvas").getContext("2d");
         context.font = style.font;
-        // Ruimte voor de tekst: binnenbreedte min de binnenruimte en de pijltjes van een getalveld (ongeveer 15 pixels).
-        return { text: context.measureText(field.placeholder).width, room: field.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 15 };
+        // Ruimte voor de tekst: buitenbreedte min de randen, de binnenruimte en de pijltjes van een getalveld
+        // (ongeveer 15 pixels). Niet clientWidth: sinds Edge 157 telt die de pijltjes al niet mee, en dan
+        // zouden ze twee keer worden afgetrokken.
+        const border = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+        return { text: context.measureText(field.placeholder).width, room: field.offsetWidth - border - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 15 };
       })()`);
       assert.ok(room.text <= room.room, `"Aantal" is ${Math.round(room.text)} pixels breed, er is ${Math.round(room.room)} pixels ruimte`);
     } finally {
       await browser.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
     }
+  });
+  // ------------------------------------------------------------------
+  // Pentest november 2026 (versie 3.26, docs/PENTESTRAPPORT.md)
+  // ------------------------------------------------------------------
+
+  // Herlaadt de pagina met de huidige opslag (zonder die te wissen) en tikt op "Handmatig zoeken".
+  const reloadApp = async () => {
+    await browser.send("Page.navigate", { url: `${browser.baseUrl}/index.html` });
+    await browser.waitFor(`document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
+    await browser.manualSearch();
+  };
+  const login = async () => {
+    await browser.click("#adminOpenButton");
+    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
+    await browser.click("#loginPassword");
+    await browser.insertText("demo-wachtwoord");
+    await browser.click("#loginForm button[type=submit]");
+    await browser.waitFor(`!document.querySelector("#adminView").classList.contains("hidden")`);
+  };
+
+  scenario("PT-03: een vastgehouden Enter op '+' telt één keer, en meer dan 10 per product kan niet", async () => {
+    await browser.click(row("Lotte van Dijk"));
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.evaluate(`document.querySelector('[data-product-increment="blikje"]').focus()`);
+    // Eén keer indrukken en daarna 30 herhalingen van dezelfde ingedrukte toets.
+    const enter = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" };
+    await browser.send("Input.dispatchKeyEvent", { type: "keyDown", ...enter });
+    for (let count = 0; count < 30; count += 1) await browser.send("Input.dispatchKeyEvent", { type: "keyDown", ...enter, autoRepeat: true });
+    await browser.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    await sleep(200);
+    assert.equal(await text("#registerSelectedProductsButton"), "Registreren (1)");
+
+    // Twaalf keer tikken: bij 10 stopt het, met een melding.
+    for (let count = 0; count < 11; count += 1) await browser.click(`[data-product-increment="blikje"]`);
+    assert.equal(await text("#registerSelectedProductsButton"), "Registreren (10)");
+    await waitForToast("Je kunt hooguit 10 per product tegelijk registreren.");
+    await browser.click("#registerSelectedProductsButton");
+    await waitForToast("Lotte van Dijk: 10× Blikje geregistreerd");
+    const stored = await browser.storedData();
+    assert.equal(stored.registrations.length, 10);
+  });
+
+  scenario("PT-06: na sluiten van het beheer staan er geen namen, registraties of logboekregels meer in de pagina", async () => {
+    await registerProduct("Sophie de Boer", "ei", 1);
+    await waitForToast("Sophie de Boer: 1× Ei geregistreerd");
+    await browser.manualSearch();
+    await login();
+    assert.ok((await browser.evaluate(`document.querySelectorAll("#adminTableBody tr").length`)) > 0);
+
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#adminModal").classList.contains("hidden")`);
+    const left = await browser.evaluate(`["#adminTableBody", "#adminEmployeeList", "#auditTableBody", "#adminCorrectionList", "#stockTableBody", "#filterEmployee"]
+      .map((selector) => document.querySelector(selector).textContent.trim()).join("")`);
+    assert.equal(left, "");
+
+    // Opnieuw inloggen tekent alles weer.
+    await login();
+    const rows = await browser.evaluate(`[...document.querySelectorAll("#adminTableBody tr")].map((tr) => tr.cells[0].textContent.trim())`);
+    assert.deepEqual(rows, ["Sophie de Boer"]);
+  });
+
+  scenario("PT-02 en PT-04: een registratie in de toekomst wordt geladen met een melding, en een reservekopie bevat geen gezichten", async () => {
+    await registerProduct("Sophie de Boer", "ei", 1);
+    await waitForToast("Sophie de Boer: 1× Ei geregistreerd");
+    // Opslag aanpassen: een registratie drie dagen in de toekomst, een gezichtsinstelling en één kapotte registratie.
+    await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      const employee = data.employees.find(({ name }) => name === "Sophie de Boer");
+      const later = new Date(Date.now() + 3 * 24 * 3600e3).toISOString();
+      const earlier = new Date(Date.now() - 3600e3).toISOString();
+      data.registrations.push({ ...data.registrations[0], id: "toekomst-1", createdAt: later });
+      data.registrations.push({ ...data.registrations[0], id: "kapot-1", createdAt: "kapot" });
+      data.faceEnrollments = [{ id: "f1", employeeId: employee.id, descriptor: new Array(128).fill(0.1), enrolledAt: earlier, consentAt: earlier }];
+      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
+    })()`);
+    await reloadApp();
+
+    const result = await browser.evaluate(`(() => {
+      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
+      const copy = JSON.parse(localStorage.getItem("tvb-blikjesregistratie-backup"));
+      return {
+        loaded: data.registrations.map(({ id }) => id).filter((id) => id === "toekomst-1"),
+        audit: data.auditLog.filter(({ action }) => action === "Tijdstip in de toekomst").length,
+        copyHasFaces: "faceEnrollments" in copy,
+        copyHasBroken: copy.registrations.some(({ id }) => id === "kapot-1"),
+        copyDate: Boolean(Date.parse(localStorage.getItem("tvb-blikjesregistratie-backup-datum")))
+      };
+    })()`);
+    assert.deepEqual(result, { loaded: ["toekomst-1"], audit: 1, copyHasFaces: false, copyHasBroken: true, copyDate: true });
+
+    await login();
+    await waitForToast("Er is 1 registratie, opening of logboekregel met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?");
   });
 });

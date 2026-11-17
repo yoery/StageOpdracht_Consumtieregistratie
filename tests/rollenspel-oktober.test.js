@@ -38,7 +38,7 @@ const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const css = readAllCss();
 const appSource = read("../assets/js/RegistrationApp.js");
 const schema = read("../docs/DATABASE-SCHEMA.sql").replace(/\r\n/g, "\n");
-const to = read("../docs/TO-BLIKJESREGISTRATIE.md");
+const to = read("../docs/TO-CONSUMPTIEREGISTRATIE.md");
 
 // Instellingen zoals in config.js, maar zonder afwijking per product (de gewichten zijn dan precies).
 const SETTINGS = { ...SMART_FRIDGE, weightVariation: 0 };
@@ -210,7 +210,7 @@ test("3: de pas van een collega terwijl de deur open is: melding met de naam en 
   assert.equal(model.fridgeOpenings[0].otherBadge, true);
   assert.equal(model.fridgeOpenings[0].status, "check");
   assert.equal(model.auditLog.at(-1).action, "Koelkast: controle nodig");
-  assert.equal(model.auditLog.at(-1).details, "Test Medewerker: 2× Blikje geregistreerd. Controle nodig: pas van een collega gescand terwijl de deur open stond (TVB · Hoofdkantoor)");
+  assert.equal(model.auditLog.at(-1).details, "Test Medewerker: 2× Blikje geregistreerd. Controle nodig: pas van een collega gescand terwijl de deur openstond (TVB · Hoofdkantoor)");
 });
 
 test("3: dezelfde pas of een onbekende pas terwijl de deur open is, verandert de status niet", () => {
@@ -251,7 +251,7 @@ test("3: het open koelkastscherm zegt op wiens naam alles komt, het overzicht no
     saveFailed: false,
     result: { taken: { blikje: 1 }, shelves: [], longOpen: false, otherBadge: true }
   });
-  assert.match(summary, /Er is een andere pas gescand terwijl de deur open stond\. De beheerder kijkt ernaar\./);
+  assert.match(summary, /Er is een andere pas gescand terwijl de deur openstond\. De beheerder kijkt ernaar\./);
 });
 
 test("3: DataStore bewaart otherBadge alleen als true of false", () => {

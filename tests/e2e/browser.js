@@ -138,6 +138,17 @@ function startServer(root) {
 // Wacht tot de browser het bestand DevToolsActivePort in het profiel heeft geschreven. Daarin
 // staat de poort van het DevTools Protocol (de browser kiest die zelf met --remote-debugging-port=0,
 // zodat twee testruns elkaar niet in de weg zitten).
+// Ruimt het tijdelijke profiel op. Houdt de browser het profiel nog even vast (Windows), dan blijft de
+// map staan in de tijdelijke map van het systeem. Dat is geen testfout, en zo verbergt een mislukt
+// opruimen nooit de echte fout van een test.
+function removeTempDir(tempDir) {
+  try {
+    fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  } catch {
+    // Laten staan.
+  }
+}
+
 async function waitForDevToolsPort(profileDir, browserProcess) {
   const file = path.join(profileDir, "DevToolsActivePort");
   const end = Date.now() + 20000;
@@ -146,7 +157,9 @@ async function waitForDevToolsPort(profileDir, browserProcess) {
     if (browserProcess.startError) {
       throw new Error(`De browser kon niet worden gestart: ${browserProcess.startError.message}. Zet BROWSER_PATH op het pad van Edge of Chrome.`);
     }
-    if (browserProcess.exitCode !== null) {
+    // Code 0 is geen fout: Edge 156 en nieuwer start zichzelf opnieuw op. Het eerste proces stopt dan
+    // met code 0 en de browser draait verder in een nieuw proces, met hetzelfde profiel.
+    if (browserProcess.exitCode !== null && browserProcess.exitCode !== 0) {
       throw new Error(`De browser stopte meteen (code ${browserProcess.exitCode}).`);
     }
     try {
@@ -222,7 +235,7 @@ export async function launch() {
   } catch (error) {
     browserProcess.kill();
     server.close();
-    fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    removeTempDir(tempDir);
     throw error;
   }
 
@@ -525,7 +538,7 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
       if (browserProcess.exitCode === null) browserProcess.kill();
     }
     server.close();
-    fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    removeTempDir(tempDir);
   };
 
   // Instellingen voor iedere test: een vast scherm, de tijdzone, licht thema van het apparaat
