@@ -7,16 +7,23 @@ declare(strict_types=1);
 //
 // Gebruik (vanuit de projectmap):
 //   php backend/bin/afas-sync.php
+//   php backend/bin/afas-sync.php --werkgevers     toont ook de verschillende waarden van de werkgever
 //   php backend/bin/afas-sync.php --env=C:\pad\naar\.env
 //
-// De instellingen AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR komen uit de omgeving of uit het .env-bestand (zie
-// .env.example). Gebruik hier alleen een token van de testomgeving van AFAS.
+// De uitvoer bevat: het aantal rijen, de redenen waarom rijen zijn afgekeurd (samengevat) en de vorm
+// van de velden die de koppeling leest (hoeveel leeg, hoeveel alleen cijfers, hoeveel iets anders).
+// Met --werkgevers komen de waarden van de velden over het bedrijf erbij. Dat zijn geen gegevens van
+// een persoon. Waarden van andere velden worden nooit getoond.
+//
+// De instellingen AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR komen uit de omgeving of uit het
+// .env-bestand (zie .env.example). Gebruik hier bij voorkeur de testomgeving van AFAS.
 
 use Tvb\Consumptie\Afas\AfasClient;
 use Tvb\Consumptie\Afas\AfasConfig;
 use Tvb\Consumptie\Afas\AfasException;
 use Tvb\Consumptie\Afas\CurlHttpClient;
 use Tvb\Consumptie\Afas\EmployeeMapper;
+use Tvb\Consumptie\Afas\FieldShape;
 
 // Alleen vanaf de opdrachtregel. Zo kan dit bestand nooit via een webserver worden gestart.
 if (PHP_SAPI !== 'cli') {
@@ -27,11 +34,14 @@ if (PHP_SAPI !== 'cli') {
 require dirname(__DIR__) . '/autoload.php';
 
 $envFile = dirname(__DIR__, 2) . '/.env';
+$showEmployers = false;
 foreach (array_slice($argv, 1) as $argument) {
     if (str_starts_with($argument, '--env=')) {
         $envFile = substr($argument, strlen('--env='));
+    } elseif ($argument === '--werkgevers') {
+        $showEmployers = true;
     } else {
-        fwrite(STDERR, "Onbekende optie: $argument. Gebruik: php backend/bin/afas-sync.php [--env=pad]\n");
+        fwrite(STDERR, "Onbekende optie: $argument. Gebruik: php backend/bin/afas-sync.php [--werkgevers] [--env=pad]\n");
         exit(2);
     }
 }
@@ -55,6 +65,42 @@ echo 'Connector: ' . $connector . "\n";
 echo 'Opgehaald: ' . $mapped->receivedCount() . " rijen\n";
 echo 'Geldig: ' . count($mapped->employees) . " (in dienst: $inService, uit dienst: " . (count($mapped->employees) - $inService) . ")\n";
 echo 'Afgekeurd: ' . count($mapped->problems) . "\n";
+
+// De redenen samengevat: per reden het aantal rijen en de eerste rij waar het voorkomt.
+$reasons = [];
 foreach ($mapped->problems as $problem) {
-    echo '  rij ' . $problem['row'] . ': ' . $problem['reason'] . "\n";
+    $reasons[$problem['reason']] ??= ['count' => 0, 'first' => $problem['row']];
+    $reasons[$problem['reason']]['count']++;
+}
+foreach ($reasons as $reason => $info) {
+    echo '  ' . $info['count'] . ' keer: ' . $reason . ' (eerste keer in rij ' . $info['first'] . ")\n";
+}
+
+// De vorm van de velden die de koppeling leest, en van alle velden over de werkgever. Alleen aantallen.
+$employerFields = array_values(array_filter(array_keys($rows[0] ?? []), static fn ($name): bool => is_string($name) && stripos($name, 'werkgever') === 0));
+$fields = array_values(array_unique(array_merge($mapper->fieldNames(), $employerFields)));
+echo "\nVorm van de velden (alleen aantallen, geen waarden):\n";
+foreach ($fields as $field) {
+    $shape = FieldShape::summarize($rows, $field);
+    echo sprintf(
+        "  %s: %d alleen cijfers, %d met letters of andere tekens, %d leeg, %d ontbreekt. %d verschillende waarden, langste %d tekens.\n",
+        $field,
+        $shape['digits'],
+        $shape['other'],
+        $shape['empty'],
+        $shape['missing'],
+        $shape['distinct'],
+        $shape['longest']
+    );
+}
+
+if ($showEmployers) {
+    foreach ($employerFields as $field) {
+        echo "\nWaarden van $field (hoogstens 50, met het aantal medewerkers):\n";
+        foreach (FieldShape::distinctValues($rows, $field) as $value => $count) {
+            echo '  ' . $count . ' keer: ' . $value . "\n";
+        }
+    }
+} elseif ($employerFields !== []) {
+    echo "\nDe waarden van de werkgever zelf bekijken: php backend/bin/afas-sync.php --werkgevers\n";
 }
