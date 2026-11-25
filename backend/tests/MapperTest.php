@@ -8,7 +8,7 @@ use Tvb\Consumptie\Afas\AfasException;
 use Tvb\Consumptie\Afas\EmployeeMapper;
 
 test('EmployeeMapper: een rij wordt een medewerker, met het voorvoegsel bij de achternaam', function (): void {
-    $mapped = (new EmployeeMapper())->map([afasRow()]);
+    $mapped = (fullMapper())->map([afasRow()]);
 
     same([], $mapped->problems);
     $employee = $mapped->employees[0];
@@ -22,14 +22,14 @@ test('EmployeeMapper: een rij wordt een medewerker, met het voorvoegsel bij de a
 });
 
 test('EmployeeMapper: zonder voorvoegsel is de achternaam alleen de achternaam, en spaties eromheen vervallen', function (): void {
-    $mapped = (new EmployeeMapper())->map([afasRow(['Voornaam' => '  Mark ', 'Achternaam' => ' Jansen ', 'Voorvoegsel' => null])]);
+    $mapped = (fullMapper())->map([afasRow(['Voornaam' => '  Mark ', 'Achternaam' => ' Jansen ', 'Voorvoegsel' => null])]);
 
     same('Mark', $mapped->employees[0]->firstName);
     same('Jansen', $mapped->employees[0]->lastName);
 });
 
 test('EmployeeMapper: een nummer dat AFAS als getal geeft, wordt tekst', function (): void {
-    $mapped = (new EmployeeMapper())->map([afasRow(['Personeelsnummer' => 5001, 'Werkgever' => 4711, 'Looncode' => 101])]);
+    $mapped = (fullMapper())->map([afasRow(['Personeelsnummer' => 5001, 'Werkgever' => 4711, 'Looncode' => 101])]);
 
     same('5001', $mapped->employees[0]->personnelNumber);
     same('4711', $mapped->employees[0]->employerNumber);
@@ -37,11 +37,11 @@ test('EmployeeMapper: een nummer dat AFAS als getal geeft, wordt tekst', functio
 });
 
 test('EmployeeMapper: voorloopnullen in een nummer blijven staan', function (): void {
-    same('0012', (new EmployeeMapper())->map([afasRow(['Personeelsnummer' => '0012'])])->employees[0]->personnelNumber);
+    same('0012', (fullMapper())->map([afasRow(['Personeelsnummer' => '0012'])])->employees[0]->personnelNumber);
 });
 
 test('EmployeeMapper: van de datum uit dienst telt alleen de dag', function (): void {
-    $mapper = new EmployeeMapper();
+    $mapper = fullMapper();
 
     same('2026-10-31', $mapper->map([afasRow(['DatumUitDienst' => '2026-10-31T00:00:00Z'])])->employees[0]->endDate);
     same('2026-10-31', $mapper->map([afasRow(['DatumUitDienst' => '2026-10-31'])])->employees[0]->endDate);
@@ -49,7 +49,7 @@ test('EmployeeMapper: van de datum uit dienst telt alleen de dag', function (): 
 });
 
 test('EmployeeMapper: de laatste werkdag telt nog als in dienst, de dag erna niet meer', function (): void {
-    $employee = (new EmployeeMapper())->map([afasRow(['DatumUitDienst' => '2026-10-31'])])->employees[0];
+    $employee = (fullMapper())->map([afasRow(['DatumUitDienst' => '2026-10-31'])])->employees[0];
 
     ok($employee->isActiveOn('2026-10-30'));
     ok($employee->isActiveOn('2026-10-31'));
@@ -61,7 +61,7 @@ test('EmployeeMapper: ontbreekt een verplicht veld, dan stopt alles met de naam 
         $row = afasRow();
         unset($row[$field]);
 
-        $error = throws(AfasException::class, fn () => (new EmployeeMapper())->map([afasRow(), $row]));
+        $error = throws(AfasException::class, fn () => (fullMapper())->map([afasRow(), $row]));
         same(AfasException::FORMAT, $error->kind);
         ok(str_contains($error->getMessage(), $field) && str_contains($error->getMessage(), 'rij 2'), $error->getMessage());
         ok(!str_contains($error->getMessage(), 'Lotte'), 'de foutmelding bevat een naam');
@@ -72,7 +72,7 @@ test('EmployeeMapper: voorvoegsel, werklocatie en datum uit dienst mogen ontbrek
     $row = afasRow();
     unset($row['Voorvoegsel'], $row['Werklocatie'], $row['DatumUitDienst']);
 
-    $employee = (new EmployeeMapper())->map([$row])->employees[0];
+    $employee = (fullMapper())->map([$row])->employees[0];
     same('Dijk', $employee->lastName);
     same('', $employee->workLocation);
     same(null, $employee->endDate);
@@ -95,7 +95,7 @@ test('EmployeeMapper: een rij met een ongeldige waarde wordt afgekeurd met een r
         'datum in een andere vorm' => [['DatumUitDienst' => '31-10-2026'], '5001'],
     ];
     foreach ($wrong as $name => [$changes, $expectedNumber]) {
-        $mapped = (new EmployeeMapper())->map([afasRow($changes), afasRow(['Personeelsnummer' => '5002', 'Voornaam' => 'Mark', 'Achternaam' => 'Jansen', 'Voorvoegsel' => null])]);
+        $mapped = (fullMapper())->map([afasRow($changes), afasRow(['Personeelsnummer' => '5002', 'Voornaam' => 'Mark', 'Achternaam' => 'Jansen', 'Voorvoegsel' => null])]);
 
         same(1, count($mapped->problems), $name);
         same(1, $mapped->problems[0]['row'], $name);
@@ -108,19 +108,19 @@ test('EmployeeMapper: een rij met een ongeldige waarde wordt afgekeurd met een r
 });
 
 test('EmployeeMapper: de personeelsnummers van afgekeurde rijen zijn op te vragen', function (): void {
-    $mapped = (new EmployeeMapper())->map([afasRow(['Looncode' => null]), afasRow(['Personeelsnummer' => 'x']), afasRow(['Personeelsnummer' => '5003', 'Voornaam' => ''])]);
+    $mapped = (fullMapper())->map([afasRow(['Looncode' => null]), afasRow(['Personeelsnummer' => 'x']), afasRow(['Personeelsnummer' => '5003', 'Voornaam' => ''])]);
 
     same(['5001', '5003'], $mapped->invalidNumbers());
 });
 
 test('EmployeeMapper: extra velden in een rij worden genegeerd', function (): void {
-    $employee = (new EmployeeMapper())->map([afasRow(['Geboortedatum' => '1990-01-01', 'BSN' => '000000000'])])->employees[0];
+    $employee = (fullMapper())->map([afasRow(['Geboortedatum' => '1990-01-01', 'BSN' => '000000000'])])->employees[0];
 
     same(['personnelNumber', 'firstName', 'lastName', 'employerNumber', 'workLocation', 'payrollCode', 'endDate'], array_keys(get_object_vars($employee)));
 });
 
 test('EmployeeMapper: de namen van de velden in de GetConnector zijn in te stellen', function (): void {
-    $mapper = new EmployeeMapper(['personnelNumber' => 'Medewerker', 'endDate' => 'DatumUit']);
+    $mapper = new EmployeeMapper(['personnelNumber' => 'Medewerker', 'firstName' => 'Voornaam', 'endDate' => 'DatumUit']);
     $row = afasRow(['Medewerker' => '7001', 'DatumUit' => '2026-12-31']);
     unset($row['Personeelsnummer'], $row['DatumUitDienst']);
 

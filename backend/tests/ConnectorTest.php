@@ -43,7 +43,7 @@ test('Zonder AFAS_CONNECTOR: de synchronisatie mislukt netjes, wijzigt niets en 
     $log = [];
     $runner = new SyncRunner(
         new AfasClient(configWithoutConnector(), $http),
-        new EmployeeMapper(),
+        fullMapper(),
         new EmployeeSync(),
         $repository,
         static function (string $line) use (&$log): void {

@@ -20,7 +20,7 @@ function planFor(array $rows, array $current = [], ?int $previousCount = null): 
 {
     $repository = new InMemoryRepository($current);
 
-    return (new EmployeeSync())->plan((new EmployeeMapper())->map($rows), $current, $repository->companies, $repository->points, TODAY, $previousCount);
+    return (new EmployeeSync())->plan((fullMapper())->map($rows), $current, $repository->companies, $repository->points, TODAY, $previousCount);
 }
 
 test('EmployeeSync: een nieuw personeelsnummer wordt een actieve medewerker met bedrijf en consumptiepunt van de werklocatie', function (): void {
@@ -171,7 +171,7 @@ test('EmployeeSync: een lijst die veel korter is dan de vorige keer, stopt de sy
 });
 
 test('EmployeeSync: de grens voor een te korte lijst is in te stellen', function (): void {
-    $mapped = (new EmployeeMapper())->map([afasRow()]);
+    $mapped = (fullMapper())->map([afasRow()]);
 
     throws(AfasException::class, fn () => (new EmployeeSync(0.9))->plan($mapped, [], [], [], TODAY, 2));
     same(1, count((new EmployeeSync(0.5))->plan($mapped, [], [], [], TODAY, 2)->additions));

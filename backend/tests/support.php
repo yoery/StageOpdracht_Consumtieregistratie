@@ -91,6 +91,45 @@ function fakeConfig(int $take = 100, string $baseUrl = 'https://12345.resttest.a
 }
 
 /**
+ * Een mapper voor een GetConnector met alle acht gegevens uit het ontwerp, ook de looncode, de
+ * werklocatie en de datum uit dienst. De GetConnector die TVB nu heeft, geeft die drie niet (zie
+ * EmployeeMapper::DEFAULT_FIELDS). De rijen van `afasRow()` horen bij deze volledige mapper.
+ */
+function fullMapper(): \Tvb\Consumptie\Afas\EmployeeMapper
+{
+    return new \Tvb\Consumptie\Afas\EmployeeMapper([
+        'personnelNumber' => 'Personeelsnummer',
+        'firstName' => 'Voornaam',
+        'workLocation' => 'Werklocatie',
+        'payrollCode' => 'Looncode',
+        'endDate' => 'DatumUitDienst',
+    ]);
+}
+
+/**
+ * Een rij zoals de GetConnector van TVB die nu geeft: met Medewerker en Roepnaam, zonder looncode,
+ * werklocatie en datum uit dienst, en met extra velden die de koppeling niet leest. Nepgegevens.
+ *
+ * @param array<string, mixed> $changes
+ * @return array<string, mixed>
+ */
+function realRow(array $changes = []): array
+{
+    return array_merge([
+        'Medewerker' => '5001',
+        'Roepnaam' => 'Lotte',
+        'Achternaam' => 'Dijk',
+        'Voorvoegsel' => 'van',
+        'Werkgever' => '4711',
+        'Voorletters' => 'L.',
+        'Geboortedatum' => '1990-01-01T00:00:00Z',
+        'Straat' => 'Voorbeeldstraat',
+        'Woonplaats' => 'Voorbeeldstad',
+        'Geblokkeerd' => false,
+    ], $changes);
+}
+
+/**
  * Een rij zoals de GetConnector die geeft. Zonder argumenten is het voorbeeldmedewerker Lotte van Dijk.
  *
  * @param array<string, mixed> $changes

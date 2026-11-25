@@ -102,9 +102,10 @@ foreach ($fields as $field) {
 }
 
 $present = array_column($fields, 'id');
-$missing = array_values(array_diff(array_values(EmployeeMapper::DEFAULT_FIELDS), $present));
-$extra = array_values(array_diff($present, array_values(EmployeeMapper::DEFAULT_FIELDS)));
-echo "\nVerwacht door de koppeling: " . implode(', ', EmployeeMapper::DEFAULT_FIELDS) . "\n";
+$expected = (new EmployeeMapper())->fieldNames();
+$missing = array_values(array_diff($expected, $present));
+$extra = array_values(array_diff($present, $expected));
+echo "\nVerwacht door de koppeling: " . implode(', ', $expected) . "\n";
 echo 'Ontbreekt in de GetConnector: ' . ($missing === [] ? 'niets' : implode(', ', $missing)) . "\n";
 echo 'Extra in de GetConnector (wordt niet gelezen): ' . ($extra === [] ? 'niets' : implode(', ', $extra)) . "\n";
 exit($missing === [] ? 0 : 1);

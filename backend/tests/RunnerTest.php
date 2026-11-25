@@ -24,7 +24,7 @@ function runSync(array $responses, InMemoryRepository $repository, array &$log =
 {
     $runner = new \Tvb\Consumptie\Afas\SyncRunner(
         new AfasClient(fakeConfig(), new FakeHttpClient($responses)),
-        new EmployeeMapper(),
+        fullMapper(),
         new EmployeeSync(),
         $repository,
         static function (string $line) use (&$log): void {

@@ -8,16 +8,17 @@ namespace Tvb\Consumptie\Afas;
  * EmployeeMapper — zet de rijen van de GetConnector om naar medewerkers (AfasEmployee).
  *
  * Verantwoordelijkheid:
- *   - weten hoe de velden in de GetConnector heten. De namen hieronder zijn een voorbeeld: de
- *     AFAS-beheerder van TVB bepaalt ze bij het inrichten van de connector. Wijken ze af, dan gaan de
- *     juiste namen mee in de constructor;
+ *   - weten hoe de velden in de GetConnector heten. De namen hieronder zijn die van de GetConnector
+ *     die TVB nu heeft. Wijken ze af, dan gaan de juiste namen mee in de constructor. De looncode, de
+ *     werklocatie en de datum uit dienst zitten niet in die connector en staan daarom uit (null). Staat
+ *     een veld uit, dan komt dat gegeven niet uit AFAS en blijft het in de app zoals het is;
  *   - controleren of de verwachte velden er zijn. Ontbreekt een verplicht veld, dan stopt alles
  *     (de connector is dan anders ingericht dan verwacht);
  *   - iedere waarde controleren met dezelfde regels als de app: nummers bestaan alleen uit cijfers,
  *     een naam is niet leeg en bevat geen stuurtekens. Een rij die niet klopt, wordt afgekeurd met
  *     een reden. De andere rijen gaan door.
  *
- * Alleen deze acht gegevens worden gelezen. Staat er meer in een rij, dan wordt dat genegeerd
+ * Alleen de ingestelde velden worden gelezen. Staat er meer in een rij, dan wordt dat genegeerd
  * (dataminimalisatie).
  *
  * Verbonden met:
@@ -27,34 +28,38 @@ namespace Tvb\Consumptie\Afas;
 final class EmployeeMapper
 {
     public const DEFAULT_FIELDS = [
-        'personnelNumber' => 'Personeelsnummer',
-        'firstName' => 'Voornaam',
+        'personnelNumber' => 'Medewerker',
+        'firstName' => 'Roepnaam',
         'lastName' => 'Achternaam',
         'prefix' => 'Voorvoegsel',
         'employer' => 'Werkgever',
-        'workLocation' => 'Werklocatie',
-        'payrollCode' => 'Looncode',
-        'endDate' => 'DatumUitDienst',
+        'workLocation' => null,
+        'payrollCode' => null,
+        'endDate' => null,
     ];
 
-    // Deze velden moeten in iedere rij staan. De andere drie (voorvoegsel, werklocatie en datum uit
-    // dienst) zijn bij veel medewerkers leeg en mogen daarom ook ontbreken.
+    // Deze vier velden moeten altijd zijn ingesteld en in iedere rij staan. De looncode moet in iedere
+    // rij staan als hij is ingesteld. Het voorvoegsel, de werklocatie en de datum uit dienst zijn bij
+    // veel medewerkers leeg en mogen daarom in een rij ontbreken.
+    private const ALWAYS = ['personnelNumber', 'firstName', 'lastName', 'employer'];
     private const REQUIRED = ['personnelNumber', 'firstName', 'lastName', 'employer', 'payrollCode'];
 
     private const MAX_CODE_LENGTH = 64;
     private const MAX_FIRST_NAME_LENGTH = 100;
     private const MAX_LAST_NAME_LENGTH = 150;
 
-    /** @var array<string, string> */
+    /** @var array<string, string|null> */
     private readonly array $fields;
 
     /**
-     * @param array<string, string> $fields afwijkende veldnamen, bijvoorbeeld ['endDate' => 'DatumUit']
+     * @param array<string, string|null> $fields afwijkende veldnamen, bijvoorbeeld
+     *                                           ['payrollCode' => 'Looncode']. Met null staat een veld uit.
      */
     public function __construct(array $fields = [])
     {
         foreach ($fields as $key => $name) {
-            if (!isset(self::DEFAULT_FIELDS[$key]) || !is_string($name) || preg_match('/^[A-Za-z0-9_]{1,100}$/', $name) !== 1) {
+            $valid = $name === null || (is_string($name) && preg_match('/^[A-Za-z0-9_-]{1,100}$/', $name) === 1);
+            if (!array_key_exists($key, self::DEFAULT_FIELDS) || !$valid || ($name === null && in_array($key, self::ALWAYS, true))) {
                 throw new AfasException(AfasException::CONFIG, sprintf('Onbekend of ongeldig veld in de instellingen van de koppeling: %s.', (string) $key));
             }
         }
@@ -64,7 +69,17 @@ final class EmployeeMapper
     /** De naam van het veld waarop AFAS moet sorteren: het personeelsnummer. */
     public function sortField(): string
     {
-        return $this->fields['personnelNumber'];
+        return (string) $this->fields['personnelNumber'];
+    }
+
+    /**
+     * De namen van de velden die de koppeling in de GetConnector verwacht (zonder de velden die uit staan).
+     *
+     * @return list<string>
+     */
+    public function fieldNames(): array
+    {
+        return array_values(array_filter($this->fields, static fn (?string $name): bool => $name !== null));
     }
 
     /**
@@ -78,7 +93,7 @@ final class EmployeeMapper
         $problems = [];
         foreach ($rows as $index => $row) {
             foreach (self::REQUIRED as $key) {
-                if (!array_key_exists($this->fields[$key], $row)) {
+                if ($this->fields[$key] !== null && !array_key_exists($this->fields[$key], $row)) {
                     throw new AfasException(
                         AfasException::FORMAT,
                         sprintf('In het antwoord van AFAS ontbreekt het veld %s (rij %d). Is de GetConnector gewijzigd?', $this->fields[$key], $index + 1)
@@ -132,8 +147,9 @@ final class EmployeeMapper
             return $problem('de werkgever ontbreekt of bestaat niet alleen uit cijfers');
         }
 
-        $payrollCode = $this->text($row, 'payrollCode');
-        if (!$this->isCode($payrollCode)) {
+        // Zit de looncode niet in de GetConnector, dan is hij onbekend (null) en blijft hij in de app.
+        $payrollCode = $this->fields['payrollCode'] === null ? null : $this->text($row, 'payrollCode');
+        if ($this->fields['payrollCode'] !== null && !$this->isCode($payrollCode)) {
             return $problem('de looncode ontbreekt of bestaat niet alleen uit cijfers');
         }
 
@@ -159,7 +175,7 @@ final class EmployeeMapper
      */
     private function text(array $row, string $key): ?string
     {
-        $value = $row[$this->fields[$key]] ?? null;
+        $value = $this->fields[$key] === null ? null : ($row[$this->fields[$key]] ?? null);
         if ($value === null) {
             return '';
         }

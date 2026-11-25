@@ -13,7 +13,8 @@ namespace Tvb\Consumptie\Afas;
  *     de vorige keer, dan stopt de synchronisatie zonder iets te wijzigen;
  *   - koppelen (stap 4): een medewerker uit AFAS wordt gezocht op personeelsnummer;
  *   - nieuw (stap 5): een personeelsnummer dat nog niet bestaat, wordt een nieuwe, actieve
- *     medewerker. Die krijgt het consumptiepunt met dezelfde naam als de werklocatie, als dat bij zijn
+ *     medewerker. Geeft AFAS geen looncode, dan komt hij zonder looncode binnen en vult de beheerder
+ *     die in de app in. Die krijgt het consumptiepunt met dezelfde naam als de werklocatie, als dat bij zijn
  *     bedrijf bestaat. Wie al uit dienst is, wordt niet toegevoegd;
  *   - gewijzigd (stap 6): zijn naam, bedrijf of looncode anders, dan worden ze bijgewerkt. Het
  *     consumptiepunt van een bestaande medewerker blijft zoals de beheerder het heeft gekozen. Alleen
@@ -84,11 +85,14 @@ final class EmployeeSync
                     $notes[] = sprintf('Personeelsnummer %s is al uit dienst en is niet toegevoegd.', $number);
                     continue;
                 }
+                if ($employee->payrollCode === null) {
+                    $notes[] = sprintf('Personeelsnummer %s is toegevoegd zonder looncode. De beheerder vult de looncode in de app in.', $number);
+                }
                 $additions[] = [
                     'personnelNumber' => $number,
                     'firstName' => $employee->firstName,
                     'lastName' => $employee->lastName,
-                    'payrollCode' => $employee->payrollCode,
+                    'payrollCode' => $employee->payrollCode ?? '',
                     'companyId' => $companyId,
                     'pointId' => $this->pointFor($employee->workLocation, $companyId, $points),
                     'active' => true,
@@ -171,7 +175,8 @@ final class EmployeeSync
         if ($existing->lastName !== $employee->lastName) {
             $changes['lastName'] = $employee->lastName;
         }
-        if ($existing->payrollCode !== $employee->payrollCode) {
+        // Geeft AFAS geen looncode, dan blijft de looncode die de beheerder in de app heeft ingevuld.
+        if ($employee->payrollCode !== null && $existing->payrollCode !== $employee->payrollCode) {
             $changes['payrollCode'] = $employee->payrollCode;
         }
         // Een onbekende werkgever verandert het bedrijf niet. Bij een ander bedrijf hoort het oude
