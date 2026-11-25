@@ -39,8 +39,10 @@
   color:var(--muted);
   font-size:11px
 }
-/* Label "Pas gekoppeld" achter de naam; zelfde vorm en kleuren als de voorraadlabels (.stock-badge.stock-ok). */
-.admin-employee-item .badge-linked {
+/* Label "Pas gekoppeld" achter de naam; zelfde vorm en kleuren als de voorraadlabels (.stock-badge.stock-ok).
+   Label "Geen looncode" heeft dezelfde vorm met de kleuren van een waarschuwing (.stock-low). */
+.admin-employee-item .badge-linked,
+.admin-employee-item .badge-missing {
   display:inline-block;
   margin-left:6px;
   padding:3px 8px;
@@ -51,6 +53,10 @@
   font-weight:700;
   white-space:nowrap;
   vertical-align:middle
+}
+.admin-employee-item .badge-missing {
+  background:var(--warning-bg);
+  color:var(--warning-text)
 }
 .admin-item-actions {
   display:flex;

@@ -327,7 +327,22 @@ export class AdminController extends ControllerPart {
     const exported = this.csvExport.download(selectedEmployee, selectedMonth);
     if (!exported) {
       this.view.showToast("Geen registraties om te exporteren voor deze filters.", { tone: "error" });
+      return;
     }
+
+    // Het bestand is gemaakt. Staan er medewerkers zonder looncode in, dan zegt een melding dat:
+    // de loonadministratie kan een regel zonder looncode niet verwerken. In het tabblad Medewerkers
+    // hebben zij het label "Geen looncode" (zie RegistrationView.renderAdminEmployees).
+    const missing = this.csvExport.countMissingPayrollCodes?.(selectedEmployee, selectedMonth) ?? 0;
+    if (missing > 0) {
+      this.view.showToast(AdminController.missingPayrollCodeMessage(missing), { tone: "error", duration: 8000 });
+    }
+  }
+
+  // De melding na een export waarin medewerkers zonder looncode staan.
+  static missingPayrollCodeMessage(count) {
+    const who = count === 1 ? "1 medewerker heeft" : `${count} medewerkers hebben`;
+    return `Het bestand is gemaakt, maar ${who} geen looncode. Vul die in bij Medewerkers en exporteer opnieuw.`;
   }
 
   // Knop "Alle gegevens wissen" in het tabblad Logboek. De tablet wordt door iedereen gedeeld en

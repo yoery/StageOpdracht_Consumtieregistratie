@@ -506,6 +506,9 @@ export class RegistrationView {
   // registraties; registraties zijn nodig voor de loonadministratie, dus dan is deactiveren genoeg.
   // Medewerkers met een gekoppelde pas krijgen het label "Pas gekoppeld". Het pasnummer zelf
   // staat niet in de lijst; dat is alleen in het formulier "Wijzigen" te zien.
+  // Medewerkers zonder looncode krijgen het label "Geen looncode": zonder looncode kan de
+  // loonadministratie hun regel in de export niet verwerken. De looncode komt niet uit AFAS, dus
+  // een medewerker die uit AFAS komt, heeft dit label totdat de beheerder de looncode invult.
   renderAdminEmployees() {
     const query = this.$("#employeeManagementSearch").value.toLowerCase().trim();
 
@@ -519,7 +522,7 @@ export class RegistrationView {
         const faceParts = this.adminFaceParts(employee, face);
         return `<div class="admin-employee-item">
           <span>
-            <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}</strong>
+            <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}${String(employee.payrollCode ?? "").trim() ? "" : ` <span class="badge-missing">Geen looncode</span>`}</strong>
             <small>
               ${employee.active ? "Actief" : "Inactief"} ·
               ${this.escapeHtml(this.model.companyName(employee.companyId))} ·

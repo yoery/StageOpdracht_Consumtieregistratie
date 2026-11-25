@@ -366,7 +366,45 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     assert.equal(lines.length, 2);
     assert.match(lines[0], /^Jaar;Maand;Looncode;Personeelsnummer;/);
     assert.match(lines[1], /0,65/);
-    // Er verscheen geen foutmelding.
+
+    // Daan heeft in de demogegevens geen looncode: de kolom Looncode is leeg en een melding zegt dat.
+    assert.equal(lines[1].split(";")[2], "");
+    await waitForToast("Het bestand is gemaakt, maar 1 medewerker heeft geen looncode. Vul die in bij Medewerkers en exporteer opnieuw.");
+
+    // In het tabblad Medewerkers heeft hij het label "Geen looncode". De beheerder vult de looncode in.
+    await browser.click(`.tab[data-tab="employees"]`);
+    await browser.waitFor(`!document.querySelector("#employeesTab").classList.contains("hidden")`);
+    const daanLabels = `[...document.querySelectorAll(".admin-employee-item")]
+      .find((item) => item.textContent.includes("Daan Smit")).querySelectorAll(".badge-missing").length`;
+    assert.equal(await browser.evaluate(daanLabels), 1);
+    assert.equal(await browser.evaluate(`document.querySelector(".badge-missing").textContent`), "Geen looncode");
+    const daanId = await browser.evaluate(`[...document.querySelectorAll("[data-edit-employee]")]
+      .find((button) => button.closest(".admin-employee-item").textContent.includes("Daan Smit")).dataset.editEmployee`);
+    await browser.click(`[data-edit-employee="${daanId}"]`);
+    await browser.waitFor(`!document.querySelector("#employeeFormModal").classList.contains("hidden")`);
+    await browser.click("#newEmployeePayrollCode");
+    await browser.insertText("103");
+    await browser.click("#newEmployeePersonnelNumber");
+    await browser.insertText("5003");
+    await browser.click(`#employeeForm [data-save-mode="close"]`);
+    await browser.waitFor(`document.querySelector("#employeeFormModal").classList.contains("hidden")`);
+    await waitForToast("Medewerker gewijzigd");
+    assert.equal(await browser.evaluate(daanLabels), 0);
+
+    // Opnieuw exporteren: de looncode staat nu in het bestand en er komt geen melding meer.
+    await browser.click(`.tab[data-tab="registrations"]`);
+    await browser.waitFor(`!document.querySelector("#registrationsTab").classList.contains("hidden")`);
+    const startedAgain = browser.waitForEvent("Browser.downloadWillBegin");
+    await browser.click("#exportButton");
+    const second = await startedAgain;
+    await browser.waitForEvent("Browser.downloadProgress", (params) => params.guid === second.guid && params.state === "completed");
+    const secondFile = path.join(browser.downloadDir, second.guid);
+    const secondLines = fs.readFileSync(secondFile, "utf8").slice(1).split("\r\n");
+    fs.rmSync(secondFile, { force: true });
+
+    assert.deepEqual(secondLines[1].split(";").slice(2, 4), ["103", "5003"]);
+    await sleep(300); // een melding komt pas na een korte vertraging in beeld
+    assert.ok(!(await visibleToastText()).includes("looncode"), "er kwam toch een melding over de looncode");
     assert.equal(await browser.evaluate(`!document.querySelector("#toastAlert").classList.contains("hidden")`), false);
   });
 

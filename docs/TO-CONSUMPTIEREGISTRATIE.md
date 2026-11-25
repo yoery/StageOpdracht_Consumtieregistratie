@@ -1,7 +1,7 @@
 # Technisch ontwerp Consumptieregistratie TVB
 
 **Auteur:** Youri Rodenburg
-**Versie:** 3.30
+**Versie:** 3.31
 **Datum:** 25 november 2026
 
 ## Inhoudsopgave
@@ -324,6 +324,7 @@ De eisen zijn per onderwerp gegroepeerd. De nummers zijn niet veranderd, zodat v
 | FR-28 | De CSV-export gebruikt de kolomvolgorde Jaar, Maand, Looncode, Personeelsnummer, Werkgevernummer, Naam, Totaal en Prijs. | Must |
 | FR-30 | Consumpties worden verwerkt in de loonadministratie van de daaropvolgende maand. Jaar en Maand in de export zijn daarom de loonmaand: consumpties uit september staan bij oktober, consumpties uit december bij januari van het volgende jaar. | Must |
 | FR-55 | Iedere registratie bewaart het werkgevernummer van dat moment. Een oude loonmaand in de CSV-export verandert daardoor niet als de medewerker later naar een ander bedrijf gaat of het nummer van het bedrijf wijzigt. | Must |
+| FR-94 | De looncode hoort bij de medewerker en wordt in het beheer ingevuld. De looncode komt niet uit AFAS. Een medewerker zonder looncode heeft in het tabblad `Medewerkers` het label "Geen looncode". Staat er na `CSV exporteren` een medewerker zonder looncode in het bestand, dan zegt een melding hoeveel medewerkers het zijn, zonder namen. Het bestand wordt wel gemaakt. | Must |
 
 ### Logboek en correcties
 
@@ -1571,7 +1572,7 @@ Deze paragraaf laat ieder scherm van de website zien zoals het nu werkt. Per sch
 
 **Hoe de screenshots zijn gemaakt.** Alle afbeeldingen staan in de map `docs/wireframes/` en zijn screenshots van de echte website, gemaakt met Microsoft Edge zonder venster (headless). Er is niets in getekend of nagemaakt.
 
-**Wanneer de screenshots zijn gemaakt.** Op 30 oktober 2026 is iedere screenshot vergeleken met hetzelfde scherm in versie 3.24. Screenshots die nog klopten, zijn niet opnieuw gemaakt. Daardoor komen de huidige screenshots uit zes reeksen. W15 is van 15 oktober 2026. W42 tot en met W45 zijn van 21 oktober 2026. W48 tot en met W51 zijn van 26 oktober 2026 (versie 3.21). W07, W08, W11, W12, W21 tot en met W24, W35 en W38 zijn van 27 oktober 2026 (versie 3.22). Alle andere screenshots, ook de nieuwe W52 tot en met W55, zijn van 30 oktober 2026 (versie 3.24). W47 is op 16 november 2026 opnieuw gemaakt (versie 3.28), nadat de uitleg in dat venster was verbeterd. Op een scherm met een banner staat de datum van de reeks. De reeksen van 15, 27 en 30 oktober zijn 's ochtends gemaakt. Daarom staat in het productvenster "Goedemorgen". W47 is 's middags gemaakt en heeft daarom "Goedemiddag". Alle screenshots zijn JPEG-bestanden (kwaliteit 88). Bij de reeks van 30 oktober stond in de browser "minder beweging" aan, zodat er geen half geopend venster op een screenshot staat. W45 toont een scherm dat niet meer bestaat (zie W45).
+**Wanneer de screenshots zijn gemaakt.** Op 30 oktober 2026 is iedere screenshot vergeleken met hetzelfde scherm in versie 3.24. Screenshots die nog klopten, zijn niet opnieuw gemaakt. Daardoor komen de huidige screenshots uit zes reeksen. W15 is van 15 oktober 2026. W42 tot en met W45 zijn van 21 oktober 2026. W48 tot en met W51 zijn van 26 oktober 2026 (versie 3.21). W07, W08, W11, W12, W22 tot en met W24 en W35 zijn van 27 oktober 2026 (versie 3.22). Alle andere screenshots, ook de nieuwe W52 tot en met W55, zijn van 30 oktober 2026 (versie 3.24). W47 is op 16 november 2026 opnieuw gemaakt (versie 3.28), nadat de uitleg in dat venster was verbeterd. W21 en W38 zijn op 25 november 2026 opnieuw gemaakt (versie 3.31), nadat het label "Geen looncode" erbij was gekomen. Op W22 tot en met W24 staat achter het formulier nog de lijst van 27 oktober, zonder dat label. Op een scherm met een banner staat de datum van de reeks. De reeksen van 15, 27 en 30 oktober zijn 's ochtends gemaakt. Daarom staat in het productvenster "Goedemorgen". W47 is 's middags gemaakt en heeft daarom "Goedemiddag". Alle screenshots zijn JPEG-bestanden (kwaliteit 88). Bij de reeks van 30 oktober stond in de browser "minder beweging" aan, zodat er geen half geopend venster op een screenshot staat. W45 toont een scherm dat niet meer bestaat (zie W45).
 
 De demogegevens zijn via de website zelf ingevoerd: Lotte van Dijk registreerde 2× Blikje en 1× Ei, Sophie de Boer 1× Yoghurt en 1× Glas melk, en Daan Smit 2× Sneetje brood en 1× Beleg. Daarna zijn in het beheer de consumptiepunten Kantine IT (IT Supervision, alleen Blikje en Glas melk) en Kantine Klik (Klik, geen producten) aangemaakt, is Tom de Groot naar Kantine IT en Eva Meijer naar Kantine Klik verplaatst en is de voorraad Blikje op Hoofdkantoor op 4 gezet. Bij het verplaatsen moesten de verplichte velden looncode en personeelsnummer worden ingevuld. Tom kreeg personeelsnummer 1 en Eva personeelsnummer 2, omdat een personeelsnummer uniek moet zijn. Of een screenshot vóór of na die beheerstappen is gemaakt, hangt af van wat het scherm moet laten zien. In de screenshots van vóór de beheerstappen (zoals W01 en W05) staan alle medewerkers onder TVB. In de screenshots erna (zoals W02, W04, W11, W28 en W31) staan Tom de Groot onder IT Supervision en Eva Meijer onder Klik. Voor een paar schermen is een aparte, nieuwe sessie gebruikt zonder de beheerstappen, zodat daar alle medewerkers onder TVB staan:
 
@@ -2293,7 +2294,7 @@ De titel is `Gezichtsherkenning instellen voor Lotte van Dijk`, met de uitleg "P
 
 ![W21 – Beheer: Medewerkers](wireframes/w21-medewerkers.jpg)
 
-**Omschrijving.** Het tabblad `Medewerkers` met de knop `Medewerker toevoegen`, een zoekveld ("Medewerker zoeken, wijzigen of activeren") en de lijst. Per medewerker staan de naam en een regel met status, bedrijf, consumptiepunt en personeelsnummer (bijvoorbeeld "Actief · TVB · Hoofdkantoor · Geen personeelsnummer"), met de knoppen `Gezichtsherkenning instellen`, `Deactiveren` en `Wijzigen`. De knop `Verwijderen` verschijnt alleen bij een inactieve medewerker zonder registraties en vraagt dan eerst om bevestiging (zie W38). Bij een medewerker met een gekoppelde pas staat het label "Pas gekoppeld" achter de naam. Het pasnummer zelf staat niet in de lijst. In de screenshot heeft niemand een pas, dus het label staat er niet. De knop `Gezichtsherkenning instellen` staat bij iedere actieve medewerker (FR-88, UC-23) en opent het instelvenster van W12 boven het beheer. In de screenshot heeft niemand een gezicht ingesteld. Bij een ingesteld gezicht staat onder de gegevens in groen "Gezichtsherkenning ingesteld tot 27-10-2027" en staat de knop `Uitzetten` in plaats van `Gezichtsherkenning instellen`. Zonder camera is `Gezichtsherkenning instellen` uitgeschakeld (vaag) met "Geen camera gevonden. Instellen kan alleen met een camera." eronder. Bij een inactieve medewerker (W38) en als de demo uitstaat, zijn er geen knoppen voor gezichtsherkenning. Tussen `Voorraad` en `Logboek` staat ook het tabblad `Koelkast`.
+**Omschrijving.** Het tabblad `Medewerkers` met de knop `Medewerker toevoegen`, een zoekveld ("Medewerker zoeken, wijzigen of activeren") en de lijst. Per medewerker staan de naam en een regel met status, bedrijf, consumptiepunt en personeelsnummer (bijvoorbeeld "Actief · TVB · Hoofdkantoor · Geen personeelsnummer"), met de knoppen `Gezichtsherkenning instellen`, `Deactiveren` en `Wijzigen`. De knop `Verwijderen` verschijnt alleen bij een inactieve medewerker zonder registraties en vraagt dan eerst om bevestiging (zie W38). Bij een medewerker met een gekoppelde pas staat het label "Pas gekoppeld" achter de naam. Het pasnummer zelf staat niet in de lijst. In de screenshot heeft niemand een pas, dus het label staat er niet. Bij een medewerker zonder looncode staat het oranje label "Geen looncode" achter de naam (FR-94). In de screenshot heeft iedereen dat label, want de demogegevens hebben geen looncodes. Het label verdwijnt zodra de beheerder met `Wijzigen` een looncode invult. De knop `Gezichtsherkenning instellen` staat bij iedere actieve medewerker (FR-88, UC-23) en opent het instelvenster van W12 boven het beheer. In de screenshot heeft niemand een gezicht ingesteld. Bij een ingesteld gezicht staat onder de gegevens in groen "Gezichtsherkenning ingesteld tot 27-10-2027" en staat de knop `Uitzetten` in plaats van `Gezichtsherkenning instellen`. Zonder camera is `Gezichtsherkenning instellen` uitgeschakeld (vaag) met "Geen camera gevonden. Instellen kan alleen met een camera." eronder. Bij een inactieve medewerker (W38) en als de demo uitstaat, zijn er geen knoppen voor gezichtsherkenning. Tussen `Voorraad` en `Logboek` staat ook het tabblad `Koelkast`.
 
 **UI-principes:**
 - *Groeperen:* alle gegevens van één medewerker staan in één rij, de acties rechts.
@@ -2301,7 +2302,7 @@ De titel is `Gezichtsherkenning instellen voor Lotte van Dijk`, met de uitleg "P
 - *Consistentie:* iedere rij heeft dezelfde knoppen op dezelfde plek.
 
 **Nielsen-heuristieken:**
-- *H1:* de status (`Actief`) staat bij iedere medewerker.
+- *H1:* de status (`Actief`) staat bij iedere medewerker, en een ontbrekende looncode is direct te zien aan het label "Geen looncode".
 - *H5:* een actieve medewerker kan niet direct worden verwijderd. Eerst deactiveren, dan verwijderen met bevestiging. Een medewerker met registraties kan helemaal niet worden verwijderd, zodat de CSV-export altijd een naam en looncode heeft.
 - *H3:* deactiveren is met `Activeren` terug te draaien.
 
@@ -2309,7 +2310,7 @@ De titel is `Gezichtsherkenning instellen voor Lotte van Dijk`, met de uitleg "P
 
 ![W38 – Beheer: inactieve medewerkers](wireframes/w38-medewerker-inactief.jpg)
 
-**Omschrijving.** Het tabblad `Medewerkers` nadat Mark Jansen en Daan Smit met `Deactiveren` op inactief zijn gezet. Bij beiden staat nu "Inactief · TVB · Hoofdkantoor · Geen personeelsnummer" en de knop `Activeren` in plaats van `Deactiveren`. De knop `Gezichtsherkenning instellen` staat er bij hen niet, want alleen een actieve medewerker kan gezichtsherkenning gebruiken (zie W21). Alleen bij Mark Jansen staat ook de rode knop `Verwijderen`, want er zijn geen registraties van Mark. Daan Smit heeft wel registraties (2× Sneetje brood en 1× Beleg) en kan daarom niet worden verwijderd. Op de pagina achter het venster staan Mark en Daan niet meer in de lijst met medewerkers: een inactieve medewerker kan niet registreren. `Verwijderen` vraagt eerst "Mark Jansen definitief verwijderen? Dit kan niet ongedaan worden gemaakt." Deactiveren en activeren vragen geen bevestiging, omdat ze altijd terug te draaien zijn.
+**Omschrijving.** Het tabblad `Medewerkers` nadat Mark Jansen en Daan Smit met `Deactiveren` op inactief zijn gezet. Bij beiden staat nu "Inactief · TVB · Hoofdkantoor · Geen personeelsnummer" en de knop `Activeren` in plaats van `Deactiveren`. Het label "Geen looncode" staat ook bij een inactieve medewerker, want zijn registraties komen nog in de export. De knop `Gezichtsherkenning instellen` staat er bij hen niet, want alleen een actieve medewerker kan gezichtsherkenning gebruiken (zie W21). Alleen bij Mark Jansen staat ook de rode knop `Verwijderen`, want er zijn geen registraties van Mark. Daan Smit heeft wel registraties (2× Sneetje brood en 1× Beleg) en kan daarom niet worden verwijderd. Op de pagina achter het venster staan Mark en Daan niet meer in de lijst met medewerkers: een inactieve medewerker kan niet registreren. `Verwijderen` vraagt eerst "Mark Jansen definitief verwijderen? Dit kan niet ongedaan worden gemaakt." Deactiveren en activeren vragen geen bevestiging, omdat ze altijd terug te draaien zijn.
 
 **UI-principes:**
 - *Feedback:* de status in de rij (`Inactief`) en de knop (`Activeren`) veranderen direct.
@@ -2929,7 +2930,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 | **ID** | UC-10 |
 | **Actor** | Beheerder |
 | **Doel** | Medewerkers toevoegen, wijzigen, een pas koppelen, actief of inactief zetten en (als het mag) definitief verwijderen. |
-| **Gerelateerde FR's** | FR-01, FR-15, FR-16, FR-23, FR-37, FR-41, FR-59, FR-61, FR-66, FR-88 |
+| **Gerelateerde FR's** | FR-01, FR-15, FR-16, FR-23, FR-37, FR-41, FR-59, FR-61, FR-66, FR-88, FR-94 |
 | **Preconditie** | De beheerder is ingelogd en het tabblad `Medewerkers` is open. |
 
 **Hoofdscenario (toevoegen):**
@@ -3093,7 +3094,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 | **ID** | UC-15 |
 | **Actor** | Beheerder |
 | **Doel** | Een CSV-bestand maken dat de loonadministratie direct kan inlezen. |
-| **Gerelateerde FR's** | FR-17, FR-18, FR-19, FR-20, FR-21, FR-28, FR-30, FR-41, FR-55 |
+| **Gerelateerde FR's** | FR-17, FR-18, FR-19, FR-20, FR-21, FR-28, FR-30, FR-41, FR-55, FR-94 |
 | **Preconditie** | De beheerder is ingelogd en het tabblad `Registraties` is open. Er zijn registraties. |
 
 **Hoofdscenario:**
@@ -3108,6 +3109,7 @@ Voor alle wijzigingen van de beheerder geldt dezelfde manier van opslaan: `Regis
 **Alternatieve en uitzonderingspaden:**
 
 - **A1 Werkgevernummer veranderd binnen een maand:** heeft een medewerker binnen één maand registraties met twee verschillende werkgevernummers (bijvoorbeeld door een overstap naar een ander bedrijf), dan krijgt die maand twee regels, één per nummer.
+- **A2 Medewerker zonder looncode:** staat er een medewerker zonder looncode in het bestand, dan wordt het bestand wel gedownload, met een lege kolom Looncode op zijn regels. Daarna verschijnt 8 seconden de melding "Het bestand is gemaakt, maar 1 medewerker heeft geen looncode. Vul die in bij Medewerkers en exporteer opnieuw." (bij meer medewerkers: "maar 3 medewerkers hebben geen looncode"). `CsvExport.countMissingPayrollCodes` telt iedere medewerker één keer, ook met regels in meer maanden, en volgt de gekozen filters. De melding noemt geen namen. In het tabblad `Medewerkers` hebben deze medewerkers het label "Geen looncode" (W21). Na het invullen van de looncode exporteert de beheerder opnieuw (FR-94).
 - **E1 Niets te exporteren:** passen er geen registraties bij de filters, dan wordt er geen bestand gemaakt en verschijnt "Geen registraties om te exporteren voor deze filters."
 - **E2 Niet ingelogd:** `exportCsv` doet niets en toont "Log eerst in als beheerder."
 
@@ -3566,6 +3568,14 @@ Deze stories horen bij FR-90 tot en met FR-93, de eisen uit de pentest van novem
 | US-93 | Als beheerder wil ik dat registraties niet verdwijnen als de klok van de tablet niet klopt, en dat ik een melding krijg dat ik de klok moet controleren, zodat de export voor de loonadministratie compleet blijft. | Should | FR-92 | UC-08, UC-16 | AC-156 |
 | US-94 | Als beheerder wil ik dat er na uitloggen geen gegevens van het beheer in de pagina achterblijven, zodat de volgende persoon aan de tablet ook met de ontwikkelaarstools geen namen of personeelsnummers ziet. | Should | FR-93 | UC-07 | AC-157 |
 
+#### Looncode in de export (sinds versie 3.31)
+
+Deze story hoort bij FR-94. De looncode komt niet uit AFAS (zie hoofdstuk 11) en wordt daarom per medewerker in het beheer ingevuld.
+
+| ID | User story | Prioriteit | FR | UC | AC |
+|---|---|---|---|---|---|
+| US-95 | Als beheerder wil ik zien welke medewerkers nog geen looncode hebben en bij het exporteren een melding krijgen als zo iemand in het bestand staat, zodat de loonadministratie geen regels zonder looncode krijgt. | Must | FR-94 | UC-10, UC-15 | AC-159, AC-160 |
+
 #### Productie, niet in de demo
 
 Deze story hoort bij het ontwerp voor productie (zie [Koppeling met AFAS Profit (ontwerp)](#koppeling-met-afas-profit-ontwerp)). De demo heeft deze functie niet en de knop `Nu synchroniseren` bestaat in de demo niet. De story telt daarom niet mee in de stories van de demo.
@@ -3580,7 +3590,7 @@ Deze story hoort bij het ontwerp voor productie (zie [Koppeling met AFAS Profit 
 
 Daarnaast bevatten twee eisen met een story ook een technisch deel dat niet in de story staat. Bij FR-16 is dat de controle op drie plekken (view, controller en model). Bij FR-38 is dat de regel dat een registratie van vóór de laatste telling de voorraad niet verandert. Die delen staan in UC-09, UC-10 en UC-14.
 
-**Controle.** Alle FR's uit hoofdstuk 4 (FR-01 tot en met FR-93) komen terug in minstens één user story, behalve FR-61. Die eis staat met de reden in de lijst hierboven. FR-51 komt alleen terug in de stories van de demo-gezichtsherkenning (US-16 tot en met US-18) en FR-67 alleen in de productiestory US-64. FR-72 tot en met FR-77 komen alleen terug in de stories van de slimme koelkast (US-71 tot en met US-76), FR-78 tot en met FR-82 in US-77 tot en met US-82 en FR-83 tot en met FR-86 in US-83 tot en met US-86. FR-89 komt terug in US-90. Alle use cases UC-01 tot en met UC-23 komen bij minstens één story terug.
+**Controle.** Alle FR's uit hoofdstuk 4 (FR-01 tot en met FR-94) komen terug in minstens één user story, behalve FR-61. Die eis staat met de reden in de lijst hierboven. FR-51 komt alleen terug in de stories van de demo-gezichtsherkenning (US-16 tot en met US-18) en FR-67 alleen in de productiestory US-64. FR-72 tot en met FR-77 komen alleen terug in de stories van de slimme koelkast (US-71 tot en met US-76), FR-78 tot en met FR-82 in US-77 tot en met US-82 en FR-83 tot en met FR-86 in US-83 tot en met US-86. FR-89 komt terug in US-90. Alle use cases UC-01 tot en met UC-23 komen bij minstens één story terug.
 
 ## 11. Interfaces
 
@@ -3685,7 +3695,7 @@ Dit is het ontwerp van de koppeling voor de productieversie (FR-67). De website 
 | Voornaam | Ja, als `Roepnaam` | De roepnaam is de voornaam in de app |
 | Achternaam en voorvoegsel | Ja, als `Achternaam` en `Voorvoegsel` | Het voorvoegsel komt bij de achternaam |
 | Werkgevernummer | Ja, als `Werkgever` | Bepaalt het bedrijf in de app |
-| Looncode | Nee. Een medewerker heeft in AFAS geen eigen looncode | De looncode blijft in de app. Een nieuwe medewerker komt zonder looncode binnen en de beheerder vult die in. Een looncode die al is ingevuld, blijft staan |
+| Looncode | Nee. Een medewerker heeft in AFAS geen eigen looncode | De looncode blijft in de app. Een nieuwe medewerker komt zonder looncode binnen en de beheerder vult die in. Een looncode die al is ingevuld, blijft staan. In het tabblad `Medewerkers` staat bij wie nog geen looncode heeft het label "Geen looncode", en de export meldt het als zo iemand in het bestand staat (FR-94) |
 | Datum uit dienst | Nee | Wie niet meer in de lijst van de GetConnector staat, wordt inactief |
 | Werklocatie | Nee | De beheerder kiest het consumptiepunt in de app |
 
@@ -3772,7 +3782,7 @@ Het CSV-bestand gebruikt altijd deze acht kolommen, in deze volgorde (`CsvExport
 
 Let op de namen: **Totaal is het aantal** en **Prijs is het totaalbedrag**, niet de prijs per stuk. Deze namen zijn zo afgesproken met de loonadministratie en blijven daarom staan.
 
-Looncode, personeelsnummer en naam worden niet per registratie bewaard. Daarvoor gelden de huidige gegevens van de medewerker. Het werkgevernummer en de prijs worden wel per registratie bewaard (FR-17, FR-55), zodat een oude loonmaand niet verandert als de medewerker naar een ander bedrijf gaat, het nummer van het bedrijf wijzigt of een prijs wordt aangepast.
+Looncode, personeelsnummer en naam worden niet per registratie bewaard. Daarvoor gelden de huidige gegevens van de medewerker. De looncode is dus een gegeven van de medewerker en niet van een product of een registratie. Heeft een medewerker geen looncode, dan is de kolom Looncode op zijn regels leeg en meldt de website dat na het exporteren (FR-94). Het werkgevernummer en de prijs worden wel per registratie bewaard (FR-17, FR-55), zodat een oude loonmaand niet verandert als de medewerker naar een ander bedrijf gaat, het nummer van het bedrijf wijzigt of een prijs wordt aangepast.
 
 **Groepering:** één regel per medewerker × loonmaand × werkgevernummer. Is het werkgevernummer van een medewerker binnen één maand veranderd, dan staan er voor die maand twee regels, één per werkgevernummer. De losse registraties staan in de tabel in het admin-dashboard.
 
@@ -3791,6 +3801,7 @@ Looncode, personeelsnummer en naam worden niet per registratie bewaard. Daarvoor
 | Tekenset | UTF-8 met BOM (het teken U+FEFF aan het begin), MIME-type `text/csv;charset=utf-8`. |
 | Totaalregel | Geen (FR-21). |
 | Geen resultaten | Er wordt geen bestand gemaakt. De beheerder krijgt de melding "Geen registraties om te exporteren voor deze filters." |
+| Geen looncode | Het bestand wordt gemaakt, met een lege kolom Looncode op de regels van die medewerker. De beheerder krijgt de melding "Het bestand is gemaakt, maar 1 medewerker heeft geen looncode. Vul die in bij Medewerkers en exporteer opnieuw." (FR-94). |
 
 **Aandachtspunt voor de loonadministratie: voorloopnullen.** Looncode, personeelsnummer en werkgevernummer staan in het bestand precies zoals ze zijn ingevoerd, dus ook met voorloopnullen (bijvoorbeeld `0012`). Wie het bestand met een dubbelklik in Excel opent, ziet echter `12`: Excel maakt van een veld met alleen cijfers automatisch een getal en laat de nullen vooraan weg. Slaat iemand het bestand daarna vanuit Excel weer op, dan zijn de nullen echt weg en past het nummer mogelijk niet meer bij de gegevens in het loonsysteem. De code lost dit bewust niet op (bijvoorbeeld met `="0012"` of een `'` ervoor), omdat het bestand bedoeld is om in te lezen in het loonsysteem en daar de kale waarde moet staan. Afspraak met de loonadministratie:
 
@@ -4209,6 +4220,7 @@ Toasts hebben tekst van 16 pixels. Ze staan in twee vaste regio's die altijd op 
 | Situatie | Wat doet het systeem? |
 |---|---|
 | Geen registraties voor de filters | De export wordt niet gestart. Melding "Geen registraties om te exporteren voor deze filters." |
+| Een medewerker in de export heeft geen looncode | Het bestand wordt gedownload. Daarna staat er 8 seconden een melding met het aantal medewerkers zonder looncode, zonder namen. In het tabblad `Medewerkers` hebben zij het label "Geen looncode" (FR-94). |
 | Negatief getal in de kolom Totaal of Prijs | Het getal blijft zoals het is ("-0,65"), zonder `'`. Een tekst die met `-` begint, krijgt wel een `'` (hoofdstuk 11). |
 
 ### Demo gezichtsherkenning
@@ -4593,6 +4605,8 @@ De kolom "FR/NFR" noemt alleen de eisen uit hoofdstuk 4 (FR) of 5 (NFR) die met 
 | AC-156 | FR-92 | De datum van de tablet drie dagen vooruitzetten, twee keer iets registreren, de datum goedzetten en de website herladen. Daarna inloggen als beheerder | De twee registraties staan er nog (tabel en export). In het logboek staat één regel "Tijdstip in de toekomst" met "Er zijn 2 registraties, openingen of logboekregels met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?" en dezelfde tekst verschijnt als melding bij het openen van het beheer. |
 | AC-157 | FR-93 | Inloggen als beheerder, het beheer sluiten met Escape en in de ontwikkelaarstools `#adminTableBody`, `#adminEmployeeList` en `#auditTableBody` bekijken. Daarna opnieuw inloggen | Na sluiten zijn de drie leeg. Na inloggen staan de registraties, medewerkers en logboekregels er weer. |
 | AC-158 | FR-89 | Lotte heeft een gezicht ingesteld. Mark (zonder gezichtsherkenning) tikt op `Herken mij met de camera (demo)`, kijkt in de camera en knippert, en houdt daarna een platte geprinte foto van Lotte voor de camera | Lotte wordt niet herkend. Na de tijdslimiet staat er "Niet herkend" en de camera gaat uit. Daarna kijkt Lotte zelf een paar keer in de camera, ook met een bril, bij tegenlicht en een beetje schuin (zodat de herkenning af en toe een beeld mist): ze wordt telkens binnen een paar seconden herkend (hertest HB-02). |
+| AC-159 | FR-94 | Inloggen als beheerder en het tabblad `Medewerkers` openen. Bij Daan Smit op `Wijzigen` klikken, looncode 103 en personeelsnummer 5003 invullen en opslaan | Vóór het wijzigen staat bij iedere medewerker van de demogegevens het oranje label "Geen looncode". Na het opslaan is het label bij Daan Smit weg en staat het bij de anderen nog. |
+| AC-160 | FR-94 | Daan Smit en Lotte van Dijk registreren ieder 1× Blikje. Alleen Daan heeft een looncode (AC-159). Inloggen als beheerder en op `CSV exporteren` klikken. Daarna bij Lotte looncode 101 en personeelsnummer 5001 invullen en opnieuw exporteren | De eerste keer wordt het bestand gedownload en staat er 8 seconden "Het bestand is gemaakt, maar 1 medewerker heeft geen looncode. Vul die in bij Medewerkers en exporteer opnieuw." In het bestand is de kolom Looncode bij Lotte leeg en staat bij Daan 103. De tweede keer komt er geen melding en staat bij Lotte 101. |
 
 ### Testverslag acceptatietests
 
@@ -4765,6 +4779,8 @@ Zo wordt het verslag ingevuld:
 | **AC-156** | FR-92 | nog uit te voeren | – | – |
 | **AC-157** | FR-93 | nog uit te voeren | – | – |
 | **AC-158** | FR-89 | nog uit te voeren | – | – |
+| **AC-159** | FR-94 | nog uit te voeren | – | – |
+| **AC-160** | FR-94 | nog uit te voeren | – | – |
 
 ### Unit tests
 
@@ -4802,7 +4818,8 @@ Daarnaast worden de regels automatisch getest met unit tests, uitgevoerd met `np
 | `tests/gezicht-instellen-veilig.test.js` | 28 | Gezichtsherkenning veilig instellen (FR-82, FR-87 en FR-88), met een nepklok en een nepcamera. Het productvenster na kiezen op naam (geen link en geen `Uitzetten`, wel de uitleg, ook als de collega al een gezicht heeft), na de pas (de link, of `Uitzetten`) en na de camera (alleen `Uitzetten`), zonder camera en met de demo uit. De controller weigert instellen en uitzetten na kiezen op naam (de camera gaat niet aan, niets bewaard, geen logboekregel) en staat het toe na de pas, ook als de pas komt terwijl het venster al open is. De beheerder: zonder inloggen niets, instellen met het vinkje van de medewerker en de logboekregel "Gezichtsherkenning ingesteld door beheerder" zonder kenmerken, uitzetten met "uitgezet door beheerder", zonder camera, met de demo uit en bij een inactieve medewerker geweigerd, en uitgelogd tijdens het instellen bewaart niets. De lijst in het tabblad Medewerkers (knop, "Gezichtsherkenning ingesteld tot 27-10-2027" met `Uitzetten`, uitgeschakeld zonder camera). Verlopen na 365 dagen (niet na 364, daarna niet meer herkend), opnieuw instellen na de pas met een nieuw vinkje, een nieuw `consentAt` en "Gezichtsherkenning opnieuw ingesteld", niet na kiezen op naam, `Nee` na verlopen onthouden, en opnieuw instellen door de beheerder. Opslag: migratie van `consentAt`, een ongeldig toestemmingsmoment valt af, het model weigert toestemming na het instellen, en `consentAt` en de kenmerken staan niet in de CSV-export. |
 | `tests/levend-gezicht.test.js` | 15 | De stille controle op een levend gezicht (FR-89), met nagebootste gezichtspunten uit `tests/helpers-gezicht.js`, een nepcamera en zonder face-api. `FaceLiveness` los: een foto die schuift, draait, schaalt en kantelt is nooit levend en faalt na `maxMs`, een echt hoofd dat een paar graden beweegt is binnen een paar beelden levend, een knipper telt ook bij een stil hoofd, een stil hoofd zonder knipper faalt (de grens geldt voor iedereen), zonder gezichtspunten telt alleen de tijd, de punten staan hooguit `windowMs` in het geheugen en worden na "levend" gewist, `enabled` op `false`, en `debug` logt alleen de gemeten waarden. De waarden van `FACE_DEMO.liveness`. `FaceRecognitionDemo`: `describeFace` geeft de punten door aan `checkLiveness`, die ze daarna vergeet. Instellen: een foto wordt niet ingesteld (ook niet na de pas en met het vinkje), een echt hoofd wel. Herkennen in het cameravenster: een foto van een ingestelde collega opent niets, een echt hoofd wordt herkend |
 | `tests/pentest-november.test.js` | 40 | De oplossingen uit de pentest van november 2026 (versie 3.26, FR-89 tot en met FR-93), met de nummers van de bevindingen in de naam van iedere test. PT-01: eerst een ander, levend gezicht dat knippert en daarna een foto van een collega opent niets bij `Herken mij` en bij het automatisch scannen, een echt hoofd wordt nog wel herkend, `confirm` begint de controle opnieuw bij een andere kandidaat, de gezichtspunten worden ook bij een onbekend gezicht vergeten, en bij het instellen telt een knipper van een ander gezicht niet. PT-02: een leesbare reservekopie zonder gezichtskenmerken met een datum, onleesbare tekst precies bewaard, geen tweede kopie bij dezelfde gegevens, wissen na 30 dagen, een oude kopie zonder datum, oude kopieën met een tijdstempel en `Alle gegevens wissen`. PT-03: de grens van 10 met de melding, een te groot aantal dat toch binnenkomt, `addSelection`, een vastgehouden Enter of spatie en `Zelfde als vorige keer`. PT-04 en RB-02: een klok die achterloopt of voorloopt, gooit niets weg, `futureItemCount`, één logboekregel en de melding in het beheer. PT-06: de lijsten leeg bij sluiten, uitloggen en automatisch uitloggen, niet tekenen na een wijziging in een ander tabblad zonder login, en na `Alle gegevens wissen`. Hertest: een datum van een kopie ver in de toekomst (HB-01), een echt hoofd dat wordt herkend als ieder derde beeld mist, de aanval met gemiste beelden tussendoor, een onbekende platte foto die op "mislukt" uitkomt en gezichtspunten zonder kandidaat die niet meetellen (HB-02), en opruimen bij de dagwissel (HB-03). |
-| **Totaal** | **931** | |
+| `tests/looncode.test.js` | 19 | De looncode in de export (versie 3.31, FR-94). `CsvExport.countMissingPayrollCodes`: niets als iedereen een looncode heeft, een medewerker met regels in twee maanden telt één keer, het tellen volgt de filters, een medewerker zonder registraties telt niet mee, alleen spaties is geen looncode en een verwijderde medewerker telt mee. De melding van `AdminController.exportCsv`: enkelvoud en meervoud, 8 seconden, zonder naam of personeelsnummer, geen melding als iedereen een looncode heeft, alleen "Geen registraties" als er niets te exporteren is, en niets zonder ingelogde beheerder. Het label "Geen looncode" in `renderAdminEmployees`: alleen bij wie geen looncode heeft, ook bij een inactieve medewerker en naast "Pas gekoppeld", weg na het invullen, en met de kleuren van een waarschuwing. Het formulier vraagt nog steeds om een looncode. |
+| **Totaal** | **950** | |
 
 Naast de unit tests zijn er 37 browsertests in `tests/e2e/app.e2e.test.js`. Ze draaien met `npm run test:e2e` en tellen niet mee in het totaal hierboven. De hulpcode (webserver, browser starten en besturen) staat in `tests/e2e/browser.js`. Standaard ziet de browser daar geen camera, zodat de tests op iedere machine hetzelfde werken. De website opent op het startscherm. `browser.openApp` tikt daarom na het openen op `Handmatig zoeken` (`browser.manualSearch`), en na registreren, na het koelkastvenster en na herladen tikt een test daar zelf op. Een pas opent de koelkast. De browsertests voor het productvenster na een pas (UX 2 en W14) geven het consumptiepunt daarom lege schappen, en de test "een pas koppelen en daarna herkennen" opent het productvenster met de knop in de koelkast.
 
@@ -5078,6 +5095,7 @@ Deze matrix laat per functionele eis (hoofdstuk 4) zien in welke use case (hoofd
 | FR-28 | Must | UC-15 | AC-20, AC-124 | `csv-export.test.js`, `rollenspel-oktober.test.js` |
 | FR-30 | Must | UC-15 | AC-21, AC-73 | `basis.test.js`, `csv-export.test.js` |
 | FR-55 | Must | UC-12, UC-15 | AC-51, AC-74 | `werkgever-en-correctiedatum.test.js` |
+| FR-94 | Must | UC-10, UC-15 | AC-159, AC-160 | `looncode.test.js`, `csv-export.test.js` |
 | FR-13 | Must | UC-09 | AC-11 | `view-en-controller.test.js`, `codecontrole4-ui.test.js`, `werkgever-en-correctiedatum.test.js`, `to-controle.test.js` |
 | FR-14 | Must | UC-09 | AC-12, AC-78, AC-90 | `basis.test.js`, `model.test.js`, `controller.test.js`, `codecontrole4-ui.test.js`, `opslag-model-export.test.js`, `to-controle.test.js` |
 | FR-17 | Must | UC-11, UC-15 | AC-56, AC-88 | `model.test.js`, `csv-export.test.js`, `codecontrole4-model.test.js`, `werkgever-en-correctiedatum.test.js` |
@@ -5752,3 +5770,4 @@ Deze bijlage noemt alle versies van dit document met per versie de belangrijkste
 | 3.28 | 16 november 2026 | Document nagelopen met de schoolchecklist voor verslagen. Nieuwe naam "Technisch ontwerp Consumptieregistratie TVB" (bestand `docs/TO-CONSUMPTIEREGISTRATIE.md`). Doel, lezers en leeswijzer in hoofdstuk 1, een inleiding bij ieder hoofdstuk, één bronnenlijst in APA-stijl, de versiegeschiedenis in deze bijlage en de taal verbeterd. In bijlage B een weging en een knock-outcriterium in de beslismatrix en een voorwaardelijk advies. Spelling van drie app-teksten verbeterd en W47 opnieuw gemaakt. Lijst van de gegevens die uit AFAS nodig zijn. |
 | 3.29 | 17 november 2026 | Code ingekort zonder iets aan de werking of de vormgeving te veranderen. De twaalf onderdelen van de controller erven nu van de basisclass `ControllerPart`. Code die op meer plekken stond, staat op één plek: in de formulieren (`prepareForm`, `beginSave`), in het beheer (`renderAdminLists`, `redrawEmployeeLists`) en bij de keuzelijst met consumptiepunten (`fillPointSelect`). De JavaScript is 118 regels korter. Klassendiagram bijgewerkt. |
 | 3.30 | 25 november 2026 | De koppeling met AFAS Profit gebouwd als los serveronderdeel in `backend/` (PHP 8.3, zonder framework): medewerkers ophalen uit de GetConnector in porties, de rijen controleren en bepalen wat er verandert. De naam van de GetConnector komt uit `AFAS_CONNECTOR` en is nog niet vastgesteld. Nieuw gegeven: de werklocatie, voor het consumptiepunt van een nieuwe medewerker. Het token staat alleen in `.env`. Getest met nagebootste antwoorden. De verbinding en de veldnamen zijn gecontroleerd met de metadata van AFAS: de GetConnector heeft geen looncode, datum uit dienst of werklocatie, dus die blijven in de app. |
+| 3.31 | 25 november 2026 | De looncode in de export (FR-94, US-95, AC-159 en AC-160). De GetConnector van AFAS heeft geen looncode, dus de beheerder vult de looncode per medewerker in. Nieuw: het label "Geen looncode" in het tabblad `Medewerkers` bij iedere medewerker zonder looncode, en na `CSV exporteren` een melding met het aantal medewerkers zonder looncode in het bestand (`CsvExport.countMissingPayrollCodes`, `AdminController.missingPayrollCodeMessage`). Het bestand zelf en de kolommen zijn niet veranderd. W21 en W38 opnieuw gemaakt. Nieuw testbestand `tests/looncode.test.js` (19 tests, totaal 950) en de browsertest van de export vult nu ook een looncode in en exporteert opnieuw. |

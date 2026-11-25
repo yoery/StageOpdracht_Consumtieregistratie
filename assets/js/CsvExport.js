@@ -10,7 +10,8 @@
  *   - RegistrationModel: levert registraties, medewerkers, de prijs per registratie
  *     (registrationPrice), het werkgevernummer en de loonmaand (payrollPeriod).
  *   - AdminController (onderdeel van de controller RegistrationApp): roept download() aan als
- *     de beheerder op "CSV exporteren" klikt, en toont een melding als er niets te exporteren is.
+ *     de beheerder op "CSV exporteren" klikt, en toont een melding als er niets te exporteren is
+ *     of als er medewerkers zonder looncode in het bestand staan (countMissingPayrollCodes).
  *
  * Deze class weet niets van de HTML-pagina; alleen download() gebruikt de browser om
  * het bestand op te slaan.
@@ -100,6 +101,24 @@ export class CsvExport {
       Totaal: total,
       Prijs: Number(price.toFixed(2))
     };
+  }
+
+  // Telt de medewerkers in deze export zonder looncode. Hun regels staan wel in het bestand, maar
+  // met een lege kolom Looncode, en de loonadministratie kan die regels dan niet verwerken. De
+  // looncode komt niet uit AFAS: de beheerder vult hem per medewerker in. AdminController toont dit
+  // aantal na het exporteren, zodat een lege looncode niet ongemerkt in het bestand blijft staan.
+  countMissingPayrollCodes(selectedEmployee, selectedMonth) {
+    const missing = new Map(); // id van de medewerker → ontbreekt de looncode?
+
+    for (const registration of this.model.registrations) {
+      if (!this.matchesFilters(registration, selectedEmployee, selectedMonth)) continue;
+      if (missing.has(registration.employeeId)) continue;
+
+      const payrollCode = this.model.findEmployee(registration.employeeId)?.payrollCode;
+      missing.set(registration.employeeId, String(payrollCode ?? "").trim() === "");
+    }
+
+    return [...missing.values()].filter(Boolean).length;
   }
 
   // Sorteert op jaar, dan maand, dan naam.

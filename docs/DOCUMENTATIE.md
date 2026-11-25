@@ -90,7 +90,8 @@ Dit hoofdstuk noemt alle bestanden en mappen van het project met hun functie. He
 | `tests/levend-gezicht.test.js` | Tests voor de stille controle op een levend gezicht, met nagebootste gezichtspunten, een nepcamera en zonder face-api: een foto die schuift, draait en kantelt is nooit levend, een echt hoofd dat een paar graden beweegt of knippert wel, een stil hoofd zonder knipper faalt na 5 seconden, de gezichtspunten staan hooguit 3 seconden in het geheugen, `enabled` en `debug`, de waarden in `config.js`, `describeFace` en `checkLiveness`, en een foto wordt niet ingesteld en niet herkend in het cameravenster |
 | `tests/helpers-gezicht.js` | Hulpbestand voor `levend-gezicht.test.js` en `startscherm.test.js`: een nagebootst gezicht van 68 punten in drie dimensies (`face3d`), de projectie bij een draai van het hoofd (`project`), een foto als plat vlak (`photo`) en een kleine ruis (`jitter`) |
 | `tests/pentest-november.test.js` | Tests voor de oplossingen uit de pentest van november 2026 (zie `docs/PENTESTRAPPORT.md`): de controle op een levend gezicht per herkend gezicht (eerst zelf knipperen en dan een foto van een collega opent niets), een leesbare reservekopie zonder gezichtskenmerken die na 30 dagen verdwijnt, de grens van 10 per product (ook met een vastgehouden Enter), tijdstippen in de toekomst die bewaard blijven, en lege lijsten van het beheer na uitloggen |
-| `tests/` | Unit tests (931) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/looncode.test.js` | Tests voor de looncode in de export: het tellen van de medewerkers zonder looncode in een export (`countMissingPayrollCodes`), de melding na het exporteren en het label "Geen looncode" in het tabblad `Medewerkers` |
+| `tests/` | Unit tests (950) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
 | `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, iedere stylesheet precies één keer gelinkt in `index.html`, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
@@ -195,6 +196,7 @@ Open het tabblad `Medewerkers`.
 - Pas koppelen (optioneel): klik in het veld `Pasnummer` en houd de pas van de medewerker tegen de USB-NFC-lezer. De lezer typt het pasnummer in het veld en de Enter die de lezer daarna stuurt, verstuurt het formulier niet. Staat er al een nummer in het veld, dan vervangt het nummer van de nieuwe pas het oude. Leeg laten betekent: geen pas. Een pas weghalen kan door het veld leeg te maken en op te slaan. Zie 4.16.
 - Klik op `Opslaan` om een medewerker toe te voegen. `Opslaan + opnieuw` houdt het bedrijf en consumptiepunt vast voor de volgende collega.
 - Gebruik `Wijzigen` om medewerkergegevens aan te passen.
+- Heeft een medewerker nog geen looncode, dan staat achter zijn naam het oranje label "Geen looncode". Dat is zo bij de demogegevens en bij een medewerker die later uit AFAS komt, want AFAS geeft geen looncode mee. Klik op `Wijzigen`, vul de looncode in en sla op. Het label verdwijnt dan.
 - Gebruik `Deactiveren` of `Activeren` om de medewerkerstatus te wijzigen.
 - Gezichtsherkenning (demo): bij een actieve medewerker staat `Gezichtsherkenning instellen`. Laat de medewerker zelf voor de camera staan en zelf het vinkje voor toestemming zetten, en klik dan op `Gezicht vastleggen`. Daarna staat in de lijst "Gezichtsherkenning ingesteld tot 27-10-2027" (een jaar later) met `Uitzetten`. Het logboek krijgt "Gezichtsherkenning ingesteld door beheerder" of "Gezichtsherkenning uitgezet door beheerder" met de naam. Zonder camera is de knop uitgeschakeld met "Geen camera gevonden. Instellen kan alleen met een camera." Staat de demo uit, dan zijn er geen knoppen. Zie 4.15.
 
@@ -269,6 +271,7 @@ Het kruisje rechtsboven, een klik naast het venster of de Escape-toets sluit het
 2. Kies eventueel een medewerker en/of maand. Achter iedere maand staat de loonmaand waarin die wordt verwerkt, bijvoorbeeld `september 2026 (loonmaand oktober 2026)`.
 3. Klik op `CSV exporteren`.
 4. De browser downloadt een `.csv`-bestand, bijvoorbeeld `blikjesregistratie-loonmaand-2026-10.csv`.
+5. Staat er daarna "Het bestand is gemaakt, maar 1 medewerker heeft geen looncode. Vul die in bij Medewerkers en exporteer opnieuw.", dan is de kolom `Looncode` bij die medewerker leeg. Open het tabblad `Medewerkers`, vul de looncode in bij iedereen met het label "Geen looncode" (zie 4.5) en exporteer opnieuw. Gebruik het eerste bestand niet.
 
 Het bestand heeft altijd de kolommen `Jaar`, `Maand`, `Looncode`, `Personeelsnummer`, `Werkgevernummer`, `Naam`, `Totaal` en `Prijs`, in die vaste volgorde. Iedere regel is één medewerker in één loonmaand. Het werkgevernummer is het nummer dat bij de registraties is bewaard (zie de tabel Registraties hieronder). Is dat binnen een maand veranderd, dan krijgt die maand één regel per werkgevernummer. Er staat bewust geen totaalregel in, omdat de loonadministratie iedere regel als medewerker inleest.
 
@@ -912,6 +915,8 @@ De export heeft geen externe bibliotheek nodig. Na een klik op `CSV exporteren` 
 5. Het bestand wordt gedownload als `.csv` (UTF-8 met BOM, zodat Excel letters zoals `é` goed toont).
 
 Zijn er geen registraties voor de filters, dan geeft `download` `false` terug en toont de controller een melding.
+
+Na een geslaagde export vraagt de controller met `countMissingPayrollCodes` hoeveel medewerkers in dit bestand geen looncode hebben. De methode loopt de registraties langs met dezelfde filters als `buildRows` en telt iedere medewerker één keer, ook als hij regels in meer maanden heeft. Is het aantal hoger dan nul, dan toont de controller 8 seconden de melding uit `AdminController.missingPayrollCodeMessage`, zonder namen. De looncode is een gegeven van de medewerker (`payrollCode`) en komt niet uit AFAS. `RegistrationView.renderAdminEmployees` zet daarom het label "Geen looncode" (`.badge-missing`) achter de naam van iedere medewerker zonder looncode.
 
 ### Event listeners
 
