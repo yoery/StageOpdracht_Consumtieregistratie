@@ -74,6 +74,33 @@ test('AfasConfig: het adres verliest de schuine streep aan het eind en krijgt zo
     same('https://12345.restaccept.afas.online/ProfitRestServices', fakeConfig(100, 'https://12345.restaccept.afas.online/ProfitRestServices')->baseUrl);
 });
 
+test('AfasConfig: het adres mag alleen het basisadres zijn, zonder connector of metainfo erachter', function (): void {
+    $wrong = [
+        'https://12345.rest.afas.online/ProfitRestServices/connectors/Een_Connector',
+        'https://12345.rest.afas.online/ProfitRestServices/connectors',
+        'https://12345.rest.afas.online/ProfitRestServices/metainfo',
+        'https://12345.rest.afas.online/connectors/Een_Connector',
+        'https://12345.rest.afas.online/iets/anders',
+    ];
+    foreach ($wrong as $baseUrl) {
+        $error = throws(AfasException::class, fn () => fakeConfig(100, $baseUrl));
+        same(AfasException::CONFIG, $error->kind, $baseUrl);
+        ok(str_contains($error->getMessage(), 'moet eindigen op /ProfitRestServices'), $baseUrl);
+        ok(str_contains($error->getMessage(), 'AFAS_CONNECTOR'), 'de melding zegt waar de connector hoort');
+    }
+    same('https://12345.rest.afas.online/ProfitRestServices', fakeConfig(100, 'https://12345.rest.afas.online/profitrestservices/')->baseUrl);
+});
+
+test('Metadata: een verkeerd adres kan nooit de gegevens van een connector ophalen', function (): void {
+    // Met een connector in het adres zou <adres>/metainfo bij AFAS toch rijen kunnen teruggeven.
+    // De instellingen worden daarom al geweigerd voordat er een verzoek is gedaan.
+    $http = new FakeHttpClient([]);
+    throws(AfasException::class, function () use ($http): void {
+        (new \Tvb\Consumptie\Afas\AfasClient(fakeConfig(100, 'https://12345.rest.afas.online/ProfitRestServices/connectors/Een_Connector'), $http))->connectors();
+    });
+    same([], $http->requests);
+});
+
 test('AfasConfig: zonder token of zonder adres volgt een duidelijke fout', function (): void {
     $missingToken = throws(AfasException::class, fn () => AfasConfig::fromValues(['AFAS_TOKEN' => '', 'AFAS_BASE_URL' => 'https://12345.rest.afas.online']));
     same(AfasException::CONFIG, $missingToken->kind);

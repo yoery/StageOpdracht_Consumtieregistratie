@@ -92,7 +92,7 @@ tests/
 backend/                    # Serverdeel in PHP: de koppeling met AFAS Profit (zie backend/README.md)
   src/Afas/                 # AfasConfig, AfasClient, EmployeeMapper, EmployeeSync en SyncRunner
   bin/                      # afas-metainfo.php (veldnamen bij AFAS) en afas-sync.php (proefdraaien)
-  tests/                    # 89 tests met nagebootste antwoorden van AFAS (php backend/tests/run.php)
+  tests/                    # Tests met nagebootste antwoorden van AFAS (php backend/tests/run.php)
 .env.example                # Voorbeeld van de instellingen AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR, zonder waarden
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)

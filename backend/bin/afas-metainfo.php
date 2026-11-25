@@ -36,6 +36,39 @@ foreach (array_slice($argv, 1) as $argument) {
     }
 }
 
+/**
+ * Laat zien welke certificaten de server meestuurt (alleen het onderwerp en de uitgever). Bedoeld
+ * voor als de controle van het certificaat mislukt. Er gaat hierbij geen token mee: er wordt alleen
+ * een beveiligde verbinding geopend en weer gesloten.
+ */
+function describeCertificateChain(string $host): void
+{
+    $context = stream_context_create(['ssl' => ['capture_peer_cert_chain' => true, 'verify_peer' => false, 'verify_peer_name' => false, 'peer_name' => $host]]);
+    $socket = @stream_socket_client("ssl://$host:443", $errorCode, $errorText, 10, STREAM_CLIENT_CONNECT, $context);
+    if ($socket === false) {
+        fwrite(STDERR, "De certificaten konden niet worden opgevraagd.\n");
+
+        return;
+    }
+    $chain = stream_context_get_params($socket)['options']['ssl']['peer_certificate_chain'] ?? [];
+    fclose($socket);
+
+    fwrite(STDERR, 'De server stuurt ' . count($chain) . " certificaat/certificaten mee:\n");
+    foreach ($chain as $index => $certificate) {
+        $info = openssl_x509_parse($certificate) ?: [];
+        fwrite(STDERR, sprintf(
+            "  [%d] onderwerp: %s | uitgever: %s (%s) | geldig tot %s\n",
+            $index,
+            $info['subject']['CN'] ?? '?',
+            $info['issuer']['CN'] ?? '?',
+            $info['issuer']['O'] ?? '?',
+            isset($info['validTo_time_t']) ? date('Y-m-d', $info['validTo_time_t']) : '?'
+        ));
+    }
+    fwrite(STDERR, "De uitgever van het laatste certificaat moet bij PHP bekend zijn. Zie backend/README.md, Certificaten.\n");
+}
+
+$config = null;
 try {
     $config = AfasConfig::fromEnvironment($envFile);
     $client = new AfasClient($config, new CurlHttpClient());
@@ -44,6 +77,9 @@ try {
     $fields = $known ? $client->connectorFields() : [];
 } catch (AfasException $error) {
     fwrite(STDERR, 'Mislukt (' . $error->kind . '): ' . $error->getMessage() . "\n");
+    if ($config !== null && $error->kind === AfasException::NETWORK && stripos($error->getMessage(), 'certificate') !== false) {
+        describeCertificateChain((string) parse_url($config->baseUrl, PHP_URL_HOST));
+    }
     exit(1);
 }
 

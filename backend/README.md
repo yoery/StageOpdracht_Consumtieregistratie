@@ -27,7 +27,17 @@ De website in de browser gebruikt deze map niet. Het token mag nooit in de brows
 3. Vul `AFAS_BASE_URL` in, bijvoorbeeld `https://<deelnemernummer>.rest.afas.online/ProfitRestServices`.
 4. Vul `AFAS_CONNECTOR` in zodra de naam van de GetConnector bekend is. `php backend/bin/afas-metainfo.php` toont welke connectors er zijn. Zolang de naam ontbreekt, geeft de koppeling de melding "AFAS_CONNECTOR ontbreekt" en haalt ze niets op.
 
-Staan dezelfde namen in de omgeving van de server, dan gaan die voor het bestand. Het adres moet met `https://` beginnen en op `.afas.online` eindigen. Zo gaat het token nooit onversleuteld of naar een andere server.
+Staan dezelfde namen in de omgeving van de server, dan gaan die voor het bestand. Het adres moet met `https://` beginnen, bij AFAS horen (`.afas.online`) en eindigen op `/ProfitRestServices`, zonder iets erachter. Zo gaat het token nooit onversleuteld of naar een andere server, en kan een opvraag van de metadata nooit per ongeluk de gegevens van een connector ophalen. De naam van de connector hoort alleen in `AFAS_CONNECTOR`.
+
+## Certificaten
+
+De koppeling controleert altijd het certificaat van de AFAS-server. Op Linux gebruikt PHP daarvoor de certificaten van het systeem. Op Windows kent PHP die niet allemaal. Meldt een hulpprogramma "unable to get local issuer certificate", geef PHP dan de lijst met vertrouwde hoofdcertificaten van Mozilla:
+
+1. Download `cacert.pem` van https://curl.se/ca/cacert.pem en controleer het controlegetal (https://curl.se/ca/cacert.pem.sha256).
+2. Zet het bestand in de map van PHP, bijvoorbeeld `extras/ssl/cacert.pem`.
+3. Zet in `php.ini` de regels `curl.cainfo` en `openssl.cafile` aan, met het pad naar dat bestand.
+
+Zet de controle van het certificaat nooit uit. `afas-metainfo.php` toont bij deze fout welke certificaten de server meestuurt.
 
 ## Gebruik
 

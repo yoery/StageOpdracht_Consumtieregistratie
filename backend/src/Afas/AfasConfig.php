@@ -201,8 +201,16 @@ final class AfasConfig
             throw new AfasException(AfasException::CONFIG, 'AFAS_BASE_URL mag geen gebruikersnaam, poort, vraagteken of # bevatten.');
         }
 
+        // Alleen het basisadres. Staat er meer achter, zoals /connectors/<naam>, dan zou een opvraag
+        // van de metadata toch de gegevens van die connector kunnen ophalen. Dat wordt hier geweigerd.
         $path = rtrim($parts['path'] ?? '', '/');
+        if ($path !== '' && strcasecmp($path, self::DEFAULT_PATH) !== 0) {
+            throw new AfasException(
+                AfasException::CONFIG,
+                'AFAS_BASE_URL moet eindigen op /ProfitRestServices, zonder iets erachter. De naam van de GetConnector hoort in AFAS_CONNECTOR.'
+            );
+        }
 
-        return 'https://' . $host . ($path === '' ? self::DEFAULT_PATH : $path);
+        return 'https://' . $host . self::DEFAULT_PATH;
     }
 }

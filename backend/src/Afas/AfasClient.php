@@ -154,7 +154,13 @@ final class AfasClient
     private function objectList(array $data, string $name, string $where): array
     {
         if (!isset($data[$name]) || !is_array($data[$name]) || !array_is_list($data[$name])) {
-            throw new AfasException(AfasException::FORMAT, sprintf('Het antwoord van AFAS bevat geen lijst "%s" (%s).', $name, $where));
+            // Alleen de namen van de onderdelen op het hoogste niveau, nooit de inhoud. Zo is te zien
+            // of het adres naar de juiste dienst wijst, zonder dat er gegevens in de melding komen.
+            $present = array_slice(array_filter(array_map('strval', array_keys($data)), static fn (string $key): bool => preg_match('/^[A-Za-z0-9_]{1,40}$/', $key) === 1), 0, 10);
+            throw new AfasException(
+                AfasException::FORMAT,
+                sprintf('Het antwoord van AFAS bevat geen lijst "%s" (%s). Wel aanwezig: %s.', $name, $where, $present === [] ? 'niets herkenbaars' : implode(', ', $present))
+            );
         }
         foreach ($data[$name] as $item) {
             if (!is_array($item)) {
