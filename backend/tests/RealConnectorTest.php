@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 // Tests voor de GetConnector zoals TVB die nu heeft. Die geeft Medewerker, Roepnaam, Achternaam,
-// Voorvoegsel en Werkgever, maar geen looncode, geen werklocatie en geen datum uit dienst. De
+// Voorvoegsel, Werkgever (de naam van het bedrijf) en Werkgever_2 (het werkgevernummer), maar geen
+// looncode, geen werklocatie en geen datum uit dienst. De
 // standaardinstelling van EmployeeMapper hoort bij deze connector. De rijen zijn nepgegevens.
 
 use Tvb\Consumptie\Afas\AfasClient;
@@ -18,7 +19,7 @@ test('Connector van TVB: Medewerker is het personeelsnummer en Roepnaam de voorn
 
     same([], $mapped->problems);
     same('Medewerker', $mapper->sortField());
-    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Voorvoegsel', 'Werkgever'], $mapper->fieldNames());
+    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Voorvoegsel', 'Werkgever_2'], $mapper->fieldNames());
     $employee = $mapped->employees[0];
     same('5001', $employee->personnelNumber);
     same('Lotte', $employee->firstName);
@@ -45,8 +46,33 @@ test('Connector van TVB: adres, geboortedatum en de andere extra velden worden n
     }
 });
 
-test('Connector van TVB: ontbreekt Medewerker, Roepnaam, Achternaam of Werkgever, dan stopt alles', function (): void {
-    foreach (['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever'] as $field) {
+test('Connector van TVB: het werkgevernummer komt uit Werkgever_2, met de voorloopnul, en de naam in Werkgever wordt niet gelezen', function (): void {
+    $mapper = new EmployeeMapper();
+
+    $employee = $mapper->map([realRow(['Werkgever' => 'Voorbeeld Klimaattechniek B.V.', 'Werkgever_2' => '01'])])->employees[0];
+    same('01', $employee->employerNumber);
+    ok(!str_contains(json_encode(get_object_vars($employee), JSON_THROW_ON_ERROR), 'Klimaattechniek'), 'de naam van het bedrijf is overgenomen');
+
+    // Een rij zonder het veld Werkgever (de naam) is gewoon geldig.
+    $row = realRow();
+    unset($row['Werkgever']);
+    same([], $mapper->map([$row])->problems);
+
+    // Een naam in plaats van een nummer wordt afgekeurd, zonder de naam in de reden.
+    $mapped = $mapper->map([realRow(['Werkgever_2' => 'Voorbeeld B.V.'])]);
+    same('de werkgever ontbreekt of bestaat niet alleen uit cijfers', $mapped->problems[0]['reason']);
+});
+
+test('Connector van TVB: werkgevernummer 01 is een ander nummer dan 1', function (): void {
+    $repository = new InMemoryRepository([]);
+    $plan = (new EmployeeSync())->plan((new EmployeeMapper())->map([realRow(['Werkgever_2' => '01'])]), [], ['1' => 'bedrijf-een'], $repository->points, '2026-11-25', null);
+
+    same(null, $plan->additions[0]['companyId']);
+    ok(str_contains(implode("\n", $plan->notes), 'werkgever 01 is niet bekend in de app'));
+});
+
+test('Connector van TVB: ontbreekt Medewerker, Roepnaam, Achternaam of Werkgever_2, dan stopt alles', function (): void {
+    foreach (['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever_2'] as $field) {
         $row = realRow();
         unset($row[$field]);
 
@@ -61,7 +87,7 @@ test('Connector van TVB: de vier vaste velden kunnen niet worden uitgezet', func
         throws(AfasException::class, fn () => new EmployeeMapper([$key => null]));
     }
     // De andere wel, en ze kunnen weer aan als de connector het veld later krijgt.
-    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever'], (new EmployeeMapper(['prefix' => null]))->fieldNames());
+    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever_2'], (new EmployeeMapper(['prefix' => null]))->fieldNames());
     ok(in_array('Looncode', (new EmployeeMapper(['payrollCode' => 'Looncode']))->fieldNames(), true));
 });
 

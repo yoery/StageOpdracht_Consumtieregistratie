@@ -9,7 +9,9 @@ namespace Tvb\Consumptie\Afas;
  *
  * Verantwoordelijkheid:
  *   - weten hoe de velden in de GetConnector heten. De namen hieronder zijn die van de GetConnector
- *     die TVB nu heeft. Wijken ze af, dan gaan de juiste namen mee in de constructor. De looncode, de
+ *     die TVB nu heeft. Het werkgevernummer staat daar in `Werkgever_2` (twee cijfers, zoals "01").
+ *     Het veld `Werkgever` is de naam van het bedrijf en wordt niet gelezen.
+ *     Wijken de namen af, dan gaan de juiste namen mee in de constructor. De looncode, de
  *     werklocatie en de datum uit dienst zitten niet in die connector en staan daarom uit (null). Staat
  *     een veld uit, dan komt dat gegeven niet uit AFAS en blijft het in de app zoals het is;
  *   - controleren of de verwachte velden er zijn. Ontbreekt een verplicht veld, dan stopt alles
@@ -32,7 +34,7 @@ final class EmployeeMapper
         'firstName' => 'Roepnaam',
         'lastName' => 'Achternaam',
         'prefix' => 'Voorvoegsel',
-        'employer' => 'Werkgever',
+        'employer' => 'Werkgever_2',
         'workLocation' => null,
         'payrollCode' => null,
         'endDate' => null,

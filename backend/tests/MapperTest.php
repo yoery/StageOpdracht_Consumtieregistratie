@@ -120,7 +120,7 @@ test('EmployeeMapper: extra velden in een rij worden genegeerd', function (): vo
 });
 
 test('EmployeeMapper: de namen van de velden in de GetConnector zijn in te stellen', function (): void {
-    $mapper = new EmployeeMapper(['personnelNumber' => 'Medewerker', 'firstName' => 'Voornaam', 'endDate' => 'DatumUit']);
+    $mapper = new EmployeeMapper(['personnelNumber' => 'Medewerker', 'firstName' => 'Voornaam', 'employer' => 'Werkgever', 'endDate' => 'DatumUit']);
     $row = afasRow(['Medewerker' => '7001', 'DatumUit' => '2026-12-31']);
     unset($row['Personeelsnummer'], $row['DatumUitDienst']);
 

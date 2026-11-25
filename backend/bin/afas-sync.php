@@ -12,6 +12,7 @@ declare(strict_types=1);
 //
 // De uitvoer bevat: het aantal rijen, de redenen waarom rijen zijn afgekeurd (samengevat) en de vorm
 // van de velden die de koppeling leest (hoeveel leeg, hoeveel alleen cijfers, hoeveel iets anders).
+// Komt een personeelsnummer meer dan één keer voor, dan staat erbij in welke velden die rijen verschillen.
 // Met --werkgevers komen de waarden van de velden over het bedrijf erbij. Dat zijn geen gegevens van
 // een persoon. Waarden van andere velden worden nooit getoond.
 //
@@ -92,6 +93,54 @@ foreach ($fields as $field) {
         $shape['distinct'],
         $shape['longest']
     );
+}
+
+// Personeelsnummers die meer dan één keer voorkomen. De synchronisatie stopt als zulke rijen
+// verschillende gegevens hebben, dus hier is te zien in welke velden ze verschillen en of een veld de
+// goede rij kan aanwijzen. Alleen aantallen en veldnamen, geen waarden.
+$duplicates = FieldShape::duplicates($rows, $mapper->sortField());
+if ($duplicates['keys'] > 0) {
+    $key = $mapper->sortField();
+    echo "\nDubbele personeelsnummers (alleen aantallen, geen waarden):\n";
+    echo sprintf(
+        "  %d nummers komen meer dan één keer voor, samen %d rijen, hoogstens %d rijen per nummer.\n",
+        $duplicates['keys'],
+        $duplicates['rows'],
+        $duplicates['largest']
+    );
+    echo '  Bij ' . $duplicates['identical'] . " daarvan zijn alle rijen precies gelijk.\n";
+    if ($duplicates['differing'] !== []) {
+        echo "  Velden die bij zo'n nummer verschillen (het aantal nummers):\n";
+        foreach ($duplicates['differing'] as $field => $count) {
+            echo '    ' . $field . ': ' . $count . "\n";
+        }
+    }
+    foreach (array_keys($duplicates['differing']) as $field) {
+        $field = (string) $field;
+        if (stripos($field, 'geblokkeerd') !== false) {
+            $choice = FieldShape::singleNoInDuplicates($rows, $key, $field);
+            echo sprintf(
+                "  %s: bij %d nummers is precies één rij niet geblokkeerd, bij %d meer dan één, bij %d geen.\n",
+                $field,
+                $choice['one'],
+                $choice['several'],
+                $choice['none']
+            );
+        }
+        if (stripos($field, 'datum') === 0) {
+            $choice = FieldShape::singleLatestInDuplicates($rows, $key, $field);
+            echo sprintf(
+                "  %s: bij %d nummers heeft precies één rij de laatste datum, bij %d delen rijen die datum, bij %d is het veld leeg.\n",
+                $field,
+                $choice['one'],
+                $choice['shared'],
+                $choice['empty']
+            );
+        }
+    }
+    if ($duplicates['identical'] < $duplicates['keys']) {
+        echo "  Let op: de synchronisatie stopt zolang een personeelsnummer rijen met verschillende gegevens heeft.\n";
+    }
 }
 
 if ($showEmployers) {

@@ -49,11 +49,11 @@ php backend/bin/afas-metainfo.php  de connectors en de veldnamen bij AFAS opvrag
 php backend/bin/afas-sync.php      proefdraaien: medewerkers ophalen en alleen aantallen tonen
 ```
 
-`afas-metainfo.php` vergelijkt de velden van de GetConnector met wat de koppeling verwacht. De verwachte namen staan in `EmployeeMapper::DEFAULT_FIELDS` en horen bij de GetConnector die TVB nu heeft: `Medewerker` (het personeelsnummer), `Roepnaam` (de voornaam), `Achternaam`, `Voorvoegsel` en `Werkgever`. De looncode, de werklocatie en de datum uit dienst zitten niet in die connector en staan uit. Krijgt de connector zo'n veld later wel, of heten de velden anders, geef dan de namen mee: `new EmployeeMapper(['payrollCode' => 'Looncode'])`.
+`afas-metainfo.php` vergelijkt de velden van de GetConnector met wat de koppeling verwacht. De verwachte namen staan in `EmployeeMapper::DEFAULT_FIELDS` en horen bij de GetConnector die TVB nu heeft: `Medewerker` (het personeelsnummer), `Roepnaam` (de voornaam), `Achternaam`, `Voorvoegsel` en `Werkgever_2` (het werkgevernummer, twee cijfers met een voorloopnul zoals "01"). Het veld `Werkgever` is de naam van het bedrijf en wordt niet gelezen. Vul in de app bij ieder bedrijf het werkgevernummer in zoals AFAS het geeft: "01" is een ander nummer dan "1". De looncode, de werklocatie en de datum uit dienst zitten niet in die connector en staan uit. Krijgt de connector zo'n veld later wel, of heten de velden anders, geef dan de namen mee: `new EmployeeMapper(['payrollCode' => 'Looncode'])`.
 
 De huidige GetConnector bevat ook adres, geboortedatum, telefoon, e-mail en een foto. De koppeling leest die velden niet, maar AFAS stuurt ze wel mee. Gebruik deze connector daarom alleen om te testen. Voor echt gebruik is een eigen GetConnector nodig met alleen de vijf velden hierboven.
 
-`afas-sync.php` haalt echte gegevens van medewerkers op. Gebruik daarvoor eerst de testomgeving van AFAS. Het programma toont alleen aantallen en slaat niets op.
+`afas-sync.php` haalt echte gegevens van medewerkers op. Gebruik daarvoor eerst de testomgeving van AFAS. Het programma toont alleen aantallen en slaat niets op: het aantal rijen, de redenen waarom rijen zijn afgekeurd en de vorm van de velden. Komt een personeelsnummer meer dan één keer voor, dan staat erbij hoeveel nummers dat zijn, in welke velden die rijen verschillen en of `Geblokkeerd` of `Datum_in_dienst` precies één rij aanwijst. Met `--werkgevers` komen de waarden van de velden over het bedrijf erbij. Waarden van andere velden worden nooit getoond.
 
 ## Veiligheid
 
@@ -66,7 +66,7 @@ De huidige GetConnector bevat ook adres, geboortedatum, telefoon, e-mail en een 
 ## Regels van de synchronisatie
 
 - Een lege lijst, een lijst zonder geldige rijen of een lijst die minder dan de helft is van de vorige keer, verandert niets.
-- Een medewerker wordt gezocht op personeelsnummer.
+- Een medewerker wordt gezocht op personeelsnummer. Komt een personeelsnummer meer dan één keer voor met verschillende gegevens, dan stopt de synchronisatie zonder iets te wijzigen.
 - Een nieuw personeelsnummer wordt een actieve medewerker. Geeft AFAS geen looncode, dan komt hij zonder looncode binnen en vult de beheerder die in de app in. Bestaat er bij zijn bedrijf een consumptiepunt met dezelfde naam als de werklocatie, dan krijgt hij dat punt. Zonder werklocatie kiest de beheerder het punt.
 - Bij een bestaande medewerker worden naam, bedrijf en looncode bijgewerkt. Geeft AFAS geen looncode, dan blijft de looncode uit de app staan. Het consumptiepunt blijft zoals de beheerder het heeft gekozen, behalve als de medewerker naar een ander bedrijf gaat.
 - Staat de medewerker niet meer in de lijst van AFAS, of is zijn datum uit dienst voorbij (als de connector die geeft), dan wordt hij inactief. Er wordt nooit iemand verwijderd.

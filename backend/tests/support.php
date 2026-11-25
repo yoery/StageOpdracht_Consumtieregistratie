@@ -100,6 +100,7 @@ function fullMapper(): \Tvb\Consumptie\Afas\EmployeeMapper
     return new \Tvb\Consumptie\Afas\EmployeeMapper([
         'personnelNumber' => 'Personeelsnummer',
         'firstName' => 'Voornaam',
+        'employer' => 'Werkgever',
         'workLocation' => 'Werklocatie',
         'payrollCode' => 'Looncode',
         'endDate' => 'DatumUitDienst',
@@ -107,8 +108,9 @@ function fullMapper(): \Tvb\Consumptie\Afas\EmployeeMapper
 }
 
 /**
- * Een rij zoals de GetConnector van TVB die nu geeft: met Medewerker en Roepnaam, zonder looncode,
- * werklocatie en datum uit dienst, en met extra velden die de koppeling niet leest. Nepgegevens.
+ * Een rij zoals de GetConnector van TVB die nu geeft: met Medewerker en Roepnaam, de naam van het
+ * bedrijf in Werkgever en het werkgevernummer in Werkgever_2, zonder looncode, werklocatie en datum
+ * uit dienst, en met extra velden die de koppeling niet leest. Nepgegevens.
  *
  * @param array<string, mixed> $changes
  * @return array<string, mixed>
@@ -120,7 +122,8 @@ function realRow(array $changes = []): array
         'Roepnaam' => 'Lotte',
         'Achternaam' => 'Dijk',
         'Voorvoegsel' => 'van',
-        'Werkgever' => '4711',
+        'Werkgever' => 'Voorbeeld Installaties B.V.',
+        'Werkgever_2' => '4711',
         'Voorletters' => 'L.',
         'Geboortedatum' => '1990-01-01T00:00:00Z',
         'Straat' => 'Voorbeeldstraat',
