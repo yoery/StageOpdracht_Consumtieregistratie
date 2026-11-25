@@ -151,7 +151,7 @@ final class AfasConfig
     {
         $decoded = preg_match('/^[A-Za-z0-9+\/]+={0,2}$/', $token) === 1 ? base64_decode($token, true) : false;
         if ($decoded === false) {
-            throw new AfasException(AfasException::CONFIG, 'AFAS_TOKEN is geen Base64-tekst. Vul de Base64-versie van het token in, zonder spaties of regeleinden.');
+            throw new AfasException(AfasException::CONFIG, 'AFAS_TOKEN is geen Base64-tekst. ' . self::tokenHint($token));
         }
         if (!str_contains($decoded, '<token>') || !str_contains($decoded, '</token>')) {
             throw new AfasException(
@@ -159,6 +159,28 @@ final class AfasConfig
                 'AFAS_TOKEN bevat geen token van AFAS. Verwacht wordt de Base64-versie van <token><version>1</version><data>…</data></token>, één keer gecodeerd.'
             );
         }
+    }
+
+    // Zegt wat er waarschijnlijk mis is met een waarde die geen Base64 is, zonder de waarde te noemen.
+    private static function tokenHint(#[\SensitiveParameter] string $token): string
+    {
+        if (preg_match('/^AfasToken\b/i', $token) === 1) {
+            return 'De waarde begint met het woord AfasToken. Vul alleen het token zelf in: de koppeling zet "AfasToken " er zelf voor.';
+        }
+        if (str_starts_with($token, '<')) {
+            return 'De waarde is de token-XML zelf (<token>…</token>). Vul de Base64-versie daarvan in.';
+        }
+        if (preg_match('/^["\']|["\']$/', $token) === 1) {
+            return 'De waarde begint of eindigt met een aanhalingsteken dat er niet hoort.';
+        }
+        if (preg_match('/\s/', $token) === 1) {
+            return 'De waarde bevat een spatie, tab of regeleinde. Zet het token op één regel, zonder spaties.';
+        }
+        if (preg_match('/^[A-Za-z0-9_-]+={0,2}$/', $token) === 1) {
+            return 'De waarde bevat - of _ in plaats van + en /. Gebruik de gewone Base64-vorm.';
+        }
+
+        return 'De waarde bevat een teken dat niet in Base64 voorkomt. Toegestaan zijn letters, cijfers, +, / en aan het eind =.';
     }
 
     // Het adres moet https zijn en bij AFAS horen. Zonder pad wordt /ProfitRestServices gebruikt.

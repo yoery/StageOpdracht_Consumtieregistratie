@@ -112,6 +112,24 @@ test('AfasConfig: een token dat geen Base64 is of twee keer is gecodeerd, wordt 
     }
 });
 
+test('AfasConfig: de melding zegt wat er mis is met het token, zonder het token te noemen', function (): void {
+    $raw = '<token><version>1</version><data>NEPTOKEN-ALLEEN-VOOR-DE-TESTS-0000</data></token>';
+    $cases = [
+        'begint met het woord AfasToken' => 'AfasToken ' . fakeToken(),
+        'de token-XML zelf' => $raw,
+        'aanhalingsteken' => '"' . fakeToken(),
+        'spatie, tab of regeleinde' => substr(fakeToken(), 0, 20) . ' ' . substr(fakeToken(), 20),
+        '- of _ in plaats van + en /' => 'abc-def_ghi',
+        'teken dat niet in Base64 voorkomt' => 'abc$def',
+    ];
+    foreach ($cases as $expected => $token) {
+        $error = throws(AfasException::class, fn () => AfasConfig::fromValues(['AFAS_TOKEN' => $token, 'AFAS_BASE_URL' => 'https://12345.rest.afas.online']));
+        ok(str_contains($error->getMessage(), $expected), "verwacht \"$expected\" in: " . $error->getMessage());
+        withoutToken($error->getMessage(), 'de foutmelding');
+        ok(!str_contains($error->getMessage(), $token), 'de foutmelding noemt de waarde');
+    }
+});
+
 test('AfasConfig: de portiegrootte en de naam van de connector worden gecontroleerd', function (): void {
     $values = ['AFAS_TOKEN' => fakeToken(), 'AFAS_BASE_URL' => 'https://12345.rest.afas.online', 'AFAS_CONNECTOR' => 'Andere_Connector'];
     throws(AfasException::class, fn () => AfasConfig::fromValues($values, 0));
