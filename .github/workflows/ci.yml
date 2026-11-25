@@ -40,6 +40,25 @@ jobs:
       - name: Unit tests uitvoeren
         run: npm test
 
+  # Tests van de backend (de koppeling met AFAS in PHP, map backend/). PHP staat al op de runner en
+  # de tests hebben geen pakketten nodig. Er gaat geen verzoek naar AFAS: de antwoorden zijn
+  # nagebootst en het token in de tests is een neptoken. Er zijn hier geen geheimen ingesteld.
+  backend:
+    # Vast op Ubuntu 24.04, net als de browsertests. Daar staat PHP 8.3.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Controleer PHP-versie
+        run: php -v
+
+      - name: Tests van de backend uitvoeren
+        run: php backend/tests/run.php
+
   # Browsertests (end-to-end): de echte pagina in headless Google Chrome, aangestuurd via het
   # Chrome DevTools Protocol (zie tests/e2e/browser.js). Er worden geen npm-pakketten geïnstalleerd;
   # Chrome staat al op de runner (ubuntu-latest). Deze job start pas als de unit tests geslaagd zijn.

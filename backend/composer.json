@@ -1,0 +1,18 @@
+{
+  "name": "tvb/consumptieregistratie-backend",
+  "description": "Serveronderdelen van de TVB Consumptieregistratie: de koppeling met AFAS Profit",
+  "type": "project",
+  "require": {
+    "php": ">=8.3",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Tvb\\Consumptie\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "php tests/run.php"
+  }
+}

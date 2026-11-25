@@ -10,6 +10,8 @@ Dubbelklikken op `index.html` werkt niet: de JavaScript bestaat uit modules en b
 
 Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
 
+Tests van de AFAS-koppeling draaien (PHP 8.3+): `php backend/tests/run.php`
+
 Browsertests (end-to-end) draai je met `npm run test:e2e`. Ze openen de echte pagina zonder venster in Microsoft Edge (Windows) of Google Chrome (Linux). Staat de browser ergens anders, zet dan `BROWSER_PATH` op het pad van de browser, bijvoorbeeld `BROWSER_PATH="/usr/bin/chromium" npm run test:e2e`. Er hoeft niets met npm te worden geïnstalleerd. In GitHub Actions draaien ze automatisch na de unit tests. Met `E2E_CPU_THROTTLE=4` draait de browser vier keer trager, zoals op een drukke server. Mislukt een browsertest, dan staan het scenario, de toestand van de pagina en de laatste meldingen uit de console in de foutuitvoer en komt er een schermafdruk in `test-results/e2e` (in GitHub Actions bewaard als artifact).
 
 ## Mappenstructuur
@@ -87,6 +89,11 @@ tests/
   helpers-gezicht.js        # Nagebootst gezicht van 68 punten, een foto als plat vlak en ruis (voor de controle op een levend gezicht)
   e2e/                      # 37 browsertests in headless Edge of Chrome (npm run test:e2e), met hulpcode in browser.js
   *.test.js                 # 931 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, slimme-koelkast, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm, gezicht-instellen-veilig, levend-gezicht, pentest-november)
+backend/                    # Serverdeel in PHP: de koppeling met AFAS Profit (zie backend/README.md)
+  src/Afas/                 # AfasConfig, AfasClient, EmployeeMapper, EmployeeSync en SyncRunner
+  bin/                      # afas-metainfo.php (veldnamen bij AFAS) en afas-sync.php (proefdraaien)
+  tests/                    # 88 tests met nagebootste antwoorden van AFAS (php backend/tests/run.php)
+.env.example                # Voorbeeld van de instellingen AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR, zonder waarden
 tools/
   md-to-docx.cjs            # Stap 1: zet Markdown om naar Word in de opmaak van het TVB-sjabloon tvbsjabloon.docx (niet in de repository, vraag het op bij TVB)
   word-bijwerken.ps1        # Stap 2: laat Word de inhoudsopgave bijwerken en slaat .docx en .pdf op
