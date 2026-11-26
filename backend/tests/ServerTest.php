@@ -737,3 +737,35 @@ Wit"]),
     same(['mw-nieuw', 'mw-zonder', 'gast-kort', 'gast-tekst', 'gast-leeg', 'gast-enter', 'mw-lotte'], array_column($response->body['rejected'], 'id'));
     same('Lotte van Dijk', $server->store->get('employees', 'mw-lotte')->name);
 });
+
+test('API: een tablet koppelt een pas aan een medewerker zonder pas; de rest van de medewerker blijft zoals op de server', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+    $mark = $server->store->get('employees', 'mw-mark');
+    $mark->active = true;
+    $server->store->put('employees', 'mw-mark', $mark, testMoment());
+
+    // Zoals de tablet hem kent: zonder personeelsnummer en looncode, en met een poging de naam te veranderen.
+    $response = $server->call('POST', '/changes', '{"changes":[{"collection":"employees","id":"mw-mark","data":{"id":"mw-mark","name":"Iemand Anders","payrollCode":"","personnelNumber":"","active":true,"badgeId":"04DDEEFF","badgeLinkedAt":"2026-11-26T08:59:00.000Z"}}]}');
+    same([], $response->body['rejected']);
+
+    $stored = $server->store->get('employees', 'mw-mark');
+    same(['04DDEEFF', '2026-11-26T08:59:00.000Z', 'Mark Jansen', '5002', '102'], [$stored->badgeId, $stored->badgeLinkedAt, $stored->name, $stored->personnelNumber, $stored->payrollCode]);
+});
+
+test('API: een tablet kan geen pas vervangen, geen pas van een ander gebruiken en niets koppelen aan een inactieve medewerker', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+    $link = static fn (string $id, string $badge): array => ['collection' => 'employees', 'id' => $id, 'data' => ['id' => $id, 'active' => true, 'badgeId' => $badge]];
+    $server->store->put('employees', 'mw-sanne', record('{"id":"mw-sanne","name":"Sanne Bakker","firstName":"Sanne","lastName":"Bakker","payrollCode":"","personnelNumber":"5003","employerNumber":"","companyId":"bedrijf-tvb","pointId":"punt-hk","active":true,"color":"#d8f1e8","badgeId":""}'), testMoment());
+
+    $response = $server->call('POST', '/changes', json_encode(['changes' => [
+        $link('mw-lotte', 'AABBCCDD'),   // Lotte heeft al een pas
+        $link('mw-mark', 'AABBCCDD'),    // Mark is inactief
+        $link('mw-sanne', '04A1B2C3'),   // de pas van Lotte
+        $link('mw-sanne', 'ab'),         // geen geldig pasnummer
+    ]]));
+    same(['mw-lotte', 'mw-mark', 'mw-sanne', 'mw-sanne'], array_column($response->body['rejected'], 'id'));
+    same('04A1B2C3', $server->store->get('employees', 'mw-lotte')->badgeId);
+    same('', $server->store->get('employees', 'mw-sanne')->badgeId);
+});

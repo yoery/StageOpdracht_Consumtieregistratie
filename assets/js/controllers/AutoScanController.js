@@ -52,7 +52,9 @@ export class AutoScanController extends ControllerPart {
     multiple: "Graag één persoon tegelijk",
     steady: "Even stil blijven…",
     notRecognized: "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig.",
-    notRecognizedNoBadge: "Je bent niet herkend. Zoek je naam met Handmatig zoeken."
+    notRecognizedNoBadge: "Je bent niet herkend. Zoek je naam met Handmatig zoeken.",
+    // Met een server (besluit 25 november 2026, punt 5). "De knop hieronder" is Handmatig zoeken.
+    notRecognizedSetup: "Zoek jezelf eerst op via de knop hieronder en stel een snellere optie in."
   };
 
   // `app` is de controller (RegistrationApp). `clock` levert de tijd en de timers (dezelfde klok als de
@@ -261,7 +263,8 @@ export class AutoScanController extends ControllerPart {
   pauseAfterUnknown(now = this.clock.now()) {
     const badge = Boolean(this.app.badgeReader?.isEnabled?.());
     const { MESSAGES } = AutoScanController;
-    this.setScanState("unknown", badge ? MESSAGES.notRecognized : MESSAGES.notRecognizedNoBadge);
+    const message = this.app.server ? MESSAGES.notRecognizedSetup : badge ? MESSAGES.notRecognized : MESSAGES.notRecognizedNoBadge;
+    this.setScanState("unknown", message);
     this.resetScan();
     this.scanPausedUntil = now + this.autoSettings.retryPauseMs;
   }

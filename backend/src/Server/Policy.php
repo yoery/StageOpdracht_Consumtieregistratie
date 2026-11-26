@@ -29,6 +29,9 @@ namespace Tvb\Consumptie\Server;
  *     verlaagt de voorraad wel op het eigen scherm, maar de server telt zelf;
  *   - een gezichtsinstelling of het antwoord op de vraag daarover, voor een actieve medewerker;
  *   - een nieuwe logboekregel (bijvoorbeeld "Gezichtsherkenning ingesteld");
+ *   - een pas koppelen aan een actieve medewerker die nog geen pas heeft (Snellere optie instellen,
+ *     FR-100). Alleen het pasnummer en het moment van koppelen worden overgenomen, en alleen als die pas
+ *     nog bij niemand hoort. De rest van de medewerker blijft zoals hij op de server staat;
  *   - een nieuwe gast (FR-98): alleen een naam en een telefoonnummer. De server maakt de regel zelf,
  *     zonder looncode, personeelsnummer, bedrijf of pas. Het telefoonnummer ziet een tablet daarna
  *     niet meer terug: alleen de beheerder.
@@ -120,7 +123,7 @@ final class Policy
 
         return match ($collection) {
             'registrations' => $incoming !== null && $existing === null ? $this->newRegistration($incoming, $deviceId) : false,
-            'employees' => $incoming !== null && $existing === null ? $this->newGuest($incoming) : false,
+            'employees' => $incoming === null ? false : ($existing === null ? $this->newGuest($incoming) : $this->badgeSelfLink($existing, $incoming)),
             'points' => $incoming !== null && $existing !== null,
             'faceEnrollments' => $this->faceEnrollment($incoming, $existing),
             'faceOffers' => $incoming !== null ? $this->faceOffer($incoming) : false,
@@ -197,6 +200,27 @@ final class Policy
         $guest->phone = $phone;
 
         return $guest;
+    }
+
+    // Een tablet koppelt een pas aan een medewerker (Snellere optie instellen). Mag alleen bij een actieve
+    // medewerker zonder pas, met een geldig pasnummer dat nog bij niemand hoort.
+    private function badgeSelfLink(\stdClass $existing, \stdClass $incoming): \stdClass|false
+    {
+        $badgeId = $incoming->badgeId ?? null;
+        if (($existing->active ?? false) !== true || ($existing->guest ?? false) === true || ($existing->badgeId ?? '') !== ''
+            || !is_string($badgeId) || preg_match('/^[A-Z0-9]{4,64}$/', $badgeId) !== 1) {
+            return false;
+        }
+        foreach ($this->store->all('employees') as $other) {
+            if (($other->badgeId ?? '') === $badgeId && ($other->id ?? null) !== ($existing->id ?? null)) {
+                return false;
+            }
+        }
+        $linked = clone $existing;
+        $linked->badgeId = $badgeId;
+        $linked->badgeLinkedAt = $this->isDateTime($incoming->badgeLinkedAt ?? null) ? $incoming->badgeLinkedAt : gmdate('Y-m-d\TH:i:s\Z');
+
+        return $linked;
     }
 
     // Het werkgevernummer van een medewerker: zijn eigen afwijkende nummer, anders dat van zijn bedrijf.

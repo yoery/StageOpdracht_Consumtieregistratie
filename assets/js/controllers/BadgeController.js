@@ -167,6 +167,8 @@ export class BadgeController extends ControllerPart {
     this.restoreSearchAfterScan();
     this.scanStart = null;
     if (filledBadgeField) return;
+    // "Houd je pas tegen de lezer" van Snellere optie instellen staat open: de pas wordt gekoppeld.
+    if (this.app.badgeLinkEmployeeId && this.app.linkScannedBadge?.(code)) return;
 
     const openModal = this.app.topModal();
     const productWindowOpen = Boolean(openModal) && openModal === this.view.$("#employeeProductsModal");

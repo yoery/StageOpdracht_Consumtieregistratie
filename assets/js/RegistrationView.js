@@ -642,14 +642,26 @@ export class RegistrationView {
   //     uitzetten. Er staat alleen een korte uitleg hoe het wel kan. Die uitleg staat er altijd (ook
   //     als de collega al een gezicht heeft), zodat niet te zien is wie gezichtsherkenning gebruikt.
   // Zonder demo staat er niets. Zonder camera geen link en geen uitleg (instellen kan dan niet).
+  //
+  // Met een server (`face.server`) staat hier alleen de vraag "Snellere optie instellen" (FR-100, zie
+  // QuickSetupController), of na herkenning "Gezichtsherkenning staat aan" met Uitzetten.
   faceAreaHtml(face) {
+    if (face.server && face.quickSetup) {
+      const text = face.quickSetup === "expired"
+        ? "Je gezichtsherkenning is na een jaar verlopen. Stel hem opnieuw in."
+        : "Sneller registreren? Stel gezichtsherkenning of je pasje in.";
+      return `<span class="face-enroll-hint">${icon("faceScan")} ${text}</span>
+           <button type="button" class="text-link" data-quick-setup>Snellere optie instellen</button>
+           <button type="button" class="text-link" data-quick-setup-decline>Nee, liever niet</button>`;
+    }
     if (!face.available) return "";
     const recognized = Boolean(face.recognized || face.recognizedByBadge);
     const camera = face.camera !== false;
     if (recognized && face.enrolled) {
-      return `<span class="face-enrolled">${icon("check")} Gezichtsherkenning staat aan (demo)</span>
+      return `<span class="face-enrolled">${icon("check")} Gezichtsherkenning staat aan${face.server ? "" : " (demo)"}</span>
            <button type="button" class="text-link" data-face-forget>Uitzetten</button>`;
     }
+    if (face.server) return "";
     if (face.recognizedByBadge && camera) {
       return `<button type="button" class="text-link" data-face-enroll>${icon("faceScan")} Gezichtsherkenning instellen (demo)</button>`;
     }

@@ -34,6 +34,13 @@ import { ServerDataStore } from "./ServerDataStore.js";
 import { ServerSync } from "./ServerSync.js";
 
 export class ServerMode {
+  // De teksten van de gezichtsherkenning met een server (zie attach).
+  static FACE_TEXTS = {
+    button: "Herken mij met de camera",
+    kicker: "Gezichtsherkenning",
+    consent: "Ik doe vrijwillig mee. Alleen kenmerken van mijn gezicht (getallen, geen foto) worden bewaard op de server van TVB, zodat ik op iedere tablet van TVB word herkend. Na een jaar worden ze vanzelf gewist en ik kan het altijd uitzetten."
+  };
+
   static MESSAGES = {
     offline: "Geen verbinding met de server. Registraties worden bewaard en later verstuurd.",
     online: "De verbinding met de server is terug.",
@@ -148,6 +155,12 @@ export class ServerMode {
     app.view.directory = () => ({ searchFirst: true, pointId: this.pointId, deviceId: this.device?.id ?? null });
     this.applyLocation();
 
+    // De gezichtsherkenning is hier geen demo meer, en de kenmerken staan op de server (niet alleen op
+    // deze tablet). De teksten zeggen dat eerlijk, ook de toestemming.
+    this.setText("#faceRecognizeButton", ServerMode.FACE_TEXTS.button, { keepIcon: true });
+    this.setText(".face-modal .section-kicker", ServerMode.FACE_TEXTS.kicker);
+    this.setText("#faceConsentLabel span", ServerMode.FACE_TEXTS.consent);
+
     $("#tab-server")?.classList.remove("hidden");
     $("#serverDeviceForm")?.addEventListener("submit", (event) => this.linkThisDevice(event));
     $("#serverAfasButton")?.addEventListener("click", () => this.runAfasSync());
@@ -155,6 +168,20 @@ export class ServerMode {
 
     this.sync.start();
     if (this.startedOffline) this.handleStatus("offline");
+  }
+
+  // Vervangt de tekst van een element. Met `keepIcon` blijft een icoon (span met data-icon) vooraan staan.
+  setText(selector, text, { keepIcon = false } = {}) {
+    const element = this.doc.querySelector(selector);
+    if (!element) return;
+    if (!keepIcon || typeof element.append !== "function") {
+      element.textContent = text;
+      return;
+    }
+    const iconElement = element.querySelector?.("[data-icon]");
+    element.textContent = "";
+    if (iconElement) element.append(iconElement, " ");
+    element.append(text);
   }
 
   // Zet de locatie van deze tablet in het model en toont "Ik ben een gast" alleen als er een locatie

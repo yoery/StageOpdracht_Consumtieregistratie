@@ -465,6 +465,37 @@
   </div>
 
   <!-- Apart formulier voor toevoegen en wijzigen van medewerkers. -->
+  <!-- Snellere optie instellen (FR-100, alleen met een server): kiezen tussen gezicht, pas of allebei.
+       Zie QuickSetupController.js. -->
+  <div class="modal-backdrop hidden" id="quickSetupModal" role="dialog" aria-modal="true" aria-labelledby="quickSetupTitle">
+    <div class="modal">
+      <button class="modal-close" data-close-quick-setup aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker" id="quickSetupName"></p>
+      <h2 id="quickSetupTitle">Snellere optie instellen</h2>
+      <p class="muted">Kies hoe je voortaan sneller registreert.</p>
+      <div class="employee-form-actions">
+        <button class="secondary-button" type="button" id="quickSetupFace" data-quick-choice="face"><span data-icon="faceScan"></span> Gezichtsherkenning</button>
+        <button class="secondary-button" type="button" id="quickSetupBadge" data-quick-choice="badge"><span data-icon="badge"></span> Pasje</button>
+        <button class="primary-button" type="button" id="quickSetupBoth" data-quick-choice="both">Allebei</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- De pas koppelen na Snellere optie instellen: zolang dit venster open is, koppelt een scan de pas. -->
+  <div class="modal-backdrop hidden" id="badgeLinkModal" role="dialog" aria-modal="true" aria-labelledby="badgeLinkTitle">
+    <div class="modal">
+      <button class="modal-close" data-close-badge-link aria-label="Sluiten" data-icon="close"></button>
+      <div class="modal-icon" aria-hidden="true" data-icon="badge"></div>
+      <p class="section-kicker" id="badgeLinkName"></p>
+      <h2 id="badgeLinkTitle">Houd je pas tegen de lezer</h2>
+      <p class="muted">Je pas wordt gekoppeld aan jouw naam. Daarna houd je voortaan je pas tegen de lezer.</p>
+      <p class="form-error" id="badgeLinkStatus" role="status"></p>
+      <div class="employee-form-actions">
+        <button class="secondary-button" type="button" data-close-badge-link>Annuleren</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Registreren als gast (iemand van buiten TVB, niet in AFAS). Zie GuestController.js. -->
   <div class="modal-backdrop hidden" id="guestModal" role="dialog" aria-modal="true" aria-labelledby="guestTitle">
     <div class="modal employee-form-modal">

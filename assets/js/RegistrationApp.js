@@ -14,6 +14,7 @@ import { RecognitionController } from "./controllers/RecognitionController.js";
 import { StandbyController } from "./controllers/StandbyController.js";
 import { AutoScanController } from "./controllers/AutoScanController.js";
 import { GuestController } from "./controllers/GuestController.js";
+import { QuickSetupController } from "./controllers/QuickSetupController.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
@@ -107,6 +108,7 @@ export class RegistrationApp {
     this.standby = new StandbyController(this, clock);
     this.autoScan = new AutoScanController(this, clock);
     this.guests = new GuestController(this);
+    this.quickSetup = new QuickSetupController(this);
 
     // De view kent de demo gezichtsherkenning niet. Voor de knoppen "Gezichtsherkenning instellen" en
     // "Uitzetten" in het tabblad Medewerkers vraagt hij hier of instellen kan ("ready", "noCamera" of
@@ -427,6 +429,9 @@ export class RegistrationApp {
       ["[data-stock-delivery]", (button) => this.bookDelivery(button.dataset.stockDelivery)],
       ["[data-clear-search]", () => this.clearSearch()],
       ["[data-open-guest]", () => this.openGuestForm()],
+      ["[data-quick-setup]", () => this.openQuickSetup()],
+      ["[data-quick-setup-decline]", () => this.declineQuickSetup()],
+      ["[data-quick-choice]", (button) => this.chooseQuickSetup(button.dataset.quickChoice)],
       ["[data-go-tab]", (button) => this.switchTab(document.querySelector(`.tab[data-tab="${cssAttributeValue(button.dataset.goTab)}"]`))],
       ["[data-repeat-last]", () => this.repeatLastSelection()],
       ["[data-face-enroll]", () => this.startFaceEnrollment()],
@@ -580,6 +585,10 @@ export class RegistrationApp {
     this.view.$("#pointForm").addEventListener("submit", (event) => this.savePoint(event));
     this.registerModalClose("#pointFormModal", "[data-close-point-modal]", () => this.closePointForm());
 
+    // Snellere optie instellen (FR-100): het keuzevenster en "Houd je pas tegen de lezer".
+    if (this.view.$("#quickSetupModal")) this.registerModalClose("#quickSetupModal", "[data-close-quick-setup]", () => this.closeQuickSetup());
+    if (this.view.$("#badgeLinkModal")) this.registerModalClose("#badgeLinkModal", "[data-close-badge-link]", () => this.cancelBadgeLink());
+
     // Registreren als gast (FR-98).
     this.view.$("#guestForm")?.addEventListener("submit", (event) => this.saveGuest(event));
     if (this.view.$("#guestModal")) this.registerModalClose("#guestModal", "[data-close-guest-modal]", () => this.closeGuestForm());
@@ -704,7 +713,7 @@ const DELEGATES = {
   },
   face: {
     methods: [
-      "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "forgetFace", "setFaceStatus",
+      "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "startQuickFaceEnrollment", "forgetFace", "setFaceStatus",
       "faceSetupState", "canSelfEnroll", "canSelfForget", "startAdminFaceEnrollment", "adminForgetFace", "renderAdminFaceChange",
       "faceTexts", "openFaceModal", "hasActiveFace", "loadSavedFaces", "expireFaces",
       "updateEnrollButton", "scanForFace", "endWakeScan", "stopCameraAfterTimeout", "scheduleEnrollTimeout",
@@ -749,6 +758,13 @@ const DELEGATES = {
   guests: {
     methods: ["openGuestForm", "closeGuestForm", "saveGuest"],
     fields: []
+  },
+  quickSetup: {
+    methods: [
+      "quickSetupOptions", "quickSetupState", "openQuickSetup", "closeQuickSetup", "chooseQuickSetup", "declineQuickSetup",
+      "startBadgeLink", "cancelBadgeLink", "linkScannedBadge"
+    ],
+    fields: ["quickSetupEmployeeId", "badgeLinkEmployeeId"]
   },
   corrections: {
     methods: [

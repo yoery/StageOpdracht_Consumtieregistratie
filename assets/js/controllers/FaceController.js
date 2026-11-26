@@ -216,6 +216,20 @@ export class FaceController extends ControllerPart {
     return true;
   }
 
+  // "Snellere optie instellen" (QuickSetupController, alleen met een server): het instelvenster voor deze
+  // medewerker, na zichzelf opzoeken. Er is bewust geen controle wie er voor de camera staat (besluit
+  // van TVB, 26 november 2026). `continuation` gaat daarna verder (bij "allebei": de pas koppelen).
+  startQuickFaceEnrollment(employeeId, continuation = null) {
+    if (!this.app.server || !this.model.findEmployee(employeeId)?.active) {
+      this.view.showToast(FaceController.SETUP_MESSAGES.enrollNotAllowed, { tone: "error", duration: 5000 });
+      return false;
+    }
+    this.enrollByAdmin = false;
+    this.openFaceModal("enroll", employeeId);
+    this.enrollContinuation = continuation;
+    return true;
+  }
+
   // Knop "Gezichtsherkenning instellen" in het tabblad Medewerkers van het beheer: het instelvenster
   // voor deze medewerker, alleen voor een ingelogde beheerder, een actieve medewerker en als er een
   // camera kan zijn. Het venster ligt boven het beheer. De medewerker kijkt zelf in de camera en zet
@@ -459,7 +473,10 @@ export class FaceController extends ControllerPart {
       return;
     }
     this.stopCameraAfterTimeout();
-    this.setFaceStatus("Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst.", "error");
+    // Met een server: zoek jezelf op en stel een snellere optie in (besluit 25 november 2026, punt 5).
+    this.setFaceStatus(this.app.server
+      ? "Niet herkend. De camera is uitgezet. Zoek jezelf eerst op in de lijst en stel een snellere optie in."
+      : "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst.", "error");
   }
 
   // Einde van de scan na een tik zonder herkenning (of zonder camera): de camera gaat uit, het venster

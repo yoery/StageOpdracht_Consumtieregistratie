@@ -978,6 +978,15 @@ export class RegistrationModel {
     return this.faceOffers.find((offer) => offer.employeeId === employeeId)?.answer ?? null;
   }
 
+  // Heeft de medewerker "Nee, liever niet" gezegd tegen een snellere optie, korter dan `days` dagen
+  // geleden (FR-100)? Daarna komt de vraag opnieuw.
+  declinedQuickSetup(employeeId, now = new Date(), days = 365) {
+    const offer = this.faceOffers.find((item) => item.employeeId === employeeId);
+    if (offer?.answer !== "declined") return false;
+    const answeredAt = Date.parse(offer.answeredAt);
+    return Number.isFinite(answeredAt) && now.getTime() - answeredAt < days * 24 * 60 * 60 * 1000;
+  }
+
   // Zet het antwoord van een medewerker (vervangt een eerder antwoord).
   setFaceOfferAnswer(employeeId, answer, answeredAt = new Date()) {
     const others = this.faceOffers.filter((offer) => offer.employeeId !== employeeId);

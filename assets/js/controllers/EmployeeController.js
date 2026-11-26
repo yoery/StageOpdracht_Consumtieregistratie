@@ -195,7 +195,10 @@ export class EmployeeController extends ControllerPart {
       enrolled: this.faceDemo.isEnrolled(this.app.selectedEmployeeId),
       recognized: this.app.recognizedByFace,
       recognizedByBadge: this.app.recognizedBy === "badge",
-      badgeReader: this.app.badgeReader?.isEnabled?.() !== false
+      badgeReader: this.app.badgeReader?.isEnabled?.() !== false,
+      // Met een server: de vraag "Snellere optie instellen" (QuickSetupController) en geen "(demo)".
+      server: Boolean(this.app.server),
+      quickSetup: this.app.quickSetupState?.(this.app.selectedEmployeeId) ?? null
     });
 
     // De product-id wordt met cssAttributeValue veilig gemaakt voor de zoekopdracht (selector).
