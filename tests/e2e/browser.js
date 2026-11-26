@@ -175,9 +175,11 @@ async function waitForDevToolsPort(profileDir, browserProcess) {
 
 // Start de webserver en de browser en geeft een object terug waarmee de tests de pagina
 // besturen. Roep aan het einde altijd close() aan.
-export async function launch() {
-  const server = await startServer(PROJECT_ROOT);
-  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+// Met `baseUrl` gebruikt de browser een server die de test zelf heeft gestart (bijvoorbeeld de
+// ontwikkelserver in PHP met de API, zie server.e2e.test.js). Dan start hier geen eigen webserver.
+export async function launch({ baseUrl: externalUrl = null } = {}) {
+  const server = externalUrl ? null : await startServer(PROJECT_ROOT);
+  const baseUrl = externalUrl ?? `http://127.0.0.1:${server.address().port}`;
 
   // Een eigen, leeg profiel per testrun: geen opgeslagen gegevens van een vorige keer.
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "tvb-e2e-"));
@@ -234,7 +236,7 @@ export async function launch() {
     });
   } catch (error) {
     browserProcess.kill();
-    server.close();
+    server?.close();
     removeTempDir(tempDir);
     throw error;
   }
@@ -537,7 +539,7 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
       await Promise.race([new Promise((resolve) => browserProcess.once("exit", resolve)), sleep(3000)]);
       if (browserProcess.exitCode === null) browserProcess.kill();
     }
-    server.close();
+    server?.close();
     removeTempDir(tempDir);
   };
 

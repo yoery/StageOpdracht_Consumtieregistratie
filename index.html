@@ -224,6 +224,33 @@
   </section>
 
   <!-- Modal voor admin-login en het beheerdashboard. -->
+  <!-- Inlogscherm voor een browser die voor de server nog niets is (geen beheerder en geen gekoppelde
+       tablet). Alleen als de website met een server werkt. De website zelf start dan niet en er staan
+       geen gegevens in de pagina (zie ServerMode.js). -->
+  <div class="modal-backdrop hidden" id="serverGate" role="dialog" aria-modal="true" aria-labelledby="serverGateTitle">
+    <div class="modal">
+      <div class="modal-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12a1 1 0 0 1 1 1v9H5v-9a1 1 0 0 1 1-1Zm6 4v3"/>
+        </svg>
+      </div>
+      <p class="section-kicker">Consumptieregistratie</p>
+      <h2 id="serverGateTitle">Inloggen</h2>
+      <p class="muted" id="serverGateText"></p>
+      <form id="serverGateForm" novalidate>
+        <label>E-mailadres
+          <input type="email" id="serverGateEmail" autocomplete="username" required>
+        </label>
+        <label>Wachtwoord
+          <input type="password" id="serverGatePassword" autocomplete="current-password" required>
+        </label>
+        <button class="primary-button full-width" type="submit">Inloggen <span data-icon="arrowRight"></span></button>
+        <p class="form-error hidden" id="serverGateError" role="alert"></p>
+      </form>
+      <button class="secondary-button full-width hidden" id="serverGateRetry" type="button">Opnieuw proberen</button>
+    </div>
+  </div>
+
   <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
     <div class="modal">
       <!-- Sluit de modal en logt de admin uit (gedeelde tablet); bij opnieuw openen verschijnt het loginformulier. -->
@@ -270,6 +297,8 @@
           <button class="tab" type="button" role="tab" id="tab-companies" aria-controls="companiesTab" aria-selected="false" data-tab="companies">Bedrijven</button>
           <button class="tab" type="button" role="tab" id="tab-stock" aria-controls="stockTab" aria-selected="false" data-tab="stock">Voorraad</button>
           <button class="tab" type="button" role="tab" id="tab-audit" aria-controls="auditTab" aria-selected="false" data-tab="audit">Logboek</button>
+          <!-- Alleen als de website met een server werkt (zie ServerMode.js). In de demo blijft dit tabblad verborgen. -->
+          <button class="tab hidden" type="button" role="tab" id="tab-server" aria-controls="serverTab" aria-selected="false" data-tab="server">Tablets en AFAS</button>
         </div>
         <div id="registrationsTab" role="tabpanel" aria-labelledby="tab-registrations">
           <!-- Filters bepalen welke registraties in de tabel en export verschijnen. -->
@@ -346,6 +375,26 @@
           <button class="secondary-button hidden" id="loadMoreAuditButton" type="button">Meer laden</button>
           <p class="muted">Wist alle medewerkers, registraties, producten, voorraad, het logboek en de reservekopieën op deze tablet en zet de demogegevens terug.</p>
           <button class="secondary-button danger-action" id="wipeDataButton" type="button">Alle gegevens wissen</button>
+        </div>
+        <!-- Tablets koppelen aan een locatie en de medewerkers ophalen uit AFAS. ServerMode.js vult dit tabblad. -->
+        <div id="serverTab" class="hidden" role="tabpanel" aria-labelledby="tab-server">
+          <h3>Deze tablet</h3>
+          <p class="muted" id="serverDeviceStatus"></p>
+          <form class="add-employee-form employee-fields" id="serverDeviceForm" novalidate>
+            <label>Naam van de tablet
+              <input type="text" id="serverDeviceName" maxlength="100" autocomplete="off" placeholder="Bijvoorbeeld: Tablet kantine">
+            </label>
+            <label>Locatie (consumptiepunt)
+              <select id="serverDevicePoint"></select>
+            </label>
+            <button class="primary-button" type="submit">Deze browser koppelen als tablet</button>
+          </form>
+          <h3>Gekoppelde tablets</h3>
+          <div id="serverDeviceList" class="admin-company-list"></div>
+          <h3>Medewerkers uit AFAS</h3>
+          <p class="muted" id="serverAfasStatus"></p>
+          <button class="secondary-button" id="serverAfasButton" type="button">Nu synchroniseren</button>
+          <ul class="muted" id="serverAfasNotes"></ul>
         </div>
       </div>
     </div>

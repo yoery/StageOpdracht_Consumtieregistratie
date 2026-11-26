@@ -290,8 +290,11 @@ final class Api
                 try {
                     if ($accepted === null) {
                         $this->store->delete($collection, $id, $now);
-                    } else {
+                    } elseif ($accepted !== true) {
                         $this->store->put($collection, $id, $accepted, $now);
+                        if ($role === Policy::ROLE_DEVICE && $collection === 'registrations') {
+                            $this->policy->registrationStored($accepted, $now);
+                        }
                     }
                     $saved++;
                 } catch (\InvalidArgumentException | \JsonException) {

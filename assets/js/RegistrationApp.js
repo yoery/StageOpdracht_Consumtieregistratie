@@ -86,6 +86,8 @@ export class RegistrationApp {
     // De status die maar bij één onderdeel hoort (bijvoorbeeld het sessienummer van het
     // cameravenster), staat in dat onderdeel en is via de lijst DELEGATES ook hier te lezen.
     this.adminLoggedIn = false;
+    // De verbinding met de server (ServerMode), of null in de demo. main.js zet dit vóór initialize.
+    this.server = null;
     this.selectedEmployeeId = null;
     this.selectedProducts = {}; // per product-id het gekozen aantal, bijv. { blikje: 2 }
     this.recognizedBy = null;      // hoe is de medewerker in het productvenster herkend: "face" (camera), "badge" (pas) of null

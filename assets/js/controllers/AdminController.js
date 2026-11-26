@@ -128,6 +128,13 @@ export class AdminController extends ControllerPart {
   openAdmin() {
     this.app.openModal("#adminModal");
 
+    // Werkt de website met een server en is deze browser daar al als beheerder ingelogd (via het
+    // inlogscherm van ServerMode), dan hoeft dat hier niet nog een keer.
+    if (!this.app.adminLoggedIn && this.app.server?.role === "admin") {
+      this.app.adminLoggedIn = true;
+      this.lastAdminActivity = this.clock.now();
+    }
+
     if (!this.app.adminLoggedIn) {
       this.showLogin();
       return;
@@ -153,15 +160,53 @@ export class AdminController extends ControllerPart {
     const email = this.view.$("#loginEmail").value;
     const password = this.view.$("#loginPassword").value;
 
-    if (email && password) {
-      this.app.hide("#loginError");
-      this.app.adminLoggedIn = true;
-      // Inloggen telt als invoer: de vijf minuten tot het automatisch uitloggen beginnen nu.
-      this.lastAdminActivity = this.clock.now();
-      this.showDashboard();
-    } else {
-      this.app.show("#loginError");
+    if (!email || !password) {
+      this.showLoginError(AdminController.LOGIN_REQUIRED);
+      return;
     }
+    // Met een server controleert de server het e-mailadres en het wachtwoord (zie serverLogin).
+    // Het demo-inloggen hieronder bestaat dan niet.
+    if (this.app.server) {
+      this.serverLogin(email, password);
+      return;
+    }
+    this.completeLogin();
+  }
+
+  // De tekst onder het inlogformulier als er niets is ingevuld.
+  static LOGIN_REQUIRED = "Vul een e-mailadres en wachtwoord in.";
+
+  showLoginError(message) {
+    const error = this.view.$("#loginError");
+    if (error) error.textContent = message;
+    this.app.show("#loginError");
+  }
+
+  // Het inloggen is gelukt: het dashboard gaat open.
+  completeLogin() {
+    this.app.hide("#loginError");
+    this.app.adminLoggedIn = true;
+    // Inloggen telt als invoer: de vijf minuten tot het automatisch uitloggen beginnen nu.
+    this.lastAdminActivity = this.clock.now();
+    this.showDashboard();
+  }
+
+  // Inloggen bij de server. Zolang het verzoek loopt, is de knop uitgeschakeld. Na het inloggen heeft
+  // ServerMode alle gegevens opnieuw opgehaald (de beheerder krijgt meer dan een tablet) en het model
+  // opnieuw laten laden. Pas daarna gaat het dashboard open. Mislukt het, dan staat de melding van
+  // de server onder het formulier.
+  async serverLogin(email, password) {
+    const button = this.view.$("#loginForm button[type=submit]");
+    if (button) button.disabled = true;
+    const result = await this.app.server.login(email, password);
+    if (button) button.disabled = false;
+
+    if (!result.ok) {
+      this.view.$("#loginPassword").value = "";
+      this.showLoginError(result.message);
+      return;
+    }
+    this.completeLogin();
   }
 
   // Knop "Uitloggen": de beheerder is uitgelogd en ziet het loginformulier weer.
@@ -172,6 +217,8 @@ export class AdminController extends ControllerPart {
     this.view.$("#loginPassword").value = "";
     this.view.clearAdminLists?.(); // geen gegevens van het beheer in de verborgen pagina (pentest PT-06)
     this.showLogin();
+    // Met een server eindigt ook daar de sessie van de beheerder (zie ServerMode.logout).
+    this.app.server?.logout();
   }
 
   // Sluit het admin-venster (sluitknop, klik op de donkere achtergrond of Escape) en logt de
@@ -193,6 +240,7 @@ export class AdminController extends ControllerPart {
     this.app.hide("#adminView");
     this.view.clearAdminLists?.();
     this.app.closeModal("#adminModal");
+    this.app.server?.logout();
   }
 
   // ------------------------------------------------------------------
@@ -291,7 +339,7 @@ export class AdminController extends ControllerPart {
 
   // Wisselt naar een ander tabblad in het dashboard. Een ontbrekend paneel wordt overgeslagen.
   switchTab(activeTab) {
-    const tabNames = ["registrations", "employees", "products", "companies", "stock", "audit"];
+    const tabNames = ["registrations", "employees", "products", "companies", "stock", "audit", "server"];
     if (!activeTab) return; // geen bestaand tabblad gevonden (bijvoorbeeld een onbekende naam)
 
     // aria-selected zegt een schermlezer welk tabblad (role="tab") gekozen is.
@@ -350,6 +398,12 @@ export class AdminController extends ControllerPart {
   wipeAllData() {
     // Alleen voor een ingelogde beheerder: wissen kan niet ongedaan worden gemaakt.
     if (!this.requireAdmin()) return;
+    // Met een server staan de gegevens van alle tablets in één database. Deze knop zet de
+    // demogegevens terug en zou dan alles van iedereen wissen. De knop is daar ook verborgen.
+    if (this.app.server) {
+      this.view.showToast("Alle gegevens wissen kan niet: de gegevens staan op de server.", { tone: "error", duration: 6000 });
+      return;
+    }
     const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?";
     if (!window.confirm(firstQuestion)) return;
     if (!window.confirm("Weet je het zeker? Dit kan niet ongedaan worden gemaakt.")) return;

@@ -18,6 +18,11 @@
  * - ThemeManager regelt het lichte en donkere thema; die staat los van de rest.
  * - FaceRecognitionDemo is de demo gezichtsherkenning (uit te zetten in config.js).
  * - BadgeReader herkent een pas via een USB-NFC-lezer (uit te zetten in config.js).
+ *
+ * Met een server (SERVER_API in deployment.js is ingevuld, zoals in de container) staan de gegevens
+ * in de database van de server. ServerMode vraagt dan eerst wie deze browser is en haalt de gegevens
+ * op. ServerDataStore neemt de plaats in van DataStore. Is de browser geen beheerder en geen
+ * gekoppelde tablet, dan staat er alleen een inlogscherm en start de rest niet.
  */
 import { STORAGE_KEY } from "./config.js";
 import { DataStore } from "./DataStore.js";
@@ -29,15 +34,38 @@ import { ThemeManager } from "./ThemeManager.js";
 import { FaceRecognitionDemo } from "./FaceRecognitionDemo.js";
 import { BadgeReader } from "./BadgeReader.js";
 import { AdminController } from "./controllers/AdminController.js";
+import { SERVER_API } from "./deployment.js";
+import { ServerApi } from "./ServerApi.js";
+import { ServerMode } from "./ServerMode.js";
 
 // Het thema eerst, zodat de kleuren kloppen voordat de rest wordt getekend.
 new ThemeManager().initialize();
 
-const model = new RegistrationModel(new DataStore(STORAGE_KEY));
-const view = new RegistrationView(model);
-const csvExport = new CsvExport(model);
-const faceDemo = new FaceRecognitionDemo();
-const badgeReader = new BadgeReader();
-const app = new RegistrationApp(model, view, csvExport, faceDemo, badgeReader, AdminController.realClock());
+// Maakt de onderdelen van de website en start ze. `server` is de ServerMode, of null in de demo.
+const start = (store, server = null) => {
+  const model = new RegistrationModel(store);
+  const view = new RegistrationView(model);
+  const csvExport = new CsvExport(model);
+  const faceDemo = new FaceRecognitionDemo();
+  const badgeReader = new BadgeReader();
+  const app = new RegistrationApp(model, view, csvExport, faceDemo, badgeReader, AdminController.realClock());
 
-app.initialize();
+  app.server = server;
+  app.initialize();
+  server?.attach(app);
+  server?.afterStart();
+};
+
+if (SERVER_API) {
+  // De opslag van de browser is alleen voor een gekoppelde tablet (zie ServerDataStore).
+  let cache = null;
+  try {
+    cache = window.localStorage;
+  } catch (error) {
+    cache = null;
+  }
+  const server = new ServerMode({ api: new ServerApi(SERVER_API), key: STORAGE_KEY, cache });
+  if ((await server.prepare()) === "ready") start(server.store, server);
+} else {
+  start(new DataStore(STORAGE_KEY));
+}

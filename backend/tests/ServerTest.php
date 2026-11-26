@@ -455,7 +455,7 @@ test('API: een tablet kan een registratie niet wijzigen of verwijderen, en niet 
     ok(str_contains(implode("\n", $server->log), 'Wijzigingen geweigerd voor rol device: 6 van 6'));
 });
 
-test('API: een tablet kan medewerkers, producten, bedrijven en het aanbod niet wijzigen, alleen de voorraad', function (): void {
+test('API: een tablet kan medewerkers, producten, bedrijven en consumptiepunten niet wijzigen', function (): void {
     $server = new TestServer();
     $server->becomeTablet();
 
@@ -473,12 +473,44 @@ test('API: een tablet kan medewerkers, producten, bedrijven en het aanbod niet w
     ok($server->store->get('employees', 'mw-mark') !== null);
     same(0.65, $server->store->get('products', 'blikje')->price);
     same(
-        '{"id":"punt-hk","name":"Hoofdkantoor","companyId":"bedrijf-tvb","products":{"blikje":{"offered":true,"stock":23,"minimum":6}}}',
+        '{"id":"punt-hk","name":"Hoofdkantoor","companyId":"bedrijf-tvb","products":{"blikje":{"offered":true,"stock":24,"minimum":6}}}',
         json_encode($server->store->get('points', 'punt-hk')),
-        'alleen het getal van de voorraad is overgenomen'
+        'het punt is veranderd door een tablet'
     );
+    same(1, $response->body['saved'], 'de wijziging van het bestaande punt wordt stil overgeslagen');
+});
 
-    same(['punt-hk'], array_column($server->call('POST', '/changes', '{"changes":[{"collection":"points","id":"punt-hk","data":{"id":"punt-hk","products":{"blikje":{"stock":"veel"}}}}]}')->body['rejected'], 'id'));
+test('API: bij een registratie van een tablet verlaagt de server zelf de voorraad, ook als twee tablets tegelijk registreren', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+    $push = static fn (string $id, string $createdAt, int $stockOnTablet): string => json_encode(['changes' => [
+        ['collection' => 'registrations', 'id' => $id, 'data' => ['id' => $id, 'employeeId' => 'mw-lotte', 'productId' => 'blikje', 'price' => 0.65, 'pointId' => 'punt-hk', 'createdAt' => $createdAt]],
+        ['collection' => 'points', 'id' => 'punt-hk', 'data' => ['id' => 'punt-hk', 'name' => 'Hoofdkantoor', 'companyId' => 'bedrijf-tvb', 'products' => ['blikje' => ['offered' => true, 'stock' => $stockOnTablet, 'minimum' => 6]]]],
+    ]]);
+
+    // Twee tablets zagen allebei 24 en sturen allebei 23. De server telt zelf: 24, 23, 22.
+    same([], $server->call('POST', '/changes', $push('reg-1', '2026-11-26T08:59:00.000Z', 23))->body['rejected']);
+    same([], $server->call('POST', '/changes', $push('reg-2', '2026-11-26T08:59:01.000Z', 23))->body['rejected']);
+    same(22, $server->store->get('points', 'punt-hk')->products->blikje->stock);
+    same(22, $server->pulled()['points']['punt-hk']->products->blikje->stock, 'de tablet krijgt de voorraad van de server terug');
+
+    // Een registratie van vóór de laatste telling zat al in de telling: de voorraad blijft.
+    $point = $server->store->get('points', 'punt-hk');
+    $point->products->blikje->stock = 10;
+    $point->products->blikje->countedAt = '2026-11-26T08:00:00.000Z';
+    $server->store->put('points', 'punt-hk', $point, testMoment());
+    $server->call('POST', '/changes', $push('reg-3', '2026-11-26T07:30:00.000Z', 9));
+    same(10, $server->store->get('points', 'punt-hk')->products->blikje->stock);
+    $server->call('POST', '/changes', $push('reg-4', '2026-11-26T08:30:00.000Z', 9));
+    same(9, $server->store->get('points', 'punt-hk')->products->blikje->stock);
+
+    // Wordt het product niet aangeboden op dat punt, dan verandert de voorraad niet.
+    $point = $server->store->get('points', 'punt-hk');
+    $point->products->blikje->offered = false;
+    $server->store->put('points', 'punt-hk', $point, testMoment());
+    $server->call('POST', '/changes', $push('reg-5', '2026-11-26T08:45:00.000Z', 8));
+    same(9, $server->store->get('points', 'punt-hk')->products->blikje->stock);
+    same(5, count($server->store->all('registrations')));
 });
 
 test('API: een tablet ziet alleen registraties van de laatste 40 dagen', function (): void {

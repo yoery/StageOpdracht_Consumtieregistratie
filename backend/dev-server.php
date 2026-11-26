@@ -29,8 +29,10 @@ if ($path === '/api' || str_starts_with($path, '/api/')) {
         }
         putenv('CR_DB_DSN=sqlite:' . __DIR__ . '/data/consumptie.sqlite');
     }
-    // De API leest een .env alleen uit deze projectmap (bij de test: de nagemaakte map).
-    putenv('CR_PROJECT_MAP=' . $root);
+    // De API leest een .env alleen uit deze projectmap (bij de test: de nagemaakte map). Met
+    // CR_ENV_MAP wijst een test een andere map aan, zodat de echte .env nooit wordt gelezen.
+    $envRoot = getenv('CR_ENV_MAP');
+    putenv('CR_PROJECT_MAP=' . (is_string($envRoot) && $envRoot !== '' ? $envRoot : $root));
     require __DIR__ . '/public/index.php';
 
     return true;

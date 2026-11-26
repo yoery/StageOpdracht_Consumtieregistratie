@@ -21,8 +21,10 @@ namespace Tvb\Consumptie\Server;
  * Wat een tablet mag schrijven:
  *   - een nieuwe registratie. De prijs en het werkgevernummer vult de server zelf in vanuit zijn
  *     eigen gegevens, zodat een tablet daar niet mee kan knoeien. Wijzigen of verwijderen mag niet:
- *     corrigeren doet de beheerder;
- *   - de voorraad van een consumptiepunt (alleen het getal `stock`). De rest van het punt blijft;
+ *     corrigeren doet de beheerder. De voorraad van het consumptiepunt gaat op de server zelf met 1
+ *     omlaag (`registrationStored`). Zo klopt de voorraad ook als twee tablets tegelijk registreren;
+ *   - een wijziging van een consumptiepunt door een tablet wordt stil overgeslagen. De tablet
+ *     verlaagt de voorraad wel op het eigen scherm, maar de server telt zelf;
  *   - een gezichtsinstelling of het antwoord op de vraag daarover, voor een actieve medewerker;
  *   - een nieuwe logboekregel (bijvoorbeeld "Gezichtsherkenning ingesteld").
  * Al het andere wordt geweigerd.
@@ -91,9 +93,10 @@ final class Policy
     /**
      * Beoordeelt één wijziging. `$incoming` is de nieuwe inhoud, of null als de regel wordt verwijderd.
      * Geeft de inhoud terug die wordt opgeslagen (de server kan velden zelf invullen), null als de
-     * regel wordt verwijderd, of false als de wijziging niet mag.
+     * regel wordt verwijderd, false als de wijziging niet mag, of true als de wijziging mag maar er
+     * niets wordt opgeslagen.
      */
-    public function accept(string $role, string $collection, string $id, ?\stdClass $incoming): \stdClass|false|null
+    public function accept(string $role, string $collection, string $id, ?\stdClass $incoming): \stdClass|bool|null
     {
         if (!in_array($collection, RecordStore::COLLECTIONS, true) || !RecordStore::isSafeId($id)) {
             return false;
@@ -112,7 +115,7 @@ final class Policy
 
         return match ($collection) {
             'registrations' => $incoming !== null && $existing === null ? $this->newRegistration($incoming) : false,
-            'points' => $incoming !== null && $existing !== null ? $this->stockOnly($existing, $incoming) : false,
+            'points' => $incoming !== null && $existing !== null,
             'faceEnrollments' => $this->faceEnrollment($incoming, $existing),
             'faceOffers' => $incoming !== null ? $this->faceOffer($incoming) : false,
             'auditLog' => $incoming !== null && $existing === null ? $this->auditEntry($incoming) : false,
@@ -168,30 +171,29 @@ final class Policy
         return is_string($number) ? $number : '';
     }
 
-    // Een tablet mag van een consumptiepunt alleen de voorraad (het getal `stock`) wijzigen, en alleen
-    // van producten die al bij het punt staan. Naam, bedrijf, aanbod, minimum en telling blijven.
-    private function stockOnly(\stdClass $existing, \stdClass $incoming): \stdClass|false
+    /**
+     * Na het opslaan van een registratie van een tablet: de voorraad van het consumptiepunt gaat met 1
+     * omlaag, met dezelfde regel als de website (RegistrationModel.addRegistration). Alleen als het
+     * product op dat punt wordt aangeboden, en niet als de registratie van vóór de laatste telling is
+     * (die zat dan al in de telling). De voorraad mag onder nul komen: er is dan meer geregistreerd
+     * dan geteld.
+     */
+    public function registrationStored(\stdClass $registration, \DateTimeImmutable $now): void
     {
-        if (!($existing->products ?? null) instanceof \stdClass || !($incoming->products ?? null) instanceof \stdClass) {
-            return false;
+        $pointId = $registration->pointId ?? null;
+        $productId = $registration->productId ?? null;
+        $point = RecordStore::isSafeId($pointId) ? $this->store->get('points', $pointId) : null;
+        $entry = $point !== null && ($point->products ?? null) instanceof \stdClass && RecordStore::isSafeId($productId) ? ($point->products->$productId ?? null) : null;
+        if (!$entry instanceof \stdClass || ($entry->offered ?? false) !== true || (!is_int($entry->stock ?? null) && !is_float($entry->stock ?? null))) {
+            return;
         }
-        $result = clone $existing;
-        $result->products = clone $existing->products;
-        foreach (get_object_vars($existing->products) as $productId => $entry) {
-            $new = $incoming->products->$productId ?? null;
-            if (!$entry instanceof \stdClass || !$new instanceof \stdClass || !property_exists($new, 'stock')) {
-                continue;
-            }
-            $stock = $new->stock;
-            if (!is_int($stock) || $stock < -100000 || $stock > 100000) {
-                return false;
-            }
-            $copy = clone $entry;
-            $copy->stock = $stock;
-            $result->products->$productId = $copy;
+        $countedAt = is_string($entry->countedAt ?? null) ? strtotime($entry->countedAt) : false;
+        $createdAt = strtotime((string) $registration->createdAt);
+        if ($countedAt !== false && $createdAt !== false && $createdAt < $countedAt) {
+            return;
         }
-
-        return $result;
+        $entry->stock = $entry->stock - 1;
+        $this->store->put('points', $pointId, $point, $now);
     }
 
     // Een gezichtsinstelling: alleen voor een actieve medewerker, met precies 128 getallen. Verwijderen
