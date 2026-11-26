@@ -63,7 +63,9 @@
   background:var(--start-screen-oval);
   transition:border-color .3s, box-shadow .3s
 }
-/* Het camerabeeld, gespiegeld (zoals een spiegel). Alleen te zien als de camera echt aan staat. */
+/* Het camerabeeld is nooit te zien (besluit 25 november 2026, punt 1): mensen zien zichzelf niet en
+   schrikken niet. De video staat wel in de pagina, want de herkenning leest de beelden eruit. In het
+   ovaal staat altijd het icoon. Er is geen regel die de video zichtbaar maakt. */
 .start-oval video {
   position:absolute;
   inset:0;
@@ -72,9 +74,6 @@
   object-fit:cover;
   transform:scaleX(-1);
   opacity:0
-}
-.start-screen.has-camera .start-oval video {
-  opacity:1
 }
 .start-oval-icon {
   position:absolute;
@@ -87,8 +86,9 @@
   width:30%;
   height:auto
 }
+/* Kijkt de camera, dan kleurt het icoon in het ovaal mee, zodat te zien is dat er gescand wordt. */
 .start-screen.has-camera .start-oval-icon {
-  display:none
+  color:var(--start-screen-accent)
 }
 /* Iemand staat goed in het ovaal ("Even stil blijven…") of is herkend: het ovaal wordt groen. */
 .start-oval[data-state="steady"],.start-oval[data-state="recognized"] {

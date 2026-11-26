@@ -60,7 +60,10 @@ export class StandbyController extends ControllerPart {
     manualOnly: "Tik op Handmatig zoeken om je naam te kiezen",
     orBadge: "Of houd je pas tegen de lezer.",
     noFaces: "Gezichtsherkenning stel je in na een passcan of via de beheerder.",
-    privacyAuto: "De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard of verstuurd."
+    // De vaste zin over het scannen (besluit 25 november 2026, punt 2). Staat altijd in beeld zolang de
+    // camera kan kijken: op het startscherm en in het cameravenster (index.html, #faceNotice).
+    scanNotice: "Deze tablet scant gezichten voor de consumptieregistratie. Het camerabeeld wordt niet getoond en niet bewaard.",
+    privacyAuto: "Deze tablet scant gezichten voor de consumptieregistratie. Het camerabeeld wordt niet getoond en niet bewaard."
   };
 
   // `app` is de controller (RegistrationApp). `clock` levert de tijd en de timer (dezelfde klok als de
@@ -196,7 +199,7 @@ export class StandbyController extends ControllerPart {
         privacy = TEXTS.privacyAuto;
       } else {
         const seconds = Math.round((this.app.faceDemo?.settings?.wakeScanMs ?? 0) / 1000);
-        privacy = `Na de tik kijkt de camera hooguit ${seconds} seconden. Alles blijft op deze tablet.`;
+        privacy = `${TEXTS.scanNotice} Na de tik kijkt de camera hooguit ${seconds} seconden.`;
       }
     } else if (this.app.faceSetupPossible?.()) {
       hint = TEXTS.noFaces;

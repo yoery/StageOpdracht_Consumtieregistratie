@@ -627,9 +627,12 @@
       <h2 id="faceTitle">Herken mij</h2>
       <p class="muted" id="faceHelp">Plaats je gezicht binnen het kader en kijk recht in de camera.</p>
       <div class="face-frame">
-        <video id="faceVideo" autoplay muted playsinline></video>
+        <!-- Het camerabeeld is nooit te zien (zie face.css). Alleen het kader en een icoon. -->
+        <video id="faceVideo" autoplay muted playsinline aria-hidden="true"></video>
         <div class="face-guide" aria-hidden="true"></div>
+        <span class="face-frame-icon" aria-hidden="true" data-icon="faceScan"></span>
       </div>
+      <p class="face-notice" id="faceNotice">Deze tablet scant gezichten voor de consumptieregistratie. Het camerabeeld wordt niet getoond en niet bewaard.</p>
       <p class="face-status" id="faceStatus" role="status"></p>
       <label class="face-consent hidden" id="faceConsentLabel">
         <input type="checkbox" id="faceConsent">

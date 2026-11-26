@@ -224,7 +224,7 @@ test("instellen: een foto wordt niet als gezicht ingesteld, ook niet met de pas 
 
   assert.equal(model.faceEnrollment("employee-1") ?? null, null);
   assert.equal(demo.isEnrolled("employee-1"), false);
-  assert.match(view.$("#faceStatus").textContent, /Geen gezicht gevonden\. Plaats je gezicht binnen het kader en probeer het opnieuw\./);
+  assert.match(view.$("#faceStatus").textContent, /Geen gezicht gevonden\. Kijk recht naar de camera boven het scherm en probeer het opnieuw\./);
   app.closeFaceModal();
 });
 

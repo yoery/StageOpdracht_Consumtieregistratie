@@ -114,6 +114,18 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     await browser.waitFor(`!document.querySelector("#adminView").classList.contains("hidden")`);
   };
 
+  scenario("het camerabeeld is nooit te zien, ook niet als de camera aan staat (besluit 25 november 2026)", async () => {
+    // Zoals bij een camera die kijkt: het startscherm krijgt has-camera en het cameravenster staat open.
+    await browser.evaluate(`document.querySelector("#startScreen").classList.add("has-camera"); document.querySelector("#startScreen").classList.remove("hidden"); document.querySelector("#faceModal").classList.remove("hidden")`);
+    const style = (selector, property) => browser.evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).${property}`);
+
+    assert.equal(await style("#startVideo", "opacity"), "0");
+    assert.equal(await style("#faceVideo", "opacity"), "0");
+    assert.notEqual(await style("#startOvalIcon", "display"), "none", "het icoon in het ovaal is weg");
+    assert.ok((await browser.evaluate(`document.querySelector("#faceNotice").textContent`)).startsWith("Deze tablet scant gezichten voor de consumptieregistratie."));
+    await browser.evaluate(`document.querySelector("#faceModal").classList.add("hidden"); document.querySelector("#startScreen").classList.remove("has-camera")`);
+  });
+
   scenario("de pagina laadt met de demogegevens en zonder fouten", async () => {
     assert.equal(await browser.evaluate("document.title"), "Consumptieregistratie | TVB");
     assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 8);

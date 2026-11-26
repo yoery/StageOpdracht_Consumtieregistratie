@@ -306,7 +306,7 @@ export class FaceController extends ControllerPart {
       // De beheerder bedient het venster, maar de medewerker kijkt zelf in de camera en geeft zelf toestemming.
       const help = this.enrollByAdmin
         ? `Laat ${name} zelf in de camera kijken en het vinkje zetten. Klik daarna op Gezicht vastleggen.`
-        : "Plaats je gezicht binnen het kader. Zet het vinkje en klik op Gezicht vastleggen.";
+        : "Kijk recht naar de camera boven het scherm. Zet het vinkje en klik op Gezicht vastleggen.";
       return { title: `Gezichtsherkenning instellen voor ${name}`, help, close: "Annuleren" };
     }
     if (mode === "wake") {
@@ -317,7 +317,7 @@ export class FaceController extends ControllerPart {
         close: "Stoppen"
       };
     }
-    return { title: "Herken mij", help: "Plaats je gezicht binnen het kader en kijk recht in de camera.", close: "Annuleren" };
+    return { title: "Herken mij", help: "Kijk recht naar de camera boven het scherm.", close: "Annuleren" };
   }
 
   // Opent het cameravenster om te herkennen ("recognize" of "wake") of om een gezicht in te stellen
@@ -446,7 +446,7 @@ export class FaceController extends ControllerPart {
         return;
       }
 
-      let status = "Geen gezicht in beeld. Plaats je gezicht binnen het kader.";
+      let status = "Geen gezicht gevonden. Kijk recht naar de camera boven het scherm.";
       if (candidate) status = "Bijna herkend. Blijf even rustig in het kader kijken.";
       else if (descriptor) status = "Gezicht gevonden, maar niet herkend. Blijf rustig in het kader kijken.";
       this.setFaceStatus(status);
@@ -544,7 +544,7 @@ export class FaceController extends ControllerPart {
     }
 
     if (!descriptor || !this.model.isValidDescriptor(descriptor)) {
-      this.setFaceStatus("Geen gezicht gevonden. Plaats je gezicht binnen het kader en probeer het opnieuw.", "error");
+      this.setFaceStatus("Geen gezicht gevonden. Kijk recht naar de camera boven het scherm en probeer het opnieuw.", "error");
       this.updateEnrollButton();
       return;
     }

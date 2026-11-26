@@ -247,7 +247,7 @@ test("startscherm (tap): de tekst zegt vooraf dat de camera na de tik hooguit 10
   assert.equal(after.mode, "tap");
   assert.equal(after.status, "Tik op het ovaal om je gezicht te laten scannen");
   assert.equal(after.hint, "Of houd je pas tegen de lezer.");
-  assert.equal(after.privacy, "Na de tik kijkt de camera hooguit 10 seconden. Alles blijft op deze tablet.");
+  assert.equal(after.privacy, "Deze tablet scant gezichten voor de consumptieregistratie. Het camerabeeld wordt niet getoond en niet bewaard. Na de tik kijkt de camera hooguit 10 seconden.");
   assert.equal(after.help, "Startscherm. Begin zo: houd je pas tegen de lezer, tik op het ovaal om herkend te worden met de camera of kies Handmatig zoeken om je naam in de lijst te zoeken.");
 });
 

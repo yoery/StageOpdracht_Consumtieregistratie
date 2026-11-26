@@ -360,7 +360,7 @@ test("teksten: per soort startscherm, met de uitleg voor een schermlezer", async
     mode: "auto",
     status: "Kijk in het ovaal",
     hint: "Of houd je pas tegen de lezer.",
-    privacy: "De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard of verstuurd.",
+    privacy: "Deze tablet scant gezichten voor de consumptieregistratie. Het camerabeeld wordt niet getoond en niet bewaard.",
     help: "Startscherm. Begin zo: houd je pas tegen de lezer, kijk in het ovaal om herkend te worden met de camera of kies Handmatig zoeken om je naam in de lijst te zoeken."
   });
 

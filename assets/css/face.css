@@ -27,7 +27,8 @@
   color:var(--green-dark);
   font-weight:600
 }
-/* Het cameravenster: het beeld gespiegeld (zoals een spiegel) met een ovaal kader voor het gezicht. */
+/* Het cameravenster: een ovaal kader met een icoon. Het camerabeeld zelf is nooit te zien (besluit
+   25 november 2026, punt 1). De video staat wel in de pagina, want de herkenning leest de beelden eruit. */
 .face-modal {
   max-width:560px
 }
@@ -43,7 +44,26 @@
   width:100%;
   height:100%;
   object-fit:cover;
-  transform:scaleX(-1)
+  opacity:0
+}
+.face-frame-icon {
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:rgba(255,255,255,.85);
+  pointer-events:none
+}
+.face-frame-icon svg {
+  width:28%;
+  height:auto
+}
+/* De vaste zin dat er wordt gescand (besluit 25 november 2026, punt 2). */
+.face-notice {
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5
 }
 .face-guide {
   position:absolute;
