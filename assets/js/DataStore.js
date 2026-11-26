@@ -542,6 +542,7 @@ export class DataStore {
       this.isSafeOptionalId(employee.companyId) &&
       this.isSafeOptionalId(employee.pointId) &&
       // Een gast (FR-98): `guest` is true of ontbreekt, en het telefoonnummer is korte tekst.
+      (employee.badgeLinkedAt === undefined || this.isValidDateTime(employee.badgeLinkedAt, Infinity)) &&
       (employee.guest === undefined || typeof employee.guest === "boolean") &&
       (employee.phone === undefined || this.isText(employee.phone, 32))
     );

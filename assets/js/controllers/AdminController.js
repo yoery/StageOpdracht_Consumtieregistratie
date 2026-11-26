@@ -392,6 +392,21 @@ export class AdminController extends ControllerPart {
     }
   }
 
+  // Knop "Pasjes exporteren" in het tabblad Medewerkers (FR-99): een CSV-bestand met het openbare
+  // serienummer van iedere gekoppelde pas en de persoon erbij. Alleen voor een ingelogde beheerder.
+  // De export komt in het logboek, met alleen het aantal.
+  exportBadges() {
+    if (!this.requireAdmin()) return;
+    const count = this.csvExport.downloadBadges?.() ?? 0;
+    if (count === 0) {
+      this.view.showToast("Er zijn nog geen pasjes gekoppeld.", { tone: "error" });
+      return;
+    }
+    const details = count === 1 ? "1 pas" : `${count} pasjes`;
+    this.app.persist(() => {}, { action: "Pasjes geëxporteerd", details });
+    this.renderAuditLog();
+  }
+
   // De melding als er gasten in de gekozen periode zijn: die staan niet in het bestand.
   static guestsLeftOutMessage(count) {
     const who = count === 1 ? "1 gast staat" : `${count} gasten staan`;

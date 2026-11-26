@@ -550,6 +550,8 @@ export class RegistrationModel {
     const newEmployee = {
       id: createId(),
       ...employeeData,
+      // Het moment van koppelen van de pas, voor de pasjes-dataset (FR-99). Alleen als er een pas is.
+      ...(employeeData.badgeId ? { badgeLinkedAt: new Date().toISOString() } : {}),
       name: `${employeeData.firstName} ${employeeData.lastName}`.trim(),
       active: true,
       color: COLORS[this.employees.length % COLORS.length]
@@ -574,7 +576,11 @@ export class RegistrationModel {
 
     this.state.employees = this.employees.map((employee) => {
       if (employee.id !== employeeId) return employee;
-      return { ...employee, ...employeeData, name };
+      const updated = { ...employee, ...employeeData, name };
+      // Een nieuwe of andere pas krijgt het moment van koppelen (FR-99). Zonder pas valt het weg.
+      if (!updated.badgeId) delete updated.badgeLinkedAt;
+      else if (updated.badgeId !== employee.badgeId) updated.badgeLinkedAt = new Date().toISOString();
+      return updated;
     });
     return true;
   }

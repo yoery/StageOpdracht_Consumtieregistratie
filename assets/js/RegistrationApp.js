@@ -521,6 +521,7 @@ export class RegistrationApp {
 
     this.onClick("#loadMoreAuditButton", () => this.loadMoreAudit());
     this.onClick("#exportButton", () => this.exportCsv());
+    this.view.$("#exportBadgesButton")?.addEventListener("click", () => this.exportBadges());
     this.onClick("#wipeDataButton", () => this.wipeAllData());
 
     // Iedere muisbeweging, klik, toets, aanraking of scroll telt als gebruik van het beheer
@@ -740,7 +741,7 @@ const DELEGATES = {
       "requireAdmin", "showMissing", "finishAdminChange", "renderAdminLists", "renderAuditLog",
       "openAdmin", "showLogin", "login", "logout", "closeAdmin", "showDashboard", "switchTab",
       "startIdleWatch", "stopIdleWatch", "noteAdminActivity", "logoutIfIdle", "idleLogoutMessage",
-      "loadMoreAudit", "exportCsv", "wipeAllData", "noteFutureTimes",
+      "loadMoreAudit", "exportCsv", "exportBadges", "wipeAllData", "noteFutureTimes",
       "toggleEmployee", "removeEmployee", "removeProduct", "removeCompany", "removePoint"
     ],
     fields: ["auditLogLimit", "lastAdminActivity", "idleTimer", "idleLogoutMs"]

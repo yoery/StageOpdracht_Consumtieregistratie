@@ -166,19 +166,57 @@ export class CsvExport {
   }
 
   // Zet rijen om naar CSV-tekst met puntkomma's, zoals een Nederlandse Excel verwacht.
-  toCsv(rows) {
-    const lines = [CsvExport.COLUMNS];
+  // `columns` zijn de kolommen in volgorde (standaard die voor de loonadministratie).
+  toCsv(rows, columns = CsvExport.COLUMNS) {
+    const lines = [columns];
 
     for (const row of rows) {
-      lines.push(CsvExport.COLUMNS.map((column) => row[column]));
+      lines.push(columns.map((column) => row[column]));
     }
 
     // De kopregel is tekst. In de regels daaronder krijgen de getalkolommen numeric: true.
     return lines
       .map((fields, line) => fields.map((field, index) =>
-        this.escapeField(field, { numeric: line > 0 && CsvExport.NUMERIC_COLUMNS.has(CsvExport.COLUMNS[index]) })
+        this.escapeField(field, { numeric: line > 0 && CsvExport.NUMERIC_COLUMNS.has(columns[index]) })
       ).join(";"))
       .join("\r\n");
+  }
+
+  // ------------------------------------------------------------------
+  // Pasjes-dataset (FR-99)
+  // ------------------------------------------------------------------
+
+  // De kolommen van de pasjes-dataset: het openbare serienummer van de pas en de persoon.
+  static BADGE_COLUMNS = ["Serienummer", "Personeelsnummer", "Naam", "Actief", "Gekoppeld op"];
+
+  // Iedere medewerker met een gekoppelde pas, op naam. Alleen de beheerder kan dit exporteren
+  // (AdminController.exportBadges).
+  badgeRows() {
+    return this.model.employees
+      .filter((employee) => employee.badgeId)
+      .map((employee) => ({
+        Serienummer: employee.badgeId,
+        Personeelsnummer: employee.personnelNumber || "",
+        Naam: employee.name,
+        Actief: employee.active ? "ja" : "nee",
+        "Gekoppeld op": employee.badgeLinkedAt ? this.localDate(employee.badgeLinkedAt) : ""
+      }))
+      .sort((a, b) => a.Naam.localeCompare(b.Naam, "nl"));
+  }
+
+  // Een tijdstip als datum in de tijdzone van de tablet, bijvoorbeeld "2026-11-26".
+  localDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  // Downloadt de pasjes-dataset. Geeft het aantal pasjes terug (0 = er is niets gedownload).
+  downloadBadges(now = new Date()) {
+    const rows = this.badgeRows();
+    if (rows.length === 0) return 0;
+    this.saveFile(this.toCsv(rows, CsvExport.BADGE_COLUMNS), `pasjes-${this.localDate(now)}.csv`);
+    return rows.length;
   }
 
   // Prijs met komma en twee decimalen, bijvoorbeeld 1,30.
@@ -206,21 +244,25 @@ export class CsvExport {
     // Geen totaalregel: de loonadministratie leest iedere regel in als medewerker.
     const csvRows = rows.map((row) => ({ ...row, Prijs: this.formatPrice(row.Prijs) }));
 
+    this.saveFile(this.toCsv(csvRows), this.fileName(selectedMonth));
+    return true;
+  }
+
+  // Laat de browser een CSV-bestand downloaden.
+  saveFile(text, fileName) {
     // De BOM (byte order mark, U+FEFF) aan het begin zorgt dat Excel letters zoals é en ë goed toont.
     const bom = String.fromCharCode(0xfeff);
-    const blob = new Blob([bom + this.toCsv(csvRows)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([bom + text], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = this.fileName(selectedMonth);
+    link.download = fileName;
     document.body.append(link);
     link.click();
     link.remove();
     // Het tijdelijke adres pas na een seconde opruimen: in sommige browsers stopt de download
     // anders voordat die echt begonnen is.
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-    return true;
   }
 }
