@@ -1,0 +1,8 @@
+# Vondsten van gitleaks die zijn gecontroleerd en GEEN geheim zijn. Eén regel per vondst
+# (de "Fingerprint" uit `gitleaks git --redact -v`). Voeg hier nooit een echt geheim toe: een echt
+# geheim moet worden vervangen (bijvoorbeeld een nieuw AFAS-token aanvragen).
+#
+# 26 november 2026: een vast nepwachtwoord voor een tijdelijke testdatabase in de browsertest met de
+# server. Het werd alleen gebruikt binnen die test, op een database die na de test wordt verwijderd.
+# Sinds de volgende commit maakt de test bij iedere run een willekeurig wachtwoord.
+1b7a23b6885e7e5f2687f900514746e2c4ddec1b:tests/e2e/server.e2e.test.js:generic-api-key:25

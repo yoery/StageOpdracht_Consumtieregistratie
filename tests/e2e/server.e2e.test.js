@@ -10,6 +10,7 @@
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
@@ -22,7 +23,9 @@ const PHP = process.env.PHP_PATH || "php";
 const phpAvailable = spawnSync(PHP, ["-v"], { stdio: "ignore" }).status === 0;
 
 const ADMIN_EMAIL = "beheer@voorbeeld.test";
-const ADMIN_PASSWORD = "een-lang-nepwachtwoord-e2e";
+// Bij iedere testrun een nieuw willekeurig wachtwoord voor de tijdelijke testdatabase. Zo staat er
+// geen vast wachtwoord in de code (gitleaks zou dat terecht als mogelijk geheim melden).
+const ADMIN_PASSWORD = `nep-${randomUUID()}`;
 const TEST_TIMEOUT = 60000;
 
 const freePort = () => new Promise((resolve) => {
