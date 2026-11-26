@@ -561,3 +561,23 @@ test("ServerApi: na uitloggen is de sleutel van de sessie weg, en een mislukte s
   assert.equal(calls[4].url, "/api/changes");
   assert.equal(calls[4].headers["X-CSRF-Token"], "sleutel-2");
 });
+
+test("server: gezichtskenmerken komen op een tablet nooit in de opslag van de browser, alleen in het geheugen", async () => {
+  const server = seededServer();
+  server.put("faceEnrollments", { id: "g-lotte", employeeId: "mw-lotte", descriptor: Array(128).fill(0.125), enrolledAt: "2026-11-20T09:00:00.000Z", consentAt: "2026-11-20T09:00:00.000Z" });
+  const cache = createCache();
+  const tablet = await createClient(server, { cache });
+
+  assert.equal(tablet.model.faceEnrollments.length, 1, "de tablet kent het gezicht niet");
+  const stored = cache.getItem("tvb-test-server");
+  assert.ok(stored.includes("Lotte van Dijk"));
+  assert.ok(!stored.includes("0.125"), "de kenmerken staan in de opslag van de browser");
+
+  // Ook een nieuw gezicht in de wachtrij komt niet in de opslag.
+  server.offline = true;
+  tablet.store.applyServerChanges([]);
+  tablet.model.state.faceEnrollments = [...tablet.model.faceEnrollments, { id: "g-mark", employeeId: "mw-lotte", descriptor: Array(128).fill(0.25), enrolledAt: "2026-11-21T09:00:00.000Z", consentAt: "2026-11-21T09:00:00.000Z" }];
+  tablet.model.save();
+  assert.ok(!cache.getItem("tvb-test-server").includes("0.25"));
+  assert.ok(tablet.store.pendingChanges().some((change) => change.collection === "faceEnrollments"), "het gezicht staat wel in de wachtrij in het geheugen");
+});

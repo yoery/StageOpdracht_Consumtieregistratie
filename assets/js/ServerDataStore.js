@@ -209,10 +209,21 @@ export class ServerDataStore extends DataStore {
     return `${this.key}-server`;
   }
 
+  // De kenmerken van gezichten (faceEnrollments) zijn biometrische gegevens. Die komen nooit in de
+  // opslag van de browser: ze staan alleen in het geheugen en komen bij iedere start opnieuw van de
+  // server. Zonder verbinding bij het starten werkt herkennen met de camera dus pas als de verbinding
+  // terug is. Een gezicht dat nog in de wachtrij stond, moet dan opnieuw worden ingesteld.
   writeCache() {
     if (!this.caching) return;
     try {
-      this.cache.setItem(this.cacheKey(), JSON.stringify({ version: this.version ?? 0, text: this.text, pending: this.pendingChanges() }));
+      let text = this.text;
+      if (text) {
+        const state = JSON.parse(text);
+        state.faceEnrollments = [];
+        text = JSON.stringify(state);
+      }
+      const pending = this.pendingChanges().filter((change) => change.collection !== "faceEnrollments");
+      this.cache.setItem(this.cacheKey(), JSON.stringify({ version: this.version ?? 0, text, pending }));
     } catch (error) {
       // De opslag van de browser is vol of geblokkeerd. De gegevens staan nog in het geheugen en
       // gaan gewoon naar de server. Alleen opstarten zonder verbinding werkt dan niet.
