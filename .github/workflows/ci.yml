@@ -108,3 +108,68 @@ jobs:
           path: test-results/e2e/
           if-no-files-found: ignore
           retention-days: 7
+
+  # De container voor Coolify (Dockerfile): bouwen en kort controleren. Er zijn hier geen geheimen
+  # ingesteld. De test maakt zelf een .env met een nepgeheim en kijkt of dat NIET in de container
+  # terechtkomt, of de website en de API antwoorden, en of zonder inloggen niets te lezen is.
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Nepgeheim klaarzetten en de container bouwen
+        run: |
+          printf 'AFAS_TOKEN=NEPGEHEIM-IN-ENV\n' > .env
+          docker build -t consumptieregistratie:test .
+
+      - name: Geen .env, tests of documenten in de container
+        run: |
+          docker run --rm --entrypoint sh consumptieregistratie:test -c '
+            set -e
+            if find /var/www /data /tmp /root /etc/apache2 \( -name ".env" -o -name ".env.*" -o -name "*.test.js" -o -name "*Test.php" \) 2>/dev/null | grep -q .; then echo "Er staat een .env of testbestand in de container"; exit 1; fi
+            if grep -rl "NEPGEHEIM-IN-ENV" /var/www /usr/local/etc /etc/apache2 2>/dev/null | grep -q .; then echo "Het nepgeheim staat in de container"; exit 1; fi
+            test ! -e /var/www/html/backend
+            test ! -e /var/www/html/docs
+            grep -q "/api" /var/www/html/assets/js/deployment.js
+          '
+
+      - name: Container starten en controleren
+        env:
+          NEP_WACHTWOORD: een-lang-nepwachtwoord-voor-ci
+        run: |
+          docker run -d --name cr -p 127.0.0.1:8080:80 \
+            -e CR_BEHEER_EMAIL=beheer@voorbeeld.test -e CR_BEHEER_WACHTWOORD="$NEP_WACHTWOORD" \
+            consumptieregistratie:test
+          for poging in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && break; sleep 1; done
+          status() { curl -s -o /dev/null -w '%{http_code}' --path-as-is "$@"; }
+          test "$(status http://127.0.0.1:8080/api/health)" = 200
+          test "$(status http://127.0.0.1:8080/)" = 200
+          test "$(status http://127.0.0.1:8080/assets/js/main.js)" = 200
+          test "$(status http://127.0.0.1:8080/api/changes?since=0)" = 401
+          test "$(status http://127.0.0.1:8080/api/devices)" = 401
+          for pad in /.env /.git/config /backend/src/Server/Api.php /api/../.env /assets/../.env /docker/start.sh /Dockerfile; do
+            code="$(status "http://127.0.0.1:8080$pad")"
+            case "$code" in 400|403|404) ;; *) echo "$pad geeft $code"; exit 1 ;; esac
+          done
+          # Inloggen met de nepbeheerder: lukt alleen van de eigen website, en de cookie is HttpOnly.
+          test "$(status -X POST -H 'Content-Type: application/json' -d '{"email":"beheer@voorbeeld.test","password":"'"$NEP_WACHTWOORD"'"}' http://127.0.0.1:8080/api/login)" = 403
+          curl -s -D kop.txt -o antwoord.json -X POST -H 'Origin: http://127.0.0.1:8080' -H 'X-CR-Client: 1' -H 'Content-Type: application/json' \
+            -d '{"email":"beheer@voorbeeld.test","password":"'"$NEP_WACHTWOORD"'"}' http://127.0.0.1:8080/api/login
+          grep -qi '^set-cookie: cr_beheer=.*httponly' kop.txt
+          grep -qi 'samesite=strict' kop.txt
+          grep -q '"role":"admin"' antwoord.json
+          # De beveiligingsheaders van Apache.
+          curl -s -D kop2.txt -o /dev/null http://127.0.0.1:8080/
+          grep -qi '^x-frame-options: DENY' kop2.txt
+          grep -qi '^x-content-type-options: nosniff' kop2.txt
+          # Het wachtwoord staat nergens in het logboek van de container.
+          if docker logs cr 2>&1 | grep -q "$NEP_WACHTWOORD"; then echo "Het wachtwoord staat in het logboek"; exit 1; fi
+          docker logs cr 2>&1 | tail -20
+
+      - name: Container stoppen
+        if: always()
+        run: docker rm -f cr >/dev/null 2>&1 || true

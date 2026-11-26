@@ -1,0 +1,32 @@
+# Coolify: kies bij "Build Pack" voor Docker Compose. Dit bestand regelt de rest.
+#
+# - SERVICE_FQDN_CONSUMPTIE_80: Coolify maakt hier een adres met HTTPS voor. Je kunt het in Coolify
+#   vervangen door een eigen domein. De website is alleen via dat adres bereikbaar: er staat bewust
+#   geen "ports:" in dit bestand, zodat de container niet zonder HTTPS te bereiken is.
+# - SERVICE_PASSWORD_BEHEER: Coolify verzint een sterk wachtwoord voor de eerste beheerder. Het staat
+#   onder Environment Variables. Vul daar zelf CR_BEHEER_EMAIL in (het e-mailadres van de beheerder).
+# - AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR: vul ze in onder Environment Variables. Zet ze nooit
+#   in dit bestand of ergens anders in Git.
+# - Het volume consumptie-data bewaart de database, ook na een nieuwe deploy.
+services:
+  consumptieregistratie:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      - SERVICE_FQDN_CONSUMPTIE_80
+      - CR_BEHEER_EMAIL=${CR_BEHEER_EMAIL:-}
+      - CR_BEHEER_WACHTWOORD=${SERVICE_PASSWORD_BEHEER}
+      # Een andere database (bijvoorbeeld PostgreSQL uit Coolify)? Vul deze drie in.
+      - CR_DB_DSN=${CR_DB_DSN:-sqlite:/data/consumptie.sqlite}
+      - CR_DB_GEBRUIKER=${CR_DB_GEBRUIKER:-}
+      - CR_DB_WACHTWOORD=${CR_DB_WACHTWOORD:-}
+      - AFAS_TOKEN=${AFAS_TOKEN:-}
+      - AFAS_BASE_URL=${AFAS_BASE_URL:-}
+      - AFAS_CONNECTOR=${AFAS_CONNECTOR:-}
+    volumes:
+      - consumptie-data:/data
+
+volumes:
+  consumptie-data:

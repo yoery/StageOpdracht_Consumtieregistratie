@@ -19,3 +19,8 @@ test-results/
 .env
 .env.*
 !.env.example
+
+# De database van de ontwikkelserver (backend/dev-server.php). Bevat gegevens van medewerkers: nooit in Git.
+backend/data/
+*.sqlite
+*.sqlite-*
