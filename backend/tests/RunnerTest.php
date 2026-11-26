@@ -133,6 +133,29 @@ test('SyncRunner: mislukt het opslaan, dan staat alleen het soort fout in het lo
     ok(!str_contains(implode("\n", $log), 'Jansen'), 'het logboek bevat de melding van de opslag');
 });
 
+test('SyncRunner: het logboek van de server bevat geen personeelsnummers, de beheerder ziet ze wel (AF-01)', function (): void {
+    $repository = new InMemoryRepository([stored(['id' => 'medewerker-mark', 'personnelNumber' => '5002', 'firstName' => 'Mark', 'lastName' => 'Jansen'])]);
+    $log = [];
+
+    $result = runSync([afasPage([afasRow(['Werkgever' => '9999'])])], $repository, $log);
+
+    ok($result->ok);
+    ok(str_contains(implode("\n", $result->plan->notes), 'Personeelsnummer 5001'), 'de beheerder ziet het personeelsnummer niet');
+    foreach (['5001', '5002', '9999'] as $number) {
+        ok(!str_contains(implode("\n", $log), $number), "het logboek bevat $number");
+    }
+    ok(str_contains($log[1], 'opmerkingen, te zien in het beheer'), implode("\n", $log));
+
+    // Ook een mislukte synchronisatie met een personeelsnummer in de melding.
+    $log = [];
+    $twice = [afasRow(), afasRow(['Voornaam' => 'Charlotte'])];
+    $failed = runSync([afasPage($twice)], new InMemoryRepository([]), $log);
+    ok(!$failed->ok);
+    ok(str_contains($failed->message, '5001'), 'de beheerder ziet het personeelsnummer niet');
+    ok(!str_contains(implode("\n", $log), '5001'), implode("\n", $log));
+    same('Een personeelsnummer komt twee keer voor', \Tvb\Consumptie\Afas\SyncRunner::withoutPersonnelNumbers('Personeelsnummer 5001 komt twee keer voor'));
+});
+
 test('SyncRunner: kan de mislukte poging zelf niet worden vastgelegd, dan komt er toch een uitkomst', function (): void {
     $repository = new InMemoryRepository([stored()]);
     $repository->recordError = new RuntimeException('de database is niet bereikbaar');
@@ -162,18 +185,20 @@ test('SyncRunner: een onverwachte fout bij het lezen uit de opslag wijzigt niets
     ok(str_contains($log[0], 'onverwachte fout (RuntimeException)'));
 });
 
-test('SyncRunner: de opmerkingen in het logboek noemen personeelsnummers en geen namen', function (): void {
+// Sinds de security audit van 26 november 2026 (AF-01) staan de opmerkingen niet meer in het logboek van
+// de server, alleen hun aantal. De opmerkingen zelf (met personeelsnummers) ziet de beheerder in het beheer.
+test('SyncRunner: het logboek noemt alleen het aantal opmerkingen, zonder namen en personeelsnummers', function (): void {
     $mark = stored(['id' => 'medewerker-mark', 'personnelNumber' => '5002', 'firstName' => 'Mark', 'lastName' => 'Jansen']);
     $repository = new InMemoryRepository([stored(), $mark]);
     $log = [];
 
-    runSync([afasPage([afasRow(['Werkgever' => '9999'])])], $repository, $log);
+    $result = runSync([afasPage([afasRow(['Werkgever' => '9999'])])], $repository, $log);
 
     $text = implode("\n", $log);
-    ok(str_contains($text, 'Personeelsnummer 5002 staat niet meer in AFAS'));
-    ok(str_contains($text, 'werkgever 9999 is niet bekend'));
-    foreach (['Lotte', 'Dijk', 'Mark', 'Jansen'] as $name) {
-        ok(!str_contains($text, $name), "het logboek bevat de naam $name");
+    ok(str_contains($text, '2 opmerkingen, te zien in het beheer'), $text);
+    ok(str_contains(implode("\n", $result->plan->notes), 'Personeelsnummer 5002 staat niet meer in AFAS'));
+    foreach (['Lotte', 'Dijk', 'Mark', 'Jansen', '5001', '5002'] as $hidden) {
+        ok(!str_contains($text, $hidden), "het logboek bevat $hidden");
     }
     withoutToken($text, 'het logboek');
 });

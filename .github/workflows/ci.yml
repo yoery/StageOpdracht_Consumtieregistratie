@@ -166,6 +166,11 @@ jobs:
           curl -s -D kop2.txt -o /dev/null http://127.0.0.1:8080/
           grep -qi '^x-frame-options: DENY' kop2.txt
           grep -qi '^x-content-type-options: nosniff' kop2.txt
+          # Zonder HTTPS via de proxy: doorverwijzen naar HTTPS. Een verzoek met een vraagteken-deel komt
+          # niet met dat deel in het logboek.
+          test "$(status -H 'X-Forwarded-Proto: http' http://127.0.0.1:8080/)" = 301
+          curl -s -o /dev/null "http://127.0.0.1:8080/api/health?geheim=NEPWAARDE-IN-ADRES"
+          if docker logs cr 2>&1 | grep -q "NEPWAARDE-IN-ADRES"; then echo "Het vraagteken-deel staat in het logboek"; exit 1; fi
           # Het wachtwoord staat nergens in het logboek van de container.
           if docker logs cr 2>&1 | grep -q "$NEP_WACHTWOORD"; then echo "Het wachtwoord staat in het logboek"; exit 1; fi
           docker logs cr 2>&1 | tail -20

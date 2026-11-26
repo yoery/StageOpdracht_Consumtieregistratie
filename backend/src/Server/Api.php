@@ -88,6 +88,12 @@ final class Api
         if ($key === 'GET /health') {
             return Response::ok();
         }
+        // Alleen via HTTPS (security audit 26 november 2026, AF-03). Zonder HTTPS gaan het wachtwoord en
+        // de cookies onversleuteld over het netwerk. Uitzondering: deze computer zelf (de tests, de
+        // ontwikkelserver en de controle in de container).
+        if (!$request->secure && !self::isLoopback($request->host)) {
+            return Response::error(403, 'Deze server werkt alleen via HTTPS.');
+        }
         if (!in_array($request->method, ['GET', 'POST'], true)) {
             return Response::error(405, 'Deze methode wordt niet ondersteund.');
         }
@@ -412,6 +418,14 @@ final class Api
     // ------------------------------------------------------------------
     // Hulpfuncties
     // ------------------------------------------------------------------
+
+    // Is dit een adres van deze computer zelf (localhost, 127.0.0.1 of ::1), met of zonder poort?
+    private static function isLoopback(string $host): bool
+    {
+        $name = preg_replace('/:\d+$/', '', strtolower($host));
+
+        return in_array($name, ['localhost', '127.0.0.1', '[::1]'], true);
+    }
 
     // Komt dit schrijvende verzoek van de eigen website? De browser zet `Origin` zelf en een andere
     // website kan de kopregel `X-CR-Client` niet meesturen zonder toestemming van deze server.

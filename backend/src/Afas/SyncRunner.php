@@ -75,8 +75,10 @@ final class SyncRunner
 
         $message = 'AFAS-synchronisatie gelukt: ' . $plan->summary() . '.';
         ($this->log)($message);
-        foreach ($plan->notes as $note) {
-            ($this->log)('AFAS-synchronisatie: ' . $note);
+        // De opmerkingen noemen personeelsnummers. Die horen niet in het logboek van de server (security
+        // audit 26 november 2026, AF-01): alleen het aantal. De beheerder ziet ze in het beheer.
+        if ($plan->notes !== []) {
+            ($this->log)(sprintf('AFAS-synchronisatie: %d opmerkingen, te zien in het beheer.', count($plan->notes)));
         }
 
         return new SyncResult(true, $message, $plan);
@@ -85,7 +87,7 @@ final class SyncRunner
     // Schrijft de fout naar het logboek en laat de opslag onthouden dat het is mislukt.
     private function fail(string $message, \DateTimeImmutable $now): SyncResult
     {
-        ($this->log)($message);
+        ($this->log)(self::withoutPersonnelNumbers($message));
         try {
             $this->repository->recordFailure($message, $now);
         } catch (\Throwable $error) {
@@ -93,5 +95,15 @@ final class SyncRunner
         }
 
         return new SyncResult(false, $message);
+    }
+
+    /**
+     * Een regel voor het logboek van de server zonder personeelsnummers (AF-01). Een melding als
+     * "Personeelsnummer 5001 komt twee keer voor" wordt "Een personeelsnummer komt twee keer voor".
+     * De volledige melding ziet alleen de beheerder in het beheer.
+     */
+    public static function withoutPersonnelNumbers(string $line): string
+    {
+        return (string) preg_replace('/Personeelsnummer\s+\S+/u', 'Een personeelsnummer', $line);
     }
 }

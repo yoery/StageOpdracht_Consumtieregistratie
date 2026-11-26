@@ -35,6 +35,10 @@ final class CurlHttpClient implements HttpClient
             CURLOPT_TIMEOUT => $this->timeoutSeconds,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
+            // Nooit debuguitvoer: die zou de kopregels, en dus het token, naar het logboek schrijven
+            // (security audit 26 november 2026, AF-02). Ook de kopregels van het antwoord worden niet gelezen.
+            CURLOPT_VERBOSE => false,
+            CURLOPT_HEADER => false,
         ];
         // Op Windows gebruikt curl hiermee de certificaten van het systeem, ook zonder eigen bestand.
         if (defined('CURLSSLOPT_NATIVE_CA')) {

@@ -65,6 +65,20 @@ final class Request
             }
         }
 
+        // Het adres van de afzender, voor de blokkade na te veel foute inlogpogingen (Auth::login). Achter
+        // de proxy van Coolify is REMOTE_ADDR altijd de proxy. Die zet het echte adres als laatste in
+        // X-Forwarded-For. Alleen dat laatste deel telt: wat ervoor staat, kan de afzender zelf invullen.
+        // De container is alleen via de proxy te bereiken (docker-compose.yml heeft geen eigen poort).
+        $address = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        $forwarded = trim((string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
+        if ($forwarded !== '') {
+            $parts = array_map('trim', explode(',', $forwarded));
+            $last = (string) end($parts);
+            if (filter_var($last, FILTER_VALIDATE_IP) !== false) {
+                $address = $last;
+            }
+        }
+
         $https = (string) ($_SERVER['HTTPS'] ?? '');
         $forwarded = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
 
@@ -75,7 +89,7 @@ final class Request
             $body,
             $headers,
             array_map(static fn ($value): string => is_string($value) ? $value : '', $_COOKIE),
-            (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+            $address,
             ($https !== '' && $https !== 'off') || $forwarded === 'https',
             strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''))
         );

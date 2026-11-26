@@ -769,3 +769,48 @@ test('API: een tablet kan geen pas vervangen, geen pas van een ander gebruiken e
     same('04A1B2C3', $server->store->get('employees', 'mw-lotte')->badgeId);
     same('', $server->store->get('employees', 'mw-sanne')->badgeId);
 });
+
+test('API: zonder HTTPS werkt de API alleen op deze computer zelf (AF-03)', function (): void {
+    $server = new TestServer();
+    $insecure = static fn (string $host, string $path = '/session'): Response => $server->api->handle(new Request('GET', $path, [], null, [], [], '203.0.113.7', false, $host), testMoment());
+
+    same(403, $insecure('consumptie.voorbeeld.test')->status);
+    same('Deze server werkt alleen via HTTPS.', $insecure('consumptie.voorbeeld.test')->body['message']);
+    same(403, $insecure('192.168.1.20:8080')->status);
+    same(200, $insecure('localhost')->status);
+    same(200, $insecure('127.0.0.1:8080')->status);
+    same(200, $insecure('[::1]:8080')->status);
+    same(200, $insecure('consumptie.voorbeeld.test', '/health')->status, 'de controle van de container werkt zonder HTTPS');
+});
+
+test('Audit: de HTTP-client schrijft nooit debuguitvoer, en Apache stuurt verzoeken zonder HTTPS door (AF-02, AF-03)', function (): void {
+    $client = (string) file_get_contents(dirname(__DIR__) . '/src/Afas/CurlHttpClient.php');
+    ok(str_contains($client, 'CURLOPT_VERBOSE => false'));
+    ok(!preg_match('/CURLOPT_VERBOSE\s*=>\s*true|CURLOPT_STDERR/', $client));
+
+    $apache = (string) file_get_contents(dirname(__DIR__, 2) . '/docker/apache.conf');
+    ok(str_contains($apache, 'RewriteCond %{HTTP:X-Forwarded-Proto} =http'));
+    ok(str_contains($apache, 'Header always set Strict-Transport-Security'));
+    ok(str_contains($apache, 'LogFormat "%h %t \\"%m %U\\" %>s %b" consumptie'), 'het logformaat van Apache bevat meer dan het pad');
+});
+
+test('Request: achter de proxy telt het laatste adres in X-Forwarded-For, anders het adres van de verbinding (AF-04)', function (): void {
+    $backup = [$_SERVER, $_GET, $_COOKIE];
+    try {
+        $_GET = [];
+        $_COOKIE = [];
+        $_SERVER = ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/api/session', 'REMOTE_ADDR' => '10.0.0.2', 'HTTP_HOST' => 'consumptie.voorbeeld.test', 'HTTP_X_FORWARDED_PROTO' => 'https'];
+        same('10.0.0.2', Request::fromGlobals()->address);
+
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '198.51.100.9, 203.0.113.7';
+        $request = Request::fromGlobals();
+        same('203.0.113.7', $request->address, 'het adres dat de proxy zelf toevoegde');
+        same(true, $request->secure);
+        same('/session', $request->path);
+
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = 'geen-adres';
+        same('10.0.0.2', Request::fromGlobals()->address);
+    } finally {
+        [$_SERVER, $_GET, $_COOKIE] = $backup;
+    }
+});

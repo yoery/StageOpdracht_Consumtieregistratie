@@ -17,7 +17,11 @@ RUN apt-get update \
 
 COPY docker/php.ini /usr/local/etc/php/conf.d/consumptieregistratie.ini
 COPY docker/apache.conf /etc/apache2/conf-available/consumptieregistratie.conf
-RUN a2enmod headers rewrite && a2enconf consumptieregistratie
+RUN a2enmod headers rewrite && a2enconf consumptieregistratie \
+# De standaardsite logt met het korte formaat "consumptie" (zie docker/apache.conf) in plaats van
+# "combined", zodat er geen vraagteken-deel van het adres, verwijzer of browser in het logboek staat.
+ && sed -i 's/ combined$/ consumptie/' /etc/apache2/sites-available/000-default.conf \
+ && grep -q ' consumptie$' /etc/apache2/sites-available/000-default.conf
 
 # Alleen wat de webserver mag uitleveren staat in /var/www/html: de pagina, de bestanden van de
 # website en het ene PHP-bestand van de API. De rest van de backend staat erbuiten.
