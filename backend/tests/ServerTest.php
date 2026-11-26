@@ -698,3 +698,42 @@ test('Database: de instellingen komen uit de omgeving, met SQLite in /data als s
     Database::migrate($pdo); // een tweede keer mag
     same(0, (new RecordStore($pdo))->head());
 });
+
+test('API: een tablet maakt een gast met alleen naam en telefoonnummer, en ziet het telefoonnummer daarna niet', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+
+    // De tablet probeert er een looncode, bedrijf en pas bij te zetten: de server neemt alleen naam en telefoon over.
+    $response = $server->call('POST', '/changes', '{"changes":[{"collection":"employees","id":"gast-1","data":{"id":"gast-1","name":"X","firstName":"Ilse","lastName":"de Wit","phone":"06 12345678","guest":true,"payrollCode":"999","personnelNumber":"1","companyId":"bedrijf-tvb","pointId":"punt-hk","badgeId":"AB12","active":true,"color":"#e3eef6"}}]}');
+    same([], $response->body['rejected']);
+
+    $stored = $server->store->get('employees', 'gast-1');
+    same(['Ilse de Wit', '', '', null, null, '', true, '06 12345678', '#e3eef6'], [$stored->name, $stored->payrollCode, $stored->personnelNumber, $stored->companyId, $stored->pointId, $stored->badgeId, $stored->guest, $stored->phone, $stored->color]);
+    same('', $server->pulled()['employees']['gast-1']->phone, 'de tablet ziet het telefoonnummer');
+
+    // De gast registreert op zijn eigen naam.
+    same([], $server->call('POST', '/changes', '{"changes":[{"collection":"registrations","id":"reg-gast","data":{"id":"reg-gast","employeeId":"gast-1","productId":"blikje","pointId":"punt-hk","createdAt":"2026-11-26T08:59:00.000Z"}}]}')->body['rejected']);
+    ok(!property_exists($server->store->get('registrations', 'reg-gast'), 'employerNumber'), 'een gast heeft geen werkgevernummer');
+
+    $server->loginAsAdmin();
+    same('06 12345678', $server->pulled()['employees']['gast-1']->phone, 'de beheerder ziet het telefoonnummer');
+});
+
+test('API: een tablet kan geen gewone medewerker aanmaken en geen gast met een ongeldig telefoonnummer, en een gast niet wijzigen', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+    $guest = static fn (string $id, array $fields): array => ['collection' => 'employees', 'id' => $id, 'data' => array_merge(['id' => $id, 'firstName' => 'Ilse', 'lastName' => 'de Wit', 'phone' => '06 12345678', 'guest' => true], $fields)];
+
+    $response = $server->call('POST', '/changes', json_encode(['changes' => [
+        $guest('mw-nieuw', ['guest' => false]),
+        $guest('mw-zonder', ['guest' => null]),
+        $guest('gast-kort', ['phone' => '1234']),
+        $guest('gast-tekst', ['phone' => 'bel mij maar']),
+        $guest('gast-leeg', ['firstName' => '']),
+        $guest('gast-enter', ['lastName' => "de
+Wit"]),
+        $guest('mw-lotte', []),
+    ]]));
+    same(['mw-nieuw', 'mw-zonder', 'gast-kort', 'gast-tekst', 'gast-leeg', 'gast-enter', 'mw-lotte'], array_column($response->body['rejected'], 'id'));
+    same('Lotte van Dijk', $server->store->get('employees', 'mw-lotte')->name);
+});

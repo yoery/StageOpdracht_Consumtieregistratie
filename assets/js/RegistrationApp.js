@@ -13,6 +13,7 @@ import { FormController } from "./controllers/FormController.js";
 import { RecognitionController } from "./controllers/RecognitionController.js";
 import { StandbyController } from "./controllers/StandbyController.js";
 import { AutoScanController } from "./controllers/AutoScanController.js";
+import { GuestController } from "./controllers/GuestController.js";
 
 /**
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
@@ -105,6 +106,7 @@ export class RegistrationApp {
     this.recognition = new RecognitionController(this, clock);
     this.standby = new StandbyController(this, clock);
     this.autoScan = new AutoScanController(this, clock);
+    this.guests = new GuestController(this);
 
     // De view kent de demo gezichtsherkenning niet. Voor de knoppen "Gezichtsherkenning instellen" en
     // "Uitzetten" in het tabblad Medewerkers vraagt hij hier of instellen kan ("ready", "noCamera" of
@@ -424,6 +426,7 @@ export class RegistrationApp {
       ["[data-show-stock-point]", (button) => this.showStockPoint(button.dataset.showStockPoint)],
       ["[data-stock-delivery]", (button) => this.bookDelivery(button.dataset.stockDelivery)],
       ["[data-clear-search]", () => this.clearSearch()],
+      ["[data-open-guest]", () => this.openGuestForm()],
       ["[data-go-tab]", (button) => this.switchTab(document.querySelector(`.tab[data-tab="${cssAttributeValue(button.dataset.goTab)}"]`))],
       ["[data-repeat-last]", () => this.repeatLastSelection()],
       ["[data-face-enroll]", () => this.startFaceEnrollment()],
@@ -576,12 +579,16 @@ export class RegistrationApp {
     this.view.$("#pointForm").addEventListener("submit", (event) => this.savePoint(event));
     this.registerModalClose("#pointFormModal", "[data-close-point-modal]", () => this.closePointForm());
 
+    // Registreren als gast (FR-98).
+    this.view.$("#guestForm")?.addEventListener("submit", (event) => this.saveGuest(event));
+    if (this.view.$("#guestModal")) this.registerModalClose("#guestModal", "[data-close-guest-modal]", () => this.closeGuestForm());
+
     // Venster van de correctie "−" (kiezen welke registratie weg moet).
     this.registerModalClose("#removeRegistrationModal", "[data-close-remove-registration]", () => this.closeRemoveRegistration());
 
     // Zodra de gebruiker een veld met een foutmelding aanpast, verdwijnt die melding.
-    for (const formSelector of ["#employeeForm", "#productForm", "#companyForm", "#pointForm"]) {
-      this.view.$(formSelector).addEventListener("input", (event) => {
+    for (const formSelector of ["#employeeForm", "#productForm", "#companyForm", "#pointForm", "#guestForm"]) {
+      this.view.$(formSelector)?.addEventListener("input", (event) => {
         if (event.target.getAttribute("aria-invalid") === "true") this.view.clearFieldError(event.target);
       });
     }
@@ -737,6 +744,10 @@ const DELEGATES = {
       "toggleEmployee", "removeEmployee", "removeProduct", "removeCompany", "removePoint"
     ],
     fields: ["auditLogLimit", "lastAdminActivity", "idleTimer", "idleLogoutMs"]
+  },
+  guests: {
+    methods: ["openGuestForm", "closeGuestForm", "saveGuest"],
+    fields: []
   },
   corrections: {
     methods: [

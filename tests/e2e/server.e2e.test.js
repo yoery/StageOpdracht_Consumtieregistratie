@@ -295,6 +295,39 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     await browser.waitFor(`document.querySelector("#todayTotal").textContent === "2"`, { timeout: 20000, message: "De registratie van de tweede tablet kwam niet op deze tablet." });
   });
 
+  scenario("een gast registreert zich op de tablet en het telefoonnummer staat daarna alleen op de server", async () => {
+    await browser.manualSearch();
+    await browser.click("#employeeSearch");
+    await browser.insertText("ilse");
+    await browser.waitFor(`!document.querySelector("#emptyState").classList.contains("hidden")`, { message: "'Geen medewerker gevonden' verscheen niet." });
+    await browser.click(`#emptyState [data-open-guest]`);
+    await browser.waitFor(`!document.querySelector("#guestModal").classList.contains("hidden")`);
+
+    await browser.click("#guestFirstName");
+    await browser.insertText("Ilse");
+    await browser.click("#guestLastName");
+    await browser.insertText("de Wit");
+    await browser.click("#guestPhone");
+    await browser.insertText("06 12345678");
+    await browser.click(`#guestForm button[type=submit]`);
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`, { message: "Het productvenster van de gast ging niet open." });
+    await browser.click(`[data-product-increment="blikje"]`);
+    await browser.click("#registerSelectedProductsButton");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+    // Na het wegsturen haalt de tablet de gast terug van de server, zonder telefoonnummer.
+    await browser.waitFor(`(() => { const text = localStorage.getItem("tvb-blikjesregistratie-server") ?? ""; return text.includes("Ilse de Wit") && !text.includes("12345678"); })()`,
+      { timeout: 20000, message: "Het telefoonnummer staat nog op de tablet." });
+
+    const pulled = (await asAdmin("GET", "/changes?since=0")).json.changes;
+    const guest = pulled.find((change) => change.collection === "employees" && change.data.name === "Ilse de Wit").data;
+    assert.deepEqual([guest.guest, guest.phone, guest.personnelNumber], [true, "06 12345678", ""]);
+    assert.ok(pulled.some((change) => change.collection === "registrations" && change.data.employeeId === guest.id), "de registratie van de gast staat niet op de server");
+    const audit = pulled.filter((change) => change.collection === "auditLog").map((change) => change.data);
+    assert.ok(audit.some((entry) => entry.action === "Gast geregistreerd" && entry.details === "Ilse de Wit"));
+    assert.ok(!JSON.stringify(audit).includes("12345678"), "het telefoonnummer staat in het logboek");
+  });
+
   scenario("zonder inloggen geeft de API niets, en de server levert geen andere bestanden uit", async () => {
     assert.equal((await call("GET", "/changes?since=0")).status, 401);
     assert.equal((await call("GET", "/devices")).status, 401);

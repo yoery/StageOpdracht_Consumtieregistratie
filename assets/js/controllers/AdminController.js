@@ -369,9 +369,14 @@ export class AdminController extends ControllerPart {
     const selectedEmployee = this.view.$("#filterEmployee").value;
     const selectedMonth = this.view.$("#filterMonth").value;
 
+    // Gasten (FR-98) staan niet in het bestand: ze zitten niet in de loonadministratie.
+    const guests = this.csvExport.countGuests?.(selectedEmployee, selectedMonth) ?? 0;
     const exported = this.csvExport.download(selectedEmployee, selectedMonth);
     if (!exported) {
-      this.view.showToast("Geen registraties om te exporteren voor deze filters.", { tone: "error" });
+      const message = guests > 0
+        ? "Er zijn voor deze filters alleen registraties van gasten. Gasten staan niet in het bestand voor de loonadministratie."
+        : "Geen registraties om te exporteren voor deze filters.";
+      this.view.showToast(message, { tone: "error" });
       return;
     }
 
@@ -379,9 +384,18 @@ export class AdminController extends ControllerPart {
     // de loonadministratie kan een regel zonder looncode niet verwerken. In het tabblad Medewerkers
     // hebben zij het label "Geen looncode" (zie RegistrationView.renderAdminEmployees).
     const missing = this.csvExport.countMissingPayrollCodes?.(selectedEmployee, selectedMonth) ?? 0;
-    if (missing > 0) {
-      this.view.showToast(AdminController.missingPayrollCodeMessage(missing), { tone: "error", duration: 8000 });
+    const messages = [];
+    if (missing > 0) messages.push(AdminController.missingPayrollCodeMessage(missing));
+    if (guests > 0) messages.push(AdminController.guestsLeftOutMessage(guests));
+    if (messages.length > 0) {
+      this.view.showToast(messages.join(" "), { tone: missing > 0 ? "error" : "info", duration: 8000 });
     }
+  }
+
+  // De melding als er gasten in de gekozen periode zijn: die staan niet in het bestand.
+  static guestsLeftOutMessage(count) {
+    const who = count === 1 ? "1 gast staat" : `${count} gasten staan`;
+    return `${who} niet in het bestand. Hun naam en telefoonnummer staan in het tabblad Medewerkers.`;
   }
 
   // De melding na een export waarin medewerkers zonder looncode staan.

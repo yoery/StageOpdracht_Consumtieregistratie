@@ -129,3 +129,49 @@ test("zoeken met een server: index.html heeft de uitleg 'Typ je naam'", () => {
   assert.ok(prompt.includes("<strong>Typ je naam</strong>"));
   assert.ok(prompt.includes("Begin met typen in het zoekveld hierboven."));
 });
+
+// ------------------------------------------------------------------
+// Producten en voorraad bij de locatie van de tablet (FR-97)
+// ------------------------------------------------------------------
+
+test("locatie: op een tablet met een locatie ziet iemand de producten van die locatie en gaat de voorraad daar omlaag", () => {
+  const { model, point } = createDirectory();
+  model.state.products = [...model.state.products, { id: "koffie", name: "Koffie", price: 0.4 }];
+  model.findPoint("punt-it").products = { koffie: { offered: true, stock: 10, minimum: 2 } };
+
+  // Zonder locatie (de demo): de producten en de voorraad van het eigen punt van Lotte.
+  assert.ok(model.productsForEmployee("employee-1").some((product) => product.id === "blikje"));
+  assert.ok(!model.productsForEmployee("employee-1").some((product) => product.id === "koffie"));
+
+  // De tablet staat bij Kantine IT. Lotte (Hoofdkantoor) pakt daar een koffie.
+  model.locationPointId = "punt-it";
+  assert.deepEqual(model.productsForEmployee("employee-1").map((product) => product.id), ["koffie"]);
+  const before = model.findPoint(point.id).products.blikje.stock;
+  model.addRegistration("employee-1", "koffie");
+
+  assert.equal(model.findPoint("punt-it").products.koffie.stock, 9);
+  assert.equal(model.findPoint(point.id).products.blikje.stock, before, "de voorraad van haar eigen punt is veranderd");
+  assert.equal(model.registrations.at(-1).pointId, "punt-it");
+  assert.equal(model.registrations.at(-1).employeeId, "employee-1", "de registratie staat niet op haar eigen naam");
+});
+
+test("locatie: een correctie van de beheerder hoort bij het eigen punt van de medewerker, en een onbekende locatie telt niet", () => {
+  const { model, point } = createDirectory();
+  model.locationPointId = "punt-it";
+  model.addRegistration("employee-1", "blikje", { correction: true });
+  assert.equal(model.registrations.at(-1).pointId, point.id);
+
+  model.locationPointId = "bestaat-niet";
+  assert.equal(model.registrationPointId(model.findEmployee("employee-1")), point.id);
+});
+
+test("locatie: een gast pakt iets op de locatie van de tablet", () => {
+  const { model } = createDirectory();
+  model.state.products = [...model.state.products, { id: "koffie", name: "Koffie", price: 0.4 }];
+  model.findPoint("punt-it").products = { koffie: { offered: true, stock: 10, minimum: 2 } };
+  const guestId = model.addGuest({ firstName: "Ilse", lastName: "de Wit", phone: "06 12345678" });
+
+  assert.deepEqual(model.productsForEmployee(guestId), [], "zonder locatie heeft een gast geen producten");
+  model.locationPointId = "punt-it";
+  assert.deepEqual(model.productsForEmployee(guestId).map((product) => product.id), ["koffie"]);
+});

@@ -156,6 +156,7 @@
             <span aria-hidden="true" data-icon="search"></span>
             <strong>Typ je naam</strong>
             <p>Begin met typen in het zoekveld hierboven. Dan verschijnen de namen.</p>
+            <button type="button" class="secondary-button hidden" data-open-guest>Ik ben een gast</button>
           </div>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
           <div class="empty-state hidden" id="emptyState">
@@ -163,6 +164,8 @@
             <strong>Geen medewerker gevonden</strong>
             <p>Probeer een andere zoekterm of kies een ander bedrijf.</p>
             <button type="button" class="secondary-button" data-clear-search>Zoekopdracht wissen</button>
+            <!-- "Ik ben een gast" alleen op een tablet met een locatie: daar staan de producten (zie ServerMode.applyLocation). -->
+            <button type="button" class="secondary-button hidden" data-open-guest>Ik ben een gast</button>
           </div>
         </div>
 
@@ -460,6 +463,31 @@
   </div>
 
   <!-- Apart formulier voor toevoegen en wijzigen van medewerkers. -->
+  <!-- Registreren als gast (iemand van buiten TVB, niet in AFAS). Zie GuestController.js. -->
+  <div class="modal-backdrop hidden" id="guestModal" role="dialog" aria-modal="true" aria-labelledby="guestTitle">
+    <div class="modal employee-form-modal">
+      <button class="modal-close" data-close-guest-modal aria-label="Sluiten" data-icon="close"></button>
+      <p class="section-kicker">Gast</p>
+      <h2 id="guestTitle">Registreren als gast</h2>
+      <p class="muted">Vul je naam en telefoonnummer in. Wat je pakt, komt op jouw naam. De administratie belt je over de betaling. Je telefoonnummer ziet alleen de beheerder.</p>
+      <form class="add-employee-form employee-fields" id="guestForm" novalidate>
+        <label>Voornaam
+          <input id="guestFirstName" maxlength="100" autocomplete="off" required>
+        </label>
+        <label>Achternaam
+          <input id="guestLastName" maxlength="100" autocomplete="off" required>
+        </label>
+        <label>Telefoonnummer
+          <input id="guestPhone" type="tel" inputmode="tel" maxlength="25" autocomplete="off" required>
+        </label>
+        <div class="employee-form-actions">
+          <button class="secondary-button" type="button" data-close-guest-modal>Annuleren</button>
+          <button class="primary-button" type="submit">Verder <span data-icon="arrowRight"></span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-backdrop hidden" id="employeeFormModal" role="dialog" aria-modal="true" aria-labelledby="employeeFormTitle">
     <div class="modal employee-form-modal">
       <button class="modal-close" data-close-employee-modal aria-label="Sluiten" data-icon="close"></button>

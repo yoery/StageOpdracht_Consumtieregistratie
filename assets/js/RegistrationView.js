@@ -203,10 +203,11 @@ export class RegistrationView {
     const localGroup = local.length > 0 ? [{ company: this.model.findPoint(directory.pointId)?.name || "Op deze tablet", employees: local }] : [];
 
     const groups = others.reduce((grouped, employee) => {
-      const key = this.companyGroupKey(employee.companyId);
+      // Gasten (FR-98) hebben geen bedrijf en staan samen in de groep "Gasten".
+      const key = employee.guest ? "guests" : this.companyGroupKey(employee.companyId);
 
       grouped[key] = grouped[key] || {
-        company: this.model.companyName(employee.companyId),
+        company: employee.guest ? "Gasten" : this.model.companyName(employee.companyId),
         employees: []
       };
 
@@ -532,16 +533,26 @@ export class RegistrationView {
 
     this.$("#adminEmployeeList").innerHTML =
       employees.map((employee) => {
-        const faceParts = this.adminFaceParts(employee, face);
-        return `<div class="admin-employee-item">
-          <span>
-            <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}${String(employee.payrollCode ?? "").trim() ? "" : ` <span class="badge-missing">Geen looncode</span>`}</strong>
-            <small>
-              ${employee.active ? "Actief" : "Inactief"} ·
+        // Een gast (FR-98) heeft het label "Gast" en zijn telefoonnummer, en geen looncode, bedrijf of
+        // personeelsnummer. Een gast wijzigen of een gezicht instellen kan niet: hij registreert opnieuw
+        // als gast als zijn gegevens anders zijn.
+        const guest = employee.guest === true;
+        const faceParts = guest ? { status: "", button: "" } : this.adminFaceParts(employee, face);
+        const label = guest
+          ? ` <span class="badge-linked">Gast</span>`
+          : String(employee.payrollCode ?? "").trim() ? "" : ` <span class="badge-missing">Geen looncode</span>`;
+        const details = guest
+          ? `${employee.active ? "Actief" : "Inactief"} · Gast · tel. ${this.escapeHtml(employee.phone || "onbekend")}`
+          : `${employee.active ? "Actief" : "Inactief"} ·
               ${this.escapeHtml(this.model.companyName(employee.companyId))} ·
               ${this.escapeHtml(this.model.findPoint(employee.pointId)?.name || "Geen consumptiepunt")} ·
               ${this.escapeHtml(employee.personnelNumber || "Geen personeelsnummer")}
-              ${employee.employerNumber ? ` · werkgevernr. ${this.escapeHtml(employee.employerNumber)} (afwijkend)` : ""}
+              ${employee.employerNumber ? ` · werkgevernr. ${this.escapeHtml(employee.employerNumber)} (afwijkend)` : ""}`;
+        return `<div class="admin-employee-item">
+          <span>
+            <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}${label}</strong>
+            <small>
+              ${details}
             </small>
             ${faceParts.status}
           </span>
@@ -562,10 +573,10 @@ export class RegistrationView {
                    </button>`
             }
 
-            <button class="table-action"
+            ${guest ? "" : `<button class="table-action"
                     data-edit-employee="${this.escapeHtml(employee.id)}">
               Wijzigen
-            </button>
+            </button>`}
           </div>
         </div>`;
       }).join("") || this.emptyState({ iconName: "userSearch", title: "Geen medewerker gevonden.", text: "Probeer een andere zoekterm, of voeg een medewerker toe." });

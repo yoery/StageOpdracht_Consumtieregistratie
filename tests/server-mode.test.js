@@ -342,3 +342,22 @@ test("ServerMode: uitloggen en daarna meteen sluiten geeft één uitlog bij de s
   assert.equal(api.calls.filter((call) => call === "logout").length, 1);
   assert.equal(server.role, "device");
 });
+
+test("ServerMode: de locatie van de tablet gaat naar het model, en 'Ik ben een gast' staat er alleen met een locatie", async () => {
+  const buttons = [createFakeElement(), createFakeElement()];
+  for (const button of buttons) button.classList.add("hidden");
+  const withLocation = createMode(createApi({ role: "device", device: { id: "tablet-1", name: "Tablet", pointId: "punt-hk" } }));
+  withLocation.doc.querySelectorAll = (selector) => (selector === "[data-open-guest]" ? buttons : []);
+  await withLocation.server.prepare();
+  const { model } = startApp(withLocation.server);
+
+  assert.equal(model.locationPointId, "punt-hk");
+  assert.ok(buttons.every((button) => !button.classList.contains("hidden")));
+
+  const without = createMode(createApi({ role: "device", device: { id: "tablet-2", name: "Tablet", pointId: null } }));
+  without.doc.querySelectorAll = (selector) => (selector === "[data-open-guest]" ? buttons : []);
+  await without.server.prepare();
+  const second = startApp(without.server);
+  assert.equal(second.model.locationPointId, null);
+  assert.ok(buttons.every((button) => button.classList.contains("hidden")));
+});

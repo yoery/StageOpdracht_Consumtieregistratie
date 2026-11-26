@@ -28,7 +28,10 @@ namespace Tvb\Consumptie\Server;
  *   - een wijziging van een consumptiepunt door een tablet wordt stil overgeslagen. De tablet
  *     verlaagt de voorraad wel op het eigen scherm, maar de server telt zelf;
  *   - een gezichtsinstelling of het antwoord op de vraag daarover, voor een actieve medewerker;
- *   - een nieuwe logboekregel (bijvoorbeeld "Gezichtsherkenning ingesteld").
+ *   - een nieuwe logboekregel (bijvoorbeeld "Gezichtsherkenning ingesteld");
+ *   - een nieuwe gast (FR-98): alleen een naam en een telefoonnummer. De server maakt de regel zelf,
+ *     zonder looncode, personeelsnummer, bedrijf of pas. Het telefoonnummer ziet een tablet daarna
+ *     niet meer terug: alleen de beheerder.
  * Al het andere wordt geweigerd.
  */
 final class Policy
@@ -40,7 +43,8 @@ final class Policy
     public const DEVICE_REGISTRATION_DAYS = 40;
 
     private const DEVICE_READ = ['employees', 'products', 'companies', 'points', 'registrations', 'faceEnrollments', 'faceOffers'];
-    private const EMPLOYEE_FIELDS_HIDDEN = ['payrollCode', 'personnelNumber', 'employerNumber'];
+    private const EMPLOYEE_FIELDS_HIDDEN = ['payrollCode', 'personnelNumber', 'employerNumber', 'phone'];
+    private const COLORS = ['#d8f1e8', '#e3eef6', '#f8e9d9', '#e9e0f4', '#e4f0d8'];
     private const FACE_ENROLLMENT_FIELDS = ['id', 'employeeId', 'descriptor', 'enrolledAt', 'consentAt'];
     private const FACE_OFFER_FIELDS = ['id', 'employeeId', 'answer', 'answeredAt'];
     private const AUDIT_FIELDS = ['id', 'action', 'details', 'createdAt'];
@@ -116,6 +120,7 @@ final class Policy
 
         return match ($collection) {
             'registrations' => $incoming !== null && $existing === null ? $this->newRegistration($incoming, $deviceId) : false,
+            'employees' => $incoming !== null && $existing === null ? $this->newGuest($incoming) : false,
             'points' => $incoming !== null && $existing !== null,
             'faceEnrollments' => $this->faceEnrollment($incoming, $existing),
             'faceOffers' => $incoming !== null ? $this->faceOffer($incoming) : false,
@@ -159,6 +164,39 @@ final class Policy
         }
 
         return $registration;
+    }
+
+    // Een nieuwe gast van een tablet. Alleen `guest: true`, een voor- en achternaam en een
+    // telefoonnummer worden overgenomen. De rest vult de server zelf in.
+    private function newGuest(\stdClass $incoming): \stdClass|false
+    {
+        $firstName = is_string($incoming->firstName ?? null) ? trim($incoming->firstName) : '';
+        $lastName = is_string($incoming->lastName ?? null) ? trim($incoming->lastName) : '';
+        $phone = is_string($incoming->phone ?? null) ? trim($incoming->phone) : '';
+        $digits = strlen((string) preg_replace('/\D/', '', $phone));
+        $validName = static fn (string $name): bool => $name !== '' && strlen($name) <= 100 && preg_match('/[\x00-\x1F\x7F]/', $name) !== 1;
+        if (($incoming->guest ?? false) !== true || !$validName($firstName) || !$validName($lastName)
+            || preg_match('/^[+0-9 ()-]{8,25}$/', $phone) !== 1 || $digits < 8 || $digits > 15) {
+            return false;
+        }
+
+        $guest = new \stdClass();
+        $guest->id = $incoming->id;
+        $guest->name = $firstName . ' ' . $lastName;
+        $guest->firstName = $firstName;
+        $guest->lastName = $lastName;
+        $guest->payrollCode = '';
+        $guest->personnelNumber = '';
+        $guest->employerNumber = '';
+        $guest->companyId = null;
+        $guest->pointId = null;
+        $guest->active = true;
+        $guest->color = in_array($incoming->color ?? null, self::COLORS, true) ? $incoming->color : self::COLORS[0];
+        $guest->badgeId = '';
+        $guest->guest = true;
+        $guest->phone = $phone;
+
+        return $guest;
     }
 
     // Het werkgevernummer van een medewerker: zijn eigen afwijkende nummer, anders dat van zijn bedrijf.

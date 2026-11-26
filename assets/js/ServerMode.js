@@ -146,7 +146,7 @@ export class ServerMode {
 
     // Zoeken: pas namen na typen, en de locatie van deze tablet bovenaan (zie RegistrationView.renderEmployees).
     app.view.directory = () => ({ searchFirst: true, pointId: this.pointId, deviceId: this.device?.id ?? null });
-    app.view.renderEmployees?.();
+    this.applyLocation();
 
     $("#tab-server")?.classList.remove("hidden");
     $("#serverDeviceForm")?.addEventListener("submit", (event) => this.linkThisDevice(event));
@@ -155,6 +155,17 @@ export class ServerMode {
 
     this.sync.start();
     if (this.startedOffline) this.handleStatus("offline");
+  }
+
+  // Zet de locatie van deze tablet in het model en toont "Ik ben een gast" alleen als er een locatie
+  // is: een gast heeft geen eigen consumptiepunt en pakt iets op de plek waar de tablet staat.
+  applyLocation() {
+    if (!this.app) return;
+    this.app.model.locationPointId = this.pointId;
+    for (const button of this.doc.querySelectorAll?.("[data-open-guest]") ?? []) {
+      button.classList.toggle("hidden", !this.pointId);
+    }
+    this.app.view.renderEmployees?.();
   }
 
   // Na het starten: op de computer van de beheerder (geen tablet) gaat het beheer meteen open.
@@ -426,6 +437,7 @@ export class ServerMode {
       const { device } = await this.api.linkDevice(name, $("#serverDevicePoint").value || null);
       this.device = device;
       this.app.view.showToast("Deze browser is gekoppeld als tablet. Log uit om hem als tablet te gebruiken.", { tone: "success", duration: 6000 });
+      this.applyLocation();
       this.app.view.renderAll?.();
     } catch (error) {
       this.app.view.showToast(error.message, { tone: "error", duration: 6000 });
@@ -438,6 +450,7 @@ export class ServerMode {
       const result = await this.api.updateDevice(device.id, device.name, pointId);
       if (device.id === this.device?.id) {
         this.device = result.device;
+        this.applyLocation();
         this.app.view.renderAll?.();
       }
       this.app.view.showToast("De locatie van de tablet is opgeslagen.", { tone: "success" });
@@ -451,7 +464,10 @@ export class ServerMode {
     if (!globalThis.confirm?.(`Tablet "${device.name}" intrekken? Die tablet kan daarna niet meer registreren tot hij opnieuw wordt gekoppeld.`)) return;
     try {
       await this.api.revokeDevice(device.id);
-      if (device.id === this.device?.id) this.device = null;
+      if (device.id === this.device?.id) {
+        this.device = null;
+        this.applyLocation();
+      }
       this.app.view.showToast("De tablet is ingetrokken.", { tone: "success" });
     } catch (error) {
       this.app.view.showToast(error.message, { tone: "error", duration: 6000 });

@@ -50,6 +50,7 @@ export class CsvExport {
 
     for (const registration of this.model.registrations) {
       if (!this.matchesFilters(registration, selectedEmployee, selectedMonth)) continue;
+      if (this.isGuestRegistration(registration)) continue;
 
       const { year, month } = this.model.payrollPeriod(new Date(registration.createdAt));
       // Het werkgevernummer van het moment van registreren. Is dat binnen één maand veranderd
@@ -77,6 +78,23 @@ export class CsvExport {
 
     const rows = [...grouped.values()].map((group) => this.toRow(group));
     return rows.sort((a, b) => this.compareRows(a, b));
+  }
+
+  // Is deze registratie van een gast (FR-98)? Een gast staat niet in de loonadministratie en dus
+  // niet in dit bestand. Zijn registraties staan wel in het beheer (tabblad Registraties).
+  isGuestRegistration(registration) {
+    return this.model.findEmployee(registration.employeeId)?.guest === true;
+  }
+
+  // Hoeveel gasten hebben registraties binnen de filters? Die staan niet in het bestand.
+  countGuests(selectedEmployee, selectedMonth) {
+    const guests = new Set();
+    for (const registration of this.model.registrations) {
+      if (this.matchesFilters(registration, selectedEmployee, selectedMonth) && this.isGuestRegistration(registration)) {
+        guests.add(registration.employeeId);
+      }
+    }
+    return guests.size;
   }
 
   // Controleert of een registratie binnen de gekozen medewerker en consumptiemaand valt.
@@ -112,7 +130,7 @@ export class CsvExport {
 
     for (const registration of this.model.registrations) {
       if (!this.matchesFilters(registration, selectedEmployee, selectedMonth)) continue;
-      if (missing.has(registration.employeeId)) continue;
+      if (missing.has(registration.employeeId) || this.isGuestRegistration(registration)) continue;
 
       const payrollCode = this.model.findEmployee(registration.employeeId)?.payrollCode;
       missing.set(registration.employeeId, String(payrollCode ?? "").trim() === "");

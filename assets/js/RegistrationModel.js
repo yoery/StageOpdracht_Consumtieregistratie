@@ -69,6 +69,17 @@ export class RegistrationModel {
     this.store = store;
     this.state = store.load() || this.createSeedState();
     this.loadProblem = store.loadProblem || null;
+    // De locatie van deze tablet (een consumptiepunt), of null. Met een server zet ServerMode dit
+    // (FR-97). Zie registrationPointId.
+    this.locationPointId = null;
+  }
+
+  // Het consumptiepunt waar iemand nu iets pakt. Heeft deze tablet een locatie, dan is dat die
+  // locatie: daar staan de producten en daar gaat de voorraad omlaag, ook voor iemand van een andere
+  // locatie of een gast (FR-97, FR-98). Zonder locatie (de demo) is het het vaste consumptiepunt van
+  // de medewerker, zoals altijd.
+  registrationPointId(employee) {
+    return this.findPoint(this.locationPointId) ? this.locationPointId : (employee?.pointId ?? null);
   }
 
   // Laadt de gegevens opnieuw uit de opslag, bijvoorbeeld omdat een ander tabblad iets heeft
@@ -256,7 +267,9 @@ export class RegistrationModel {
   // Een keuze uit het productvenster gaat via addSelection (met een grens per product).
   addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date() } = {}) {
     const employee = this.findEmployee(employeeId);
-    const point = this.findPoint(employee?.pointId);
+    // Een correctie van de beheerder hoort bij het vaste punt van de medewerker. Een registratie op de
+    // tablet bij het punt waar de tablet staat (zie registrationPointId).
+    const point = this.findPoint(correction ? employee?.pointId : this.registrationPointId(employee));
     const offered = Boolean(this.pointProduct(point, productId)?.offered);
     const employerNumber = this.employerNumberFor(employee);
 
@@ -495,6 +508,37 @@ export class RegistrationModel {
 
     const point = this.findPoint(pointId);
     return Boolean(point) && point.companyId === companyId;
+  }
+
+  // Maakt een gast aan (FR-98): iemand van buiten TVB, zonder looncode, personeelsnummer of bedrijf.
+  // Bestaat er al een actieve gast met dezelfde naam en hetzelfde telefoonnummer, dan wordt die
+  // gebruikt. Geeft de id van de gast terug.
+  addGuest({ firstName, lastName, phone }) {
+    const name = `${firstName} ${lastName}`.trim();
+    const digits = (value) => String(value ?? "").replace(/\D/g, "");
+    const existing = this.employees.find((employee) =>
+      employee.guest === true && employee.active && employee.name.toLowerCase() === name.toLowerCase() && digits(employee.phone) === digits(phone)
+    );
+    if (existing) return existing.id;
+
+    const guest = {
+      id: createId(),
+      name,
+      firstName,
+      lastName,
+      payrollCode: "",
+      personnelNumber: "",
+      employerNumber: "",
+      companyId: null,
+      pointId: null,
+      active: true,
+      color: COLORS[this.employees.length % COLORS.length],
+      badgeId: "",
+      guest: true,
+      phone
+    };
+    this.state.employees = [...this.employees, guest];
+    return guest.id;
   }
 
   // Maakt een nieuwe medewerker aan met een unieke id en een kleur voor de avatar.
@@ -803,7 +847,7 @@ export class RegistrationModel {
 
   // De producten die een medewerker kan kiezen: het aanbod van het eigen consumptiepunt.
   productsForEmployee(employeeId) {
-    return this.offeredProducts(this.findEmployee(employeeId)?.pointId);
+    return this.offeredProducts(this.registrationPointId(this.findEmployee(employeeId)));
   }
 
   // ------------------------------------------------------------------
