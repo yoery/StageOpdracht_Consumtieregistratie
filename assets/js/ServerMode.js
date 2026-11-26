@@ -144,6 +144,10 @@ export class ServerMode {
     $("#wipeDataButton")?.classList.add("hidden");
     $("#wipeDataButton")?.previousElementSibling?.classList.add("hidden");
 
+    // Zoeken: pas namen na typen, en de locatie van deze tablet bovenaan (zie RegistrationView.renderEmployees).
+    app.view.directory = () => ({ searchFirst: true, pointId: this.pointId, deviceId: this.device?.id ?? null });
+    app.view.renderEmployees?.();
+
     $("#tab-server")?.classList.remove("hidden");
     $("#serverDeviceForm")?.addEventListener("submit", (event) => this.linkThisDevice(event));
     $("#serverAfasButton")?.addEventListener("click", () => this.runAfasSync());

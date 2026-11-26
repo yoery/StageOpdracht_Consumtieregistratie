@@ -19,7 +19,9 @@ namespace Tvb\Consumptie\Server;
  *     het vaakst registreert). Het logboek krijgt een tablet niet.
  *
  * Wat een tablet mag schrijven:
- *   - een nieuwe registratie. De prijs en het werkgevernummer vult de server zelf in vanuit zijn
+ *   - een nieuwe registratie. De server zet er de id van de tablet bij (`deviceId`), zodat een
+ *     tablet kan zien wie er het vaakst op die tablet registreert (FR-97).
+ *     De prijs en het werkgevernummer vult de server zelf in vanuit zijn
  *     eigen gegevens, zodat een tablet daar niet mee kan knoeien. Wijzigen of verwijderen mag niet:
  *     corrigeren doet de beheerder. De voorraad van het consumptiepunt gaat op de server zelf met 1
  *     omlaag (`registrationStored`). Zo klopt de voorraad ook als twee tablets tegelijk registreren;
@@ -39,7 +41,6 @@ final class Policy
 
     private const DEVICE_READ = ['employees', 'products', 'companies', 'points', 'registrations', 'faceEnrollments', 'faceOffers'];
     private const EMPLOYEE_FIELDS_HIDDEN = ['payrollCode', 'personnelNumber', 'employerNumber'];
-    private const REGISTRATION_FIELDS = ['id', 'employeeId', 'productId', 'price', 'pointId', 'createdAt', 'employerNumber'];
     private const FACE_ENROLLMENT_FIELDS = ['id', 'employeeId', 'descriptor', 'enrolledAt', 'consentAt'];
     private const FACE_OFFER_FIELDS = ['id', 'employeeId', 'answer', 'answeredAt'];
     private const AUDIT_FIELDS = ['id', 'action', 'details', 'createdAt'];
@@ -96,7 +97,7 @@ final class Policy
      * regel wordt verwijderd, false als de wijziging niet mag, of true als de wijziging mag maar er
      * niets wordt opgeslagen.
      */
-    public function accept(string $role, string $collection, string $id, ?\stdClass $incoming): \stdClass|bool|null
+    public function accept(string $role, string $collection, string $id, ?\stdClass $incoming, ?string $deviceId = null): \stdClass|bool|null
     {
         if (!in_array($collection, RecordStore::COLLECTIONS, true) || !RecordStore::isSafeId($id)) {
             return false;
@@ -114,7 +115,7 @@ final class Policy
         $existing = $this->store->get($collection, $id);
 
         return match ($collection) {
-            'registrations' => $incoming !== null && $existing === null ? $this->newRegistration($incoming) : false,
+            'registrations' => $incoming !== null && $existing === null ? $this->newRegistration($incoming, $deviceId) : false,
             'points' => $incoming !== null && $existing !== null,
             'faceEnrollments' => $this->faceEnrollment($incoming, $existing),
             'faceOffers' => $incoming !== null ? $this->faceOffer($incoming) : false,
@@ -125,7 +126,7 @@ final class Policy
 
     // Een registratie van een tablet: alleen voor een actieve medewerker en een bestaand product. De
     // prijs komt uit het product op de server en het werkgevernummer uit de medewerker of zijn bedrijf.
-    private function newRegistration(\stdClass $incoming): \stdClass|false
+    private function newRegistration(\stdClass $incoming, ?string $deviceId): \stdClass|false
     {
         $employeeId = $incoming->employeeId ?? null;
         $productId = $incoming->productId ?? null;
@@ -152,6 +153,9 @@ final class Policy
         $employerNumber = $this->employerNumber($employee);
         if ($employerNumber !== '') {
             $registration->employerNumber = $employerNumber;
+        }
+        if ($deviceId !== null && RecordStore::isSafeId($deviceId)) {
+            $registration->deviceId = $deviceId;
         }
 
         return $registration;

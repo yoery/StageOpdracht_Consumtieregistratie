@@ -426,6 +426,7 @@ test('API: een registratie van een tablet krijgt de prijs en het werkgevernummer
     $stored = $server->store->get('registrations', 'reg-1');
     same(0.65, $stored->price);
     same('77', $stored->employerNumber, 'het afwijkende werkgevernummer van Lotte');
+    same($server->auth->devices()[0]['id'], $stored->deviceId, 'de server zet de tablet bij de registratie');
     ok(!property_exists($stored, 'correction'), 'een tablet kan geen correctie maken');
     same($response->body['version'], $server->store->head());
     same('77', $server->pulled()['registrations']['reg-1']->employerNumber, 'de tablet krijgt de regel van de server terug');

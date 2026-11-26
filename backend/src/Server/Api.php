@@ -124,7 +124,7 @@ final class Api
         return match ($key) {
             'POST /logout' => $this->logout($request, $admin, $device, $now),
             'GET /changes' => $this->changes($request, $role, $now),
-            'POST /changes' => $this->saveChanges($request, $role, $now),
+            'POST /changes' => $this->saveChanges($request, $role, $now, $admin === null ? ($device['subjectId'] ?? null) : null),
             default => $admin === null ? Response::error(403, 'Alleen voor de beheerder.') : $this->adminRoute($key, $request, $admin, $now),
         };
     }
@@ -264,7 +264,7 @@ final class Api
         return Response::ok(['version' => $head, 'changes' => $changes]);
     }
 
-    private function saveChanges(Request $request, string $role, \DateTimeImmutable $now): Response
+    private function saveChanges(Request $request, string $role, \DateTimeImmutable $now, ?string $deviceId): Response
     {
         $changes = $request->body->changes ?? null;
         if (!is_array($changes) || count($changes) > self::MAX_CHANGES) {
@@ -273,7 +273,7 @@ final class Api
 
         $rejected = [];
         $saved = 0;
-        $this->store->transaction(function () use ($changes, $role, $now, &$rejected, &$saved): void {
+        $this->store->transaction(function () use ($changes, $role, $now, $deviceId, &$rejected, &$saved): void {
             foreach ($changes as $change) {
                 $collection = $change->collection ?? null;
                 $id = $change->id ?? null;
@@ -282,7 +282,7 @@ final class Api
                     $rejected[] = ['collection' => is_string($collection) ? $collection : '', 'id' => is_string($id) ? $id : ''];
                     continue;
                 }
-                $accepted = $this->policy->accept($role, $collection, $id, $incoming);
+                $accepted = $this->policy->accept($role, $collection, $id, $incoming, $deviceId);
                 if ($accepted === false) {
                     $rejected[] = ['collection' => $collection, 'id' => $id];
                     continue;

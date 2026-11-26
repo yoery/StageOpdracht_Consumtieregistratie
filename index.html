@@ -151,6 +151,12 @@
           <div class="employee-list" id="employeeList"></div>
           <!-- Vaste statusregel, alleen voor schermlezers: "3 medewerkers gevonden" of "Geen medewerker gevonden". -->
           <p class="visually-hidden" id="employeeResultsStatus" role="status"></p>
+          <!-- Met een server staan er pas namen in de lijst als iemand begint te typen (FR-96). Tot dan staat hier deze uitleg. -->
+          <div class="empty-state hidden" id="searchPrompt">
+            <span aria-hidden="true" data-icon="search"></span>
+            <strong>Typ je naam</strong>
+            <p>Begin met typen in het zoekveld hierboven. Dan verschijnen de namen.</p>
+          </div>
           <!-- Deze melding verschijnt wanneer de zoekopdracht geen resultaat geeft. -->
           <div class="empty-state hidden" id="emptyState">
             <span aria-hidden="true" data-icon="userSearch"></span>

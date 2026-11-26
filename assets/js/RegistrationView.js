@@ -164,18 +164,28 @@ export class RegistrationView {
   }
 
   // Rendert de publieke medewerkerlijst op basis van de zoekterm en het gekozen bedrijf.
+  //
+  // Met een server (zie ServerMode) geeft `this.directory` twee extra regels:
+  //   - searchFirst: zolang het zoekveld leeg is, staan er geen namen in beeld, alleen de uitleg
+  //     "Typ je naam" (FR-96). Zo ziet niemand bij de tablet een lijst met alle collega's;
+  //   - pointId en deviceId: de medewerkers van de locatie van deze tablet staan bovenaan, in een
+  //     eigen groep met de naam van de locatie (FR-97). Zie locationRanking.
+  // In de demo (zonder server) is `this.directory` er niet en blijft alles zoals het was.
   renderEmployees() {
     const query = this.$("#employeeSearch").value.toLowerCase().trim();
     const companyFilter = this.$("#employeeCompanyFilter").dataset.value || "all";
+    const directory = this.directory?.() ?? {};
+    const waitingForQuery = Boolean(directory.searchFirst) && query === "";
 
-    const employees = this.model.employees.filter(({ name, active, companyId }) =>
+    const employees = waitingForQuery ? [] : this.model.employees.filter(({ name, active, companyId }) =>
       active &&
       name.toLowerCase().includes(query) &&
       (companyFilter === "all" || this.companyGroupKey(companyId) === companyFilter)
     );
 
-    this.$("#employeeCount").textContent = `${employees.length} totaal`;
-    this.$("#emptyState").classList.toggle("hidden", employees.length > 0);
+    this.$("#employeeCount").textContent = waitingForQuery ? "" : `${employees.length} totaal`;
+    this.$("#searchPrompt")?.classList.toggle("hidden", !waitingForQuery);
+    this.$("#emptyState").classList.toggle("hidden", employees.length > 0 || waitingForQuery);
     // "Tik op je naam" staat één keer boven de lijst, en alleen als er namen in de lijst staan.
     this.$("#employeeListHint")?.classList.toggle("hidden", employees.length === 0);
     // Een schermlezer hoort na het zoeken of filteren alleen het aantal, bijvoorbeeld
@@ -183,9 +193,16 @@ export class RegistrationView {
     // meer, maar is er een vaste, onzichtbare statusregel (#employeeResultsStatus in index.html).
     // Verandert het aantal niet, dan blijft de tekst gelijk en wordt er niets voorgelezen.
     const status = this.$("#employeeResultsStatus");
-    if (status) status.textContent = this.employeeResultsText(employees.length);
+    if (status) status.textContent = waitingForQuery ? "" : this.employeeResultsText(employees.length);
 
-    const groups = employees.reduce((grouped, employee) => {
+    // De medewerkers van deze locatie eerst, in een eigen groep. De rest per bedrijf, zoals altijd.
+    const ranking = this.locationRanking(employees, directory);
+    const local = employees.filter((employee) => ranking.has(employee.id))
+      .sort((a, b) => ranking.get(b.id) - ranking.get(a.id) || a.name.localeCompare(b.name, "nl"));
+    const others = employees.filter((employee) => !ranking.has(employee.id));
+    const localGroup = local.length > 0 ? [{ company: this.model.findPoint(directory.pointId)?.name || "Op deze tablet", employees: local }] : [];
+
+    const groups = others.reduce((grouped, employee) => {
       const key = this.companyGroupKey(employee.companyId);
 
       grouped[key] = grouped[key] || {
@@ -197,8 +214,8 @@ export class RegistrationView {
       return grouped;
     }, {});
 
-    this.$("#employeeList").innerHTML = Object.values(groups)
-      .sort((a, b) => a.company.localeCompare(b.company, "nl"))
+    const companyGroups = Object.values(groups).sort((a, b) => a.company.localeCompare(b.company, "nl"));
+    this.$("#employeeList").innerHTML = [...localGroup, ...companyGroups]
       .map(({ company, employees: companyEmployees }) =>
         `<section class="company-group">
           <h3>${this.escapeHtml(company)}</h3>
@@ -226,6 +243,32 @@ export class RegistrationView {
 
   // De tekst voor schermlezers na zoeken of filteren: "Geen medewerker gevonden",
   // "1 medewerker gevonden" of "3 medewerkers gevonden" (zie employeeCountText).
+  // Wie hoort er bovenaan op deze tablet (FR-97)? Een score per medewerker:
+  //   - 1 punt per registratie op deze tablet in de laatste 40 dagen (`deviceId`, dat zet de server
+  //     bij iedere registratie). Zo komt wie hier vaak iets pakt bovenaan, ook van een andere locatie;
+  //   - 1000 punten als het vaste consumptiepunt van de medewerker de locatie van deze tablet is.
+  // AFAS geeft geen werklocatie (zie het TO, hoofdstuk 11). Komt die er later wel, dan wordt dat het
+  // consumptiepunt van de medewerker en telt het hier vanzelf mee.
+  // Geeft een Map met id → score, alleen voor medewerkers met een score boven nul.
+  locationRanking(employees, { pointId = null, deviceId = null } = {}) {
+    const ranking = new Map();
+    if (!pointId && !deviceId) return ranking;
+
+    const visible = new Set(employees.map((employee) => employee.id));
+    if (deviceId) {
+      for (const registration of this.model.registrations) {
+        if (registration.deviceId !== deviceId || !visible.has(registration.employeeId)) continue;
+        ranking.set(registration.employeeId, (ranking.get(registration.employeeId) ?? 0) + 1);
+      }
+    }
+    if (pointId) {
+      for (const employee of employees) {
+        if (employee.pointId === pointId) ranking.set(employee.id, (ranking.get(employee.id) ?? 0) + 1000);
+      }
+    }
+    return ranking;
+  }
+
   employeeResultsText(count) {
     return count === 0 ? "Geen medewerker gevonden" : `${this.employeeCountText(count)} gevonden`;
   }

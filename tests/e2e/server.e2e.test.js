@@ -226,7 +226,14 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     await browser.waitFor(`document.querySelector("#adminModal").classList.contains("hidden")`);
     await browser.manualSearch();
 
-    await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 2`, { message: "De tablet toont de medewerkers niet." });
+    // Op de tablet staan er pas namen in beeld als iemand begint te typen (FR-96).
+    await browser.waitFor(`!document.querySelector("#searchPrompt").classList.contains("hidden")`, { message: "De uitleg 'Typ je naam' staat er niet." });
+    assert.equal(await browser.evaluate(`document.querySelectorAll("[data-open-employee]").length`), 0);
+    await browser.click("#employeeSearch");
+    await browser.insertText("lot");
+    await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 1`, { message: "Na typen verschijnt Lotte niet." });
+    // Lotte werkt bij Hoofdkantoor, de locatie van deze tablet: ze staat in de groep van die locatie (FR-97).
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeList .company-group h3").textContent`), "Hoofdkantoor");
     // Na het uitloggen haalt de tablet de gegevens opnieuw op als tablet en bewaart ze dan pas in de browser.
     await browser.waitFor(`(localStorage.getItem("tvb-blikjesregistratie-server") ?? "").includes("Lotte van Dijk")`, { message: "De tablet bewaart de namen niet." });
     assert.ok(!(await pageText()).includes("5001"), "het personeelsnummer staat nog in de pagina");
@@ -256,6 +263,11 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     assert.equal(registrations[0].data.employeeId, "mw-lotte");
     assert.equal(registrations[0].data.price, 0.65);
     assert.equal(registrations[0].data.employerNumber, "01");
+    const devices = (await asAdmin("GET", "/devices")).json.devices;
+    assert.equal(registrations[0].data.deviceId, devices.find((device) => device.name === "Tablet kantine").id, "de server zet de tablet niet bij de registratie");
+    // Na registreren is het zoekveld leeg en staan er weer geen namen in beeld.
+    await browser.manualSearch();
+    await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 0 && !document.querySelector("#searchPrompt").classList.contains("hidden")`);
     const points = (await asAdmin("GET", "/changes?since=0")).json.changes.filter((change) => change.collection === "points");
     assert.equal(points[0].data.products.blikje.stock, 23);
   });
