@@ -1,7 +1,7 @@
 ﻿/* Vensters (modals): de achtergrond, het venster zelf, de sluitknop (×), labels en invoervelden
    in een venster, de productkeuze en de algemene knoppen (.primary-button en .secondary-button) en
-   de foutregel onder een formulier. Het productvenster, het beheer, de koelkast en het cameravenster
-   bouwen hierop voort.
+   de foutregel onder een formulier. Het productvenster, het beheer en het cameravenster bouwen
+   hierop voort.
    Laadt na home.css.
    De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
 /* Beheerder-modal met login en dashboard. */

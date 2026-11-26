@@ -44,11 +44,11 @@ test("index.html laadt iedere stylesheet uit assets/css precies één keer, van 
   assert.equal(linked[0], "assets/css/base.css");
   assert.equal(linked.at(-1), "assets/css/responsive.css");
   // De volledige volgorde. Sinds versie 3.21 staat start-screen.css (het startscherm) op de plek van
-  // standby.css: na face.css en vóór fridge.css.
+  // standby.css: na face.css en vóór responsive.css.
   assert.deepEqual(linked.map((file) => file.replace("assets/css/", "")), [
     "base.css", "topbar.css", "home.css", "modal.css", "admin.css", "product-window.css", "admin-forms.css",
     "toast.css", "admin-corrections.css", "motion.css", "icons.css", "feedback.css", "suggestion.css",
-    "directory-tools.css", "face.css", "start-screen.css", "fridge.css", "responsive.css"
+    "directory-tools.css", "face.css", "start-screen.css", "responsive.css"
   ]);
   assert.doesNotMatch(readAllCss(), /@import/);
   // De CSP staat stylesheets van de eigen server toe (style-src 'self').

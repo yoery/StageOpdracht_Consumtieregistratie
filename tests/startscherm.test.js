@@ -14,10 +14,9 @@ import { CsvExport } from "../assets/js/CsvExport.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { FaceIntent } from "../assets/js/FaceIntent.js";
 import { BadgeReader } from "../assets/js/BadgeReader.js";
-import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
 import { AutoScanController } from "../assets/js/controllers/AutoScanController.js";
 import { StandbyController } from "../assets/js/controllers/StandbyController.js";
-import { SMART_FRIDGE, STANDBY, FACE_DEMO } from "../assets/js/config.js";
+import { STANDBY, FACE_DEMO } from "../assets/js/config.js";
 import { createModel, addEmployee, createRecordingView, createFakeElement } from "./helpers.js";
 import { face3d, project, photo } from "./helpers-gezicht.js";
 
@@ -111,11 +110,11 @@ const createDemo = (camera, settings = {}) => {
   return { demo, scene };
 };
 
-const MODALS = ["#adminModal", "#employeeProductsModal", "#fridgeModal", "#faceOfferModal", "#faceModal"];
+const MODALS = ["#adminModal", "#employeeProductsModal", "#faceOfferModal", "#faceModal"];
 
-// Controller met een nep-view, nep-klok, nep-camera en een nagebootste koelkast. employee-1 (Test
-// Medewerker) heeft pas 04A1B2C3 en hoort bij het demo-consumptiepunt met de standaardindeling.
-const createApp = ({ model = createModel().model, hasCamera = true, fails = null, faceSettings = {}, target = "fridge", standby = STANDBY, badge = true } = {}) => {
+// Controller met een nep-view, nep-klok en nep-camera. employee-1 (Test Medewerker) heeft pas 04A1B2C3
+// en hoort bij het demo-consumptiepunt.
+const createApp = ({ model = createModel().model, hasCamera = true, fails = null, faceSettings = {}, standby = STANDBY, badge = true } = {}) => {
   model.state.employees[0].badgeId = "04A1B2C3";
   const view = createRecordingView();
   for (const selector of MODALS) view.$(selector).classList.add("hidden");
@@ -126,9 +125,7 @@ const createApp = ({ model = createModel().model, hasCamera = true, fails = null
   const camera = createCamera({ hasCamera, fails });
   const { demo, scene } = createDemo(camera, faceSettings);
   const reader = new BadgeReader({ enabled: badge, minLength: 4, maxKeyIntervalMs: 40, endDelayMs: 120 }, { now: () => 0, setTimeout: () => 0, clearTimeout: () => {} });
-  const smartFridge = SmartFridge.createSimulated({ ...SMART_FRIDGE, weightVariation: 0 }, { clock });
-  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, clock, smartFridge);
-  app.recognition.recognitionTargetSetting = target;
+  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, clock);
   app.standby.standbySettings = standby;
   globalThis.document = {
     activeElement: null,
@@ -241,25 +238,22 @@ test("startscherm: komt terug na een registratie, en de bevestiging blijft staan
   stop(app);
 });
 
-test("startscherm: komt terug na afloop van een koelkastopening, maar niet bij de knop naar het productvenster", () => {
+test("startscherm: komt terug na een registratie in het productvenster dat na de pas opende, en na sluiten zonder registreren", () => {
   const { app, model, demo } = createApp({ hasCamera: false });
   demo.hasCamera = false;
   app.startStandbyWatch();
   app.enterStandby();
 
   app.recognizeBadge("04A1B2C3");
-  assert.equal(app.fridgePhase, "open");
-  assert.equal(app.standbyActive, false, "de pas op het startscherm opent de koelkast en het startscherm verdwijnt");
-  app.takeFromShelf("1");
-  app.closeFridgeDoor();
-  assert.equal(app.standbyActive, false, "het overzicht staat nog open");
-  app.finishFridgeWindow();
+  assert.equal(app.selectedEmployeeId, "employee-1");
+  assert.equal(app.standbyActive, false, "de pas op het startscherm opent het productvenster en het startscherm verdwijnt");
+  app.incrementProduct("blikje");
+  assert.equal(app.standbyActive, false, "het productvenster staat nog open");
+  app.registerSelectedProducts();
   assert.equal(app.standbyActive, true);
   assert.equal(model.registrations.length, 1);
 
-  // De knop "Liever brood of beleg?" opent het productvenster: dan geen startscherm ertussen.
   app.recognizeBadge("04A1B2C3");
-  assert.equal(app.switchFridgeToProducts(), true);
   assert.equal(app.standbyActive, false);
   assert.equal(app.selectedEmployeeId, "employee-1");
 
@@ -329,22 +323,13 @@ test("Handmatig zoeken: een klik op het startscherm zelf wordt nooit tegengehoud
   assert.equal(app.swallowStandbyGhostClick(onStart), false);
 });
 
-test("pas: een passcan op het startscherm opent de koelkast (of het productvenster) en het startscherm verdwijnt", () => {
-  const products = createApp({ target: "products" });
-  products.app.enterStandby();
-  products.app.recognizeBadge("04A1B2C3");
-  assert.equal(products.app.standbyActive, false);
-  assert.equal(products.app.selectedEmployeeId, "employee-1");
-  assert.equal(products.app.recognizedBy, "badge");
-
-  const fridge = createApp();
-  fridge.demo.hasCamera = false;
-  fridge.app.enterStandby();
-  fridge.app.recognizeBadge("04A1B2C3");
-  assert.equal(fridge.app.standbyActive, false);
-  assert.equal(fridge.app.fridgePhase, "open");
-  assert.equal(fridge.app.fridgeRecognizedBy, "badge");
-  fridge.app.finishFridgeWindow();
+test("pas: een passcan op het startscherm opent het productvenster en het startscherm verdwijnt", () => {
+  const { app } = createApp();
+  app.enterStandby();
+  app.recognizeBadge("04A1B2C3");
+  assert.equal(app.standbyActive, false);
+  assert.equal(app.selectedEmployeeId, "employee-1");
+  assert.equal(app.recognizedBy, "badge");
 });
 
 test("pas: na een passcan blijft de vraag 'Gezichtsherkenning nog niet ingesteld. Wil je dit?' zoals hij was", async () => {
@@ -593,7 +578,7 @@ test("drempel: een gezicht dat blijft bewegen krijgt geen kenmerken", async () =
 });
 
 test("drempel: pas na stillMs stil in het ovaal worden de kenmerken berekend, alleen van dat ene gezicht", async () => {
-  const { app, model, scene, clock, view } = createApp({ target: "products" });
+  const { app, model, scene, clock, view } = createApp();
   enrollInModel(app, model);
   scene.descriptor = face(0.9); // niet herkend, zodat er niets opent
   await startOnStartScreen(app);
@@ -640,7 +625,7 @@ test("FaceIntent: het ovaal, dichtbij, binnen en stil", () => {
 // Herkend en niet herkend
 // ------------------------------------------------------------------
 
-test("herkend: twee keer dezelfde medewerker, dan de camera uit, de begroeting en daarna de koelkast", async () => {
+test("herkend: twee keer dezelfde medewerker, dan de camera uit, de begroeting en daarna het productvenster", async () => {
   const { app, model, scene, clock, view, camera } = createApp();
   enrollInModel(app, model);
   await startOnStartScreen(app);
@@ -652,17 +637,17 @@ test("herkend: twee keer dezelfde medewerker, dan de camera uit, de begroeting e
   assert.equal(camera.on, false, "de camera gaat meteen uit");
   assert.deepEqual(lastState(view), ["recognized", "Goedemorgen Test."]);
   assert.equal(app.standbyActive, true, "de begroeting staat nog in het ovaal");
-  assert.equal(app.fridgePhase, "closed");
+  assert.equal(app.selectedEmployeeId, null);
 
   clock.advance(FACE_DEMO.autoScan.greetingMs);
   assert.equal(app.standbyActive, false);
-  assert.equal(app.fridgePhase, "open");
-  assert.equal(app.fridgeEmployeeId, "employee-1");
-  assert.equal(app.fridgeRecognizedBy, "face");
+  assert.equal(app.selectedEmployeeId, "employee-1");
+  assert.equal(app.recognizedBy, "face");
   assert.equal(camera.on, false, "zolang het venster open is, blijft de camera uit");
 
   // Na afloop komt het startscherm terug en gaat de camera weer aan.
-  app.finishFridgeWindow();
+  app.incrementProduct("blikje");
+  app.registerSelectedProducts();
   await flush();
   await flush();
   assert.equal(app.standbyActive, true);
@@ -671,23 +656,10 @@ test("herkend: twee keer dezelfde medewerker, dan de camera uit, de begroeting e
   stop(app);
 });
 
-test("herkend: met RECOGNITION_TARGET 'products' opent het productvenster", async () => {
-  const { app, model, scene, clock } = createApp({ target: "products" });
-  enrollInModel(app, model);
-  await startOnStartScreen(app);
-
-  scene.frame = frame(NEAR_IN_OVAL);
-  await run(clock, FIRST_DESCRIPTOR_MS + TICK + FACE_DEMO.autoScan.greetingMs);
-
-  assert.equal(app.selectedEmployeeId, "employee-1");
-  assert.equal(app.recognizedBy, "face");
-  stop(app);
-});
-
 test("herkend: een gezicht van een inactieve collega telt niet", async () => {
   const { model } = createModel();
   addEmployee(model, { id: "employee-2", pointId: model.points[0].id, companyId: model.points[0].companyId });
-  const { app, scene, clock } = createApp({ model, target: "products" });
+  const { app, scene, clock } = createApp({ model });
   enrollInModel(app, model, "employee-2", 0.1);
   enrollInModel(app, model, "employee-1", 0.12);
   model.state.employees[1] = { ...model.employees[1], active: false };
@@ -711,7 +683,6 @@ test("herkend: Handmatig zoeken tijdens de begroeting opent niets", async () => 
   app.handleManualSearch({ detail: 1 });
   clock.advance(FACE_DEMO.autoScan.greetingMs);
 
-  assert.equal(app.fridgePhase, "closed");
   assert.equal(app.selectedEmployeeId, null);
   stop(app);
 });
@@ -727,7 +698,7 @@ test("niet herkend: na een paar pogingen een vriendelijke melding en een pauze, 
   assert.equal(scene.described.length, FACE_DEMO.autoScan.attempts);
   assert.deepEqual(lastState(view), ["unknown", "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig."]);
   assert.equal(app.standbyActive, true);
-  assert.equal(app.fridgePhase, "closed");
+  assert.equal(app.selectedEmployeeId, null);
 
   // Tijdens de pauze wordt er niet gekeken, ook al staat het gezicht nog in het ovaal.
   const detections = scene.detections;
@@ -794,7 +765,7 @@ test("levend gezicht: een foto van een collega in het ovaal opent niets en geeft
   await run(clock, FIRST_DESCRIPTOR_MS + FACE_DEMO.liveness.maxMs + TICK);
 
   assert.equal(app.greetingFor, null);
-  assert.equal(app.fridgePhase, "closed");
+  assert.equal(app.selectedEmployeeId, null);
   assert.equal(app.standbyActive, true);
   assert.deepEqual(lastState(view), ["unknown", "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig."]);
   stop(app);

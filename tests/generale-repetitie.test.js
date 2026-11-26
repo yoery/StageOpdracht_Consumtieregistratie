@@ -19,7 +19,7 @@ import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { BadgeController } from "../assets/js/controllers/BadgeController.js";
 import { FaceController } from "../assets/js/controllers/FaceController.js";
-import { createModel, createRecordingView, createFakeElement, asAdmin, disabledFridge, readAllCss } from "./helpers.js";
+import { createModel, createRecordingView, createFakeElement, asAdmin, readAllCss } from "./helpers.js";
 
 const read = (file) => fs.readFileSync(new URL(file, import.meta.url), "utf8");
 
@@ -69,7 +69,7 @@ const createApp = () => {
   const clock = createClock();
   const reader = new BadgeReader(SETTINGS, clock);
   const demo = new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader, undefined, disabledFridge()));
+  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader));
   const openModals = [];
   globalThis.document = {
     activeElement: null,
@@ -196,7 +196,7 @@ test("generale repetitie 2: zonder camera zegt het cameravenster 'Geen camera ge
       isEnrolled: () => false,
       enrolledIds: () => []
     };
-    const app = asAdmin(new RegistrationApp(model, view, undefined, demo, undefined, undefined, disabledFridge()));
+    const app = asAdmin(new RegistrationApp(model, view, undefined, demo));
     globalThis.document = { activeElement: null, querySelectorAll: () => [] };
 
     await app.openFaceModal("enroll", "employee-1");

@@ -11,8 +11,7 @@ import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { RegistrationApp } from "../assets/js/RegistrationApp.js";
 import { CsvExport } from "../assets/js/CsvExport.js";
 import { BadgeReader } from "../assets/js/BadgeReader.js";
-import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
-import { SMART_FRIDGE, STANDBY, FACE_DEMO } from "../assets/js/config.js";
+import { STANDBY, FACE_DEMO } from "../assets/js/config.js";
 import { createModel, addEmployee, createRecordingView } from "./helpers.js";
 import { face3d, project, photo, jitter } from "./helpers-gezicht.js";
 
@@ -179,7 +178,7 @@ test("FaceRecognitionDemo: een echt hoofd is na een paar keer describeFace leven
 // In de app: "Herken mij" (en de scan na een tik) en het instellen
 // ------------------------------------------------------------------
 
-const MODALS = ["#adminModal", "#employeeProductsModal", "#fridgeModal", "#faceOfferModal", "#faceModal"];
+const MODALS = ["#adminModal", "#employeeProductsModal", "#faceOfferModal", "#faceModal"];
 
 // De app met de echte FaceRecognitionDemo. readFace geeft steeds het gezicht van employee-1 terug, met
 // de volgende gezichtspunten uit `frames` (een foto of een echt hoofd). De bibliotheek telt als geladen.
@@ -205,9 +204,7 @@ const createApp = async (frames, liveness = {}) => {
     return descriptor(0.1);
   };
   const reader = new BadgeReader({ enabled: true, minLength: 4, maxKeyIntervalMs: 40, endDelayMs: 120 }, { now: () => 0, setTimeout: () => 0, clearTimeout: () => {} });
-  const fridge = SmartFridge.createSimulated({ ...SMART_FRIDGE, enabled: false }, { clock: { now: () => Date.now(), setInterval, clearInterval, setTimeout, clearTimeout } });
-  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, undefined, fridge);
-  app.recognition.recognitionTargetSetting = "products";
+  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader);
   app.standby.standbySettings = { ...STANDBY, enabled: false };
   globalThis.document = {
     activeElement: null,

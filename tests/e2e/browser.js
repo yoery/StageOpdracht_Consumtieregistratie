@@ -355,7 +355,7 @@ async function createSession({ ws, server, browserProcess, tempDir, downloadDir,
   // Dat laatste is nodig omdat een overgang ook met prefers-reduced-motion (0,01 ms) pas klaar is
   // bij het volgende beeld. De muisbeweging van CDP wacht op dat beeld. Zonder deze stap werd het
   // punt gemeten vóór dat beeld, schoof het venster daarna nog op en viel de klik ernaast (gezien bij
-  // de koelkast: het venster staat in het midden en schuift omhoog als de knopbalk verschijnt).
+  // een venster dat in het midden staat en omhoog schuift als de knopbalk verschijnt).
   const clickablePoint = (selector, { timeout = DEFAULT_TIMEOUT } = {}) => waitFor(`(async () => {
     const element = document.querySelector(${quote(selector)});
     if (!element || element.getClientRects().length === 0) return null;

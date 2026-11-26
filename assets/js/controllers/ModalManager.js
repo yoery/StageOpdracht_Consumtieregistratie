@@ -164,7 +164,6 @@ export class ModalManager extends ControllerPart {
   // iemand tekst in een invoerveld en laat hij de muis los boven de achtergrond, dan telt de
   // browser dat als klik op de achtergrond; zonder deze controle gaat de invoer dan verloren.
   // Bij een klik (sluitknop of achtergrond) krijgt `closeAction` het klikevent mee, bij Escape niets.
-  // Zo kan een venster een "spookklik" negeren (zie FridgeController.isFridgeGhostClick).
   registerModalClose(modalSelector, closeButtonSelector, closeAction) {
     document.querySelectorAll(closeButtonSelector).forEach((button) => {
       button.addEventListener("click", closeAction);

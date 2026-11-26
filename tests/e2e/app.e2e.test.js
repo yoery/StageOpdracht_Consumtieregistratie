@@ -8,7 +8,7 @@
 // Iedere test begint met lege opslag (dus met de demogegevens) en eindigt met de controle dat
 // er geen fouten in de console van de browser zijn verschenen. Sinds versie 3.21 opent de website op het
 // startscherm: browser.openApp tikt daarna op "Handmatig zoeken", zodat een test op de lijst begint. Komt
-// het startscherm terug (na registreren, na de koelkast, na een venster dat na de pas opende), dan tikt
+// het startscherm terug (na registreren of na een venster dat na de pas opende), dan tikt
 // de test opnieuw op "Handmatig zoeken" (browser.manualSearch).
 // De correctieknoppen (+ en −) in het beheer worden hier niet getest; die staan in de unit tests.
 import { describe, test, before, after, beforeEach, afterEach } from "node:test";
@@ -318,14 +318,10 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     await browser.click("#employeeSearch");
     await browser.scanBadge("04A1B2C3");
 
-    // Vanaf 3.17 opent de pas de koelkast voor Lotte (RECOGNITION_TARGET "fridge"). Er is geen camera,
-    // dus er komt geen vraag over gezichtsherkenning. Met de knop in de koelkast opent het productvenster.
-    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
-    assert.equal(await isHidden("#faceOfferModal"), true);
-    assert.match(await text("#fridgeBody"), /Lotte\. Je bent herkend met je pas\. Pak wat je wilt en sluit de deur\./);
-    await browser.click("[data-fridge-to-products]");
+    // De pas opent het productvenster van Lotte. Er is geen camera, dus er komt geen vraag over
+    // gezichtsherkenning.
     await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-    assert.equal(await isHidden("#fridgeModal"), true);
+    assert.equal(await isHidden("#faceOfferModal"), true);
     assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
     assert.match(await text("#employeeWelcome"), /Lotte, welkom terug\. Je bent herkend met je pas\./);
     // Na herkenning met de pas staat de keuze van de vorige keer klaar om over te nemen.
@@ -528,15 +524,10 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
 
   // Koppelt een pas aan een demomedewerker zonder het beheer: na één registratie staan de gegevens in
   // localStorage. Daar komt het pasnummer bij, en daarna wordt de pagina opnieuw geladen.
-  // Met `fridge: false` krijgen alle consumptiepunten een koelkast met lege schappen. Dan opent de pas
-  // het productvenster (zoals vóór 3.17), want de koelkast kan niet open (RecognitionController).
-  const linkBadgeDirectly = async (name, badgeId, { fridge = true } = {}) => {
+  const linkBadgeDirectly = async (name, badgeId) => {
     await registerProduct("Daan Smit", "blikje", 1);
     await browser.evaluate(`(() => {
       const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
-      if (!${fridge}) {
-        data.fridgeShelves = data.points.flatMap((point, index) => [1, 2, 3].map((shelf) => ({ id: "e2e-" + index + "-" + shelf, pointId: point.id, shelf, productId: null, unitWeight: null })));
-      }
       data.employees.find((employee) => employee.name === ${JSON.stringify(name)}).badgeId = ${JSON.stringify(badgeId)};
       localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
       window.oudePagina = true;
@@ -586,8 +577,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   });
 
   scenario("UX 2: een pas vervangt het open productvenster van een collega en geeft een melding bij een ander venster", async () => {
-    // Zonder schapindeling opent de pas het productvenster (zie linkBadgeDirectly).
-    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3", { fridge: false });
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
 
     // Mark kiest iets, maar registreert niet en loopt weg. Lotte houdt haar pas tegen de lezer.
     await browser.click(row("Mark Jansen"));
@@ -762,9 +752,8 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     // (EmployeeController.openEmployeeProducts). Eerder onthield de browser de scrollpositie van het
     // verborgen venster: stond de focus de vorige keer op Registreren onderaan, dan opende het venster
     // de volgende keer omlaag gescrold. Hier wordt dat nagebootst door het venster omlaag te scrollen
-    // en te sluiten, en het daarna opnieuw te openen. Zonder schapindeling opent de pas het
-    // productvenster en niet de koelkast (zie linkBadgeDirectly).
-    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3", { fridge: false });
+    // en te sluiten, en het daarna opnieuw te openen.
+    await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
     const scroller = `document.querySelector("#employeeProductsModal .modal")`;
     const header = () => browser.evaluate(`(() => {
       const top = (selector) => document.querySelector(selector).getBoundingClientRect().top;
@@ -811,137 +800,8 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   });
 
   // ------------------------------------------------------------------
-  // Slimme koelkast (demo, TO versie 3.14)
-  // ------------------------------------------------------------------
-
-  scenario("koelkast: pas koppelen, openen met de pas, 2 blikjes pakken, deur dicht en de registratie in de totalen en het beheer", async () => {
-    // Pas koppelen bij Lotte in het medewerkersformulier (de lezer typt in het veld Pasnummer).
-    await loginAsAdmin();
-    await browser.click(`.tab[data-tab="employees"]`);
-    await browser.waitFor(`!document.querySelector("#employeesTab").classList.contains("hidden")`);
-    const lotteId = await browser.evaluate(`[...document.querySelectorAll("[data-edit-employee]")]
-      .find((button) => button.closest(".admin-employee-item").textContent.includes("Lotte van Dijk")).dataset.editEmployee`);
-    await browser.click(`[data-edit-employee="${lotteId}"]`);
-    await browser.waitFor(`!document.querySelector("#employeeFormModal").classList.contains("hidden")`);
-    await browser.click("#newEmployeePayrollCode");
-    await browser.insertText("101");
-    await browser.click("#newEmployeePersonnelNumber");
-    await browser.insertText("5001");
-    await browser.click("#newEmployeeBadgeId");
-    await browser.scanBadge("04:a1:b2:c3");
-    await browser.waitFor(`document.querySelector("#newEmployeeBadgeId").value === "04A1B2C3"`);
-    await browser.click(`#employeeForm [data-save-mode="close"]`);
-    await browser.waitFor(`document.querySelector("#employeeFormModal").classList.contains("hidden")`);
-    await browser.press("Escape");
-    await browser.waitFor(`document.querySelector("#adminModal").classList.contains("hidden")`);
-
-    // Het koelkastvenster: de deur is dicht en op slot.
-    await browser.click("#fridgeOpenButton");
-    await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    assert.equal(await text("#fridgeTitle"), "Koelkast openen");
-    assert.match(await text("#fridgeBody"), /Houd je pas tegen de lezer om de koelkast te openen/);
-    assert.equal(await isHidden("#fridgeCloseDoorButton"), true);
-
-    // De pas opent de koelkast (en niet het productvenster).
-    await browser.scanBadge("04A1B2C3");
-    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
-    assert.equal(await isHidden("#employeeProductsModal"), true);
-    assert.match(await text("#fridgeBody"), /Lotte\. Pak wat je wilt en sluit de deur\./);
-    assert.match(await text(`.fridge-shelf`), /Schap 1 · Blikje\s*24 op het schap/);
-
-    // Twee blikjes pakken: de tegels van schap 1 zijn één knop. Daarna de deur dicht.
-    await browser.click(`[data-fridge-take="1"]`);
-    await browser.click(`[data-fridge-take="1"]`);
-    await browser.waitFor(`document.querySelector("#fridgeHandText").textContent === "2× Blikje"`);
-    // Een tweede scan terwijl de deur open is, telt niet.
-    await browser.scanBadge("04A1B2C3");
-    await browser.waitFor(`document.querySelector("#fridgeStatus").textContent === "De koelkast is al open. Sluit eerst de deur."`);
-    await browser.click("#fridgeCloseDoorButton");
-    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
-    assert.equal(await text("#fridgeSummaryHeading"), "Je hebt gepakt: 2× Blikje");
-    assert.match(await text("#fridgeBody"), /Dit is geregistreerd op naam van Lotte van Dijk\. De koelkast is weer op slot\./);
-    assert.equal(await browser.evaluate(`document.activeElement?.hasAttribute("data-fridge-done")`), true);
-
-    // Klaar: het venster sluit, het startscherm komt terug (3.21) en de totalen zijn bijgewerkt.
-    await browser.press("Enter");
-    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    assert.equal(await browser.manualSearch(), true, "na Klaar kwam het startscherm niet terug");
-    assert.equal(await text("#todayTotal"), "2");
-    assert.equal(await text("#monthTotal"), "2");
-
-    const stored = await browser.storedData();
-    assert.deepEqual(stored.registrations.map(({ productId, source }) => [productId, source]), [["blikje", "fridge"], ["blikje", "fridge"]]);
-    assert.equal(stored.points[0].products.blikje.stock, 22);
-    assert.equal(stored.fridgeOpenings.length, 1);
-    assert.equal(stored.fridgeOpenings[0].status, "registered");
-
-    // In het beheer: de registraties met het label Koelkast, de opening en één logboekregel.
-    await loginAsAdmin();
-    const rows = await browser.evaluate(`[...document.querySelectorAll("#adminTableBody tr")].map((tr) => [...tr.cells].slice(0, 3).map((td) => td.textContent.trim().replace(/\\s+/g, " ")))`);
-    assert.deepEqual(rows, [["Lotte van Dijk", "Blikje Koelkast", "+1"], ["Lotte van Dijk", "Blikje Koelkast", "+1"]]);
-    await browser.click(`.tab[data-tab="fridge"]`);
-    await browser.waitFor(`!document.querySelector("#fridgeTab").classList.contains("hidden")`);
-    const opening = await browser.evaluate(`[...document.querySelector("#fridgeOpeningsBody tr").cells].slice(1).map((td) => td.textContent.trim())`);
-    assert.deepEqual(opening, ["Lotte van Dijk", "2× Blikje", "Geregistreerd"]);
-    await browser.click(`.tab[data-tab="audit"]`);
-    assert.equal(await text("#auditTableBody tr td"), "Koelkast geopend");
-    assert.match(await text("#auditTableBody tr td:nth-child(2)"), /^Lotte van Dijk: 2× Blikje geregistreerd \(TVB · Hoofdkantoor\)$/);
-  });
-
-  scenario("koelkast: een onbekende pas laat de koelkast dicht, Escape sluit het venster", async () => {
-    await browser.click("#fridgeOpenButton");
-    await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
-
-    await browser.scanBadge("DEADBEEF");
-    await browser.waitFor(`document.querySelector("#fridgeStatus").textContent === "Deze pas is niet gekoppeld aan een medewerker. De koelkast blijft dicht."`);
-    assert.equal(await browser.evaluate(`document.querySelector("#fridgeStatus").getAttribute("role")`), "status");
-    assert.equal(await text("#fridgeTitle"), "Koelkast openen");
-    assert.equal(await isHidden("#employeeProductsModal"), true);
-    assert.equal(await browser.evaluate(`Boolean(document.querySelector("[data-fridge-take]"))`), false);
-
-    // Na het sluiten van het koelkastvenster komt het startscherm terug (3.21), met de focus op Handmatig zoeken.
-    await browser.press("Escape");
-    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
-    assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
-    assert.equal((await browser.storedData())?.fridgeOpenings?.length ?? 0, 0);
-  });
-
-  // ------------------------------------------------------------------
   // Rollenspeltests en FMEA van oktober 2026 (versie 3.16)
   // ------------------------------------------------------------------
-
-  // Koppelt passen rechtstreeks in localStorage en herlaadt de pagina (zonder registratie vooraf).
-  const linkBadges = async (pairs) => {
-    await browser.click(row("Daan Smit"));
-    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-    await browser.click(`[data-product-increment="blikje"]`);
-    await browser.click("#registerSelectedProductsButton");
-    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
-    await browser.evaluate(`(() => {
-      const data = JSON.parse(localStorage.getItem("tvb-blikjesregistratie"));
-      for (const [name, badgeId] of ${JSON.stringify(pairs)}) data.employees.find((employee) => employee.name === name).badgeId = badgeId;
-      localStorage.setItem("tvb-blikjesregistratie", JSON.stringify(data));
-      window.oudePagina = true;
-    })()`);
-    await browser.send("Page.reload");
-    await browser.waitFor(`!window.oudePagina && document.readyState === "complete" && document.querySelectorAll("[data-open-employee]").length > 0`);
-    await browser.manualSearch();
-  };
-
-  // Opent het koelkastvenster en opent de koelkast via de demokeuze voor deze medewerker.
-  const openFridgeForDemo = async (name) => {
-    await browser.click("#fridgeOpenButton");
-    await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    await browser.evaluate(`(() => {
-      const select = document.querySelector("#fridgeDemoEmployee");
-      select.value = [...select.options].find((option) => option.textContent === ${JSON.stringify(name)}).value;
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    })()`);
-    await browser.waitFor(`!document.querySelector("[data-fridge-demo-open]").disabled`);
-    await browser.click("[data-fridge-demo-open]");
-    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
-  };
 
   scenario("Rollenspel 1: sluiten met het kruisje of Escape zonder registreren maakt zoekveld en bedrijfsfilter leeg", async () => {
     for (const close of ["kruisje", "Escape"]) {
@@ -965,70 +825,6 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     }
   });
 
-  scenario("Rollenspel 2: een dubbeltik op Deur dicht laat het overzicht staan", async () => {
-    for (const gap of [90, 300]) {
-      await openFridgeForDemo("Lotte van Dijk");
-      await browser.click(`[data-fridge-take="1"]`);
-      const point = await browser.clickablePoint("#fridgeCloseDoorButton");
-      const tap = async () => {
-        const mouse = { x: point.x, y: point.y, button: "left", clickCount: 1 };
-        await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
-        await browser.send("Input.dispatchMouseEvent", { type: "mousePressed", ...mouse });
-        await browser.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...mouse });
-      };
-      await tap();
-      await sleep(gap);
-      await tap();
-      await sleep(200);
-      assert.equal(await isHidden("#fridgeModal"), false, `${gap} ms: het venster is nog open`);
-      assert.equal(await text("#fridgeSummaryHeading"), "Je hebt gepakt: 1× Blikje");
-
-      // Na een halve seconde sluit een tik op de achtergrond het venster wel.
-      await sleep(600);
-      const corner = { x: 4, y: 4, button: "left", clickCount: 1 };
-      await browser.send("Input.dispatchMouseEvent", { type: "mousePressed", ...corner });
-      await browser.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...corner });
-      await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
-      await browser.manualSearch();
-    }
-    assert.equal((await browser.storedData()).registrations.length, 2);
-  });
-
-  scenario("Rollenspel 3: de open koelkast noemt de naam, de pas van een collega geeft Controle nodig", async () => {
-    const { identifier } = await browser.send("Page.addScriptToEvaluateOnNewDocument", {
-      source: "(() => { const echt = Date.now.bind(Date); window.klokVooruit = 0; Date.now = () => echt() + window.klokVooruit; })()"
-    });
-    try {
-      await browser.openApp();
-      await linkBadges([["Lotte van Dijk", "04A1B2C3"], ["Mark Jansen", "0499AABB"]]);
-      await browser.click("#fridgeOpenButton");
-      await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
-      await browser.scanBadge("04A1B2C3");
-      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
-      assert.equal(await text("#fridgeOwner"), "Alles wat je nu pakt, staat op naam van Lotte van Dijk.");
-      await browser.click(`[data-fridge-take="1"]`);
-
-      // Na een minuut noemt de waarschuwing op wiens naam de koelkast open is.
-      await browser.evaluate("window.klokVooruit = 61000");
-      await browser.waitFor(`document.querySelector("#fridgeDoorWarning").textContent === "De deur staat al lang open. Sluit de deur. Wat er nu wordt gepakt, staat op naam van Lotte van Dijk."`);
-
-      // Mark houdt zijn pas ertegen terwijl de deur open is.
-      await browser.scanBadge("0499AABB");
-      await browser.waitFor(`document.querySelector("#fridgeStatus").textContent === "De koelkast is al open op naam van Lotte van Dijk. Sluit eerst de deur en open dan met je eigen pas. De beheerder kijkt naar deze opening."`);
-      await browser.click(`[data-fridge-take="1"]`);
-      await browser.click("#fridgeCloseDoorButton");
-      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
-      assert.match(await text("#fridgeBody"), /Dit is geregistreerd op naam van Lotte van Dijk\./);
-      assert.match(await text("#fridgeBody"), /Er is een andere pas gescand terwijl de deur openstond\./);
-
-      const stored = await browser.storedData();
-      assert.equal(stored.fridgeOpenings[0].status, "check");
-      assert.equal(stored.fridgeOpenings[0].otherBadge, true);
-    } finally {
-      await browser.send("Page.removeScriptToEvaluateOnNewDocument", { identifier });
-    }
-  });
-
   scenario("Rollenspel 4: een registratie die een ander tabblad net opsloeg, wordt niet overschreven", async () => {
     await registerProduct("Daan Smit", "blikje", 1);
     // Een ander tabblad slaat een registratie op. In hetzelfde tabblad komt geen storage-event, net als
@@ -1045,22 +841,6 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     const stored = await browser.storedData();
     assert.deepEqual(stored.registrations.map(({ productId }) => productId), ["blikje", "ei", "yoghurt"]);
     assert.equal(await text("#todayTotal"), "3");
-  });
-
-  scenario("Rollenspel 8: de demokeuze in de koelkast begint leeg en Openen (demo) staat pas aan na een keuze", async () => {
-    await browser.click("#fridgeOpenButton");
-    await browser.waitFor(`!document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    assert.equal(await browser.evaluate(`document.querySelector("#fridgeDemoEmployee").value`), "");
-    assert.equal(await browser.evaluate(`document.querySelector("#fridgeDemoEmployee").selectedOptions[0].textContent`), "Kies een medewerker");
-    assert.equal(await browser.evaluate(`document.querySelector("[data-fridge-demo-open]").disabled`), true);
-    assert.equal(await browser.evaluate(`document.activeElement?.hasAttribute("data-close-fridge")`), true);
-    await browser.press("Escape");
-    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
-    await browser.manualSearch();
-
-    await openFridgeForDemo("Mark Jansen");
-    assert.match(await text("#fridgeBody"), /Mark\. Pak wat je wilt en sluit de deur\./);
-    assert.equal(await text("#fridgeOwner"), "Alles wat je nu pakt, staat op naam van Mark Jansen.");
   });
 
   // ------------------------------------------------------------------
@@ -1167,7 +947,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     });
   });
 
-  scenario("startscherm: een passcan op het startscherm opent meteen de koelkast, en na Klaar komt het startscherm terug", async () => {
+  scenario("startscherm: een passcan op het startscherm opent meteen het productvenster, en na Registreren komt het startscherm terug", async () => {
     await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
     await browser.evaluate("window.oudePagina = true");
     await browser.send("Page.reload");
@@ -1176,19 +956,20 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
 
     // De lezer typt het pasnummer met een Enter erachter: die Enter drukt niet op Handmatig zoeken.
     await browser.scanBadge("04A1B2C3");
-    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
     assert.equal(await startScreenShown(), false);
-    assert.match(await text("#fridgeBody"), /Lotte\. Je bent herkend met je pas\./);
-    assert.deepEqual(await openModalIds(), ["fridgeModal"], "zonder camera geen vraag over gezichtsherkenning");
+    assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
+    assert.match(await text("#employeeWelcome"), /Lotte.*Je bent herkend met je pas\.$/);
+    assert.deepEqual(await openModalIds(), ["employeeProductsModal"], "zonder camera geen vraag over gezichtsherkenning");
 
-    await browser.click(`[data-fridge-take="1"]`);
-    await browser.click("#fridgeCloseDoorButton");
-    await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is dicht"`);
-    await browser.press("Enter");
-    await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+    await browser.click(`[data-product-increment="blikje"]`);
+    await browser.click("#registerSelectedProductsButton");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
     await browser.waitFor(`!document.querySelector("#startScreen").classList.contains("hidden")`);
     assert.equal(await browser.evaluate(`document.activeElement?.id`), "startManualButton");
-    assert.equal((await browser.storedData()).registrations.filter(({ source }) => source === "fridge").length, 1);
+    const afterBadge = await browser.storedData();
+    const lotteId = afterBadge.employees.find(({ name }) => name === "Lotte van Dijk").id;
+    assert.equal(afterBadge.registrations.filter(({ employeeId }) => employeeId === lotteId).length, 1);
 
     // Een onbekende pas op het startscherm: een melding, het startscherm blijft staan.
     await browser.scanBadge("DEADBEEF");
@@ -1230,7 +1011,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     }
   });
 
-  scenario("vraag na een passcan: Nee wordt onthouden en daarna gaat de koelkast open", async () => {
+  scenario("vraag na een passcan: Nee wordt onthouden en daarna opent het productvenster", async () => {
     await withPageScripts([FAKE_CAMERA], async () => {
       await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
       await browser.scanBadge("04A1B2C3");
@@ -1240,28 +1021,29 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       assert.match(await text("#faceOfferGreeting"), /Lotte\. Je bent herkend met je pas\.$/);
       assert.equal(await text("#faceOfferHelp"), "Het is vrijwillig. Alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist. Je pas blijft altijd werken.");
       assert.equal(await browser.evaluate(`document.activeElement?.id`), "faceOfferNoButton");
-      assert.equal(await isHidden("#fridgeModal"), true, "de koelkast opent pas na het antwoord");
+      assert.equal(await isHidden("#employeeProductsModal"), true, "het productvenster opent pas na het antwoord");
 
       await browser.click("#faceOfferNoButton");
-      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open"`);
-      assert.deepEqual(await openModalIds(), ["fridgeModal"]);
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["employeeProductsModal"]);
+      assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
       const stored = await browser.storedData();
       const lotte = stored.employees.find(({ name }) => name === "Lotte van Dijk");
       assert.deepEqual(stored.faceOffers.map(({ employeeId, answer }) => [employeeId, answer]), [[lotte.id, "declined"]]);
       assert.deepEqual(stored.faceEnrollments, []);
       assert.equal(stored.auditLog.length, 0, "Nee komt niet in het logboek");
 
-      // Deur dicht zonder iets te pakken, en opnieuw de pas: geen vraag meer.
+      // Sluiten zonder iets te kiezen, en opnieuw de pas: geen vraag meer.
       await browser.press("Escape");
-      await browser.waitFor(`document.querySelector("#fridgeModal").classList.contains("hidden")`);
+      await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
       await sleep(600);
       await browser.scanBadge("04A1B2C3");
-      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open" && !document.querySelector("#fridgeModal").classList.contains("hidden")`);
-      assert.deepEqual(await openModalIds(), ["fridgeModal"]);
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["employeeProductsModal"]);
     });
   });
 
-  scenario("vraag na een passcan: Ja opent het instelvenster met het vinkje, Annuleren gaat door naar de koelkast", async () => {
+  scenario("vraag na een passcan: Ja opent het instelvenster met het vinkje, Annuleren gaat door naar het productvenster", async () => {
     await withPageScripts([FAKE_CAMERA], async () => {
       await linkBadgeDirectly("Lotte van Dijk", "04A1B2C3");
       await browser.scanBadge("04A1B2C3");
@@ -1276,8 +1058,9 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
       assert.equal(await browser.evaluate(`document.querySelector("#faceEnrollButton").disabled`), true);
 
       await browser.click("#faceModal .employee-form-actions [data-close-face-modal]");
-      await browser.waitFor(`document.querySelector("#fridgeTitle").textContent === "De deur is open" && !document.querySelector("#fridgeModal").classList.contains("hidden")`);
-      assert.deepEqual(await openModalIds(), ["fridgeModal"]);
+      await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+      assert.deepEqual(await openModalIds(), ["employeeProductsModal"]);
+      assert.equal(await text("#employeeProductsTitle"), "Product kiezen voor Lotte van Dijk");
       const stored = await browser.storedData();
       assert.deepEqual(stored?.faceEnrollments ?? [], []);
       assert.deepEqual(stored?.faceOffers ?? [], [], "Annuleren onthoudt niets");
@@ -1463,6 +1246,6 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
     assert.deepEqual(result, { loaded: ["toekomst-1"], audit: 1, copyHasFaces: false, copyHasBroken: true, copyDate: true });
 
     await login();
-    await waitForToast("Er is 1 registratie, opening of logboekregel met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?");
+    await waitForToast("Er is 1 registratie of logboekregel met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?");
   });
 });

@@ -99,10 +99,9 @@ export class AdminController extends ControllerPart {
   }
 
   // Tekent alle lijsten en tabellen van het beheer opnieuw: de filters, de registraties, de
-  // medewerkers, de correctielijst, de producten, de bedrijven, de voorraad, het logboek en het
-  // tabblad Koelkast. Met `stock: false` of `fridge: false` blijft de voorraadtabel of het
-  // koelkastformulier staan, bijvoorbeeld omdat de beheerder daar nog in typt.
-  renderAdminLists({ stock = true, fridge = true } = {}) {
+  // medewerkers, de correctielijst, de producten, de bedrijven, de voorraad en het logboek. Met
+  // `stock: false` blijft de voorraadtabel staan, bijvoorbeeld omdat de beheerder daar nog in typt.
+  renderAdminLists({ stock = true } = {}) {
     this.view.populateFilters();
     this.view.renderAdmin();
     this.view.renderAdminEmployees();
@@ -111,7 +110,6 @@ export class AdminController extends ControllerPart {
     this.view.renderAdminCompanies();
     if (stock) this.view.renderStock();
     this.renderAuditLog();
-    if (fridge) this.view.renderFridgeAdmin();
   }
 
   // Tekent het logboek opnieuw met het aantal regels dat de beheerder nu ziet. Zo blijft het
@@ -272,10 +270,10 @@ export class AdminController extends ControllerPart {
   }
 
   // De melding (en de tekst in het logboek) als er regels met een tijdstip in de toekomst zijn, bijvoorbeeld
-  // "Er zijn 3 registraties, openingen of logboekregels met een tijdstip meer dan een dag in de toekomst.
+  // "Er zijn 3 registraties of logboekregels met een tijdstip meer dan een dag in de toekomst.
   // Klopt de klok van deze tablet?" Sinds versie 3.26 worden zulke regels niet meer overgeslagen.
   static futureTimesMessage(count) {
-    const subject = count === 1 ? "is 1 registratie, opening of logboekregel" : `zijn ${count} registraties, openingen of logboekregels`;
+    const subject = count === 1 ? "is 1 registratie of logboekregel" : `zijn ${count} registraties of logboekregels`;
     return `Er ${subject} met een tijdstip meer dan een dag in de toekomst. Klopt de klok van deze tablet?`;
   }
 
@@ -291,10 +289,9 @@ export class AdminController extends ControllerPart {
     return this.app.persist(() => {}, { action: AdminController.FUTURE_ACTION, details });
   }
 
-  // Wisselt naar een ander tabblad in het dashboard. Het tabblad Koelkast (slimme koelkast, demo)
-  // bestaat alleen in index.html als de koelkast erin staat; een ontbrekend paneel wordt overgeslagen.
+  // Wisselt naar een ander tabblad in het dashboard. Een ontbrekend paneel wordt overgeslagen.
   switchTab(activeTab) {
-    const tabNames = ["registrations", "employees", "products", "companies", "stock", "fridge", "audit"];
+    const tabNames = ["registrations", "employees", "products", "companies", "stock", "audit"];
     if (!activeTab) return; // geen bestaand tabblad gevonden (bijvoorbeeld een onbekende naam)
 
     // aria-selected zegt een schermlezer welk tabblad (role="tab") gekozen is.
@@ -353,7 +350,7 @@ export class AdminController extends ControllerPart {
   wipeAllData() {
     // Alleen voor een ingelogde beheerder: wissen kan niet ongedaan worden gemaakt.
     if (!this.requireAdmin()) return;
-    const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?";
+    const firstQuestion = "Alle medewerkers, registraties, producten, voorraad, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?";
     if (!window.confirm(firstQuestion)) return;
     if (!window.confirm("Weet je het zeker? Dit kan niet ongedaan worden gemaakt.")) return;
 

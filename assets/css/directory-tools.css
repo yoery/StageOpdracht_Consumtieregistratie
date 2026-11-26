@@ -1,13 +1,13 @@
-﻿/* Beginpagina: de regel met de hint voor de pas en de demoknoppen (camera en slimme koelkast),
+﻿/* Beginpagina: de regel met de hint voor de pas en de demoknop (camera),
    "Tik op je naam" naast de teller, en het zoekveld en het bedrijfsfilter naast elkaar vanaf een
    tablet.
    Laadt na suggestion.css.
    De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
 /* Demo gezichtsherkenning: knop op de beginpagina en instellen in het productvenster. */
-/* De hint voor de pas en de demoknoppen ("Herken mij met de camera (demo)" en "Slimme koelkast (demo)")
-   staan naast elkaar op één regel (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger
-   op het scherm. De demoknoppen staan samen rechts (.directory-actions). Staan ze allemaal uit
-   (config.js), dan verdwijnt de regel helemaal. */
+/* De hint voor de pas en de demoknop ("Herken mij met de camera (demo)") staan naast elkaar op één
+   regel (op een smal scherm onder elkaar). Zo begint de medewerkerlijst hoger op het scherm. De
+   demoknop staat rechts (.directory-actions). Staan ze allebei uit (config.js), dan verdwijnt de
+   regel helemaal. */
 .directory-tools {
   display:flex;
   align-items:center;

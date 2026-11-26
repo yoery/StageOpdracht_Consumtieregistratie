@@ -1,5 +1,5 @@
 // Tests voor versie 3.17: de standby van de tablet, tik om te scannen, wat er opent na herkennen
-// (koelkast of productvenster), de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" na een
+// (het productvenster), de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" na een
 // passcan, het jaarlijks verlopen van een gezichtsinstelling en het opslaan, controleren en wissen van
 // de gezichtskenmerken. Met een nep-klok, een nep-camera (mediaDevices) en zonder face-api: het laden
 // en het lezen van een gezicht worden nagebootst.
@@ -14,11 +14,10 @@ import { DataStore } from "../assets/js/DataStore.js";
 import { CsvExport } from "../assets/js/CsvExport.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { BadgeReader } from "../assets/js/BadgeReader.js";
-import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
 import { StandbyController } from "../assets/js/controllers/StandbyController.js";
 import { RecognitionController } from "../assets/js/controllers/RecognitionController.js";
 import { FaceController } from "../assets/js/controllers/FaceController.js";
-import { SMART_FRIDGE, STANDBY, FACE_DEMO, RECOGNITION_TARGET } from "../assets/js/config.js";
+import { STANDBY, FACE_DEMO } from "../assets/js/config.js";
 import { createModel, addEmployee, createRecordingView, createFakeElement, createStore, fakeLocalStorage, asAdmin } from "./helpers.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -89,11 +88,11 @@ const createDemo = (camera, { settings = {}, seen = () => null } = {}) => {
 };
 
 // De vensters in de volgorde van index.html (het laatste open venster ligt bovenaan).
-const MODALS = ["#adminModal", "#employeeProductsModal", "#fridgeModal", "#faceOfferModal", "#faceModal"];
+const MODALS = ["#adminModal", "#employeeProductsModal", "#faceOfferModal", "#faceModal"];
 
-// Controller met een nep-view, nep-klok, nep-camera en een nagebootste koelkast. employee-1 (Test
-// Medewerker) heeft pas 04A1B2C3 en hoort bij het demo-consumptiepunt met de standaardindeling.
-const createApp = ({ model = createModel().model, hasCamera = true, faceSettings = {}, seen, fridge = true, target = RECOGNITION_TARGET, standby = STANDBY } = {}) => {
+// Controller met een nep-view, nep-klok en nep-camera. employee-1 (Test Medewerker) heeft pas 04A1B2C3
+// en hoort bij het demo-consumptiepunt.
+const createApp = ({ model = createModel().model, hasCamera = true, faceSettings = {}, seen, standby = STANDBY } = {}) => {
   model.state.employees[0].badgeId = "04A1B2C3";
   const view = createRecordingView();
   for (const selector of MODALS) view.$(selector).classList.add("hidden");
@@ -103,9 +102,7 @@ const createApp = ({ model = createModel().model, hasCamera = true, faceSettings
   const camera = createCamera({ hasCamera });
   const demo = createDemo(camera, { settings: faceSettings, seen });
   const reader = new BadgeReader({ enabled: true, minLength: 4, maxKeyIntervalMs: 40, endDelayMs: 120 }, { now: () => 0, setTimeout: () => 0, clearTimeout: () => {} });
-  const smartFridge = SmartFridge.createSimulated({ ...SMART_FRIDGE, enabled: fridge, weightVariation: 0 }, { clock });
-  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, clock, smartFridge);
-  app.recognition.recognitionTargetSetting = target;
+  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, clock);
   app.standby.standbySettings = standby;
   globalThis.document = {
     activeElement: null,
@@ -157,11 +154,11 @@ test("standby: iedere invoer begint de tijd opnieuw", () => {
 test("standby: niet met een open venster of een open productvenster", () => {
   const { app, view, clock } = createApp();
   app.startStandbyWatch();
-  view.$("#fridgeModal").classList.remove("hidden");
+  view.$("#adminModal").classList.remove("hidden");
   clock.advance(STANDBY.idleMs * 3);
   assert.equal(app.standbyActive, false);
 
-  view.$("#fridgeModal").classList.add("hidden");
+  view.$("#adminModal").classList.add("hidden");
   app.selectedEmployeeId = "employee-1";
   clock.advance(STANDBY.idleMs * 3);
   assert.equal(app.standbyActive, false);
@@ -205,13 +202,13 @@ test("startscherm: Handmatig zoeken verbergt het startscherm en gaat niet door n
   assert.equal(prevented && stopped, true);
 
   // Een klik die de browser vlak daarna naar een knop onder het standby-scherm stuurt, telt niet.
-  const ghost = { target: createFakeElement({ id: "fridgeOpenButton" }), stopped: false, preventDefault() {}, stopPropagation() { this.stopped = true; } };
+  const ghost = { target: createFakeElement({ id: "faceRecognizeButton" }), stopped: false, preventDefault() {}, stopPropagation() { this.stopped = true; } };
   assert.equal(app.swallowStandbyGhostClick(ghost), true);
   assert.equal(ghost.stopped, true);
 
   // Na een halve seconde werkt klikken weer gewoon.
   clock.advance(StandbyController.GHOST_CLICK_MS);
-  assert.equal(app.swallowStandbyGhostClick({ target: createFakeElement({ id: "fridgeOpenButton" }), preventDefault() {}, stopPropagation() {} }), false);
+  assert.equal(app.swallowStandbyGhostClick({ target: createFakeElement({ id: "faceRecognizeButton" }), preventDefault() {}, stopPropagation() {} }), false);
 });
 
 test("startscherm (tap): een tik op het ovaal doet niets zolang niemand een gezicht heeft ingesteld", () => {
@@ -226,7 +223,7 @@ test("startscherm (tap): een tik op het ovaal doet niets zolang niemand een gezi
 });
 
 test("standby: een passcan op het startscherm wordt meteen verwerkt en het startscherm verdwijnt", () => {
-  const { app, view, camera } = createApp({ target: "products" });
+  const { app, view, camera } = createApp();
   app.enterStandby();
 
   app.recognizeBadge("04A1B2C3");
@@ -291,7 +288,6 @@ test("camera: gaat aan na een tik op het standby-scherm en na de scantijd weer u
   assert.equal(isOpen(view, "#faceModal"), false, "het scanvenster is dicht");
   assert.deepEqual(toastTexts(view), [FaceController.WAKE_MESSAGES.notRecognized]);
   assert.equal(app.selectedEmployeeId, null);
-  assert.equal(app.fridgePhase, "closed");
 });
 
 test("camera: Stoppen zet de camera meteen uit", async () => {
@@ -331,26 +327,8 @@ test("tik om te scannen: geen scan zonder demo, zonder camera of zonder actief i
   for (const { camera } of [noFaces, noCamera, disabled, inactive]) assert.equal(camera.starts, 0);
 });
 
-test("tik om te scannen: herkend opent de koelkast met de begroeting en zet de camera uit", async () => {
+test("tik om te scannen: herkend opent het productvenster met de begroeting en zet de camera uit", async () => {
   const { app, view, model, camera } = createApp({ seen: () => face(0.1) });
-  enrollInModel(app, model);
-  app.enterStandby();
-
-  app.handleStandbyTap({});
-  await wait(30);
-
-  assert.equal(app.fridgePhase, "open");
-  assert.equal(app.fridgeEmployeeId, "employee-1");
-  assert.equal(app.fridgeRecognizedBy, "face");
-  const lastWindow = view.calls.filter(([name]) => name === "renderFridgeWindow").at(-1)[1];
-  assert.equal(lastWindow.recognizedBy, "face");
-  assert.equal(camera.on, false);
-  assert.equal(isOpen(view, "#faceModal"), false);
-  app.finishFridgeWindow();
-});
-
-test("tik om te scannen: met RECOGNITION_TARGET 'products' opent het productvenster", async () => {
-  const { app, model } = createApp({ seen: () => face(0.1), target: "products" });
   enrollInModel(app, model);
   app.enterStandby();
 
@@ -359,26 +337,15 @@ test("tik om te scannen: met RECOGNITION_TARGET 'products' opent het productvens
 
   assert.equal(app.selectedEmployeeId, "employee-1");
   assert.equal(app.recognizedBy, "face");
-  assert.equal(app.fridgePhase, "closed");
-});
-
-test("tik om te scannen: zonder schapindeling op het consumptiepunt opent het productvenster", async () => {
-  const { app, model } = createApp({ seen: () => face(0.1) });
-  model.saveFridgeShelves(model.points[0].id, [{ shelf: 1, productId: null }, { shelf: 2, productId: null }, { shelf: 3, productId: null }]);
-  enrollInModel(app, model);
-  app.enterStandby();
-
-  app.handleStandbyTap({});
-  await wait(30);
-
-  assert.equal(app.selectedEmployeeId, "employee-1");
-  assert.equal(app.fridgePhase, "closed");
+  assert.equal(app.standbyActive, false);
+  assert.equal(camera.on, false);
+  assert.equal(isOpen(view, "#faceModal"), false);
 });
 
 test("tik om te scannen: een gezicht van een inactieve collega telt niet (allowedIds)", async () => {
   const { model } = createModel();
   addEmployee(model, { id: "employee-2", pointId: model.points[0].id, companyId: model.points[0].companyId });
-  const { app } = createApp({ model, seen: () => face(0.1), target: "products" });
+  const { app } = createApp({ model, seen: () => face(0.1) });
   enrollInModel(app, model, "employee-2", 0.1);
   enrollInModel(app, model, "employee-1", 0.12);
   model.state.employees[1] = { ...model.employees[1], active: false };
@@ -391,43 +358,18 @@ test("tik om te scannen: een gezicht van een inactieve collega telt niet (allowe
 });
 
 // ------------------------------------------------------------------
-// Na een passcan: koelkast of productvenster, en de vraag over gezichtsherkenning
+// Na een passcan: het productvenster, en de vraag over gezichtsherkenning
 // ------------------------------------------------------------------
 
-test("pas: opent de koelkast voor de medewerker met 'Je bent herkend met je pas.'", async () => {
+test("pas: opent het productvenster voor de medewerker met 'Je bent herkend met je pas.'", async () => {
   const { app, view, demo } = createApp({ hasCamera: false });
   await demo.detectCamera();
 
   app.recognizeBadge("04A1B2C3");
 
-  assert.equal(app.fridgePhase, "open");
-  assert.equal(app.fridgeRecognizedBy, "badge");
-  assert.equal(isOpen(view, "#faceOfferModal"), false, "zonder camera geen vraag");
-  app.finishFridgeWindow();
-});
-
-test("pas: de knop in de open koelkast opent in plaats daarvan het productvenster", async () => {
-  const { app, model, demo } = createApp({ hasCamera: false });
-  await demo.detectCamera();
-  app.recognizeBadge("04A1B2C3");
-
-  assert.equal(app.switchFridgeToProducts(), true);
-
-  assert.equal(app.fridgePhase, "closed");
   assert.equal(app.selectedEmployeeId, "employee-1");
   assert.equal(app.recognizedBy, "badge");
-  assert.equal(model.registrations.length, 0);
-});
-
-test("pas: met iets in de hand opent de knop het productvenster niet", async () => {
-  const { app, demo } = createApp({ hasCamera: false });
-  await demo.detectCamera();
-  app.recognizeBadge("04A1B2C3");
-  app.takeFromShelf(1);
-
-  assert.equal(app.switchFridgeToProducts(), false);
-  assert.equal(app.fridgePhase, "open");
-  app.finishFridgeWindow();
+  assert.equal(isOpen(view, "#faceOfferModal"), false, "zonder camera geen vraag");
 });
 
 test("vraag: na een passcan zonder gezichtsinstelling, met camera", async () => {
@@ -440,10 +382,10 @@ test("vraag: na een passcan zonder gezichtsinstelling, met camera", async () => 
   assert.equal(view.$("#faceOfferTitle").textContent, "Gezichtsherkenning nog niet ingesteld. Wil je dit?");
   assert.equal(view.$("#faceOfferHelp").textContent, RecognitionController.OFFER_HELP);
   assert.equal(view.$("#faceOfferNoButton").focused, true);
-  assert.equal(app.fridgePhase, "closed", "de koelkast opent pas na het antwoord");
+  assert.equal(app.selectedEmployeeId, null, "het productvenster opent pas na het antwoord");
 });
 
-test("vraag: Nee wordt onthouden en daarna gaat de koelkast open. De volgende keer komt de vraag niet", async () => {
+test("vraag: Nee wordt onthouden en daarna opent het productvenster. De volgende keer komt de vraag niet", async () => {
   const { app, view, model, demo } = createApp();
   await demo.detectCamera();
   app.recognizeBadge("04A1B2C3");
@@ -452,18 +394,17 @@ test("vraag: Nee wordt onthouden en daarna gaat de koelkast open. De volgende ke
 
   assert.equal(isOpen(view, "#faceOfferModal"), false);
   assert.equal(model.faceOfferAnswer("employee-1"), "declined");
-  assert.equal(app.fridgePhase, "open");
+  assert.equal(app.selectedEmployeeId, "employee-1");
   assert.equal(model.auditLog.length, 0, "Nee komt niet in het logboek");
-  app.finishFridgeWindow();
+  app.closeEmployeeProducts();
 
   app.recognizeBadge("04A1B2C3");
   assert.equal(isOpen(view, "#faceOfferModal"), false);
-  assert.equal(app.fridgePhase, "open");
-  app.finishFridgeWindow();
+  assert.equal(app.selectedEmployeeId, "employee-1");
 });
 
 test("vraag: kruisje of Escape onthoudt niets, de flow gaat wel verder", async () => {
-  const { app, view, model, demo } = createApp({ target: "products" });
+  const { app, view, model, demo } = createApp();
   await demo.detectCamera();
   app.recognizeBadge("04A1B2C3");
 
@@ -476,7 +417,7 @@ test("vraag: kruisje of Escape onthoudt niets, de flow gaat wel verder", async (
   assert.equal(isOpen(view, "#faceOfferModal"), true);
 });
 
-test("vraag: Ja opent het instelvenster met het vinkje. Na vastleggen opgeslagen en daarna de koelkast", async () => {
+test("vraag: Ja opent het instelvenster met het vinkje. Na vastleggen opgeslagen en daarna het productvenster", async () => {
   const { app, view, model, demo, camera } = createApp({ seen: () => face(0.2) });
   await demo.detectCamera();
   app.recognizeBadge("04A1B2C3");
@@ -495,17 +436,17 @@ test("vraag: Ja opent het instelvenster met het vinkje. Na vastleggen opgeslagen
   assert.equal(model.faceEnrollment("employee-1").descriptor.length, 128);
   assert.equal(demo.isEnrolled("employee-1"), true);
   assert.equal(camera.on, false);
-  assert.equal(app.fridgePhase, "open", "na het instellen gaat de koelkast open");
+  assert.equal(app.selectedEmployeeId, "employee-1", "na het instellen opent het productvenster");
   assert.deepEqual(model.auditLog.map(({ action, details }) => [action, details]), [["Gezichtsherkenning ingesteld", "Test Medewerker"]]);
-  app.finishFridgeWindow();
+  app.closeEmployeeProducts();
 
   // De volgende passcan: geen vraag meer.
   app.recognizeBadge("04A1B2C3");
   assert.equal(isOpen(view, "#faceOfferModal"), false);
-  app.finishFridgeWindow();
+  assert.equal(app.selectedEmployeeId, "employee-1");
 });
 
-test("vraag: Ja en dan Annuleren in het instelvenster: niets opgeslagen, de koelkast gaat toch open", async () => {
+test("vraag: Ja en dan Annuleren in het instelvenster: niets opgeslagen, het productvenster opent toch", async () => {
   const { app, model, demo, camera } = createApp();
   await demo.detectCamera();
   app.recognizeBadge("04A1B2C3");
@@ -516,13 +457,12 @@ test("vraag: Ja en dan Annuleren in het instelvenster: niets opgeslagen, de koel
 
   assert.equal(model.faceEnrollments.length, 0);
   assert.equal(camera.on, false);
-  assert.equal(app.fridgePhase, "open");
-  app.finishFridgeWindow();
+  assert.equal(app.selectedEmployeeId, "employee-1");
 });
 
 test("vraag: niet als de demo uit staat, als er geen camera is of als offerAfterBadge uit staat", async () => {
   for (const options of [{ faceSettings: { enabled: false } }, { hasCamera: false }, { faceSettings: { offerAfterBadge: false } }]) {
-    const { app, view, demo } = createApp({ ...options, target: "products" });
+    const { app, view, demo } = createApp({ ...options });
     await demo.detectCamera();
     app.recognizeBadge("04A1B2C3");
     assert.equal(isOpen(view, "#faceOfferModal"), false, JSON.stringify(options));
@@ -542,7 +482,7 @@ test("vraag: zonder antwoord sluit de vraag na offerIdleCloseMs, zonder iets te 
 
   assert.equal(isOpen(view, "#faceOfferModal"), false);
   assert.equal(model.faceOfferAnswer("employee-1"), null);
-  assert.equal(app.fridgePhase, "closed");
+  assert.equal(app.selectedEmployeeId, null);
   app.stopStandbyWatch();
 });
 
@@ -554,8 +494,7 @@ test("vraag: met een geldige gezichtsinstelling komt de vraag niet", async () =>
   app.recognizeBadge("04A1B2C3");
 
   assert.equal(isOpen(view, "#faceOfferModal"), false);
-  assert.equal(app.fridgePhase, "open");
-  app.finishFridgeWindow();
+  assert.equal(app.selectedEmployeeId, "employee-1");
 });
 
 // ------------------------------------------------------------------
@@ -744,7 +683,7 @@ test("privacy: de kenmerken staan niet in de CSV-export en niet in het logboek",
   await wait(10);
   view.$("#faceConsent").checked = true;
   await app.captureEnrollment();
-  app.finishFridgeWindow();
+  app.closeEmployeeProducts();
 
   const csv = app.csvExport.toCsv(app.csvExport.buildRows("all", "all"));
   assert.equal(csv.includes("0.314159"), false);

@@ -1,6 +1,5 @@
 import { STOCK_STATUS } from "./RegistrationModel.js";
 import { icon } from "./icons.js";
-import { FridgeView } from "./FridgeView.js";
 
 // Maakt een waarde veilig om tussen aanhalingstekens in een CSS-selector te zetten, zoals
 // `[data-stock-status="${cssAttributeValue(id)}"]`. Zonder deze stap breekt een id met een " of \
@@ -27,8 +26,6 @@ export function cssAttributeValue(value) {
  *   - index.html: de view vult de elementen met een id, zoals #employeeList en #stockTableBody.
  *   - RegistrationApp: bepaalt wanneer er opnieuw getekend moet worden en roept dan de
  *     render-methodes aan. De view weet zelf niets van de controller.
- *   - FridgeView: tekent het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo). Deze
- *     view maakt FridgeView en geeft de methodes daarvan door (renderFridgeWindow en verder).
  */
 export class RegistrationView {
   // De waarschuwing in het productvenster vlak voordat het vanzelf sluit (zie showIdleWarning).
@@ -43,35 +40,9 @@ export class RegistrationView {
   constructor(model) {
     this.model = model;
     this.$ = (selector) => document.querySelector(selector);
-    // Het koelkastvenster en het tabblad Koelkast (slimme koelkast, demo) staan in een eigen class.
-    this.fridge = new FridgeView(this);
     // Functie van de controller die zegt of de beheerder een gezicht kan instellen (zie adminFaceParts).
     // Zonder controller (bijvoorbeeld in een test) staan er geen knoppen voor gezichtsherkenning.
     this.faceSetup = null;
-  }
-
-  // ------------------------------------------------------------------
-  // Slimme koelkast (demo): doorgegeven aan FridgeView
-  // ------------------------------------------------------------------
-
-  renderFridgeWindow(state) {
-    this.fridge.renderFridgeWindow(state);
-  }
-
-  setFridgeStatus(text, tone) {
-    this.fridge.setFridgeStatus(text, tone);
-  }
-
-  announceFridge(text) {
-    this.fridge.announceFridge(text);
-  }
-
-  setDoorWarning(shown, name) {
-    this.fridge.setDoorWarning(shown, name);
-  }
-
-  renderFridgeAdmin() {
-    this.fridge.renderFridgeAdmin();
   }
 
   // Escapet tekst voordat die in innerHTML wordt geplaatst. Dit geldt voor namen, maar ook
@@ -312,8 +283,7 @@ export class RegistrationView {
     this.$("#monthTotal").textContent = this.model.countForMonth(now);
   }
 
-  // Rendert de gefilterde registratietabel in het admin-dashboard. Een registratie die de slimme
-  // koelkast (demo) automatisch heeft gemaakt, krijgt het label "Koelkast" achter de productnaam.
+  // Rendert de gefilterde registratietabel in het admin-dashboard.
   renderAdmin() {
     const monthFilter = this.$("#filterMonth").value;
     const employeeFilter = this.$("#filterEmployee").value;
@@ -333,7 +303,7 @@ export class RegistrationView {
         return `
           <tr>
             <td>${employee ? this.escapeHtml(employee.name) : "Verwijderd"}</td>
-            <td>${this.escapeHtml(this.model.productName(registration.productId))}${registration.source === "fridge" ? ` <span class="badge-linked">Koelkast</span>` : ""}</td>
+            <td>${this.escapeHtml(this.model.productName(registration.productId))}</td>
             <td>+1</td>
             <td>${this.formatDate(registration.createdAt)}</td>
           </tr>`;
@@ -966,7 +936,7 @@ export class RegistrationView {
   }
 
   // Vult een keuzelijst met alle consumptiepunten, gegroepeerd per bedrijf. Het punt dat gekozen
-  // was, blijft gekozen als het nog bestaat. Voor de voorraad en voor het tabblad Koelkast.
+  // was, blijft gekozen als het nog bestaat. Voor het tabblad Voorraad.
   fillPointSelect(select) {
     const selected = select.value;
     select.innerHTML = this.model.sortedCompanies()
@@ -1090,7 +1060,7 @@ export class RegistrationView {
     const containers = [
       "#adminTableBody", "#adminCorrectionList", "#removeRegistrationList", "#filterEmployee", "#filterMonth",
       "#adminEmployeeList", "#adminProductList", "#adminCompanyList", "#stockAlerts", "#stockPointSelect",
-      "#stockTableBody", "#auditTableBody", "#fridgePointSelect", "#fridgeShelfFields", "#fridgeOpeningsBody"
+      "#stockTableBody", "#auditTableBody"
     ];
     for (const selector of containers) {
       const element = this.$(selector);

@@ -18,9 +18,8 @@ import { DataStore } from "../assets/js/DataStore.js";
 import { CsvExport } from "../assets/js/CsvExport.js";
 import { FaceRecognitionDemo } from "../assets/js/FaceRecognitionDemo.js";
 import { BadgeReader } from "../assets/js/BadgeReader.js";
-import { SmartFridge } from "../assets/js/fridge/SmartFridge.js";
 import { FaceController } from "../assets/js/controllers/FaceController.js";
-import { SMART_FRIDGE, STANDBY, FACE_DEMO, RECOGNITION_TARGET } from "../assets/js/config.js";
+import { STANDBY, FACE_DEMO } from "../assets/js/config.js";
 import { createModel, addEmployee, createRecordingView, createFakeElement, createStore, fakeLocalStorage } from "./helpers.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -70,10 +69,10 @@ const createCamera = ({ hasCamera = true } = {}) => {
   return camera;
 };
 
-const MODALS = ["#adminModal", "#employeeProductsModal", "#fridgeModal", "#faceOfferModal", "#faceModal"];
+const MODALS = ["#adminModal", "#employeeProductsModal", "#faceOfferModal", "#faceModal"];
 
 // Controller met een nep-view, nep-klok en nep-camera. employee-1 (Test Medewerker) heeft pas 04A1B2C3.
-// Na herkennen opent het productvenster (geen koelkast), zodat de test het venster kan bekijken.
+// Na herkennen opent het productvenster, zodat de test het venster kan bekijken.
 const createApp = async ({ hasCamera = true, faceSettings = {}, seen = () => face(0.2) } = {}) => {
   const { model } = createModel();
   model.state.employees[0].badgeId = "04A1B2C3";
@@ -88,9 +87,7 @@ const createApp = async ({ hasCamera = true, faceSettings = {}, seen = () => fac
   demo.load = async () => {};
   demo.readFace = async () => seen();
   const reader = new BadgeReader({ enabled: true, minLength: 4, maxKeyIntervalMs: 40, endDelayMs: 120 }, { now: () => 0, setTimeout: () => 0, clearTimeout: () => {} });
-  const fridge = SmartFridge.createSimulated({ ...SMART_FRIDGE, enabled: false }, { clock });
-  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, clock, fridge);
-  app.recognition.recognitionTargetSetting = "products";
+  const app = new RegistrationApp(model, view, new CsvExport(model), demo, reader, clock);
   app.standby.standbySettings = { ...STANDBY, enabled: false };
   globalThis.document = {
     activeElement: null,

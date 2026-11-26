@@ -11,7 +11,7 @@ import { ControllerPart } from "./ControllerPart.js";
  *   - het herkenningsmodel laden en de camera starten en stoppen, ook als het venster intussen
  *     is gesloten (ieder venster krijgt daarvoor een eigen sessienummer);
  *   - zoeken naar een bekend gezicht tot iemand is herkend of de tijd om is. Daarna gaat de camera
- *     altijd uit. Na herkenning bepaalt RecognitionController wat er opent (koelkast of productvenster);
+ *     altijd uit. Na herkenning opent RecognitionController het productvenster;
  *   - een gezicht vastleggen, alleen met toestemming (vinkje) en als de camera echt aan staat, en
  *     het opslaan in het model met de datum (persist), met een logboekregel zonder kenmerken;
  *   - de opgeslagen gezichten in het geheugen van FaceRecognitionDemo zetten (loadSavedFaces) en
@@ -39,7 +39,7 @@ import { ControllerPart } from "./ControllerPart.js";
  *   - FaceRecognitionDemo: laadt face-api, bedient de camera en vergelijkt gezichten;
  *   - RegistrationApp: maakt deze class en geeft de methodes en velden door;
  *   - RegistrationModel (via RegistrationApp): slaat de gezichtsinstellingen op en wist ze;
- *   - RecognitionController (via RegistrationApp): opent na herkennen de koelkast of het productvenster;
+ *   - RecognitionController (via RegistrationApp): opent na herkennen het productvenster;
  *   - EmployeeController (via RegistrationApp): tekent het productvenster opnieuw na instellen of uitzetten;
  *   - ModalManager (via RegistrationApp): opent en sluit het cameravenster;
  *   - RegistrationView: zoekt de elementen op en toont meldingen.
@@ -202,7 +202,7 @@ export class FaceController extends ControllerPart {
   }
 
   // "Ja, instellen" bij de vraag na een passcan (RecognitionController): het instelvenster voor deze
-  // medewerker, zonder productvenster eronder. `continuation` gaat daarna verder met de koelkast of
+  // medewerker, zonder productvenster eronder. `continuation` gaat daarna verder met
   // het productvenster, na vastleggen en ook na Annuleren. `how` is hoe de medewerker is herkend: de
   // vraag komt alleen na de pas, dus alleen "badge" opent het venster. Geeft true terug als het opent.
   startFaceEnrollmentFor(employeeId, continuation, how = null) {
@@ -414,7 +414,7 @@ export class FaceController extends ControllerPart {
   // Kijkt steeds opnieuw of er een bekend gezicht in beeld is, tot iemand is herkend, het venster
   // wordt gesloten of de tijd om is (`timeoutMs`: FACE_DEMO.scanTimeoutMs bij "Herken mij",
   // FACE_DEMO.wakeScanMs bij de scan na een tik). Na herkenning gaat het venster dicht (de camera
-  // gaat uit) en opent RecognitionController de koelkast of het productvenster. Is de tijd om, dan
+  // gaat uit) en opent RecognitionController het productvenster. Is de tijd om, dan
   // gaat de camera uit (zie stopCameraAfterTimeout). Anders zou de camera blijven filmen tot iemand
   // het venster sluit, ook als de medewerker al is weggelopen. Bij de scan na een tik gaat dan ook het
   // venster dicht, met een korte melding, en staat de beginpagina klaar.
@@ -632,7 +632,7 @@ export class FaceController extends ControllerPart {
   // omdat het sessienummer verandert. De focus gaat terug naar de knop of link waarmee het
   // venster werd geopend (zie closeModal).
   // Kwam het instellen van de vraag na een passcan, dan gaat de oorspronkelijke flow daarna verder
-  // (koelkast of productvenster), na vastleggen en ook na Annuleren, Escape of het kruisje. Met
+  // (het productvenster opent), na vastleggen en ook na Annuleren, Escape of het kruisje. Met
   // `continueFlow: false` (wissen in een ander tabblad, of de tijd is om) gaat er niets verder.
   // Bij een klik op het kruisje of de achtergrond krijgt deze methode het klikevent mee; dat telt
   // als gewoon sluiten.

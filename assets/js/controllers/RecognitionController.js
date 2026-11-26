@@ -1,22 +1,17 @@
-import { FACE_DEMO, RECOGNITION_TARGET } from "../config.js";
+import { FACE_DEMO } from "../config.js";
 import { ControllerPart } from "./ControllerPart.js";
 
 /**
  * RecognitionController — wat er gebeurt nadat een medewerker is herkend, met de pas of met de
  * camera (demo), en de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" na een passcan.
  *
- * Na herkennen (continueAfterRecognition):
- *   - RECOGNITION_TARGET "fridge" (standaard): de slimme koelkast gaat open voor deze medewerker (het
- *     slot eraf, de weegschalen tellen wat hij pakt), als de koelkast aan staat en het consumptiepunt
- *     van de medewerker een schapindeling met producten heeft. In het koelkastvenster staat een knop
- *     om in plaats daarvan het productvenster te openen (brood, beleg);
- *   - anders, of met RECOGNITION_TARGET "products": het productvenster, zoals vóór versie 3.17.
+ * Na herkennen (continueAfterRecognition) opent altijd het productvenster van de medewerker.
  *
  * De vraag na een passcan (afterRecognition met "badge"): heeft een actieve medewerker nog geen
  * geldige gezichtsinstelling en heeft hij niet eerder Nee gezegd, dan komt eerst het venster
  * #faceOfferModal. Alleen als de demo gezichtsherkenning aan staat en de tablet een camera heeft.
  *   - "Ja, instellen": het instelvenster met het toestemmingsvinkje (FaceController). Daarna, of na
- *     Annuleren, gaat de oorspronkelijke flow verder (koelkast of productvenster);
+ *     Annuleren, gaat de oorspronkelijke flow verder (het productvenster opent);
  *   - "Nee": wordt onthouden (RegistrationModel.declineFaceOffer), de vraag komt niet meer terug, en
  *     de flow gaat verder. De medewerker kan het later zelf aanzetten in het productvenster;
  *   - kruisje, Escape of achtergrond: niets onthouden, de flow gaat verder (de vraag komt dus terug);
@@ -30,14 +25,13 @@ import { ControllerPart } from "./ControllerPart.js";
  *   - BadgeController (via RegistrationApp): roept afterRecognition aan na een geldige passcan;
  *   - FaceController (via RegistrationApp): roept continueAfterRecognition aan na herkennen met de
  *     camera, wist verlopen instellingen (expireFaces) en opent het instelvenster;
- *   - FridgeController (via RegistrationApp): canOpenFridgeFor en openFridgeFor;
  *   - EmployeeController (via RegistrationApp): openEmployeeProducts;
  *   - RegistrationModel: hasValidFaceEnrollment, faceOfferAnswer en declineFaceOffer;
  *   - FaceRecognitionDemo: of de demo aan staat en of er een camera is;
  *   - ModalManager (via RegistrationApp): opent en sluit #faceOfferModal;
  *   - StandbyController (via RegistrationApp): het startscherm verdwijnt als er na herkennen een venster
  *     opent (wakeFromStandby) en komt terug als de vraag vanzelf sluit (returnToStartScreen);
- *   - config.js: RECOGNITION_TARGET en FACE_DEMO (offerAfterBadge, offerIdleCloseMs).
+ *   - config.js: FACE_DEMO (offerAfterBadge, offerIdleCloseMs).
  */
 export class RecognitionController extends ControllerPart {
   // De titels van de vraag na een passcan en de uitleg in één zin.
@@ -49,11 +43,10 @@ export class RecognitionController extends ControllerPart {
   static OFFER_HELP = "Het is vrijwillig. Alleen kenmerken van je gezicht (geen foto) worden op deze tablet bewaard en na een jaar vanzelf gewist. Je pas blijft altijd werken.";
 
   // `app` is de controller (RegistrationApp). `clock` levert de tijd (dezelfde klok als de andere
-  // onderdelen). `target` is RECOGNITION_TARGET uit config.js.
-  constructor(app, clock, target = RECOGNITION_TARGET) {
+  // onderdelen).
+  constructor(app, clock) {
     super(app);
     this.clock = clock;
-    this.recognitionTargetSetting = target;
     this.offerEmployeeId = null;   // voor wie de vraag nu open staat (null = geen vraag open)
     this.offerHow = null;          // hoe die medewerker is herkend ("badge")
     this.offerKind = null;         // "new" of "expired"
@@ -67,18 +60,12 @@ export class RecognitionController extends ControllerPart {
   }
 
   // ------------------------------------------------------------------
-  // Na herkennen: koelkast of productvenster
+  // Na herkennen: het productvenster
   // ------------------------------------------------------------------
 
-  // Wat er voor deze medewerker opent: "fridge" of "products" (zie het commentaar bovenaan).
-  recognitionTarget(employeeId) {
-    if (this.recognitionTargetSetting === "fridge" && this.app.canOpenFridgeFor(employeeId)) return "fridge";
-    return "products";
-  }
-
   // Een medewerker is herkend (`how`: "badge" of "face"). Na een passcan komt eerst de vraag over
-  // gezichtsherkenning als die van toepassing is (shouldOfferFace). Daarna, of meteen, opent de
-  // koelkast of het productvenster. Stond het startscherm in beeld, dan verdwijnt het (de camera gaat uit).
+  // gezichtsherkenning als die van toepassing is (shouldOfferFace). Daarna, of meteen, opent het
+  // productvenster. Stond het startscherm in beeld, dan verdwijnt het (de camera gaat uit).
   afterRecognition(employeeId, how) {
     this.app.wakeFromStandby?.();
     if (how === "badge") {
@@ -92,11 +79,10 @@ export class RecognitionController extends ControllerPart {
     this.continueAfterRecognition(employeeId, how);
   }
 
-  // Opent de koelkast of het productvenster voor een (nog steeds actieve) medewerker.
+  // Opent het productvenster voor een (nog steeds actieve) medewerker.
   continueAfterRecognition(employeeId, how) {
     if (!this.model.findEmployee(employeeId)?.active) return;
     this.app.wakeFromStandby?.();
-    if (this.recognitionTarget(employeeId) === "fridge" && this.app.openFridgeFor(employeeId, how)) return;
     this.app.openEmployeeProducts(employeeId, { recognizedBy: how });
   }
 

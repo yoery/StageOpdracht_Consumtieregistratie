@@ -23,8 +23,7 @@ import {
   createRecordingView,
   createFakeElement,
   createDataStore,
-  asAdmin,
-  disabledFridge
+  asAdmin
 } from "./helpers.js";
 
 // Console-meldingen van DataStore horen bij deze tests; ze maken de uitvoer alleen onrustig.
@@ -111,8 +110,7 @@ const createApp = ({ model = createModel().model, faceDemo } = {}) => {
   const clock = createClock();
   const reader = new BadgeReader(SETTINGS, clock);
   const demo = faceDemo || new FaceRecognitionDemo({ enabled: true, matchThreshold: 0.5, scanTimeoutMs: 1000 }, null);
-  // Zonder koelkast: na herkenning opent het productvenster (zie disabledFridge in helpers.js).
-  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader, undefined, disabledFridge()));
+  const app = asAdmin(new RegistrationApp(model, view, undefined, demo, reader));
   return { app, model, view, clock, reader, openModals, listeners, demo };
 };
 

@@ -4,21 +4,8 @@
    Laadt als laatste.
    De volgorde van de stylesheets in index.html is de volgorde van de cascade: niet omwisselen. */
 @media (max-width:720px) {
-  .directory-actions,.fridge-start {
+  .directory-actions {
     width:100%
-  }
-  .fridge-shelf-field {
-    grid-template-columns:1fr
-  }
-  .fridge-cabinet {
-    grid-template-columns:36px 1fr
-  }
-  .fridge-shelf {
-    padding:10px
-  }
-  .fridge-item {
-    width:32px;
-    height:32px
   }
 }
 @media (min-width:721px) and (max-width:900px) {

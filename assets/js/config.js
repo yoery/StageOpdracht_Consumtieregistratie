@@ -16,9 +16,6 @@
  *   - DataStore: BACKUP_RETENTION_DAYS, hoe lang een reservekopie bewaard blijft;
  *   - EmployeeController: EMPLOYEE_IDLE_CLOSE_MS en EMPLOYEE_IDLE_WARNING_MS, na hoeveel tijd zonder
  *     invoer het productvenster vanzelf sluit en wanneer de waarschuwing daarvoor verschijnt;
- *   - SmartFridge, FridgeController en RegistrationModel: SMART_FRIDGE, de instellingen van de
- *     simulatie van de slimme koelkast (slot en weegschalen per schap);
- *   - RecognitionController: RECOGNITION_TARGET, wat er opent na herkennen met de pas of de camera;
  *   - StandbyController: STANDBY, wanneer het startscherm (weer) verschijnt;
  *   - AutoScanController en FaceIntent: FACE_DEMO.scanMode en FACE_DEMO.autoScan, het automatisch
  *     scannen op het startscherm met de intentie-drempel;
@@ -129,7 +126,7 @@ export const FACE_DEMO = {
   //     ovaal (0.12 = 12 procent), en toch als stil tellen;
   //   - attempts: zo vaak wordt een gezicht vergeleken voordat "Je bent niet herkend." verschijnt;
   //   - retryPauseMs: zo lang (ms) wacht de camera na "Je bent niet herkend." voordat hij het opnieuw probeert;
-  //   - greetingMs: zo lang (ms) staat de begroeting in het ovaal voordat de koelkast of het productvenster opent;
+  //   - greetingMs: zo lang (ms) staat de begroeting in het ovaal voordat het productvenster opent;
   //   - videoWidth en videoHeight: de gevraagde resolutie van de camera in pixels (laag, zodat de tablet
   //     niet warm wordt).
   autoScan: {
@@ -180,23 +177,14 @@ export const FACE_DEMO = {
   offerIdleCloseMs: 60 * 1000
 };
 
-// Wat er opent nadat een medewerker is herkend, met de pas of met de camera (zie
-// RecognitionController.continueAfterRecognition). Eén instelling voor beide manieren van herkennen:
-//   - "fridge": de slimme koelkast gaat open voor deze medewerker (het slot eraf, de weegschalen
-//     tellen wat hij pakt), als SMART_FRIDGE.enabled aan staat en het consumptiepunt van de medewerker
-//     een schapindeling met producten heeft. Anders opent het productvenster. In het koelkastvenster
-//     staat een knop om in plaats daarvan het productvenster te openen (brood, beleg);
-//   - "products": altijd het productvenster, zoals vóór versie 3.17.
-export const RECOGNITION_TARGET = "fridge";
-
 // Het startscherm van de tablet (zie StandbyController, sinds versie 3.21 in plaats van het gedimde
 // standby-scherm). Het startscherm is zwart, met het TVB-logo, een ovaal voor het gezicht en de knop
-// "Handmatig zoeken". Het verschijnt bij het openen van de website, na afloop van een registratie of
-// koelkastopening, en als de beginpagina zo lang niet is gebruikt (geen tik, toets, scroll of passcan, en
-// geen venster open). Er zijn drie manieren om te beginnen: de pas (werkt altijd, ook op het startscherm),
-// het gezicht (zie FACE_DEMO.scanMode) en "Handmatig zoeken" (de lijst met medewerkers). Zet enabled op
-// false om het startscherm uit te zetten: de website opent dan op de lijst met medewerkers, gaat niet meer
-// vanzelf terug naar het startscherm en de camera gaat nooit vanzelf aan.
+// "Handmatig zoeken". Het verschijnt bij het openen van de website, na afloop van een registratie, en als
+// de beginpagina zo lang niet is gebruikt (geen tik, toets, scroll of passcan, en geen venster open).
+// Er zijn drie manieren om te beginnen: de pas (werkt altijd, ook op het startscherm), het gezicht (zie
+// FACE_DEMO.scanMode) en "Handmatig zoeken" (de lijst met medewerkers). Zet enabled op false om het
+// startscherm uit te zetten: de website opent dan op de lijst met medewerkers, gaat niet meer vanzelf
+// terug naar het startscherm en de camera gaat nooit vanzelf aan.
 //   - idleMs: na zo veel milliseconden zonder invoer komt het startscherm terug (2 minuten).
 export const STANDBY = {
   enabled: true,
@@ -239,8 +227,7 @@ export const EMPLOYEE_IDLE_WARNING_MS = 10 * 1000;
 
 // Hoe vaak een medewerker één product in het productvenster in één keer kan kiezen (sinds versie 3.26,
 // pentest PT-03). Zonder grens kon iemand met een ingedrukte Enter honderden producten op naam van een
-// collega zetten en de opslag laten vollopen. Wie meer nodig heeft, registreert twee keer. De slimme
-// koelkast heeft een eigen grens (wat er op het schap ligt) en valt hier niet onder.
+// collega zetten en de opslag laten vollopen. Wie meer nodig heeft, registreert twee keer.
 export const MAX_PER_PRODUCT = 10;
 
 // Hoe lang een reservekopie van beschadigde gegevens bewaard blijft (sinds versie 3.26, pentest PT-02).
@@ -249,54 +236,6 @@ export const MAX_PER_PRODUCT = 10;
 // net als iedere kopie na deze termijn.
 // In dagen: 30.
 export const BACKUP_RETENTION_DAYS = 30;
-
-// Slimme koelkast (demo), zie SmartFridge.js en TO bijlage B (optie C: een slot en weegschalen per
-// schap, met de pas als sleutel). De demo simuleert het slot en de weegschalen in de browser. In
-// productie stuurt alleen de backend het echte slot en de weegschalen aan. Zet enabled op false om de
-// simulatie helemaal uit te zetten: de knop op de beginpagina en het tabblad Koelkast verdwijnen dan.
-//   - shelfCount: het aantal schappen. Op ieder schap ligt één soort product;
-//   - defaultShelves: de indeling zolang de beheerder voor een consumptiepunt nog niets heeft ingesteld
-//     (schap 1, 2, 3, ...). unitWeight is het gewicht van één product in grammen. Een product dat het
-//     consumptiepunt niet aanbiedt, telt als leeg schap;
-//   - toleranceRatio: hoeveel het gewichtsverschil van een heel aantal producten mag afwijken, als
-//     deel van het gewicht van één product (0.15 = 15 procent, bij een blikje van 350 gram 52 gram);
-//   - measuredWeightRange: weet de koelkast hoeveel producten er op een schap liggen, dan rekent hij
-//     met het gemeten gemiddelde gewicht van één product (gewicht van het schap gedeeld door het
-//     aantal) in plaats van met unitWeight. Dat geldt zolang het gemiddelde niet meer dan dit deel
-//     (0.25 = 25 procent) afwijkt van unitWeight. Zo telt de koelkast ook goed als producten
-//     structureel zwaarder of lichter zijn dan ingesteld (bijvoorbeeld eieren van klasse L);
-//   - emptyShelfToleranceGrams: zo veel gram mag een leeg schap verschillen voordat het opvalt;
-//   - weightVariation: alleen voor de simulatie. Ieder product wijkt tot zo veel (0.02 = 2 procent)
-//     af van het opgegeven gewicht, zoals echte blikjes ook niet allemaal even zwaar zijn;
-//   - foreignWeightGrams: alleen voor de simulatie. Zo veel gram legt de demoknop "Iets anders op
-//     het schap leggen" op schap 1, om een onverklaarbaar verschil te laten zien;
-//   - autoLockMs: het slot gaat weer dicht als de deur niet binnen deze tijd wordt geopend;
-//   - doorWarningMs: staat de deur langer open, dan verschijnt "De deur staat al lang open.";
-//   - doorAlertMs: staat de deur langer open, dan krijgt de opening de status "Controle nodig";
-//   - idleCloseMs: het koelkastvenster sluit vanzelf als het zo lang niet wordt gebruikt terwijl de
-//     deur dicht is (wachten op een pas of het overzicht na sluiten);
-//   - maxUnitWeight: het hoogste gewicht van één product dat de beheerder kan invullen (grammen);
-//   - recentOpenings: zo veel openingen staan in het beheer bij "Laatste openingen".
-export const SMART_FRIDGE = {
-  enabled: true,
-  shelfCount: 3,
-  defaultShelves: [
-    { productId: "blikje", unitWeight: 350 },
-    { productId: "yoghurt", unitWeight: 150 },
-    { productId: "ei", unitWeight: 60 }
-  ],
-  toleranceRatio: 0.15,
-  measuredWeightRange: 0.25,
-  emptyShelfToleranceGrams: 25,
-  weightVariation: 0.02,
-  foreignWeightGrams: 120,
-  autoLockMs: 10 * 1000,
-  doorWarningMs: 60 * 1000,
-  doorAlertMs: 5 * 60 * 1000,
-  idleCloseMs: 60 * 1000,
-  maxUnitWeight: 5000,
-  recentOpenings: 10
-};
 
 // Standaardproducten met prijs in euro's. De id's worden gebruikt in registraties en voorraad.
 export const DEFAULT_PRODUCTS = [

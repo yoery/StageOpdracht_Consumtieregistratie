@@ -15,8 +15,8 @@ import { ControllerPart } from "./ControllerPart.js";
  *     herkennen en is de camera niet nodig);
  *   - het tabblad is zichtbaar (visibilitychange);
  *   - er wordt niet net iemand begroet.
- * In alle andere gevallen staat hij uit: na "Handmatig zoeken", bij ieder venster (koelkast,
- * productvenster, beheer, de vraag na een passcan), in een verborgen tabblad, zonder camera of
+ * In alle andere gevallen staat hij uit: na "Handmatig zoeken", bij ieder venster (productvenster,
+ * beheer, de vraag na een passcan), in een verborgen tabblad, zonder camera of
  * toestemming, met FACE_DEMO uit of als niemand een gezicht heeft ingesteld.
  *
  * Het scannen (scanTick, FACE_DEMO.autoScan.detectIntervalMs, 3 keer per seconde):
@@ -29,7 +29,7 @@ import { ControllerPart } from "./ControllerPart.js";
  *      FaceLiveness (FaceRecognitionDemo.checkLiveness) heeft een knipper of een vervorming gezien. Een
  *      foto beweegt als één plat geheel en wordt na liveness.maxMs behandeld als "niet herkend";
  *   4. herkend: de camera gaat uit, het ovaal toont de begroeting ("Goedemorgen Lotte.") en na
- *      autoScan.greetingMs opent RecognitionController de koelkast of het productvenster;
+ *      autoScan.greetingMs opent RecognitionController het productvenster;
  *   5. na autoScan.attempts vergelijkingen zonder resultaat, terwijl het gezicht in het ovaal blijft:
  *      "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig." en een pauze van
  *      autoScan.retryPauseMs. Daarna probeert hij het opnieuw.
@@ -266,8 +266,8 @@ export class AutoScanController extends ControllerPart {
     this.scanPausedUntil = now + this.autoSettings.retryPauseMs;
   }
 
-  // Herkend: de camera gaat meteen uit, het ovaal toont de begroeting en na greetingMs opent de koelkast
-  // of het productvenster (RecognitionController.continueAfterRecognition, die het startscherm verbergt).
+  // Herkend: de camera gaat meteen uit, het ovaal toont de begroeting en na greetingMs opent het
+  // productvenster (RecognitionController.continueAfterRecognition, die het startscherm verbergt).
   // Is het startscherm intussen verdwenen (bijvoorbeeld met "Handmatig zoeken"), dan opent er niets.
   greet(employeeId) {
     this.greetingFor = employeeId;

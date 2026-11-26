@@ -17,8 +17,8 @@ import { ControllerPart } from "./ControllerPart.js";
  *
  * Verantwoordelijkheid:
  *   - het startscherm tonen bij het openen van de website (RegistrationApp.initialize), na afloop van een
- *     registratie of koelkastopening (returnToStartScreen) en na STANDBY.idleMs zonder invoer op de
- *     beginpagina zonder open venster (checkStandby);
+ *     registratie (returnToStartScreen) en na STANDBY.idleMs zonder invoer op de beginpagina zonder
+ *     open venster (checkStandby);
  *   - de teksten van het startscherm kiezen naar wat er kan: camera, tikken of alleen pas en handmatig
  *     (startScreenTexts), en ze opnieuw tekenen als dat verandert (refreshStartScreen);
  *   - het startscherm verbergen: met "Handmatig zoeken", met een tik op het ovaal (scanMode "tap") of als
@@ -147,7 +147,7 @@ export class StandbyController extends ControllerPart {
     this.refreshStartScreen();
   }
 
-  // Na afloop van een registratie, een koelkastopening of een venster dat vanzelf sluit: het startscherm
+  // Na afloop van een registratie of een venster dat vanzelf sluit: het startscherm
   // komt terug, zodat de volgende persoon weer op het startscherm begint. Alleen als het startscherm aan
   // staat, de app draait (de timer loopt, zie startStandbyWatch) en er geen venster meer open is. Geeft
   // true terug als het startscherm nu in beeld is gekomen.

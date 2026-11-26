@@ -3,6 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { DataStore } from "../assets/js/DataStore.js";
+import { RegistrationModel } from "../assets/js/RegistrationModel.js";
+import { CsvExport } from "../assets/js/CsvExport.js";
 import { DEFAULT_PRODUCTS, DEFAULT_COMPANIES } from "../assets/js/config.js";
 import { createDataStore, fakeLocalStorage } from "./helpers.js";
 
@@ -230,4 +232,109 @@ test("voorraad zonder getal wordt 0 en 'aangeboden' moet echt true zijn", () => 
   data.points = [{ id: "p1", name: "Kantine", companyId: "c1", products: { blikje: { offered: "ja", stock: "veel", minimum: null } } }];
 
   assert.deepEqual(createDataStore(data).load().points[0].products.blikje, { offered: false, stock: 0, minimum: 0 });
+});
+
+// ------------------------------------------------------------------
+// Oude gegevens van de vervallen slimme koelkast (weegschaal en slot)
+// ------------------------------------------------------------------
+//
+// Tot en met versie 3.32 stonden in de opgeslagen gegevens ook de lijsten fridgeShelves (de indeling
+// van de schappen) en fridgeOpenings (de openingen), en had een registratie van de koelkast de velden
+// `source: "fridge"` en `openingId`. De functie is vervallen. Gegevens waarin dat nog staat, moeten
+// gewoon blijven laden: de lijsten en de twee velden vallen stil weg, zonder melding en zonder
+// reservekopie, en de registraties blijven gewone registraties.
+const oldFridgeData = () => ({
+  ...validData(),
+  registrations: [
+    { id: "r1", employeeId: "e1", productId: "blikje", createdAt: "2026-09-10T10:00:00.000Z" },
+    { id: "r2", employeeId: "e1", productId: "blikje", price: 0.65, pointId: null, createdAt: "2026-10-19T10:00:20.000Z", source: "fridge", openingId: "opening-1" },
+    { id: "r3", employeeId: "e1", productId: "ei", price: 0.5, pointId: null, createdAt: "2026-10-19T10:00:20.000Z", source: "fridge", openingId: "opening-1" }
+  ],
+  fridgeShelves: [
+    { id: "schap-1", pointId: "p1", shelf: 1, productId: "blikje", unitWeight: 350 },
+    { id: "schap-2", pointId: "p1", shelf: 2, productId: null, unitWeight: null }
+  ],
+  fridgeOpenings: [{
+    id: "opening-1",
+    employeeId: "e1",
+    pointId: null,
+    openedAt: "2026-10-19T10:00:00.000Z",
+    closedAt: "2026-10-19T10:00:20.000Z",
+    status: "registered",
+    longOpen: false,
+    shelves: [{ shelf: 1, productId: "blikje", unitWeight: 350, before: 3500, after: 3150, count: 1, flag: null }]
+  }]
+});
+
+const backupKeys = () => ["test-backup", "test-backup-datum", "test-backup-laatste", "test-backup-laatste-datum"];
+
+test("oude gegevens met de lijsten van de slimme koelkast laden zonder melding en zonder reservekopie", () => {
+  const store = createDataStore(oldFridgeData());
+
+  const data = store.load(new Date("2026-11-26T12:00:00.000Z"));
+
+  assert.equal(store.loadProblem, null, "geen melding 'beschadigde regels'");
+  for (const key of backupKeys()) assert.equal(localStorage.getItem(key), null, `geen reservekopie (${key})`);
+  assert.equal(Object.hasOwn(data, "fridgeShelves"), false, "de indeling van de schappen valt weg");
+  assert.equal(Object.hasOwn(data, "fridgeOpenings"), false, "de openingen vallen weg");
+  assert.equal(data.employees.length, 1);
+  assert.equal(data.registrations.length, 3, "alle registraties blijven");
+});
+
+test("een registratie van de slimme koelkast wordt een gewone registratie en blijft in de export", () => {
+  const model = new RegistrationModel(createDataStore(oldFridgeData()));
+
+  assert.equal(model.loadProblem, null);
+  assert.deepEqual(model.registrations.map(({ id }) => id), ["r1", "r2", "r3"]);
+  for (const registration of model.registrations) {
+    assert.equal(Object.hasOwn(registration, "source"), false, `${registration.id} heeft geen source meer`);
+    assert.equal(Object.hasOwn(registration, "openingId"), false, `${registration.id} heeft geen openingId meer`);
+  }
+  // De prijs en het tijdstip van toen blijven, zodat de loonmaand en het bedrag niet veranderen.
+  assert.deepEqual(model.registrations[1], { id: "r2", employeeId: "e1", productId: "blikje", price: 0.65, pointId: null, createdAt: "2026-10-19T10:00:20.000Z" });
+
+  // In de export: september (loonmaand 10) één registratie, oktober (loonmaand 11) de twee van de koelkast.
+  const rows = new CsvExport(model).buildRows("all", "all");
+  assert.deepEqual(rows.map(({ Naam, Maand, Totaal }) => [Naam, Maand, Totaal]), [["Jan Jansen", 10, 1], ["Jan Jansen", 11, 2]]);
+});
+
+test("na de eerste keer opslaan staan de lijsten en velden van de slimme koelkast niet meer in de opslag", () => {
+  const model = new RegistrationModel(createDataStore(oldFridgeData()));
+
+  assert.equal(model.save(), true);
+
+  const stored = JSON.parse(localStorage.getItem("test"));
+  assert.equal(Object.hasOwn(stored, "fridgeShelves"), false);
+  assert.equal(Object.hasOwn(stored, "fridgeOpenings"), false);
+  assert.equal(stored.registrations.length, 3);
+  assert.equal(JSON.stringify(stored).includes("fridge"), false);
+  assert.equal(JSON.stringify(stored).includes("openingId"), false);
+});
+
+test("ook beschadigde lijsten van de slimme koelkast geven geen melding: ze worden niet meer gecontroleerd", () => {
+  for (const damaged of [
+    { fridgeShelves: "kapot", fridgeOpenings: { geen: "lijst" } },
+    { fridgeShelves: [null, { id: "<script>", shelf: 99 }], fridgeOpenings: [{ id: "opening-1", status: "onbekend" }, "tekst"] }
+  ]) {
+    const store = createDataStore({ ...oldFridgeData(), ...damaged });
+
+    const data = store.load(new Date("2026-11-26T12:00:00.000Z"));
+
+    assert.equal(store.loadProblem, null, JSON.stringify(damaged));
+    assert.equal(localStorage.getItem("test-backup"), null);
+    assert.equal(data.registrations.length, 3);
+  }
+});
+
+test("een registratie met een onbekende bron of een ongeldige opening-id blijft ook een gewone registratie", () => {
+  const data = validData();
+  data.registrations = [
+    { id: "r1", employeeId: "e1", productId: "blikje", createdAt: "2026-09-10T10:00:00.000Z", source: "<script>", openingId: { geen: "id" } }
+  ];
+  const store = createDataStore(data);
+
+  const loaded = store.load(new Date("2026-11-26T12:00:00.000Z"));
+
+  assert.equal(store.loadProblem, null);
+  assert.deepEqual(loaded.registrations, [{ id: "r1", employeeId: "e1", productId: "blikje", createdAt: "2026-09-10T10:00:00.000Z" }]);
 });

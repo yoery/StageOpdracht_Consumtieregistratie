@@ -3,7 +3,6 @@ import {
   COLORS,
   DEFAULT_PRODUCTS,
   DEFAULT_COMPANIES,
-  SMART_FRIDGE,
   FACE_DEMO,
   MAX_PER_PRODUCT
 } from "./config.js";
@@ -16,14 +15,6 @@ export const STOCK_STATUS = {
   out: "Leeg",
   low: "Bijbestellen",
   ok: "Op voorraad"
-};
-
-// Status van een opening van de slimme koelkast (demo), met de tekst die in het beheer staat.
-// SmartFridge.statusOf bepaalt de status. DataStore kent dezelfde drie waarden (FRIDGE_STATUSES).
-export const FRIDGE_STATUS = {
-  registered: "Geregistreerd",
-  nothing: "Niets gepakt",
-  check: "Controle nodig"
 };
 
 // Hoogste prijs (in euro) die een product mag hebben. Deze waarde moet gelijk zijn aan MAX_PRICE
@@ -51,9 +42,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  *
  * Verantwoordelijkheid:
  *   - bewaart de complete status: medewerkers, registraties, producten, bedrijven,
- *     consumptiepunten (met voorraad), het logboek, van de slimme koelkast (demo) de indeling van
- *     de schappen en de openingen, en van de demo gezichtsherkenning de opgeslagen kenmerken met
- *     hun datum en het antwoord op de vraag na een passcan;
+ *     consumptiepunten (met voorraad), het logboek, en van de demo gezichtsherkenning de opgeslagen
+ *     kenmerken met hun datum en het antwoord op de vraag na een passcan;
  *   - bevat de regels, bijvoorbeeld: een registratie verlaagt de voorraad, een bedrijf met
  *     medewerkers mag niet worden verwijderd, de loonmaand is de maand na de consumptie.
  *
@@ -149,8 +139,6 @@ export class RegistrationModel {
       companies,
       points: [demoPoint],
       auditLog: [],
-      fridgeShelves: [],
-      fridgeOpenings: [],
       faceEnrollments: [],
       faceOffers: []
     };
@@ -166,8 +154,6 @@ export class RegistrationModel {
       companies: [...this.state.companies],
       points: [...this.state.points],
       auditLog: [...this.state.auditLog],
-      fridgeShelves: [...this.fridgeShelves],
-      fridgeOpenings: [...this.fridgeOpenings],
       faceEnrollments: [...this.faceEnrollments],
       faceOffers: [...this.faceOffers]
     };
@@ -234,17 +220,6 @@ export class RegistrationModel {
     return this.state.points;
   }
 
-  // De indeling van de schappen van de slimme koelkast (demo), zoals de beheerder die heeft ingesteld.
-  // Gegevens van vóór de slimme koelkast hebben deze lijst niet; dan is hij leeg.
-  get fridgeShelves() {
-    return this.state.fridgeShelves ?? [];
-  }
-
-  // De openingen van de slimme koelkast (demo). Ook leeg bij gegevens van vóór de slimme koelkast.
-  get fridgeOpenings() {
-    return this.state.fridgeOpenings ?? [];
-  }
-
   // Demo gezichtsherkenning: de opgeslagen gezichtsinstellingen, per medewerker
   // { id, employeeId, descriptor (128 getallen), enrolledAt, consentAt }. Leeg bij gegevens van vóór
   // versie 3.17. `consentAt` (het moment van toestemming) bestaat sinds versie 3.22.
@@ -278,11 +253,8 @@ export class RegistrationModel {
   //     blijft een oude maand in de CSV-export hetzelfde bedrag houden.
   //   - `employerNumber` is om dezelfde reden het werkgevernummer op het moment van registreren
   //     (zie registrationEmployerNumber). Is er dan nog geen nummer, dan wordt het niet bewaard.
-  //   - `source: "fridge"` en `openingId` betekenen dat de registratie automatisch is gemaakt door
-  //     de slimme koelkast (demo), bij de opening met die id (zie addFridgeOpening). Zo'n registratie
-  //     telt verder mee zoals iedere andere (totalen, export, voorraad).
   // Een keuze uit het productvenster gaat via addSelection (met een grens per product).
-  addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date(), source = null, openingId = null } = {}) {
+  addRegistration(employeeId, productId = "blikje", { correction = false, createdAt = new Date() } = {}) {
     const employee = this.findEmployee(employeeId);
     const point = this.findPoint(employee?.pointId);
     const offered = Boolean(this.pointProduct(point, productId)?.offered);
@@ -298,10 +270,6 @@ export class RegistrationModel {
     };
     if (employerNumber) registration.employerNumber = employerNumber;
     if (correction) registration.correction = true;
-    if (source === "fridge") {
-      registration.source = "fridge";
-      if (openingId) registration.openingId = openingId;
-    }
     this.state.registrations = [...this.registrations, registration];
 
     const entry = this.stockEntry(point?.id, productId);
@@ -435,7 +403,6 @@ export class RegistrationModel {
   // ieder aantal is een heel getal van 1 tot en met `max` (MAX_PER_PRODUCT, 10), het product bestaat en er
   // is minstens één product gekozen. Klopt dat niet, dan wordt er niets opgeslagen en geeft de methode false
   // terug. Zo zet niemand met een vastgehouden toets honderden producten op naam van een collega.
-  // De slimme koelkast gebruikt deze methode niet (die heeft een eigen grens, zie addFridgeOpening).
   addSelection(employeeId, selection, max = MAX_PER_PRODUCT) {
     if (!this.findEmployee(employeeId) || !selection || typeof selection !== "object") return false;
     const entries = Object.entries(selection).filter(([, amount]) => amount !== 0);
@@ -449,7 +416,7 @@ export class RegistrationModel {
     return true;
   }
 
-  // Hoeveel registraties, koelkastopeningen en logboekregels hebben een tijdstip meer dan een dag na `now`
+  // Hoeveel registraties en logboekregels hebben een tijdstip meer dan een dag na `now`
   // (MAX_FUTURE_MS)? Sinds versie 3.26 (pentest PT-04 en RB-02) worden die bij het laden niet meer
   // overgeslagen. Zo'n tijdstip komt bijna altijd door een klok die voorliep of achterloopt. De beheerder
   // krijgt dan een melding (AdminController.futureTimesMessage) en er komt één regel in het logboek.
@@ -457,7 +424,6 @@ export class RegistrationModel {
     const latest = now.getTime() + MAX_FUTURE_MS;
     const later = (value) => Date.parse(value) > latest;
     return this.registrations.filter(({ createdAt }) => later(createdAt)).length +
-      this.fridgeOpenings.filter(({ closedAt }) => later(closedAt)).length +
       this.auditLog.filter(({ createdAt }) => later(createdAt)).length;
   }
 
@@ -809,16 +775,12 @@ export class RegistrationModel {
   }
 
   // Verwijdert een consumptiepunt alleen als er geen medewerkers meer aan gekoppeld zijn.
-  // Oude registraties en koelkastopeningen blijven bewaard. De indeling van de koelkast van dit punt
-  // verdwijnt mee.
+  // Oude registraties blijven bewaard.
   removePoint(pointId) {
     const hasEmployees = this.employees.some((employee) => employee.pointId === pointId);
     if (hasEmployees) return false;
 
     this.state.points = this.points.filter((point) => point.id !== pointId);
-    if (this.fridgeShelves.some((shelf) => shelf.pointId === pointId)) {
-      this.state.fridgeShelves = this.fridgeShelves.filter((shelf) => shelf.pointId !== pointId);
-    }
     return true;
   }
 
@@ -908,121 +870,6 @@ export class RegistrationModel {
     }
 
     return alerts;
-  }
-
-  // ------------------------------------------------------------------
-  // Slimme koelkast (demo)
-  // ------------------------------------------------------------------
-
-  // De indeling van de koelkast van een consumptiepunt: voor ieder schap (1 tot en met
-  // SMART_FRIDGE.shelfCount) { shelf, productId, unitWeight }. Heeft de beheerder voor dit punt nog
-  // niets ingesteld, dan geldt SMART_FRIDGE.defaultShelves uit config.js. Een product dat het punt
-  // niet (meer) aanbiedt of dat niet meer bestaat, telt als leeg schap (productId en unitWeight null):
-  // de koelkast mag geen product registreren dat de medewerker in het productvenster niet kan kiezen.
-  // Een onbekend consumptiepunt heeft geen koelkast (lege lijst).
-  fridgeLayout(pointId, settings = SMART_FRIDGE) {
-    const point = this.findPoint(pointId);
-    if (!point) return [];
-
-    const stored = this.fridgeShelves.filter((shelf) => shelf.pointId === pointId);
-    const source = stored.length > 0
-      ? stored
-      : settings.defaultShelves.map((shelf, index) => ({ shelf: index + 1, ...shelf }));
-
-    return Array.from({ length: settings.shelfCount }, (_, index) => {
-      const row = source.find((shelf) => shelf.shelf === index + 1);
-      const usable = Boolean(row?.productId) && Boolean(this.findProduct(row.productId)) &&
-        Boolean(this.pointProduct(point, row.productId)?.offered) && row.unitWeight > 0;
-      return {
-        shelf: index + 1,
-        productId: usable ? row.productId : null,
-        unitWeight: usable ? row.unitWeight : null
-      };
-    });
-  }
-
-  // Slaat de indeling van de koelkast van een consumptiepunt op (alleen de beheerder). `shelves` is
-  // een lijst met { shelf, productId, unitWeight }; productId null of "" is een leeg schap. Geeft false
-  // terug (en verandert niets) als het punt niet bestaat, een schapnummer niet klopt, een product niet
-  // door het punt wordt aangeboden of een gewicht geen heel getal van 1 tot en met
-  // SMART_FRIDGE.maxUnitWeight gram is. Anders true.
-  saveFridgeShelves(pointId, shelves, settings = SMART_FRIDGE) {
-    const point = this.findPoint(pointId);
-    if (!point || !Array.isArray(shelves)) return false;
-
-    const rows = [];
-    for (const { shelf, productId, unitWeight } of shelves) {
-      if (!Number.isInteger(shelf) || shelf < 1 || shelf > settings.shelfCount) return false;
-      if (rows.some((row) => row.shelf === shelf)) return false;
-      if (!productId) {
-        rows.push({ id: createId(), pointId, shelf, productId: null, unitWeight: null });
-        continue;
-      }
-      const offered = Boolean(this.findProduct(productId)) && Boolean(this.pointProduct(point, productId)?.offered);
-      const weightAllowed = Number.isInteger(unitWeight) && unitWeight >= 1 && unitWeight <= settings.maxUnitWeight;
-      if (!offered || !weightAllowed) return false;
-      rows.push({ id: createId(), pointId, shelf, productId, unitWeight });
-    }
-
-    this.state.fridgeShelves = [...this.fridgeShelves.filter((row) => row.pointId !== pointId), ...rows];
-    return true;
-  }
-
-  // Slaat het resultaat van een koelkastopening op (SmartFridge.finish) en registreert wat er is
-  // gepakt. Iedere gepakte stuk wordt een gewone registratie (addRegistration) met source "fridge" en
-  // de id van de opening, op het tijdstip waarop de deur dichtging. De voorraad gaat zo ook omlaag.
-  // Schappen met een markering zijn al niet meegeteld in `taken` (zie SmartFridge.takenProducts).
-  // Van de opening wordt alleen bewaard wat nodig is (TO bijlage B, AVG): wie, welk consumptiepunt,
-  // wanneer de deur open- en dichtging, per schap het gewicht voor en na, het berekende aantal en een
-  // eventuele markering, de status en of er een andere pas is gescand terwijl de deur open was
-  // (otherBadge, alleen als dat zo is). Geen beelden of andere gegevens.
-  // Geeft de opgeslagen opening terug, of false als de medewerker of de status niet klopt (dan
-  // verandert er niets en weigert persist de wijziging).
-  addFridgeOpening(result) {
-    if (!this.findEmployee(result?.employeeId) || !Object.hasOwn(FRIDGE_STATUS, result.status)) return false;
-
-    const closedAt = new Date(result.closedAt);
-    const opening = {
-      id: createId(),
-      employeeId: result.employeeId,
-      pointId: this.findPoint(result.pointId) ? result.pointId : null,
-      openedAt: new Date(result.openedAt).toISOString(),
-      closedAt: closedAt.toISOString(),
-      status: result.status,
-      longOpen: Boolean(result.longOpen),
-      shelves: result.shelves.map(({ shelf, productId, unitWeight, before, after, count, flag }) => ({
-        shelf, productId: productId ?? null, unitWeight: unitWeight ?? null, before, after, count, flag: flag ?? null
-      }))
-    };
-    // Scande een collega zijn pas terwijl de deur open was, dan wordt alleen dát onthouden (niet van wie).
-    if (result.otherBadge) opening.otherBadge = true;
-
-    for (const [productId, amount] of Object.entries(result.taken)) {
-      for (let count = 0; count < amount; count += 1) {
-        this.addRegistration(result.employeeId, productId, { createdAt: closedAt, source: "fridge", openingId: opening.id });
-      }
-    }
-
-    this.state.fridgeOpenings = [...this.fridgeOpenings, opening];
-    return opening;
-  }
-
-  // De laatste openingen van de koelkast, nieuwste bovenaan (voor het beheer).
-  recentFridgeOpenings(limit = SMART_FRIDGE.recentOpenings) {
-    return [...this.fridgeOpenings]
-      .sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt))
-      .slice(0, limit);
-  }
-
-  // Wat er bij een opening is gepakt, als { productId: aantal } (schappen met een markering tellen
-  // niet mee, zie SmartFridge.takenProducts).
-  fridgeOpeningTaken(opening) {
-    const taken = {};
-    for (const { productId, count, flag } of opening.shelves) {
-      if (!productId || flag || !(count > 0)) continue;
-      taken[productId] = (taken[productId] || 0) + count;
-    }
-    return taken;
   }
 
   // ------------------------------------------------------------------

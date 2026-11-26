@@ -51,21 +51,11 @@ const MAX_PRICE = 1000;
 
 // Hoe ver een tijdstip in de toekomst mag liggen ten opzichte van het moment van laden: één dag (in
 // milliseconden). Sinds versie 3.26 (pentest PT-04 en RB-02) geldt dit alleen nog voor gezichtsinstellingen
-// en antwoorden op de vraag na een passcan. Registraties, koelkastopeningen en logboekregels met een
-// tijdstip verder in de toekomst worden wél geladen: zo'n tijdstip ontstaat vooral door een klok die
+// en antwoorden op de vraag na een passcan. Registraties en logboekregels met een tijdstip verder in de
+// toekomst worden wél geladen: zo'n tijdstip ontstaat vooral door een klok die
 // voorliep of achterloopt, en overslaan liet echte registraties voor de loonadministratie verdwijnen.
 // RegistrationModel.futureItemCount telt ze, en de beheerder krijgt een melding.
 export const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
-
-// Slimme koelkast (demo): de geldige statussen van een opening (gelijk aan FRIDGE_STATUS in
-// RegistrationModel.js), de markeringen per schap (zie SmartFridge.countShelf) en grenzen voor de
-// getallen. Een hoger schapnummer, gewicht of aantal is vrijwel zeker geknoeid.
-const FRIDGE_STATUSES = new Set(["registered", "nothing", "check"]);
-const FRIDGE_FLAGS = new Set(["added", "mismatch", "unknown"]);
-const MAX_SHELF = 20;
-const MAX_UNIT_WEIGHT = 5000;
-const MAX_SHELF_WEIGHT = 1000000;
-const MAX_TAKEN = 1000;
 
 // Demo gezichtsherkenning: een opgeslagen descriptor bestaat uit precies 128 getallen tussen -10 en
 // 10 (gelijk aan FACE_DESCRIPTOR_LENGTH en MAX_DESCRIPTOR_VALUE in RegistrationModel.js), en het
@@ -94,11 +84,15 @@ const FACE_OFFER_ANSWERS = new Set(["declined", "expired"]);
 export class DataStore {
   // De lijsten in de opgeslagen gegevens. Staat er bij een van deze namen iets anders dan een
   // lijst, dan zijn de gegevens beschadigd (zie migrate).
-  // De twee lijsten van de slimme koelkast (fridgeShelves en fridgeOpenings) ontbreken in gegevens
-  // van vóór de koelkast. Die krijgen dan een lege lijst (zie migrate).
-  // Hetzelfde geldt voor de twee lijsten van de demo gezichtsherkenning (faceEnrollments en faceOffers,
-  // vanaf versie 3.17).
-  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog", "fridgeShelves", "fridgeOpenings", "faceEnrollments", "faceOffers"];
+  // De twee lijsten van de demo gezichtsherkenning (faceEnrollments en faceOffers, vanaf versie 3.17)
+  // ontbreken in oudere gegevens. Die krijgen dan een lege lijst (zie migrate).
+  static LISTS = ["employees", "registrations", "products", "companies", "points", "auditLog", "faceEnrollments", "faceOffers"];
+
+  // De slimme koelkast (weegschaal en slot) is vervallen na versie 3.32. Oude gegevens kunnen nog de
+  // lijsten fridgeShelves en fridgeOpenings bevatten, en registraties met de velden `source` en
+  // `openingId`. Bij het laden vallen die stil weg (zie migrate en migrateRegistration): dat telt niet als
+  // beschadigd, dus zonder melding en zonder reservekopie.
+  static RETIRED_REGISTRATION_FIELDS = ["source", "openingId"];
 
   // De sleutel waaronder de gegevens in localStorage staan.
   // `loadProblem` zegt na load() of er iets mis was met de opgeslagen gegevens:
@@ -352,8 +346,6 @@ export class DataStore {
       products: (product) => this.isValidProduct(product),
       companies: (company) => this.isValidCompany(company),
       points: (point) => this.isValidPoint(point),
-      fridgeShelves: (shelf) => this.isValidFridgeShelf(shelf),
-      fridgeOpenings: (opening) => this.isValidFridgeOpening(opening, now),
       faceEnrollments: (entry) => this.isValidFaceEnrollment(entry, now),
       faceOffers: (offer) => this.isValidFaceOffer(offer, now)
     };
@@ -555,8 +547,6 @@ export class DataStore {
   // Een registratie moet een veilige id, medewerker, product en geldige datum hebben.
   // De prijs is optioneel (oude registraties hebben er nog geen), maar als die er staat,
   // moet het een geldige prijs zijn; anders zou de CSV-export een verkeerd bedrag tonen.
-  // Een registratie van de slimme koelkast heeft `source: "fridge"` en de id van de opening
-  // (`openingId`). Beide zijn optioneel; een andere bron dan "fridge" is ongeldig.
   // Het consumptiepunt mag leeg zijn (het product ging dan niet van de voorraad af).
   // Het werkgevernummer is ook optioneel; als het er staat, is het een korte tekst (hooguit 64 tekens).
   // Het tijdstip (`createdAt`) moet een ISO-tijdstip vanaf 1 januari 2000 zijn (zie isValidDateTime).
@@ -577,60 +567,7 @@ export class DataStore {
       this.isSafeOptionalId(registration.pointId) &&
       this.isValidDateTime(registration.createdAt, Infinity) &&
       hasValidPrice &&
-      hasValidEmployerNumber &&
-      (registration.source === undefined || registration.source === "fridge") &&
-      (registration.openingId === undefined || this.isSafeId(registration.openingId))
-    );
-  }
-
-  // Is dit een heel getal van `min` tot en met `max`?
-  isWholeNumber(value, min, max) {
-    return Number.isInteger(value) && value >= min && value <= max;
-  }
-
-  // Eén schap van de indeling van de slimme koelkast: een veilige id, een consumptiepunt (veilige id),
-  // een schapnummer van 1 tot en met MAX_SHELF, en een product met het gewicht van één
-  // stuk (1 tot en met MAX_UNIT_WEIGHT gram), of een leeg schap (product en gewicht allebei null).
-  isValidFridgeShelf(shelf) {
-    if (!this.isSafeId(shelf?.id) || !this.isSafeId(shelf.pointId) || !this.isWholeNumber(shelf.shelf, 1, MAX_SHELF)) return false;
-    if (shelf.productId === null) return shelf.unitWeight === null;
-    return this.isSafeId(shelf.productId) && this.isWholeNumber(shelf.unitWeight, 1, MAX_UNIT_WEIGHT);
-  }
-
-  // Eén opening van de slimme koelkast: een veilige id, medewerker en (optioneel) consumptiepunt, een
-  // geldig tijdstip van openen en sluiten (sluiten niet vóór openen, sinds versie 3.26 zonder grens in de toekomst), een
-  // bekende status en per schap het gewicht voor en na, het berekende aantal en een eventuele markering.
-  // Een opening die halverwege is afgebroken (bijvoorbeeld door herladen) wordt nooit opgeslagen.
-  isValidFridgeOpening(opening, now = new Date()) {
-    // Geen grens in de toekomst meer (sinds versie 3.26, zie MAX_FUTURE_MS).
-    const latest = Infinity;
-    return (
-      this.isSafeId(opening?.id) &&
-      this.isSafeId(opening.employeeId) &&
-      this.isSafeOptionalId(opening.pointId) &&
-      this.isValidDateTime(opening.openedAt, latest) &&
-      this.isValidDateTime(opening.closedAt, latest) &&
-      Date.parse(opening.closedAt) >= Date.parse(opening.openedAt) &&
-      FRIDGE_STATUSES.has(opening.status) &&
-      (opening.longOpen === undefined || typeof opening.longOpen === "boolean") &&
-      (opening.otherBadge === undefined || typeof opening.otherBadge === "boolean") &&
-      Array.isArray(opening.shelves) &&
-      opening.shelves.length <= MAX_SHELF &&
-      opening.shelves.every((shelf) => this.isValidOpeningShelf(shelf))
-    );
-  }
-
-  // Eén schap in een opening (zie isValidFridgeOpening).
-  isValidOpeningShelf(shelf) {
-    return (
-      this.isObject(shelf) &&
-      this.isWholeNumber(shelf.shelf, 1, MAX_SHELF) &&
-      this.isSafeOptionalId(shelf.productId) &&
-      (shelf.unitWeight === null || this.isWholeNumber(shelf.unitWeight, 1, MAX_UNIT_WEIGHT)) &&
-      this.isWholeNumber(shelf.before, 0, MAX_SHELF_WEIGHT) &&
-      this.isWholeNumber(shelf.after, 0, MAX_SHELF_WEIGHT) &&
-      this.isWholeNumber(shelf.count, 0, MAX_TAKEN) &&
-      (shelf.flag === null || FRIDGE_FLAGS.has(shelf.flag))
+      hasValidEmployerNumber
     );
   }
 
@@ -727,6 +664,9 @@ export class DataStore {
   // uit een oudere versie) krijgt een standaardwaarde.
   // `now` is het moment van laden; completePointStock gebruikt het om een telling in de
   // toekomst weg te laten. Een logboekregel in de toekomst wordt sinds versie 3.26 wel geladen.
+  // De lijsten van de vervallen slimme koelkast (fridgeShelves en fridgeOpenings) komen niet in de
+  // uitkomst: wat er in oude gegevens ook bij staat, het wordt niet gecontroleerd en niet geteld als
+  // overgeslagen.
   // De voorraadlijsten van de consumptiepunten worden alleen opgebouwd voor producten die de
   // controle doorstaan (isValidProduct). Een geknoeid product met een id als "constructor" krijgt
   // zo nergens een voorraadregel, ook al valt het product zelf pas later (in removeInvalidItems) af.
@@ -760,10 +700,6 @@ export class DataStore {
       companies,
       points: points.map((point) => this.completePointStock(point, validProducts, now)),
       auditLog: Array.isArray(data.auditLog) ? data.auditLog.filter((entry) => this.isValidAuditEntry(entry, now)) : [],
-      // Slimme koelkast (demo): gegevens van vóór de koelkast hebben deze lijsten niet en krijgen een
-      // lege lijst. De koelkast gebruikt dan de standaardindeling uit config.js.
-      fridgeShelves: objects(data.fridgeShelves),
-      fridgeOpenings: objects(data.fridgeOpenings),
       // Demo gezichtsherkenning (vanaf 3.17): oudere gegevens hebben geen opgeslagen gezichten en geen
       // antwoorden. Toen stonden gezichten alleen in het geheugen; die zijn na herladen dus al weg.
       // Sinds 3.22 staat bij iedere instelling het moment van toestemming (zie migrateFaceEnrollment).
@@ -895,9 +831,13 @@ export class DataStore {
   // Zet oude product-id's om; een registratie zonder product wordt een blikje.
   // Een werkgevernummer dat als getal is opgeslagen, wordt tekst (zie codeText), net als bij een
   // medewerker en een bedrijf. Een registratie zonder werkgevernummer blijft zonder.
+  // Een registratie die de vervallen slimme koelkast heeft gemaakt, verliest de velden `source` en
+  // `openingId` (RETIRED_REGISTRATION_FIELDS) en is daarna een gewone registratie: ze telt mee in de
+  // totalen en de export zoals iedere andere.
   migrateRegistration(registration) {
     const productId = this.renameProductId(registration.productId) || "blikje";
     const migrated = { ...registration, productId };
+    for (const field of DataStore.RETIRED_REGISTRATION_FIELDS) delete migrated[field];
     if (registration.employerNumber !== undefined) migrated.employerNumber = this.codeText(registration.employerNumber);
     return migrated;
   }
