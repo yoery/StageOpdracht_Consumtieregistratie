@@ -9,13 +9,49 @@ declare(strict_types=1);
 
 const PROJECT_ROOT = __DIR__ . '/../..';
 
-test('Geheimen: .env.example bevat AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR zonder waarde', function (): void {
+test('Geheimen: .env.example bevat alleen de namen van de instellingen, zonder waarde', function (): void {
     $lines = array_values(array_filter(
         array_map('trim', file(PROJECT_ROOT . '/.env.example', FILE_IGNORE_NEW_LINES) ?: []),
         static fn (string $line): bool => $line !== '' && !str_starts_with($line, '#')
     ));
 
-    same(['AFAS_TOKEN=', 'AFAS_BASE_URL=', 'AFAS_CONNECTOR='], $lines);
+    same(
+        ['AFAS_TOKEN=', 'AFAS_BASE_URL=', 'AFAS_CONNECTOR=', 'CR_BEHEER_EMAIL=', 'CR_BEHEER_WACHTWOORD=', 'CR_DB_DSN=', 'CR_DB_GEBRUIKER=', 'CR_DB_WACHTWOORD='],
+        $lines
+    );
+});
+
+test('Geheimen: .env staat in .dockerignore en de container kopieert alleen de website en de backend', function (): void {
+    $ignored = array_map('trim', file(PROJECT_ROOT . '/.dockerignore', FILE_IGNORE_NEW_LINES) ?: []);
+    foreach (['.env', '.env.*', '**/.env', '.git', 'backend/tests', 'backend/data', 'docs'] as $entry) {
+        ok(in_array($entry, $ignored, true), "$entry staat niet in .dockerignore");
+    }
+
+    // Geen "COPY . ...": dan zou alles uit de projectmap in de container komen. Iedere COPY noemt
+    // precies wat er mee mag.
+    preg_match_all('/^COPY\s+(\S+)\s+\S+$/m', (string) file_get_contents(PROJECT_ROOT . '/Dockerfile'), $copies);
+    $sources = $copies[1];
+    sort($sources);
+    same(
+        ['assets/', 'backend/autoload.php', 'backend/bin/', 'backend/public/index.php', 'backend/src/', 'docker/apache.conf', 'docker/deployment.js', 'docker/php.ini', 'docker/start.sh', 'index.html'],
+        $sources
+    );
+});
+
+test('Geheimen: in de Docker-bestanden staat geen waarde van een geheim, alleen de naam van de instelling', function (): void {
+    $compose = (string) file_get_contents(PROJECT_ROOT . '/docker-compose.yml');
+    foreach (['AFAS_TOKEN', 'AFAS_BASE_URL', 'AFAS_CONNECTOR', 'CR_DB_WACHTWOORD', 'CR_DB_GEBRUIKER', 'CR_BEHEER_EMAIL'] as $name) {
+        ok(str_contains($compose, "- $name=\${" . $name . ':-}'), "$name heeft een vaste waarde in docker-compose.yml");
+    }
+    ok(str_contains($compose, '- CR_BEHEER_WACHTWOORD=${SERVICE_PASSWORD_BEHEER}'), 'het wachtwoord van de beheerder komt niet van Coolify');
+    ok(preg_match('/^\s*ports:/m', $compose) !== 1, 'de container is zonder HTTPS bereikbaar via een eigen poort');
+
+    foreach (['Dockerfile', 'docker/start.sh', 'docker/apache.conf', 'docker/php.ini'] as $file) {
+        $text = (string) file_get_contents(PROJECT_ROOT . '/' . $file);
+        ok(preg_match('/(AFAS_TOKEN|WACHTWOORD)\s*=\s*["\']?[A-Za-z0-9+\/]{8,}/', $text) !== 1, "$file bevat een waarde van een geheim");
+    }
+    // Het startscript toont nooit een wachtwoord of token.
+    ok(preg_match('/echo[^\n]*\$\{?(CR_BEHEER_WACHTWOORD|AFAS_TOKEN|CR_DB_WACHTWOORD)/', (string) file_get_contents(PROJECT_ROOT . '/docker/start.sh')) !== 1);
 });
 
 test('Geheimen: .env staat in .gitignore, en .env.example niet', function (): void {
