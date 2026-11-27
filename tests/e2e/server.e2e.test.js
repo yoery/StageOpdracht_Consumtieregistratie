@@ -195,8 +195,10 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     await browser.click("#serverGatePassword");
     await browser.insertText(ADMIN_PASSWORD);
     await browser.click("#serverGateForm button[type=submit]");
-    // De pagina start opnieuw en het beheer gaat meteen open.
-    await browser.waitFor(`!document.querySelector("#adminView")?.classList.contains("hidden")`, { message: "Het beheer ging niet open na inloggen." });
+    // De pagina start opnieuw en het beheer gaat meteen open. Tijdens het herladen is de pagina even
+    // leeg: dan bestaat #adminView nog niet. Daarom eerst wachten tot de nieuwe pagina klaar is (het
+    // tabblad van de server staat er) en het beheer echt zichtbaar is.
+    await browser.waitFor(`document.readyState === "complete" && document.querySelector("#adminView")?.classList.contains("hidden") === false && document.querySelector("#tab-server")?.classList.contains("hidden") === false`, { message: "Het beheer ging niet open na inloggen." });
 
     assert.equal(await isHidden("#serverGate"), true);
     assert.equal(await isHidden("#tab-server"), false);
