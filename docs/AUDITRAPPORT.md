@@ -209,7 +209,7 @@ Tests: `ServerTest.php` ("een tablet vindt de medewerker bij een pas, in iedere 
 
 | Wat | Uitkomst |
 |---|---|
-| Tests van de backend (`php backend/tests/run.php`) | 175 geslaagd |
+| Tests van de backend (`php backend/tests/run.php`) | 177 geslaagd |
 | Unit tests (`npm test`) | 1016 geslaagd |
 | Browsertests (`npm run test:e2e`), waarvan 12 met de echte server | 45 geslaagd |
 | Gitleaks over de hele geschiedenis (alle branches) | 171 commits, geen vondsten |

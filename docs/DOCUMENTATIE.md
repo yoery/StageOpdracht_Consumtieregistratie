@@ -151,9 +151,11 @@ Dubbelklikken op `index.html` werkt niet: de JavaScript is opgedeeld in modules,
 
 Sinds versie 3.33 kan de website ook met de server draaien. Op een eigen computer gaat dat zonder Docker, met PHP 8.3 of hoger:
 
-1. Maak eerst een beheerder aan. Zet in een opdrachtvenster `CR_DB_DSN` op de database in `backend/data/` (zoals in `start-lokaal.cmd`) en voer `php backend/bin/beheerder.php jouw@adres.nl` uit. Het programma vraagt om een wachtwoord van minstens 12 tekens.
-2. Dubbelklik op `start-lokaal.cmd`, of start `php -S 127.0.0.1:8080 backend/dev-server.php` vanuit de projectmap.
-3. Open `http://127.0.0.1:8080`. Je ziet het inlogscherm van de server (4.19).
+1. Dubbelklik op `start-lokaal.cmd`.
+2. De eerste keer is er nog geen beheerder. Het venster vraagt dan een gebruikersnaam (bijvoorbeeld `beheerder`) en een wachtwoord van minstens 12 tekens. Is de naam leeg of het wachtwoord te kort, dan vraagt het opnieuw.
+3. De browser opent `http://127.0.0.1:8080`. Log in met die gebruikersnaam en dat wachtwoord (4.19).
+
+Een beheerder kan ook met de hand: `php backend/bin/beheerder.php <gebruikersnaam>` vanuit de projectmap, in PowerShell of een opdrachtvenster. Zonder `CR_DB_DSN` gebruikt het op een eigen computer dezelfde database als `start-lokaal.cmd`. Een nieuw wachtwoord: dezelfde opdracht met `--reset` erachter.
 
 De database komt in `backend/data/` en die map staat in `.gitignore`. De ontwikkelserver levert alleen `index.html`, `assets/` en `/api` uit, nooit `.env`, de tests of de documenten. Op de computer zelf werkt de server zonder HTTPS. Op een ander adres weigert de API een verzoek zonder HTTPS. Gebruik op een eigen computer alleen gegevens van de testomgeving van AFAS.
 

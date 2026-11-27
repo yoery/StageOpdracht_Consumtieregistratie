@@ -1102,3 +1102,67 @@ test('API: inloggen met de gebruikersnaam (hoofdletters en spaties tellen niet m
     $old = $server->call('POST', '/login', json_encode(['email' => TEST_USERNAME, 'password' => TEST_PASSWORD]));
     same([400, 'Vul de gebruikersnaam en het wachtwoord in.'], [$old->status, $old->body['message']]);
 });
+
+test('Database: een SQLite-bestand in een map die nog niet bestaat, krijgt die map erbij', function (): void {
+    $root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'consumptie-map-' . bin2hex(random_bytes(6));
+    $file = $root . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'consumptie.sqlite';
+    try {
+        $pdo = Database::connect('sqlite:' . $file);
+        same(0, (new Auth($pdo))->adminCount());
+        ok(is_file($file), 'het databasebestand is niet aangemaakt');
+        $pdo = null;
+    } finally {
+        foreach (['', '-wal', '-shm'] as $suffix) {
+            if (is_file($file . $suffix)) {
+                unlink($file . $suffix);
+            }
+        }
+        foreach ([dirname($file), $root] as $directory) {
+            if (is_dir($directory)) {
+                rmdir($directory);
+            }
+        }
+    }
+});
+
+test('beheerder.php --heeft-beheerder: 1 zonder beheerder, 0 met beheerder, 2 als de database niet werkt (voor start-lokaal.cmd)', function (): void {
+    if (!function_exists('proc_open')) {
+        skip('proc_open is niet beschikbaar');
+    }
+    $root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'consumptie-beheer-' . bin2hex(random_bytes(6));
+    $file = $root . DIRECTORY_SEPARATOR . 'consumptie.sqlite';
+    $run = static function (string $dsn): array {
+        $environment = getenv();
+        $environment['CR_DB_DSN'] = $dsn;
+        unset($environment['CR_BEHEER_WACHTWOORD']);
+        $process = proc_open([PHP_BINARY, dirname(__DIR__) . '/bin/beheerder.php', '--heeft-beheerder'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, $environment);
+        $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        return [proc_close($process), $output];
+    };
+    try {
+        same(1, $run('sqlite:' . $file)[0], 'een nieuwe database heeft nog geen beheerder');
+        same(null, (new Auth(Database::connect('sqlite:' . $file)))->createAdmin(TEST_USERNAME, TEST_PASSWORD, testMoment()));
+        same(0, $run('sqlite:' . $file)[0]);
+
+        // Het "bestand" van de database is een map: SQLite kan het niet openen.
+        mkdir($root . DIRECTORY_SEPARATOR . 'bestand-is-een-map');
+        [$status, $output] = $run('sqlite:' . $root . DIRECTORY_SEPARATOR . 'bestand-is-een-map');
+        same(2, $status);
+        ok(str_contains($output, 'De database is niet bereikbaar:'), $output);
+    } finally {
+        foreach (['', '-wal', '-shm'] as $suffix) {
+            if (is_file($file . $suffix)) {
+                unlink($file . $suffix);
+            }
+        }
+        if (is_dir($root . DIRECTORY_SEPARATOR . 'bestand-is-een-map')) {
+            rmdir($root . DIRECTORY_SEPARATOR . 'bestand-is-een-map');
+        }
+        if (is_dir($root)) {
+            rmdir($root);
+        }
+    }
+});

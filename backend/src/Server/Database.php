@@ -44,6 +44,14 @@ final class Database
 
     public static function connect(string $dsn, string $user = '', #[\SensitiveParameter] string $password = ''): \PDO
     {
+        // Een SQLite-bestand in een map die nog niet bestaat (bijvoorbeeld backend/data/ de eerste keer
+        // op een eigen computer): eerst de map maken, anders kan SQLite het bestand niet aanmaken.
+        if (str_starts_with($dsn, 'sqlite:') && !str_contains($dsn, ':memory:')) {
+            $directory = dirname(substr($dsn, strlen('sqlite:')));
+            if ($directory !== '' && $directory !== '.' && !is_dir($directory)) {
+                @mkdir($directory, 0700, true);
+            }
+        }
         $pdo = new \PDO($dsn, $user === '' ? null : $user, $password === '' ? null : $password, [
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,

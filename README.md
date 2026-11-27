@@ -10,11 +10,11 @@ Open de map in VS Code en start [index.html](./index.html) met de extensie **Liv
 
 Dubbelklikken op `index.html` werkt niet: de JavaScript bestaat uit modules en browsers blokkeren die via `file://`.
 
-Met de server op een eigen computer (PHP 8.3+): maak eerst een beheerder met `php backend/bin/beheerder.php <gebruikersnaam>` (met `CR_DB_DSN` zoals in `start-lokaal.cmd`), start dan `start-lokaal.cmd` of `php -S 127.0.0.1:8080 backend/dev-server.php` en open `http://127.0.0.1:8080`. Op de server van TVB bouwt Coolify de container uit `Dockerfile` en `docker-compose.yml`. De instellingen (`CR_BEHEER_NAAM`, `SERVICE_PASSWORD_BEHEER`, `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`) staan alleen in Coolify, nooit in Git. Zie [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md), hoofdstuk 3.
+Met de server op een eigen computer (PHP 8.3+): dubbelklik op `start-lokaal.cmd`. De eerste keer vraagt het een gebruikersnaam en een wachtwoord voor de beheerder, daarna opent `http://127.0.0.1:8080`. De database komt in `backend/data/` (in `.gitignore`). Op de server van TVB bouwt Coolify de container uit `Dockerfile` en `docker-compose.yml`. De instellingen (`CR_BEHEER_NAAM`, `SERVICE_PASSWORD_BEHEER`, `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`) staan alleen in Coolify, nooit in Git. Zie [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md), hoofdstuk 3.
 
 Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
 
-Tests van de backend draaien (de server en de AFAS-koppeling, 175 tests, PHP 8.3+): `php backend/tests/run.php`
+Tests van de backend draaien (de server en de AFAS-koppeling, 177 tests, PHP 8.3+): `php backend/tests/run.php`
 
 Browsertests (end-to-end) draai je met `npm run test:e2e`. Ze openen de echte pagina zonder venster in Microsoft Edge (Windows) of Google Chrome (Linux). Staat de browser ergens anders, zet dan `BROWSER_PATH` op het pad van de browser, bijvoorbeeld `BROWSER_PATH="/usr/bin/chromium" npm run test:e2e`. Er hoeft niets met npm te worden geïnstalleerd. Er zijn 42 browsertests: 33 in `tests/e2e/app.e2e.test.js` (de demo) en 9 in `tests/e2e/server.e2e.test.js` (met de echte server in PHP en een tijdelijke database, zonder PHP overgeslagen). In GitHub Actions draaien ze automatisch na de unit tests. Met `E2E_CPU_THROTTLE=4` draait de browser vier keer trager, zoals op een drukke server. Mislukt een browsertest, dan staan het scenario, de toestand van de pagina en de laatste meldingen uit de console in de foutuitvoer en komt er een schermafdruk in `test-results/e2e` (in GitHub Actions bewaard als artifact).
 

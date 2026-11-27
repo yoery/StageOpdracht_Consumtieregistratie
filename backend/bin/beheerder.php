@@ -10,10 +10,15 @@ declare(strict_types=1);
 //   php backend/bin/beheerder.php --uit-omgeving             maakt de beheerder uit CR_BEHEER_NAAM en
 //                                                         CR_BEHEER_WACHTWOORD als die nog niet bestaat
 //                                                         (dit doet de container bij het starten)
+//   php backend/bin/beheerder.php --heeft-beheerder          stopt met 0 als er een beheerder is, 1 als
+//                                                         er nog geen is en 2 als de database niet werkt
+//                                                         (gebruikt door start-lokaal.cmd)
 //
 // Het wachtwoord staat nooit op de opdrachtregel (daar is het voor anderen op de server te zien) en
 // komt nooit in de uitvoer. Het wordt gevraagd, of het komt uit CR_BEHEER_WACHTWOORD.
-// De database komt uit CR_DB_DSN (standaard sqlite:/data/consumptie.sqlite).
+// De database komt uit CR_DB_DSN. Zonder CR_DB_DSN is dat in de container sqlite:/data/consumptie.sqlite,
+// en op een eigen computer (zonder map /data) backend/data/consumptie.sqlite, net als bij
+// start-lokaal.cmd en backend/dev-server.php. Zo werkt dit ook in PowerShell zonder iets in te stellen.
 
 use Tvb\Consumptie\Server\Auth;
 use Tvb\Consumptie\Server\Database;
@@ -34,6 +39,27 @@ $names = array_values(array_filter($arguments, static fn (string $argument): boo
 $username = $fromEnvironment ? trim((string) getenv('CR_BEHEER_NAAM')) : ($names[0] ?? '');
 $password = (string) getenv('CR_BEHEER_WACHTWOORD');
 
+// Op een eigen computer zonder CR_DB_DSN: dezelfde database als start-lokaal.cmd.
+if (trim((string) getenv('CR_DB_DSN')) === '' && !is_dir('/data')) {
+    putenv('CR_DB_DSN=sqlite:' . dirname(__DIR__) . '/data/consumptie.sqlite');
+}
+
+$openDatabase = static function (): Auth {
+    try {
+        return new Auth(Database::fromEnvironment());
+    } catch (Throwable $error) {
+        // Bij SQLite noemt de melding alleen het pad van het bestand (geen gebruikersnaam of wachtwoord).
+        $dsn = trim((string) getenv('CR_DB_DSN'));
+        $detail = str_starts_with($dsn, 'sqlite:') ? sprintf(': %s (%s)', $error->getMessage(), $dsn) : sprintf(' (%s)', $error::class);
+        fwrite(STDERR, 'De database is niet bereikbaar' . $detail . ". Controleer CR_DB_DSN.\n");
+        exit(2);
+    }
+};
+
+if (in_array('--heeft-beheerder', $arguments, true)) {
+    exit($openDatabase()->adminCount() > 0 ? 0 : 1);
+}
+
 if ($username === '') {
     if ($fromEnvironment) {
         fwrite(STDERR, "Geen beheerder aangemaakt: CR_BEHEER_NAAM is niet ingesteld.\n");
@@ -43,12 +69,7 @@ if ($username === '') {
     exit(2);
 }
 
-try {
-    $auth = new Auth(Database::fromEnvironment());
-} catch (Throwable $error) {
-    fwrite(STDERR, 'De database is niet bereikbaar (' . $error::class . "). Controleer CR_DB_DSN.\n");
-    exit(1);
-}
+$auth = $openDatabase();
 
 if ($fromEnvironment && $auth->adminExists($username)) {
     echo "De beheerder bestaat al. Er is niets gewijzigd.\n";
