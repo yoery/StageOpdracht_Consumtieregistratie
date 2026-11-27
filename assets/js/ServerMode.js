@@ -46,7 +46,9 @@ export class ServerMode {
     rejected: "De server heeft een wijziging geweigerd. De gegevens zijn opnieuw opgehaald.",
     noConnection: "Geen verbinding met de server. Controleer het netwerk en probeer het opnieuw.",
     notConfigured: "Er is nog geen beheerder op de server. Vul CR_BEHEER_EMAIL en CR_BEHEER_WACHTWOORD in bij de instellingen van de server en start hem opnieuw.",
-    gate: "Log in als beheerder om het beheer te openen of deze tablet te koppelen."
+    gate: "Log in als beheerder om het beheer te openen of deze tablet te koppelen.",
+    badgeOffline: "Herkennen met de pas werkt nu niet: geen verbinding met de server. Zoek je naam in de lijst.",
+    linkOffline: "Geen verbinding met de server. De pas is niet gekoppeld. Probeer het opnieuw."
   };
 
   // `reload` en `doc` zijn mee te geven, zodat de tests zonder browser werken.
@@ -215,6 +217,47 @@ export class ServerMode {
     const message = ServerMode.MESSAGES[status];
     if (!message) return;
     this.app?.view?.showToast?.(message, status === "online" ? { tone: "success" } : { tone: "error", duration: 6000 });
+  }
+
+  // ------------------------------------------------------------------
+  // Herkennen op de server (security audit AF-07 en AF-08)
+  // ------------------------------------------------------------------
+
+  // Wie is dit gezicht? Geeft de id van de medewerker of null. Is de server niet bereikbaar, dan ook
+  // null, en staat `recognitionOffline` aan zodat de melding dat kan zeggen (FaceController,
+  // AutoScanController). Bij het volgende gelukte verzoek gaat die weer uit.
+  async recognizeFace(descriptor) {
+    try {
+      const result = await this.api.recognizeFace(descriptor);
+      this.recognitionOffline = false;
+      return typeof result.employeeId === "string" ? result.employeeId : null;
+    } catch (error) {
+      this.recognitionOffline = error?.status === 0 || error?.status >= 500;
+      return null;
+    }
+  }
+
+  // Van wie is deze pas? Geeft { ok: true, employeeId } (employeeId null als niemand) of
+  // { ok: false, message }.
+  async recognizeBadge(code) {
+    try {
+      const result = await this.api.recognizeBadge(code);
+      return { ok: true, employeeId: typeof result.employeeId === "string" ? result.employeeId : null };
+    } catch (error) {
+      return { ok: false, message: error?.status === 0 ? ServerMode.MESSAGES.badgeOffline : error.message };
+    }
+  }
+
+  // Koppelt een pas aan een medewerker. Geeft { ok: true } of { ok: false, message }. Na het koppelen
+  // worden de gegevens opgehaald, zodat de tablet weet dat de medewerker een pas heeft.
+  async linkBadge(employeeId, code) {
+    try {
+      await this.api.linkBadge(employeeId, code);
+    } catch (error) {
+      return { ok: false, message: error?.status === 0 ? ServerMode.MESSAGES.linkOffline : error.message };
+    }
+    await this.sync.pull().catch(() => {});
+    return { ok: true };
   }
 
   // ------------------------------------------------------------------

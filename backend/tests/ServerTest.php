@@ -16,6 +16,7 @@ use Tvb\Consumptie\Server\Auth;
 use Tvb\Consumptie\Server\Database;
 use Tvb\Consumptie\Server\Policy;
 use Tvb\Consumptie\Server\RecordEmployeeRepository;
+use Tvb\Consumptie\Server\Recognition;
 use Tvb\Consumptie\Server\RecordStore;
 use Tvb\Consumptie\Server\Request;
 use Tvb\Consumptie\Server\Response;
@@ -388,11 +389,13 @@ test('API: een tablet ziet medewerkers zonder looncode, personeelsnummer en werk
 
     $pulled = $server->pulled();
     $lotte = $pulled['employees']['mw-lotte'];
-    same(['Lotte van Dijk', '', '', '', '04A1B2C3', 'punt-hk'], [$lotte->name, $lotte->payrollCode, $lotte->personnelNumber, $lotte->employerNumber, $lotte->badgeId, $lotte->pointId]);
+    same(['Lotte van Dijk', '', '', '', '', true, 'punt-hk'], [$lotte->name, $lotte->payrollCode, $lotte->personnelNumber, $lotte->employerNumber, $lotte->badgeId, $lotte->badgeLinked, $lotte->pointId]);
+    same(false, $pulled['employees']['mw-mark']->badgeLinked, 'Mark heeft geen pas');
+    ok(!property_exists($lotte, 'badgeLinkedAt'));
     ok(!isset($pulled['auditLog']), 'een tablet krijgt het logboek');
     ok(isset($pulled['products']['blikje'], $pulled['companies']['bedrijf-tvb'], $pulled['points']['punt-hk']));
     $text = json_encode($pulled, JSON_THROW_ON_ERROR);
-    foreach (['5001', '5002', '"101"', '"102"', '"77"'] as $hidden) {
+    foreach (['5001', '5002', '"101"', '"102"', '"77"', '04A1B2C3'] as $hidden) {
         ok(!str_contains($text, $hidden), "een tablet ziet $hidden");
     }
     same('5001', $server->store->get('employees', 'mw-lotte')->personnelNumber, 'de server zelf houdt het personeelsnummer');
@@ -746,38 +749,6 @@ Wit"]),
     same('Lotte van Dijk', $server->store->get('employees', 'mw-lotte')->name);
 });
 
-test('API: een tablet koppelt een pas aan een medewerker zonder pas; de rest van de medewerker blijft zoals op de server', function (): void {
-    $server = new TestServer();
-    $server->becomeTablet();
-    $mark = $server->store->get('employees', 'mw-mark');
-    $mark->active = true;
-    $server->store->put('employees', 'mw-mark', $mark, testMoment());
-
-    // Zoals de tablet hem kent: zonder personeelsnummer en looncode, en met een poging de naam te veranderen.
-    $response = $server->call('POST', '/changes', '{"changes":[{"collection":"employees","id":"mw-mark","data":{"id":"mw-mark","name":"Iemand Anders","payrollCode":"","personnelNumber":"","active":true,"badgeId":"04DDEEFF","badgeLinkedAt":"2026-11-26T08:59:00.000Z"}}]}');
-    same([], $response->body['rejected']);
-
-    $stored = $server->store->get('employees', 'mw-mark');
-    same(['04DDEEFF', '2026-11-26T08:59:00.000Z', 'Mark Jansen', '5002', '102'], [$stored->badgeId, $stored->badgeLinkedAt, $stored->name, $stored->personnelNumber, $stored->payrollCode]);
-});
-
-test('API: een tablet kan geen pas vervangen, geen pas van een ander gebruiken en niets koppelen aan een inactieve medewerker', function (): void {
-    $server = new TestServer();
-    $server->becomeTablet();
-    $link = static fn (string $id, string $badge): array => ['collection' => 'employees', 'id' => $id, 'data' => ['id' => $id, 'active' => true, 'badgeId' => $badge]];
-    $server->store->put('employees', 'mw-sanne', record('{"id":"mw-sanne","name":"Sanne Bakker","firstName":"Sanne","lastName":"Bakker","payrollCode":"","personnelNumber":"5003","employerNumber":"","companyId":"bedrijf-tvb","pointId":"punt-hk","active":true,"color":"#d8f1e8","badgeId":""}'), testMoment());
-
-    $response = $server->call('POST', '/changes', json_encode(['changes' => [
-        $link('mw-lotte', 'AABBCCDD'),   // Lotte heeft al een pas
-        $link('mw-mark', 'AABBCCDD'),    // Mark is inactief
-        $link('mw-sanne', '04A1B2C3'),   // de pas van Lotte
-        $link('mw-sanne', 'ab'),         // geen geldig pasnummer
-    ]]));
-    same(['mw-lotte', 'mw-mark', 'mw-sanne', 'mw-sanne'], array_column($response->body['rejected'], 'id'));
-    same('04A1B2C3', $server->store->get('employees', 'mw-lotte')->badgeId);
-    same('', $server->store->get('employees', 'mw-sanne')->badgeId);
-});
-
 test('API: zonder HTTPS werkt de API alleen op deze computer zelf (AF-03)', function (): void {
     $server = new TestServer();
     $insecure = static fn (string $host, string $path = '/session'): Response => $server->api->handle(new Request('GET', $path, [], null, [], [], '203.0.113.7', false, $host), testMoment());
@@ -821,4 +792,172 @@ test('Request: achter de proxy telt het laatste adres in X-Forwarded-For, anders
     } finally {
         [$_SERVER, $_GET, $_COOKIE] = $backup;
     }
+});
+
+// ------------------------------------------------------------------
+// Herkennen op de server (security audit AF-07 en AF-08)
+// ------------------------------------------------------------------
+
+/** Een reeks kenmerken van 128 getallen: overal `$value`, met `$first` als eerste getal. */
+function descriptor(float $value, ?float $first = null): array
+{
+    $numbers = array_fill(0, 128, $value);
+    if ($first !== null) {
+        $numbers[0] = $first;
+    }
+
+    return $numbers;
+}
+
+/** Zet een gezichtsinstelling direct in de database van de test. */
+function storeFace(TestServer $server, string $id, string $employeeId, array $numbers, string $enrolledAt = '2026-11-20T09:00:00.000Z'): void
+{
+    $server->store->put('faceEnrollments', $id, record(json_encode(['id' => $id, 'employeeId' => $employeeId, 'descriptor' => $numbers, 'enrolledAt' => $enrolledAt, 'consentAt' => $enrolledAt])), testMoment());
+}
+
+test('Herkennen: de drempel en de geldigheid zijn gelijk aan die in config.js', function (): void {
+    $config = (string) file_get_contents(dirname(__DIR__, 2) . '/assets/js/config.js');
+    ok(preg_match('/matchThreshold:\s*([0-9.]+)/', $config, $threshold) === 1);
+    ok(preg_match('/validityDays:\s*([0-9]+)/', $config, $days) === 1);
+    same((float) $threshold[1], Recognition::MATCH_THRESHOLD);
+    same((int) $days[1], Recognition::VALIDITY_DAYS);
+});
+
+test('Herkennen: geen browser krijgt de kenmerken van een gezicht, ook de beheerder niet', function (): void {
+    $server = new TestServer();
+    storeFace($server, 'g-lotte', 'mw-lotte', descriptor(0.125));
+    $server->becomeTablet();
+
+    $device = $server->pulled()['faceEnrollments']['g-lotte'];
+    same(['g-lotte', 'mw-lotte', '2026-11-20T09:00:00.000Z'], [$device->id, $device->employeeId, $device->enrolledAt]);
+    ok(!property_exists($device, 'descriptor'), 'de tablet krijgt de kenmerken');
+
+    $server->loginAsAdmin();
+    ok(!property_exists($server->pulled()['faceEnrollments']['g-lotte'], 'descriptor'), 'de beheerder krijgt de kenmerken');
+    same(128, count($server->store->get('faceEnrollments', 'g-lotte')->descriptor), 'de server bewaart ze wel');
+    same('04A1B2C3', $server->pulled()['employees']['mw-lotte']->badgeId, 'de beheerder ziet het pasnummer');
+});
+
+test('Herkennen: stuurt een browser een gezichtsinstelling terug zonder kenmerken, dan blijven de kenmerken staan', function (): void {
+    $server = new TestServer();
+    storeFace($server, 'g-lotte', 'mw-lotte', descriptor(0.125));
+    $server->loginAsAdmin();
+
+    $response = $server->call('POST', '/changes', '{"changes":[{"collection":"faceEnrollments","id":"g-lotte","data":{"id":"g-lotte","employeeId":"mw-lotte","enrolledAt":"2026-11-20T09:00:00.000Z","consentAt":"2026-11-20T09:00:00.000Z"}}]}');
+    same([], $response->body['rejected']);
+    same(128, count($server->store->get('faceEnrollments', 'g-lotte')->descriptor));
+
+    // Zonder kenmerken een nieuwe instelling, of een andere medewerker: geweigerd.
+    $rejected = $server->call('POST', '/changes', '{"changes":[{"collection":"faceEnrollments","id":"g-nieuw","data":{"id":"g-nieuw","employeeId":"mw-lotte","enrolledAt":"2026-11-20T09:00:00.000Z","consentAt":"2026-11-20T09:00:00.000Z"}},{"collection":"faceEnrollments","id":"g-lotte","data":{"id":"g-lotte","employeeId":"mw-mark","enrolledAt":"2026-11-20T09:00:00.000Z","consentAt":"2026-11-20T09:00:00.000Z"}}]}');
+    same(['g-nieuw', 'g-lotte'], array_column($rejected->body['rejected'], 'id'));
+    same('mw-lotte', $server->store->get('faceEnrollments', 'g-lotte')->employeeId);
+});
+
+test('Herkennen: de server vindt de actieve medewerker met het dichtstbijzijnde gezicht onder de drempel', function (): void {
+    $server = new TestServer();
+    $mark = $server->store->get('employees', 'mw-mark');
+    $mark->active = true;
+    $server->store->put('employees', 'mw-mark', $mark, testMoment());
+    storeFace($server, 'g-lotte', 'mw-lotte', descriptor(0.1));
+    storeFace($server, 'g-mark', 'mw-mark', descriptor(0.1, 0.6));
+    $server->becomeTablet();
+    $recognize = static function (array $numbers) use ($server): mixed {
+        $body = $server->call('POST', '/recognize/face', json_encode(['descriptor' => $numbers]))->body;
+
+        return array_key_exists('employeeId', $body) ? $body['employeeId'] : 'fout';
+    };
+
+    same('mw-lotte', $recognize(descriptor(0.1, 0.2)), 'afstand 0,1 tot Lotte, 0,4 tot Mark');
+    same('mw-mark', $recognize(descriptor(0.1, 0.5)), 'afstand 0,4 tot Lotte, 0,1 tot Mark');
+    same(null, $recognize(descriptor(0.1, 1.2)), 'niemand dichtbij genoeg');
+});
+
+test('Herkennen: een inactieve medewerker, een gast en een gezicht van langer dan een jaar geleden doen niet mee', function (): void {
+    $server = new TestServer();
+    storeFace($server, 'g-mark', 'mw-mark', descriptor(0.3));
+    storeFace($server, 'g-lotte', 'mw-lotte', descriptor(0.5), '2025-11-01T09:00:00.000Z');
+    $server->becomeTablet();
+    $recognize = static fn (array $numbers): mixed => $server->call('POST', '/recognize/face', json_encode(['descriptor' => $numbers]))->body['employeeId'];
+
+    same(null, $recognize(descriptor(0.3)), 'Mark is inactief');
+    same(null, $recognize(descriptor(0.5)), 'het gezicht van Lotte is verlopen');
+});
+
+test('Herkennen: ongeldige kenmerken, zonder inloggen en van een andere website worden geweigerd', function (): void {
+    $server = new TestServer();
+    same(401, $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.1)]))->status);
+    $server->becomeTablet();
+
+    foreach ([array_fill(0, 127, 0.1), array_fill(0, 128, 11), array_merge(array_fill(0, 127, 0.1), ['x']), 'geen lijst'] as $wrong) {
+        same(400, $server->call('POST', '/recognize/face', json_encode(['descriptor' => $wrong]))->status);
+    }
+    same(403, $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.1)]), ['origin' => 'https://kwaad.voorbeeld.test'])->status);
+});
+
+test('Herkennen: een tablet vindt de medewerker bij een pas, in iedere schrijfwijze, maar niet bij een inactieve', function (): void {
+    $server = new TestServer();
+    $mark = $server->store->get('employees', 'mw-mark');
+    $mark->badgeId = 'AABBCCDD';
+    $server->store->put('employees', 'mw-mark', $mark, testMoment());
+    $server->becomeTablet();
+    $recognize = static fn (string $code): Response => $server->call('POST', '/recognize/badge', json_encode(['code' => $code]));
+
+    same('mw-lotte', $recognize('04A1B2C3')->body['employeeId']);
+    same('mw-lotte', $recognize('04:a1:b2:c3')->body['employeeId']);
+    same(null, $recognize('FFFFFFFF')->body['employeeId']);
+    same(null, $recognize('AABBCCDD')->body['employeeId'], 'Mark is inactief');
+    same(400, $recognize('a!')->status);
+});
+
+test('Herkennen: na 240 verzoeken in een minuut weigert de server, een minuut later weer niet', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+    $at = static fn (string $time): DateTimeImmutable => new DateTimeImmutable($time);
+
+    for ($index = 0; $index < Recognition::MAX_PER_MINUTE; $index++) {
+        same(200, $server->call('POST', '/recognize/badge', '{"code":"FFFF0000"}', [], $at('2026-11-26T09:00:30Z'))->status);
+    }
+    same(429, $server->call('POST', '/recognize/badge', '{"code":"FFFF0000"}', [], $at('2026-11-26T09:00:40Z'))->status);
+    same(429, $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.1)]), [], $at('2026-11-26T09:00:50Z'))->status);
+    same(200, $server->call('POST', '/recognize/badge', '{"code":"FFFF0000"}', [], $at('2026-11-26T09:01:35Z'))->status);
+});
+
+test('Pas koppelen: een tablet koppelt een pas aan een actieve medewerker zonder pas, met een regel in het logboek', function (): void {
+    $server = new TestServer();
+    $mark = $server->store->get('employees', 'mw-mark');
+    $mark->active = true;
+    $server->store->put('employees', 'mw-mark', $mark, testMoment());
+    $server->becomeTablet();
+
+    $response = $server->call('POST', '/badge/link', '{"employeeId":"mw-mark","code":"04:dd:ee:ff"}');
+    same(200, $response->status);
+
+    $stored = $server->store->get('employees', 'mw-mark');
+    same(['04DDEEFF', 'Mark Jansen', '5002', '102'], [$stored->badgeId, $stored->name, $stored->personnelNumber, $stored->payrollCode]);
+    ok(is_string($stored->badgeLinkedAt));
+    $audit = $server->store->all('auditLog');
+    same(['Pas gekoppeld door medewerker', 'Mark Jansen'], [$audit[0]->action, $audit[0]->details]);
+    ok(!str_contains(json_encode($audit), '04DDEEFF'), 'het pasnummer staat in het logboek');
+    same(true, $server->pulled()['employees']['mw-mark']->badgeLinked);
+    same('mw-mark', $server->call('POST', '/recognize/badge', '{"code":"04DDEEFF"}')->body['employeeId']);
+});
+
+test('Pas koppelen: een pas van een ander, een tweede pas, een inactieve medewerker of een gast kan niet', function (): void {
+    $server = new TestServer();
+    $server->store->put('employees', 'mw-sanne', record('{"id":"mw-sanne","name":"Sanne Bakker","firstName":"Sanne","lastName":"Bakker","payrollCode":"","personnelNumber":"5003","employerNumber":"","companyId":"bedrijf-tvb","pointId":"punt-hk","active":true,"color":"#d8f1e8","badgeId":""}'), testMoment());
+    $server->store->put('employees', 'gast-1', record('{"id":"gast-1","name":"Ilse de Wit","firstName":"Ilse","lastName":"de Wit","payrollCode":"","personnelNumber":"","employerNumber":"","companyId":null,"pointId":null,"active":true,"color":"#d8f1e8","badgeId":"","guest":true,"phone":"06 12345678"}'), testMoment());
+    $server->becomeTablet();
+    $link = static fn (string $employeeId, string $code): Response => $server->call('POST', '/badge/link', json_encode(['employeeId' => $employeeId, 'code' => $code]));
+
+    same([409, 'Deze pas is al gekoppeld aan iemand anders. Vraag het de beheerder.'], [$link('mw-sanne', '04A1B2C3')->status, $link('mw-sanne', '04A1B2C3')->body['message']]);
+    same(409, $link('mw-lotte', 'AABBCCDD')->status, 'Lotte heeft al een pas');
+    same(404, $link('mw-mark', 'AABBCCDD')->status, 'Mark is inactief');
+    same(404, $link('gast-1', 'AABBCCDD')->status, 'een gast');
+    same(404, $link('bestaat-niet', 'AABBCCDD')->status);
+    same(400, $link('mw-sanne', 'a!')->status);
+    same('', $server->store->get('employees', 'mw-sanne')->badgeId);
+
+    // Ook via de gewone wijzigingen kan een tablet geen pas koppelen.
+    $rejected = $server->call('POST', '/changes', '{"changes":[{"collection":"employees","id":"mw-sanne","data":{"id":"mw-sanne","active":true,"badgeId":"AABBCCDD"}}]}');
+    same(['mw-sanne'], array_column($rejected->body['rejected'], 'id'));
 });

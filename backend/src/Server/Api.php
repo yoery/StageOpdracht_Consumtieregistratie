@@ -19,6 +19,9 @@ use Tvb\Consumptie\Afas\SyncRunner;
  *   POST /account/password  het eigen wachtwoord wijzigen;
  *   GET  /changes?since=N   wat er sinds volgnummer N is veranderd;
  *   POST /changes           wijzigingen opslaan;
+ *   POST /recognize/face    wie is dit gezicht (de kenmerken van het gezicht voor de camera);
+ *   POST /recognize/badge   van wie is deze pas;
+ *   POST /badge/link        een pas koppelen aan een medewerker zonder pas;
  *   GET  /devices           de gekoppelde tablets (beheerder);
  *   POST /devices           deze browser koppelen als tablet (beheerder);
  *   POST /devices/update    naam en locatie van een tablet wijzigen (beheerder);
@@ -46,6 +49,7 @@ final class Api
     private readonly Auth $auth;
     private readonly RecordStore $store;
     private readonly Policy $policy;
+    private readonly Recognition $recognition;
 
     /** @var (\Closure(RecordStore): SyncRunner)|null */
     private readonly ?\Closure $syncRunner;
@@ -63,6 +67,7 @@ final class Api
         $this->auth = new Auth($pdo);
         $this->store = new RecordStore($pdo);
         $this->policy = new Policy($this->store);
+        $this->recognition = new Recognition($pdo, $this->store);
         $this->syncRunner = $syncRunner;
         $this->log = $log ?? static function (string $line): void {
             error_log($line);
@@ -131,6 +136,9 @@ final class Api
             'POST /logout' => $this->logout($request, $admin, $device, $now),
             'GET /changes' => $this->changes($request, $role, $now),
             'POST /changes' => $this->saveChanges($request, $role, $now, $admin === null ? ($device['subjectId'] ?? null) : null),
+            'POST /recognize/face' => $this->recognizeFace($request, ($admin ?? $device)['subjectId'], $now),
+            'POST /recognize/badge' => $this->recognizeBadge($request, ($admin ?? $device)['subjectId'], $now),
+            'POST /badge/link' => $this->linkBadge($request, ($admin ?? $device)['subjectId'], $now),
             default => $admin === null ? Response::error(403, 'Alleen voor de beheerder.') : $this->adminRoute($key, $request, $admin, $now),
         };
     }
@@ -313,6 +321,58 @@ final class Api
         }
 
         return Response::ok(['version' => $this->store->head(), 'saved' => $saved, 'rejected' => $rejected]);
+    }
+
+    // ------------------------------------------------------------------
+    // Herkennen op de server (AF-07, AF-08)
+    // ------------------------------------------------------------------
+
+    // De kenmerken van het gezicht voor de camera: geeft de id van de medewerker of null.
+    private function recognizeFace(Request $request, string $subjectId, \DateTimeImmutable $now): Response
+    {
+        $descriptor = $request->body->descriptor ?? null;
+        if (!Recognition::isDescriptor($descriptor)) {
+            return Response::error(400, 'De kenmerken van het gezicht zijn niet te lezen.');
+        }
+        if (!$this->recognition->allow($subjectId, $now)) {
+            return Response::error(429, 'Te veel verzoeken. Probeer het over een minuut opnieuw.');
+        }
+
+        return Response::ok(['employeeId' => $this->recognition->matchFace($descriptor, $now)]);
+    }
+
+    // Het nummer van de gescande pas: geeft de id van de actieve medewerker of null.
+    private function recognizeBadge(Request $request, string $subjectId, \DateTimeImmutable $now): Response
+    {
+        $code = Recognition::normalizeBadge($request->body->code ?? null);
+        if ($code === null) {
+            return Response::error(400, 'Dit is geen geldig pasnummer.');
+        }
+        if (!$this->recognition->allow($subjectId, $now)) {
+            return Response::error(429, 'Te veel verzoeken. Probeer het over een minuut opnieuw.');
+        }
+
+        return Response::ok(['employeeId' => $this->recognition->findByBadge($code)]);
+    }
+
+    // Een pas koppelen aan een medewerker zonder pas (Snellere optie instellen).
+    private function linkBadge(Request $request, string $subjectId, \DateTimeImmutable $now): Response
+    {
+        $employeeId = $request->body->employeeId ?? null;
+        $code = Recognition::normalizeBadge($request->body->code ?? null);
+        if (!is_string($employeeId) || $code === null) {
+            return Response::error(400, 'Dit is geen geldig pasnummer.');
+        }
+        if (!$this->recognition->allow($subjectId, $now)) {
+            return Response::error(429, 'Te veel verzoeken. Probeer het over een minuut opnieuw.');
+        }
+
+        return match ($this->recognition->linkBadge($employeeId, $code, $now)) {
+            'ok' => Response::ok(['version' => $this->store->head()]),
+            'taken' => Response::error(409, 'Deze pas is al gekoppeld aan iemand anders. Vraag het de beheerder.'),
+            'has-badge' => Response::error(409, 'Je hebt al een pas. Een andere pas koppelen kan via de beheerder.'),
+            default => Response::error(404, 'Deze medewerker kan geen pas koppelen.'),
+        };
     }
 
     // ------------------------------------------------------------------

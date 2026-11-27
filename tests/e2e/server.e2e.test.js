@@ -319,13 +319,105 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     await browser.waitFor(`(() => { const text = localStorage.getItem("tvb-blikjesregistratie-server") ?? ""; return text.includes("Ilse de Wit") && !text.includes("12345678"); })()`,
       { timeout: 20000, message: "Het telefoonnummer staat nog op de tablet." });
 
-    const pulled = (await asAdmin("GET", "/changes?since=0")).json.changes;
-    const guest = pulled.find((change) => change.collection === "employees" && change.data.name === "Ilse de Wit").data;
+    // De registratie kan nog onderweg zijn (de tablet stuurt wijzigingen kort na elkaar weg).
+    let pulled = [];
+    let guest = null;
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      pulled = (await asAdmin("GET", "/changes?since=0")).json.changes;
+      guest = pulled.find((change) => change.collection === "employees" && change.data.name === "Ilse de Wit")?.data ?? null;
+      if (guest && pulled.some((change) => change.collection === "registrations" && change.data.employeeId === guest.id)) break;
+      await sleep(200);
+    }
     assert.deepEqual([guest.guest, guest.phone, guest.personnelNumber], [true, "06 12345678", ""]);
     assert.ok(pulled.some((change) => change.collection === "registrations" && change.data.employeeId === guest.id), "de registratie van de gast staat niet op de server");
     const audit = pulled.filter((change) => change.collection === "auditLog").map((change) => change.data);
     assert.ok(audit.some((entry) => entry.action === "Gast geregistreerd" && entry.details === "Ilse de Wit"));
     assert.ok(!JSON.stringify(audit).includes("12345678"), "het telefoonnummer staat in het logboek");
+  });
+
+  scenario("herkennen met de pas gebeurt op de server: de tablet kent geen pasnummers en geen gezichtskenmerken (AF-07, AF-08)", async () => {
+    // De beheerder geeft Lotte een pas en een gezicht, buiten de browser om.
+    const changes = (await asAdmin("GET", "/changes?since=0")).json.changes;
+    const lotte = changes.find((change) => change.id === "mw-lotte").data;
+    const descriptor = Array(128).fill(0.125);
+    const pushed = await asAdmin("POST", "/changes", { changes: [
+      { collection: "employees", id: "mw-lotte", data: { ...lotte, badgeId: "04A1B2C3" } },
+      { collection: "faceEnrollments", id: "g-lotte", data: { id: "g-lotte", employeeId: "mw-lotte", descriptor, enrolledAt: new Date().toISOString(), consentAt: new Date().toISOString() } }
+    ] });
+    assert.deepEqual(pushed.json.rejected, []);
+
+    // De pas scannen op de tablet: de server zoekt hem op en het productvenster van Lotte gaat open.
+    await browser.manualSearch();
+    await browser.scanBadge("04:a1:b2:c3");
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`, { message: "Het productvenster ging niet open na de pas." });
+    assert.equal(await browser.evaluate(`document.querySelector("#employeeProductsTitle").textContent`), "Product kiezen voor Lotte van Dijk");
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+    // Wat de tablet van de server krijgt en bewaart, bevat geen pasnummer en geen kenmerken.
+    await sleep(9000); // het volgende ophalen (iedere 8 seconden)
+    const seen = await browser.evaluate(`fetch("/api/changes?since=0").then((response) => response.json())`);
+    const lotteOnTablet = seen.changes.find((change) => change.id === "mw-lotte").data;
+    assert.deepEqual([lotteOnTablet.badgeId, lotteOnTablet.badgeLinked], ["", true]);
+    const face = seen.changes.find((change) => change.id === "g-lotte").data;
+    assert.ok(face && !("descriptor" in face), "de tablet krijgt de kenmerken");
+    const stored = await browser.evaluate(`localStorage.getItem("tvb-blikjesregistratie-server") ?? ""`);
+    assert.ok(stored.includes("Lotte van Dijk"));
+    for (const hidden of ["04A1B2C3", "0.125"]) {
+      assert.ok(!stored.includes(hidden), `de tablet bewaart ${hidden}`);
+      assert.ok(!(await pageText()).includes(hidden), `de pagina bevat ${hidden}`);
+    }
+
+    // Herkennen met het gezicht kan alleen via de server, ook voor de beheerder.
+    const recognized = await asAdmin("POST", "/recognize/face", { descriptor });
+    assert.equal(recognized.json.employeeId, "mw-lotte");
+    const adminView = (await asAdmin("GET", "/changes?since=0")).json.changes.find((change) => change.id === "g-lotte").data;
+    assert.ok(!("descriptor" in adminView), "de beheerder krijgt de kenmerken");
+  });
+
+  scenario("snellere optie: Mark koppelt zelf zijn pas op de tablet en wordt daarna met die pas herkend", async () => {
+    await browser.manualSearch();
+    await browser.click("#employeeSearch");
+    await browser.insertText("mark");
+    await browser.waitFor(`document.querySelectorAll("[data-open-employee]").length === 1`);
+    await browser.click(`[data-open-employee][aria-label="Product kiezen voor Mark Jansen"]`);
+    await browser.waitFor(`!document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+    // De vraag staat in het productvenster. De tablet heeft geen camera, dus alleen "Pasje" kan.
+    await browser.waitFor(`Boolean(document.querySelector("#faceEnrollArea [data-quick-setup]"))`, { message: "De vraag 'Snellere optie instellen' staat er niet." });
+    await browser.click("#faceEnrollArea [data-quick-setup]");
+    await browser.waitFor(`!document.querySelector("#quickSetupModal").classList.contains("hidden")`);
+    assert.deepEqual(await browser.evaluate(`["#quickSetupFace", "#quickSetupBadge", "#quickSetupBoth"].map((id) => document.querySelector(id).classList.contains("hidden"))`), [true, false, true]);
+    await browser.click("#quickSetupBadge");
+    await browser.waitFor(`!document.querySelector("#badgeLinkModal").classList.contains("hidden")`);
+
+    // Eerst de pas van Lotte: die hoort al bij iemand anders.
+    await browser.scanBadge("04A1B2C3");
+    await browser.waitFor(`document.querySelector("#badgeLinkStatus").textContent === "Deze pas is al gekoppeld aan iemand anders. Vraag het de beheerder."`);
+    assert.equal(await isHidden("#badgeLinkModal"), false);
+    // De server weigert met status 409. Die staat als fout in de console van de browser: dat is hier de bedoeling.
+    await sleep(200);
+    assert.ok(browser.errors.every((error) => error.includes("status of 409") && error.includes("/api/badge/link")), browser.errors.join(" | "));
+    browser.errors.length = 0;
+
+    // Dan een eigen pas.
+    await browser.scanBadge("aa:bb:cc:dd");
+    await waitForToast("Je pas is gekoppeld. Voortaan houd je je pas tegen de lezer.");
+    assert.equal(await isHidden("#badgeLinkModal"), true);
+    await browser.waitFor(`!document.querySelector("#faceEnrollArea [data-quick-setup]")`, { message: "De vraag staat er nog, terwijl Mark nu een pas heeft." });
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+
+    const changes = (await asAdmin("GET", "/changes?since=0")).json.changes;
+    assert.equal(changes.find((change) => change.id === "mw-mark").data.badgeId, "AABBCCDD");
+    assert.ok(changes.some((change) => change.collection === "auditLog" && change.data.action === "Pas gekoppeld door medewerker" && change.data.details === "Mark Jansen"));
+
+    // Met de nieuwe pas wordt Mark herkend.
+    await browser.manualSearch();
+    await browser.scanBadge("AABBCCDD");
+    await browser.waitFor(`document.querySelector("#employeeProductsTitle").textContent === "Product kiezen voor Mark Jansen" && !document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
+    await browser.press("Escape");
+    await browser.waitFor(`document.querySelector("#employeeProductsModal").classList.contains("hidden")`);
   });
 
   scenario("de beheerder importeert looncodes uit een bestand en koppelt een afdeling uit AFAS aan een consumptiepunt", async () => {

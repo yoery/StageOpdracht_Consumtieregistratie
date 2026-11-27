@@ -545,6 +545,8 @@ export class DataStore {
       (employee.badgeLinkedAt === undefined || this.isValidDateTime(employee.badgeLinkedAt, Infinity)) &&
       // De afdeling uit AFAS (FR-102): korte tekst, of geen.
       (employee.unit === undefined || this.isText(employee.unit)) &&
+      // Met een server krijgt een tablet het pasnummer niet, alleen of er een pas is (AF-08).
+      (employee.badgeLinked === undefined || typeof employee.badgeLinked === "boolean") &&
       (employee.guest === undefined || typeof employee.guest === "boolean") &&
       (employee.phone === undefined || this.isText(employee.phone, 32))
     );
@@ -589,9 +591,13 @@ export class DataStore {
     return (
       this.isSafeId(entry?.id) &&
       this.isSafeId(entry.employeeId) &&
-      Array.isArray(entry.descriptor) &&
-      entry.descriptor.length === FACE_DESCRIPTOR_LENGTH &&
-      entry.descriptor.every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE) &&
+      // Met een server staan de kenmerken alleen op de server (security audit AF-07): de browser krijgt
+      // de instelling zonder `descriptor`. Staan ze er wel (de demo), dan moeten ze kloppen.
+      (entry.descriptor === undefined || (
+        Array.isArray(entry.descriptor) &&
+        entry.descriptor.length === FACE_DESCRIPTOR_LENGTH &&
+        entry.descriptor.every((value) => Number.isFinite(value) && Math.abs(value) <= MAX_DESCRIPTOR_VALUE)
+      )) &&
       this.isValidDateTime(entry.enrolledAt, now.getTime() + MAX_FUTURE_MS) &&
       this.isValidDateTime(entry.consentAt, now.getTime() + MAX_FUTURE_MS) &&
       Date.parse(entry.consentAt) <= Date.parse(entry.enrolledAt) &&

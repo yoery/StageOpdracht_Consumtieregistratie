@@ -54,7 +54,8 @@ export class AutoScanController extends ControllerPart {
     notRecognized: "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig.",
     notRecognizedNoBadge: "Je bent niet herkend. Zoek je naam met Handmatig zoeken.",
     // Met een server (besluit 25 november 2026, punt 5). "De knop hieronder" is Handmatig zoeken.
-    notRecognizedSetup: "Zoek jezelf eerst op via de knop hieronder en stel een snellere optie in."
+    notRecognizedSetup: "Zoek jezelf eerst op via de knop hieronder en stel een snellere optie in.",
+    offline: "Herkennen werkt nu niet: geen verbinding met de server. Zoek je naam met de knop hieronder."
   };
 
   // `app` is de controller (RegistrationApp). `clock` levert de tijd en de timers (dezelfde klok als de
@@ -239,7 +240,8 @@ export class AutoScanController extends ControllerPart {
     // Eerst de kandidaat (confirm), dan de controle op een levend gezicht: bij een andere kandidaat begint
     // die controle opnieuw, zodat een knipper van iemand anders niet meetelt (pentest PT-01).
     const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
-    const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
+    const match = descriptor ? await this.app.matchFace(descriptor, activeIds) : null;
+    if (session !== this.scanSession) return;
     const candidate = match && this.model.findEmployee(match)?.active ? match : null;
     const employeeId = this.faceDemo.confirm(candidate);
     const live = this.faceDemo.checkLiveness(this.clock.now());
@@ -263,7 +265,9 @@ export class AutoScanController extends ControllerPart {
   pauseAfterUnknown(now = this.clock.now()) {
     const badge = Boolean(this.app.badgeReader?.isEnabled?.());
     const { MESSAGES } = AutoScanController;
-    const message = this.app.server ? MESSAGES.notRecognizedSetup : badge ? MESSAGES.notRecognized : MESSAGES.notRecognizedNoBadge;
+    let message = this.app.server ? MESSAGES.notRecognizedSetup : badge ? MESSAGES.notRecognized : MESSAGES.notRecognizedNoBadge;
+    // Met een server die niet bereikbaar is: dat zeggen, in plaats van "niet herkend".
+    if (this.app.server?.recognitionOffline) message = MESSAGES.offline;
     this.setScanState("unknown", message);
     this.resetScan();
     this.scanPausedUntil = now + this.autoSettings.retryPauseMs;

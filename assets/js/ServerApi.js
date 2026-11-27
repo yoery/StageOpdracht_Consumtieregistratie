@@ -57,6 +57,21 @@ export class ServerApi {
     return this.request("POST", "/changes", { changes });
   }
 
+  // Wie is dit gezicht? Alleen de kenmerken van het gezicht voor de camera gaan mee.
+  recognizeFace(descriptor) {
+    return this.request("POST", "/recognize/face", { descriptor: Array.from(descriptor) });
+  }
+
+  // Van wie is deze pas?
+  recognizeBadge(code) {
+    return this.request("POST", "/recognize/badge", { code });
+  }
+
+  // Koppelt een pas aan een medewerker zonder pas.
+  linkBadge(employeeId, code) {
+    return this.request("POST", "/badge/link", { employeeId, code });
+  }
+
   devices() {
     return this.request("GET", "/devices");
   }

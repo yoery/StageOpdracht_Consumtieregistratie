@@ -55,7 +55,8 @@ export class QuickSetupController extends ControllerPart {
     if (!this.app.server || !employee?.active || employee.guest) return { face: false, badge: false };
     const face = this.app.faceSetupState?.() === "ready" &&
       !this.model.hasValidFaceEnrollment(employeeId, now, FACE_DEMO.validityDays);
-    const badge = Boolean(this.app.badgeReader?.isEnabled?.()) && !employee.badgeId;
+    // Met een server kent de tablet het pasnummer niet, alleen of er een pas is (badgeLinked).
+    const badge = Boolean(this.app.badgeReader?.isEnabled?.()) && !employee.badgeId && !employee.badgeLinked;
     return { face, badge };
   }
 
@@ -124,6 +125,30 @@ export class QuickSetupController extends ControllerPart {
   // De pas koppelen
   // ------------------------------------------------------------------
 
+  // De pas koppelen via de server. Zolang het verzoek loopt, telt een tweede scan niet. Lukt het niet
+  // (de pas hoort bij iemand anders, of geen verbinding), dan blijft het venster open met de reden.
+  async linkBadgeOnServer(employeeId, code) {
+    if (this.linking) return;
+    this.linking = true;
+    this.view.$("#badgeLinkStatus").textContent = "";
+    let result;
+    try {
+      result = await this.app.server.linkBadge(employeeId, code);
+    } finally {
+      this.linking = false;
+    }
+    if (this.badgeLinkEmployeeId !== employeeId) return; // het venster is intussen gesloten
+    if (!result.ok) {
+      this.view.$("#badgeLinkStatus").textContent = result.message;
+      return;
+    }
+
+    this.badgeLinkEmployeeId = null;
+    this.app.closeModal("#badgeLinkModal");
+    if (this.app.selectedEmployeeId === employeeId) this.app.renderProductWindow();
+    this.view.showToast(QuickSetupController.TEXTS.badgeLinked, { tone: "success", duration: 5000 });
+  }
+
   // Opent "Houd je pas tegen de lezer". Zolang dit venster open is, koppelt een scan de pas.
   startBadgeLink(employeeId) {
     if (!this.quickSetupOptions(employeeId).badge) return false;
@@ -144,6 +169,13 @@ export class QuickSetupController extends ControllerPart {
   linkScannedBadge(code) {
     const employeeId = this.badgeLinkEmployeeId;
     if (!employeeId) return false;
+
+    // Met een server koppelt de server de pas. Alleen de server weet of de pas al bij iemand anders
+    // hoort (de tablet kent de pasnummers van anderen niet). Het logboek schrijft de server zelf.
+    if (typeof this.app.server?.linkBadge === "function") {
+      this.linkBadgeOnServer(employeeId, code);
+      return true;
+    }
 
     if (this.model.isBadgeTaken(code, employeeId)) {
       this.view.$("#badgeLinkStatus").textContent = QuickSetupController.TEXTS.badgeTaken;

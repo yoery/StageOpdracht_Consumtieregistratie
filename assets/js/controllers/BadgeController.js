@@ -170,27 +170,56 @@ export class BadgeController extends ControllerPart {
     // "Houd je pas tegen de lezer" van Snellere optie instellen staat open: de pas wordt gekoppeld.
     if (this.app.badgeLinkEmployeeId && this.app.linkScannedBadge?.(code)) return;
 
+    if (!this.canOpenAfterScan()) return;
+
+    // Met een server zoekt de server de pas op: de pasnummers van anderen komen niet in de browser
+    // (security audit AF-08). In de demo zoekt de browser zelf.
+    if (typeof this.app.server?.recognizeBadge === "function") {
+      return this.recognizeBadgeOnServer(code);
+    }
+    this.openAfterScan(this.model.findEmployeeByBadge(code));
+  }
+
+  // Mag er na een scan iets opengaan? Niet als er een ander venster dan het productvenster open is.
+  canOpenAfterScan() {
     const openModal = this.app.topModal();
     const productWindowOpen = Boolean(openModal) && openModal === this.view.$("#employeeProductsModal");
     if (openModal && !productWindowOpen) {
       this.view.showToast(BadgeController.CLOSE_WINDOW_FIRST, { tone: "error", duration: 5000 });
+      return false;
+    }
+    return true;
+  }
+
+  // Vraagt de server van wie de pas is, en gaat daarna verder zoals in de demo. Is de server niet
+  // bereikbaar, dan zegt een melding dat. Kwam er intussen een ander venster in beeld, dan opent er niets.
+  async recognizeBadgeOnServer(code) {
+    const result = await this.app.server.recognizeBadge(code);
+    if (!result.ok) {
+      this.view.showToast(result.message, { tone: "error", duration: 6000 });
       return;
     }
+    if (!this.canOpenAfterScan()) return;
+    this.openAfterScan(result.employeeId ? this.model.findEmployee(result.employeeId) : null);
+  }
 
-    const employee = this.model.findEmployeeByBadge(code);
+  // Opent na een scan het productvenster van de medewerker (via RecognitionController), of zegt dat
+  // de pas niet is gekoppeld.
+  openAfterScan(employee) {
     if (!employee?.active) {
-      this.view.showToast(
-        "Deze pas is niet gekoppeld aan een medewerker. Kies je naam in de lijst of vraag de beheerder om de pas te koppelen.",
-        { tone: "error", duration: 5000 }
-      );
+      this.view.showToast(BadgeController.NOT_LINKED, { tone: "error", duration: 5000 });
       return;
     }
 
+    const openModal = this.app.topModal();
+    const productWindowOpen = Boolean(openModal) && openModal === this.view.$("#employeeProductsModal");
     if (productWindowOpen && this.replaceProductWindow(employee.id)) return;
-    // Wat er opent, bepaalt RecognitionController: eerst eventueel de vraag over gezichtsherkenning
-    // (demo), daarna het productvenster.
+    // Wat er opent, bepaalt RecognitionController: eerst eventueel de vraag over gezichtsherkenning,
+    // daarna het productvenster.
     this.app.afterRecognition(employee.id, "badge");
   }
+
+  static NOT_LINKED = "Deze pas is niet gekoppeld aan een medewerker. Kies je naam in de lijst of vraag de beheerder om de pas te koppelen.";
 
   // Een pas wordt gescand terwijl het productvenster open is. Is het venster van dezelfde
   // medewerker, dan blijft het open: de keuze blijft staan en de scan telt als invoer (de tijd tot

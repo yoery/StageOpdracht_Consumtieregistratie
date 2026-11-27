@@ -62,6 +62,9 @@ export class FaceController extends ControllerPart {
   };
 
   // Meldingen als instellen of uitzetten niet mag of niet kan (zie het commentaar bovenaan).
+  // Herkennen met de camera werkt met een server alleen als de server bereikbaar is.
+  static OFFLINE_MESSAGE = "Herkennen met de camera werkt nu niet: geen verbinding met de server. Zoek je naam in de lijst.";
+
   static SETUP_MESSAGES = {
     enrollNotAllowed: "Gezichtsherkenning instellen kan alleen na herkenning met je pas, of via de beheerder.",
     forgetNotAllowed: "Uitzetten kan alleen na herkenning met je pas of de camera, of via de beheerder.",
@@ -95,6 +98,14 @@ export class FaceController extends ControllerPart {
   // eerder (gesloten) venster mag een opnieuw geopend venster niet blokkeren.
   get capturing() {
     return this.captureSession !== null && this.captureSession === this.faceSession;
+  }
+
+  // Wie is dit gezicht? Met een server vergelijkt de server (ServerMode.recognizeFace): de kenmerken
+  // van anderen komen nooit in de browser (security audit AF-07). In de demo vergelijkt de browser zelf
+  // met de gezichten in het geheugen. Alleen actieve medewerkers doen mee. Geeft een id of null.
+  async matchFace(descriptor, activeIds) {
+    if (typeof this.app.server?.recognizeFace === "function") return this.app.server.recognizeFace(descriptor);
+    return this.faceDemo.findMatch(descriptor, activeIds);
   }
 
   // Heeft minstens één actieve medewerker een ingesteld gezicht (in het geheugen)?
@@ -450,7 +461,8 @@ export class FaceController extends ControllerPart {
       // een andere kandidaat begint de controle opnieuw, zodat een knipper van iemand anders niet meetelt
       // (pentest PT-01). checkLiveness wordt altijd aangeroepen, zodat de gezichtspunten worden vergeten.
       const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
-      const match = descriptor ? this.faceDemo.findMatch(descriptor, activeIds) : null;
+      const match = descriptor ? await this.matchFace(descriptor, activeIds) : null;
+      if (session !== this.faceSession) return;
       const candidate = match && this.model.findEmployee(match)?.active ? match : null;
       const employeeId = this.faceDemo.confirm(candidate);
       const live = this.faceDemo.checkLiveness();
@@ -474,6 +486,11 @@ export class FaceController extends ControllerPart {
     }
     this.stopCameraAfterTimeout();
     // Met een server: zoek jezelf op en stel een snellere optie in (besluit 25 november 2026, punt 5).
+    // Was de server niet bereikbaar, dan zegt de melding dat.
+    if (this.app.server?.recognitionOffline) {
+      this.setFaceStatus(FaceController.OFFLINE_MESSAGE, "error");
+      return;
+    }
     this.setFaceStatus(this.app.server
       ? "Niet herkend. De camera is uitgezet. Zoek jezelf eerst op in de lijst en stel een snellere optie in."
       : "Niet herkend. De camera is uitgezet. Sluit dit venster en kies je naam in de lijst.", "error");

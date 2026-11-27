@@ -724,7 +724,7 @@ const DELEGATES = {
   },
   face: {
     methods: [
-      "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "startQuickFaceEnrollment", "forgetFace", "setFaceStatus",
+      "startFaceRecognition", "startWakeScan", "startFaceEnrollment", "startFaceEnrollmentFor", "startQuickFaceEnrollment", "forgetFace", "setFaceStatus", "matchFace",
       "faceSetupState", "canSelfEnroll", "canSelfForget", "startAdminFaceEnrollment", "adminForgetFace", "renderAdminFaceChange",
       "faceTexts", "openFaceModal", "hasActiveFace", "loadSavedFaces", "expireFaces",
       "updateEnrollButton", "scanForFace", "endWakeScan", "stopCameraAfterTimeout", "scheduleEnrollTimeout",

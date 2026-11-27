@@ -74,6 +74,17 @@ final class Policy
      */
     public function visible(string $role, string $collection, \stdClass $data, \DateTimeImmutable $now): \stdClass|false
     {
+        // De kenmerken van een gezicht gaan nooit naar een browser, ook niet naar de beheerder (AF-07).
+        // Herkennen gebeurt op de server (Recognition). De browser ziet alleen dat er een gezicht is
+        // ingesteld en wanneer, zodat hij "Uitzetten" en het verlopen na een jaar kan tonen.
+        if ($collection === 'faceEnrollments') {
+            $copy = clone $data;
+            unset($copy->descriptor);
+            if ($role === self::ROLE_ADMIN) {
+                return $copy;
+            }
+            $data = $copy;
+        }
         if ($role === self::ROLE_ADMIN) {
             return $data;
         }
@@ -85,6 +96,11 @@ final class Policy
             foreach (self::EMPLOYEE_FIELDS_HIDDEN as $field) {
                 $copy->$field = '';
             }
+            // Ook het pasnummer niet (AF-08): herkennen met de pas gebeurt op de server. De tablet hoort
+            // alleen of iemand een pas heeft (voor "Snellere optie instellen").
+            $copy->badgeLinked = is_string($data->badgeId ?? null) && $data->badgeId !== '';
+            $copy->badgeId = '';
+            unset($copy->badgeLinkedAt);
 
             return $copy;
         }
@@ -112,6 +128,18 @@ final class Policy
         if ($incoming !== null && ($incoming->id ?? null) !== $id) {
             return false;
         }
+        // Een browser kent de kenmerken van een opgeslagen gezicht niet (zie visible). Stuurt hij een
+        // gezichtsinstelling terug zonder kenmerken, dan blijven de kenmerken op de server staan. Is er
+        // nog geen instelling, dan zijn kenmerken verplicht.
+        if ($collection === 'faceEnrollments' && $incoming !== null && !property_exists($incoming, 'descriptor')) {
+            $stored = $this->store->get($collection, $id);
+            if ($stored === null || ($stored->employeeId ?? null) !== ($incoming->employeeId ?? null) || !property_exists($stored, 'descriptor')) {
+                return false;
+            }
+            $incoming = clone $incoming;
+            $incoming->descriptor = $stored->descriptor;
+        }
+        // Een beheerder kent het pasnummer wel. Laat hij het weg, dan blijft het pasnummer staan.
         if ($role === self::ROLE_ADMIN) {
             return $incoming;
         }
@@ -123,7 +151,9 @@ final class Policy
 
         return match ($collection) {
             'registrations' => $incoming !== null && $existing === null ? $this->newRegistration($incoming, $deviceId) : false,
-            'employees' => $incoming === null ? false : ($existing === null ? $this->newGuest($incoming) : $this->badgeSelfLink($existing, $incoming)),
+            // Een tablet maakt alleen een gast. Een pas koppelen gaat via /badge/link (Recognition::linkBadge),
+            // omdat de tablet de pasnummers van anderen niet kent en dus niet kan zien of een pas vrij is.
+            'employees' => $incoming !== null && $existing === null ? $this->newGuest($incoming) : false,
             'points' => $incoming !== null && $existing !== null,
             'faceEnrollments' => $this->faceEnrollment($incoming, $existing),
             'faceOffers' => $incoming !== null ? $this->faceOffer($incoming) : false,
@@ -204,24 +234,6 @@ final class Policy
 
     // Een tablet koppelt een pas aan een medewerker (Snellere optie instellen). Mag alleen bij een actieve
     // medewerker zonder pas, met een geldig pasnummer dat nog bij niemand hoort.
-    private function badgeSelfLink(\stdClass $existing, \stdClass $incoming): \stdClass|false
-    {
-        $badgeId = $incoming->badgeId ?? null;
-        if (($existing->active ?? false) !== true || ($existing->guest ?? false) === true || ($existing->badgeId ?? '') !== ''
-            || !is_string($badgeId) || preg_match('/^[A-Z0-9]{4,64}$/', $badgeId) !== 1) {
-            return false;
-        }
-        foreach ($this->store->all('employees') as $other) {
-            if (($other->badgeId ?? '') === $badgeId && ($other->id ?? null) !== ($existing->id ?? null)) {
-                return false;
-            }
-        }
-        $linked = clone $existing;
-        $linked->badgeId = $badgeId;
-        $linked->badgeLinkedAt = $this->isDateTime($incoming->badgeLinkedAt ?? null) ? $incoming->badgeLinkedAt : gmdate('Y-m-d\TH:i:s\Z');
-
-        return $linked;
-    }
 
     // Het werkgevernummer van een medewerker: zijn eigen afwijkende nummer, anders dat van zijn bedrijf.
     private function employerNumber(\stdClass $employee): string

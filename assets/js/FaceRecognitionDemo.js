@@ -282,6 +282,8 @@ export class FaceRecognitionDemo {
 
     for (const [employeeId, known] of this.knownFaces) {
       if (allowed && !allowed.has(employeeId)) continue;
+      // Met een server zijn de kenmerken niet in de browser (zie FaceController.matchFace).
+      if (!Array.isArray(known)) continue;
       const distance = this.distance(descriptor, known);
       if (distance < bestDistance) {
         bestDistance = distance;
