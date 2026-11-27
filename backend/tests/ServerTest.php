@@ -638,7 +638,12 @@ test('AFAS opslaan: het antwoord aan de browser bevat geen namen, geen token en 
     foreach (['Sanne', 'Bakker', 'Lotte', 'Voorbeeldstraat', 'Geboortedatum', fakeToken(), 'AfasToken', 'Authorization'] as $hidden) {
         ok(!str_contains($text, $hidden), "het antwoord bevat $hidden");
     }
-    ok(str_contains($text, 'Personeelsnummer 6001: werkgever 55 is niet bekend in de app'), 'de opmerking voor de beheerder ontbreekt');
+    ok(str_contains($text, 'Werkgever 55 (Voorbeeld Installaties B.V.) is nieuw en is als bedrijf in de app gezet.'), 'de opmerking voor de beheerder ontbreekt');
+
+    // Het nieuwe bedrijf staat in de database, één keer, ook na een tweede synchronisatie.
+    same(['Voorbeeld Installaties B.V.', '55'], [$server->store->get('companies', 'afas-werkgever-55')->name, $server->store->get('companies', 'afas-werkgever-55')->employerNumber]);
+    $sanne = array_values(array_filter($server->store->all('employees'), static fn (stdClass $employee): bool => $employee->personnelNumber === '6001'))[0];
+    same('afas-werkgever-55', $sanne->companyId);
     ok(str_contains($http->requests[0]['headers'][0] ?? '', 'AfasToken'), 'het token gaat alleen mee naar AFAS');
 });
 

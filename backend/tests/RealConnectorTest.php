@@ -19,7 +19,7 @@ test('Connector van TVB: Medewerker is het personeelsnummer en Roepnaam de voorn
 
     same([], $mapped->problems);
     same('Medewerker', $mapper->sortField());
-    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Voorvoegsel', 'Werkgever_2', 'Organisatorische_Eenheid'], $mapper->fieldNames());
+    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Voorvoegsel', 'Werkgever_2', 'Organisatorische_Eenheid', 'Werkgever', 'Datum_in_dienst'], $mapper->fieldNames());
     $employee = $mapped->employees[0];
     same('5001', $employee->personnelNumber);
     same('Lotte', $employee->firstName);
@@ -46,14 +46,18 @@ test('Connector van TVB: adres, geboortedatum en de andere extra velden worden n
     }
 });
 
-test('Connector van TVB: het werkgevernummer komt uit Werkgever_2, met de voorloopnul, en de naam in Werkgever wordt niet gelezen', function (): void {
+test('Connector van TVB: het werkgevernummer komt uit Werkgever_2, met de voorloopnul, en de naam uit Werkgever', function (): void {
     $mapper = new EmployeeMapper();
 
-    $employee = $mapper->map([realRow(['Werkgever' => 'Voorbeeld Klimaattechniek B.V.', 'Werkgever_2' => '01'])])->employees[0];
+    $employee = $mapper->map([realRow(['Werkgever' => 'Voorbeeld Klimaattechniek B.V.', 'Werkgever_2' => '01', 'Datum_in_dienst' => '2024-03-01T00:00:00Z'])])->employees[0];
     same('01', $employee->employerNumber);
-    ok(!str_contains(json_encode(get_object_vars($employee), JSON_THROW_ON_ERROR), 'Klimaattechniek'), 'de naam van het bedrijf is overgenomen');
+    same('Voorbeeld Klimaattechniek B.V.', $employee->employerName, 'de naam is nodig om een nieuw bedrijf aan te maken');
+    same('2024-03-01', $employee->startDate);
 
-    // Een rij zonder het veld Werkgever (de naam) is gewoon geldig.
+    // Een rij zonder de naam of met een kapotte datum in dienst is gewoon geldig: die zijn alleen hulpgegevens.
+    $row = realRow(['Datum_in_dienst' => 'gisteren', 'Werkgever' => "Naam\nmet enter"]);
+    same([], $mapper->map([$row])->problems);
+    same(['', null], [$mapper->map([$row])->employees[0]->employerName, $mapper->map([$row])->employees[0]->startDate]);
     $row = realRow();
     unset($row['Werkgever']);
     same([], $mapper->map([$row])->problems);
@@ -67,8 +71,10 @@ test('Connector van TVB: werkgevernummer 01 is een ander nummer dan 1', function
     $repository = new InMemoryRepository([]);
     $plan = (new EmployeeSync())->plan((new EmployeeMapper())->map([realRow(['Werkgever_2' => '01'])]), [], ['1' => 'bedrijf-een'], $repository->points, '2026-11-25', null);
 
-    same(null, $plan->additions[0]['companyId']);
-    ok(str_contains(implode("\n", $plan->notes), 'werkgever 01 is niet bekend in de app'));
+    // 01 is niet 1: er komt een nieuw bedrijf voor werkgever 01, met de naam uit AFAS.
+    same('afas-werkgever-01', $plan->additions[0]['companyId']);
+    same([['id' => 'afas-werkgever-01', 'employerNumber' => '01', 'name' => 'Voorbeeld Installaties B.V.']], $plan->companies);
+    ok(str_contains(implode("\n", $plan->notes), 'Werkgever 01 (Voorbeeld Installaties B.V.) is nieuw'));
 });
 
 test('Connector van TVB: ontbreekt Medewerker, Roepnaam, Achternaam of Werkgever_2, dan stopt alles', function (): void {
@@ -87,7 +93,7 @@ test('Connector van TVB: de vier vaste velden kunnen niet worden uitgezet', func
         throws(AfasException::class, fn () => new EmployeeMapper([$key => null]));
     }
     // De andere wel, en ze kunnen weer aan als de connector het veld later krijgt.
-    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever_2', 'Organisatorische_Eenheid'], (new EmployeeMapper(['prefix' => null]))->fieldNames());
+    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever_2', 'Organisatorische_Eenheid', 'Werkgever', 'Datum_in_dienst'], (new EmployeeMapper(['prefix' => null]))->fieldNames());
     ok(in_array('Looncode', (new EmployeeMapper(['payrollCode' => 'Looncode']))->fieldNames(), true));
 });
 

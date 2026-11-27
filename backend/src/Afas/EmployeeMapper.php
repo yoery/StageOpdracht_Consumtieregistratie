@@ -40,6 +40,11 @@ final class EmployeeMapper
         'workLocation' => 'Organisatorische_Eenheid',
         'payrollCode' => null,
         'endDate' => null,
+        // De naam van de werkgever: daarmee maakt de synchronisatie een bedrijf aan dat de app nog niet kent.
+        'employerName' => 'Werkgever',
+        // De datum in dienst: staat een personeelsnummer meer dan één keer in AFAS (één rij per
+        // dienstverband of functie), dan telt de rij met de laatste datum (zie EmployeeSync).
+        'startDate' => 'Datum_in_dienst',
     ];
 
     // Deze vier velden moeten altijd zijn ingesteld en in iedere rij staan. De looncode moet in iedere
@@ -167,7 +172,25 @@ final class EmployeeMapper
             return $problem('de datum uit dienst is geen geldige datum');
         }
 
-        return new AfasEmployee($personnelNumber, $firstName, $lastName, $employerNumber, $workLocation, $payrollCode, $endDate);
+        // De naam van de werkgever en de datum in dienst zijn hulpgegevens: klopt er een niet, dan telt
+        // hij als leeg en wordt de rij niet afgekeurd.
+        $employerName = $this->text($row, 'employerName');
+        if ($employerName === null || !$this->isName($employerName, self::MAX_LAST_NAME_LENGTH)) {
+            $employerName = '';
+        }
+        $startDate = $this->date($this->text($row, 'startDate'));
+
+        return new AfasEmployee(
+            $personnelNumber,
+            $firstName,
+            $lastName,
+            $employerNumber,
+            $workLocation,
+            $payrollCode,
+            $endDate,
+            $employerName,
+            $startDate === false ? null : $startDate
+        );
     }
 
     /**

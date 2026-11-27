@@ -139,7 +139,7 @@ if ($duplicates['keys'] > 0) {
         }
     }
     if ($duplicates['identical'] < $duplicates['keys']) {
-        echo "  Let op: de synchronisatie stopt zolang een personeelsnummer rijen met verschillende gegevens heeft.\n";
+        echo "  De synchronisatie neemt per personeelsnummer de rij met de laatste Datum_in_dienst. Verschilt de werkgever, dan krijgt de beheerder een opmerking.\n";
     }
 }
 

@@ -116,7 +116,7 @@ test('EmployeeMapper: de personeelsnummers van afgekeurde rijen zijn op te vrage
 test('EmployeeMapper: extra velden in een rij worden genegeerd', function (): void {
     $employee = (fullMapper())->map([afasRow(['Geboortedatum' => '1990-01-01', 'BSN' => '000000000'])])->employees[0];
 
-    same(['personnelNumber', 'firstName', 'lastName', 'employerNumber', 'workLocation', 'payrollCode', 'endDate'], array_keys(get_object_vars($employee)));
+    same(['personnelNumber', 'firstName', 'lastName', 'employerNumber', 'workLocation', 'payrollCode', 'endDate', 'employerName', 'startDate'], array_keys(get_object_vars($employee)));
 });
 
 test('EmployeeMapper: de namen van de velden in de GetConnector zijn in te stellen', function (): void {

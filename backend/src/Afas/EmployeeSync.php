@@ -11,7 +11,9 @@ namespace Tvb\Consumptie\Afas;
  * De regels:
  *   - controleren (stap 3): is de lijst leeg, is geen enkele rij geldig of is de lijst veel korter dan
  *     de vorige keer, dan stopt de synchronisatie zonder iets te wijzigen;
- *   - koppelen (stap 4): een medewerker uit AFAS wordt gezocht op personeelsnummer;
+ *   - koppelen (stap 4): een medewerker uit AFAS wordt gezocht op personeelsnummer. Staat een nummer
+ *     vaker in AFAS (meer dienstverbanden of functies), dan telt de rij met de laatste datum in dienst;
+ *   - een werkgever die de app nog niet kent, wordt een nieuw bedrijf met de naam en het nummer uit AFAS;
  *   - nieuw (stap 5): een personeelsnummer dat nog niet bestaat, wordt een nieuwe, actieve
  *     medewerker. Geeft AFAS geen looncode, dan komt hij zonder looncode binnen en vult de beheerder
  *     die in de app in. Die krijgt het consumptiepunt met dezelfde naam als de werklocatie, als dat bij zijn
@@ -52,11 +54,12 @@ final class EmployeeSync
     {
         $this->check($mapped, $previousCount);
 
-        $fromAfas = $this->byPersonnelNumber($mapped->employees);
+        $notes = [];
+        $fromAfas = $this->byPersonnelNumber($mapped->employees, $notes);
         $untouched = array_flip($mapped->invalidNumbers());
         $additions = [];
         $updates = [];
-        $notes = [];
+        $newCompanies = [];
         foreach ($mapped->problems as $problem) {
             $notes[] = sprintf('Rij %d afgekeurd: %s.', $problem['row'], $problem['reason']);
         }
@@ -75,9 +78,15 @@ final class EmployeeSync
             }
 
             $active = $employee->isActiveOn($today);
+            // Een werkgever die de app nog niet kent, wordt een nieuw bedrijf met de naam uit AFAS.
             $companyId = $companyIds[$employee->employerNumber] ?? null;
             if ($companyId === null) {
-                $notes[] = sprintf('Personeelsnummer %s: werkgever %s is niet bekend in de app. Het bedrijf is niet gekoppeld.', $number, $employee->employerNumber);
+                $companyId = self::companyIdFor($employee->employerNumber);
+                if (!isset($newCompanies[$companyId])) {
+                    $name = $employee->employerName !== '' ? $employee->employerName : 'Werkgever ' . $employee->employerNumber;
+                    $newCompanies[$companyId] = ['id' => $companyId, 'employerNumber' => $employee->employerNumber, 'name' => $name];
+                    $notes[] = sprintf('Werkgever %s (%s) is nieuw en is als bedrijf in de app gezet.', $employee->employerNumber, $name);
+                }
             }
 
             $existing = $stored[$number] ?? null;
@@ -116,7 +125,7 @@ final class EmployeeSync
             }
         }
 
-        return new SyncPlan($additions, $updates, $notes, $mapped->receivedCount(), count($mapped->problems));
+        return new SyncPlan($additions, $updates, $notes, $mapped->receivedCount(), count($mapped->problems), array_values($newCompanies));
     }
 
     // Stap 3: een lege, onbruikbare of veel te korte lijst mag nooit medewerkers inactief maken.
@@ -138,28 +147,56 @@ final class EmployeeSync
     }
 
     /**
-     * Zet de medewerkers uit AFAS op personeelsnummer. Komt een nummer twee keer voor met dezelfde
-     * gegevens (dat kan als de lijst tijdens het ophalen verschuift), dan telt het één keer. Zijn de
-     * gegevens verschillend, dan is niet te zeggen welke klopt en stopt de synchronisatie.
+     * Zet de medewerkers uit AFAS op personeelsnummer. De GetConnector geeft één rij per dienstverband
+     * of functie, dus een personeelsnummer kan vaker voorkomen. Dan telt één rij:
+     *   1. de rij met de laatste datum in dienst (het nieuwste dienstverband);
+     *   2. bij een gelijke datum de rij met het laagste werkgevernummer, en daarna de eerste afdeling op
+     *      alfabet. Zo is de keuze iedere keer dezelfde.
+     * Verschilt de werkgever tussen de rijen, dan krijgt de beheerder een opmerking. Met een afwijkend
+     * werkgevernummer bij de medewerker kan hij het voor de export anders zetten.
      *
      * @param list<AfasEmployee> $employees
+     * @param list<string> $notes
      * @return array<string, AfasEmployee>
      */
-    private function byPersonnelNumber(array $employees): array
+    private function byPersonnelNumber(array $employees, array &$notes): array
     {
-        $byNumber = [];
+        $groups = [];
         foreach ($employees as $employee) {
-            $earlier = $byNumber[$employee->personnelNumber] ?? null;
-            if ($earlier !== null && $earlier != $employee) {
-                throw new AfasException(
-                    AfasException::CHECK,
-                    sprintf('Personeelsnummer %s komt twee keer voor in AFAS met verschillende gegevens. Er is niets gewijzigd.', $employee->personnelNumber)
+            $groups[$employee->personnelNumber][] = $employee;
+        }
+
+        $byNumber = [];
+        foreach ($groups as $number => $rows) {
+            usort($rows, static fn (AfasEmployee $a, AfasEmployee $b): int =>
+                strcmp((string) $b->startDate, (string) $a->startDate)
+                ?: strcmp($a->employerNumber, $b->employerNumber)
+                ?: strcmp($a->workLocation, $b->workLocation));
+            $byNumber[(string) $number] = $rows[0];
+
+            $employers = array_values(array_unique(array_map(static fn (AfasEmployee $row): string => $row->employerNumber, $rows)));
+            if (count($employers) > 1) {
+                sort($employers);
+                $notes[] = sprintf(
+                    'Personeelsnummer %s staat %d keer in AFAS, bij werkgever %s. Werkgever %s telt (het laatste dienstverband). Is dat niet goed, vul dan bij de medewerker een afwijkend werkgevernummer in.',
+                    $number,
+                    count($rows),
+                    implode(' en ', $employers),
+                    $rows[0]->employerNumber
                 );
             }
-            $byNumber[$employee->personnelNumber] = $employee;
         }
 
         return $byNumber;
+    }
+
+    /**
+     * De id van een bedrijf dat de synchronisatie aanmaakt voor een werkgevernummer. Altijd dezelfde
+     * voor hetzelfde nummer, zodat een tweede synchronisatie geen tweede bedrijf maakt.
+     */
+    public static function companyIdFor(string $employerNumber): string
+    {
+        return strlen($employerNumber) <= 40 ? 'afas-werkgever-' . $employerNumber : 'afas-werkgever-' . substr(hash('sha256', $employerNumber), 0, 24);
     }
 
     /**

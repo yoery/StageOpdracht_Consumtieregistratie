@@ -27,8 +27,7 @@
  *   - main.js: maakt deze class en start daarna de rest van de website;
  *   - AdminController: roept `login` en `logout` aan als `app.server` bestaat.
  */
-import { DEFAULT_COMPANIES, DEFAULT_PRODUCTS } from "./config.js";
-import { createId } from "./ids.js";
+import { DEFAULT_PRODUCTS } from "./config.js";
 import { icon } from "./icons.js";
 import { ServerDataStore } from "./ServerDataStore.js";
 import { ServerSync } from "./ServerSync.js";
@@ -110,17 +109,13 @@ export class ServerMode {
     return "ready";
   }
 
-  // Een nieuwe server is leeg. De eerste beheerder die inlogt, zet er de standaardproducten en de
-  // bedrijven van TVB op (dezelfde als in de demo). Medewerkers komen niet uit de demo: die komen
-  // uit AFAS of worden door de beheerder toegevoegd. Consumptiepunten maakt de beheerder zelf.
+  // Een nieuwe server is leeg. De eerste beheerder die inlogt, zet er de standaardproducten op (dezelfde
+  // als in de demo). De bedrijven niet: die maakt de synchronisatie met AFAS aan, met de naam en het
+  // werkgevernummer uit AFAS (zie EmployeeSync). De 13 bedrijven van de demo hebben geen nummer en
+  // zouden dubbel naast die van AFAS staan. Medewerkers komen uit AFAS of van de beheerder.
+  // Consumptiepunten maakt de beheerder zelf.
   async seedEmptyServer() {
-    const changes = [
-      ...DEFAULT_PRODUCTS.map((product) => ({ collection: "products", id: product.id, data: { ...product } })),
-      ...DEFAULT_COMPANIES.map((name) => {
-        const id = createId();
-        return { collection: "companies", id, data: { id, name, employerNumber: "" } };
-      })
-    ];
+    const changes = DEFAULT_PRODUCTS.map((product) => ({ collection: "products", id: product.id, data: { ...product } }));
     await this.api.push(changes);
     await this.sync.fullPull();
   }

@@ -302,7 +302,7 @@ test("ServerMode: de meldingen over de verbinding", async () => {
   ]);
 });
 
-test("ServerMode: de eerste beheerder op een lege server zet de standaardproducten en bedrijven erop, geen demomedewerkers", async () => {
+test("ServerMode: de eerste beheerder op een lege server zet de standaardproducten erop, geen demomedewerkers en geen demobedrijven", async () => {
   const api = createApi({ role: "admin" });
   let stored = [];
   api.pull = async () => ({ ok: true, version: stored.length, changes: stored });
@@ -315,8 +315,8 @@ test("ServerMode: de eerste beheerder op een lege server zet de standaardproduct
   assert.deepEqual(model.employees, []);
   assert.deepEqual(model.points, []);
   assert.equal(model.products.length, 8);
-  assert.equal(model.companies.length, 13);
-  assert.equal(model.companies[0].name, "TVB");
+  // De bedrijven komen uit AFAS, met naam en werkgevernummer (EmployeeSync).
+  assert.deepEqual(model.companies, []);
   assert.deepEqual(server.store.pendingChanges(), []);
 });
 

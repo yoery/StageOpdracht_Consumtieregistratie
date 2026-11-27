@@ -104,6 +104,9 @@ function fullMapper(): \Tvb\Consumptie\Afas\EmployeeMapper
         'workLocation' => 'Werklocatie',
         'payrollCode' => 'Looncode',
         'endDate' => 'DatumUitDienst',
+        // In deze nep-rijen is "Werkgever" het nummer. Een naam van de werkgever is er niet.
+        'employerName' => null,
+        'startDate' => 'DatumInDienst',
     ]);
 }
 

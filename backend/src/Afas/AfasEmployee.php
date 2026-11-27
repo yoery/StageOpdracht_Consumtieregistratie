@@ -20,7 +20,10 @@ final class AfasEmployee
         public readonly string $employerNumber,
         public readonly string $workLocation,
         public readonly ?string $payrollCode,
-        public readonly ?string $endDate
+        public readonly ?string $endDate,
+        // De naam van de werkgever (leeg als die er niet is) en de datum in dienst ("2026-01-01" of null).
+        public readonly string $employerName = '',
+        public readonly ?string $startDate = null
     ) {
     }
 

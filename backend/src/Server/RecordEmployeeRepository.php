@@ -88,6 +88,19 @@ final class RecordEmployeeRepository implements EmployeeRepository
     public function apply(SyncPlan $plan, \DateTimeImmutable $now): void
     {
         $this->store->transaction(function () use ($plan, $now): void {
+            // Eerst de nieuwe bedrijven, zodat de medewerkers ernaar kunnen verwijzen. Bestaat de id al
+            // (de beheerder heeft het bedrijf intussen aangepast), dan blijft het bedrijf zoals het is.
+            foreach ($plan->companies as $company) {
+                if ($this->store->get('companies', $company['id']) !== null) {
+                    continue;
+                }
+                $record = new \stdClass();
+                $record->id = $company['id'];
+                $record->name = $company['name'];
+                $record->employerNumber = $company['employerNumber'];
+                $this->store->put('companies', $record->id, $record, $now);
+            }
+
             $count = count($this->store->all('employees'));
             foreach ($plan->additions as $addition) {
                 $employee = new \stdClass();

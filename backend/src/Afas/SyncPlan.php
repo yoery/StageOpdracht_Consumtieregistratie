@@ -24,14 +24,17 @@ final class SyncPlan
         public readonly array $updates,
         public readonly array $notes,
         public readonly int $receivedCount,
-        public readonly int $rejectedRows
+        public readonly int $rejectedRows,
+        // Bedrijven die de synchronisatie aanmaakt voor werkgevers die de app nog niet kent:
+        // [{ id, employerNumber, name }].
+        public readonly array $companies = []
     ) {
     }
 
     /** Verandert dit plan iets aan de gegevens? */
     public function isEmpty(): bool
     {
-        return $this->additions === [] && $this->updates === [];
+        return $this->additions === [] && $this->updates === [] && $this->companies === [];
     }
 
     /** Hoeveel medewerkers worden inactief? */
@@ -57,6 +60,6 @@ final class SyncPlan
             $this->deactivationCount(),
             $this->reactivationCount(),
             $this->rejectedRows
-        );
+        ) . ($this->companies === [] ? '' : sprintf(', %d bedrijven aangemaakt', count($this->companies)));
     }
 }

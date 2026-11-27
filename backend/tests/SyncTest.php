@@ -47,12 +47,15 @@ test('EmployeeSync: de werklocatie wordt zonder hoofdletters vergeleken en allee
     same(null, planFor([afasRow(['Werklocatie' => null])])->additions[0]['pointId']);
 });
 
-test('EmployeeSync: een onbekende werkgever wordt niet gekoppeld en komt in de opmerkingen', function (): void {
-    $plan = planFor([afasRow(['Werkgever' => '9999'])]);
+test('EmployeeSync: een werkgever die de app niet kent, wordt een nieuw bedrijf, één keer voor alle medewerkers', function (): void {
+    $plan = planFor([afasRow(['Werkgever' => '9999']), afasRow(['Personeelsnummer' => '5002', 'Werkgever' => '9999'])]);
 
-    same(null, $plan->additions[0]['companyId']);
+    same(['afas-werkgever-9999', 'afas-werkgever-9999'], array_column($plan->additions, 'companyId'));
     same(null, $plan->additions[0]['pointId']);
-    ok(str_contains(implode("\n", $plan->notes), 'werkgever 9999 is niet bekend'));
+    same([['id' => 'afas-werkgever-9999', 'employerNumber' => '9999', 'name' => 'Werkgever 9999']], $plan->companies);
+    same(1, substr_count(implode("\n", $plan->notes), 'Werkgever 9999 (Werkgever 9999) is nieuw'));
+    ok(str_ends_with($plan->summary(), ', 1 bedrijven aangemaakt'), $plan->summary());
+    ok(!$plan->isEmpty());
 });
 
 test('EmployeeSync: wie al uit dienst is en nog niet in de app staat, wordt niet toegevoegd', function (): void {
@@ -118,11 +121,11 @@ test('EmployeeSync: bij een ander bedrijf volgt het consumptiepunt van de werklo
     same(['companyId' => 'bedrijf-it', 'pointId' => null], $unknownPlace->updates[0]['changes']);
 });
 
-test('EmployeeSync: een onbekende werkgever verandert het bedrijf van een bestaande medewerker niet', function (): void {
+test('EmployeeSync: gaat een bestaande medewerker naar een werkgever die de app niet kent, dan komt hij bij het nieuwe bedrijf', function (): void {
     $plan = planFor([afasRow(['Werkgever' => '9999'])], [stored()]);
 
-    ok($plan->isEmpty());
-    ok(str_contains(implode("\n", $plan->notes), 'werkgever 9999 is niet bekend'));
+    same([['id' => 'medewerker-lotte', 'personnelNumber' => '5001', 'changes' => ['companyId' => 'afas-werkgever-9999', 'pointId' => null]]], $plan->updates);
+    same('afas-werkgever-9999', $plan->companies[0]['id']);
 });
 
 test('EmployeeSync: een datum uit dienst die voorbij is, maakt de medewerker inactief en verwijdert hem niet', function (): void {
@@ -207,11 +210,38 @@ test('EmployeeSync: hetzelfde personeelsnummer twee keer met dezelfde gegevens t
     same(1, count(planFor([afasRow(), afasRow()])->additions));
 });
 
-test('EmployeeSync: hetzelfde personeelsnummer met verschillende gegevens stopt de synchronisatie', function (): void {
-    $error = throws(AfasException::class, fn () => planFor([afasRow(), afasRow(['Looncode' => '999'])], [stored()]));
+// De GetConnector geeft één rij per dienstverband of functie. Een personeelsnummer kan dus vaker
+// voorkomen (proefdraai 26 november 2026: 72 nummers, hoogstens 6 rijen per nummer).
+test('EmployeeSync: staat een personeelsnummer vaker in AFAS, dan telt de rij met de laatste datum in dienst', function (): void {
+    $rows = [
+        afasRow(['Werkgever' => '4711', 'Werklocatie' => 'Hoofdkantoor', 'DatumInDienst' => '2019-02-01']),
+        afasRow(['Werkgever' => '4712', 'Werklocatie' => 'Kantine IT', 'DatumInDienst' => '2024-05-01']),
+        afasRow(['Werkgever' => '4711', 'Werklocatie' => 'Service', 'DatumInDienst' => '2021-09-01']),
+    ];
 
-    same(AfasException::CHECK, $error->kind);
-    ok(str_contains($error->getMessage(), '5001'));
+    foreach ([$rows, array_reverse($rows)] as $order) {
+        $plan = planFor($order);
+        same(1, count($plan->additions), 'één medewerker');
+        same(['bedrijf-it', 'Kantine IT', 'punt-kantine-it'], [$plan->additions[0]['companyId'], $plan->additions[0]['unit'], $plan->additions[0]['pointId']]);
+        ok(str_contains(implode("\n", $plan->notes), 'Personeelsnummer 5001 staat 3 keer in AFAS, bij werkgever 4711 en 4712. Werkgever 4712 telt'), implode("\n", $plan->notes));
+    }
+});
+
+test('EmployeeSync: bij dezelfde datum in dienst telt het laagste werkgevernummer, en daarna de eerste afdeling', function (): void {
+    $plan = planFor([
+        afasRow(['Werkgever' => '4712', 'Werklocatie' => 'B', 'DatumInDienst' => '2024-05-01']),
+        afasRow(['Werkgever' => '4711', 'Werklocatie' => 'Zuid', 'DatumInDienst' => '2024-05-01']),
+        afasRow(['Werkgever' => '4711', 'Werklocatie' => 'Noord', 'DatumInDienst' => '2024-05-01']),
+    ]);
+
+    same(['bedrijf-tvb', 'Noord'], [$plan->additions[0]['companyId'], $plan->additions[0]['unit']]);
+});
+
+test('EmployeeSync: verschillen de rijen alleen in velden die de app niet leest (zoals de functie), dan geen opmerking', function (): void {
+    $plan = planFor([afasRow(['Functie' => 'Monteur', 'DatumInDienst' => '2020-01-01']), afasRow(['Functie' => 'Planner', 'DatumInDienst' => '2020-01-01'])]);
+
+    same(1, count($plan->additions));
+    ok(!str_contains(implode("\n", $plan->notes), 'keer in AFAS'));
 });
 
 test('EmployeeSync: de samenvatting bevat alleen aantallen', function (): void {

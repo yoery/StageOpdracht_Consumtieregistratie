@@ -140,18 +140,18 @@ test('SyncRunner: het logboek van de server bevat geen personeelsnummers, de beh
     $result = runSync([afasPage([afasRow(['Werkgever' => '9999'])])], $repository, $log);
 
     ok($result->ok);
-    ok(str_contains(implode("\n", $result->plan->notes), 'Personeelsnummer 5001'), 'de beheerder ziet het personeelsnummer niet');
+    ok(str_contains(implode("\n", $result->plan->notes), 'Personeelsnummer 5002'), 'de beheerder ziet het personeelsnummer niet');
     foreach (['5001', '5002', '9999'] as $number) {
         ok(!str_contains(implode("\n", $log), $number), "het logboek bevat $number");
     }
     ok(str_contains($log[1], 'opmerkingen, te zien in het beheer'), implode("\n", $log));
 
-    // Ook een mislukte synchronisatie met een personeelsnummer in de melding.
+    // Ook de opmerking over een personeelsnummer dat bij twee werkgevers staat.
     $log = [];
-    $twice = [afasRow(), afasRow(['Voornaam' => 'Charlotte'])];
-    $failed = runSync([afasPage($twice)], new InMemoryRepository([]), $log);
-    ok(!$failed->ok);
-    ok(str_contains($failed->message, '5001'), 'de beheerder ziet het personeelsnummer niet');
+    $twice = [afasRow(), afasRow(['Werkgever' => '4712', 'DatumInDienst' => '2025-01-01'])];
+    $result = runSync([afasPage($twice)], new InMemoryRepository([]), $log);
+    ok($result->ok);
+    ok(str_contains(implode("\n", $result->plan->notes), 'Personeelsnummer 5001 staat 2 keer in AFAS'), 'de beheerder ziet de opmerking niet');
     ok(!str_contains(implode("\n", $log), '5001'), implode("\n", $log));
     same('Een personeelsnummer komt twee keer voor', \Tvb\Consumptie\Afas\SyncRunner::withoutPersonnelNumbers('Personeelsnummer 5001 komt twee keer voor'));
 });
