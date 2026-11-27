@@ -2,6 +2,8 @@
 
 **Datum:** 26 november 2026
 
+**Bijgewerkt:** 27 november 2026. AF-07 en AF-08 zijn opgelost: herkennen met de camera en met de pas gebeurt nu op de server (commit bd1ad42). De hertest is herhaald.
+
 ## Samenvatting
 
 Na het besluit van de administratie van 25 november 2026 gaat de consumptieregistratie in gebruik, met een server, een database en tablets op meer plekken. Deze security audit kijkt naar die nieuwe situatie, met de nadruk op twee vragen: kan het token van AFAS ergens uitlekken, en kunnen personeelsgegevens uitlekken? De audit is gedaan op de code van branch `development` (commit 0b20bd4) en de oplossingen staan in commit 24297ad.
@@ -16,21 +18,24 @@ Bij personeelsgegevens waren er vijf punten die in de code op te lossen waren. D
 4. Apache logde het volledige adres met het vraagteken-deel, de verwijzer en de browser (AF-05).
 5. De debuguitvoer van de HTTP-client stond niet expliciet uit (AF-02).
 
-Er blijven vier risico's over die niet zonder een besluit of een actie buiten de code op te lossen zijn. Twee daarvan gaan over gegevens die iedere tablet nodig heeft om zonder server te herkennen: de kenmerken van gezichten (AF-07) en de koppeling tussen pasnummer en naam (AF-08). Het derde is het token in de instellingen van Coolify (AF-10). Het vierde is de GetConnector die meer persoonsgegevens meestuurt dan nodig (AF-11). Eén risico is bewust geaccepteerd door TVB: bij "Snellere optie instellen" wordt niet gecontroleerd of iemand echt zichzelf kiest (AF-09).
+Twee risico's gingen over gegevens die iedere tablet had om zelf te herkennen: de kenmerken van gezichten (AF-07) en de koppeling tussen pasnummer en naam (AF-08). Op 27 november 2026 is besloten het herkennen naar de server te verplaatsen. Een tablet krijgt nu geen kenmerken van gezichten en geen pasnummers meer, alleen het antwoord op de vraag wie er voor de camera staat of van wie de pas is. Die twee risico's zijn daarmee opgelost.
+
+Er blijven twee risico's over die alleen buiten de code op te lossen zijn: het token in de instellingen van Coolify (AF-10) en de GetConnector die meer persoonsgegevens meestuurt dan nodig (AF-11). Eén risico is bewust geaccepteerd door TVB: bij "Snellere optie instellen" wordt niet gecontroleerd of iemand echt zichzelf kiest (AF-09).
 
 **Aantal bevindingen per ernst en status**
 
 | Ernst | Aantal | Nummers | Opgelost | Deels opgelost | Geaccepteerd | Open (actie nodig) |
 |---|---|---|---|---|---|---|
 | Hoog | 0 | | | | | |
-| Middel | 7 | AF-01, AF-03, AF-04, AF-07, AF-08, AF-09, AF-10 | 3 (AF-01, AF-03, AF-04) | 1 (AF-07) | 1 (AF-09) | 2 (AF-08, AF-10) |
+| Middel | 7 | AF-01, AF-03, AF-04, AF-07, AF-08, AF-09, AF-10 | 5 (AF-01, AF-03, AF-04, AF-07, AF-08) | | 1 (AF-09) | 1 (AF-10) |
 | Laag | 6 | AF-02, AF-05, AF-06, AF-11, AF-12, AF-13 | 3 (AF-02, AF-05, AF-06) | | 2 (AF-12, AF-13) | 1 (AF-11) |
 
 ### Actielijst
 
 | Wat | Bevinding | Wie | Status |
 |---|---|---|---|
-| Beslissen of het herkennen met de camera en de pas naar de server gaat, zodat tablets de kenmerken van gezichten en de pasnummers niet meer krijgen | AF-07, AF-08 | TVB | Open |
+| Herkennen met de camera en de pas naar de server, zodat tablets de kenmerken van gezichten en de pasnummers niet meer krijgen | AF-07, AF-08 | Ontwikkelaar | Gedaan (27 november 2026, commit bd1ad42) |
+| De tablets in kioskmodus zetten, zodat de ontwikkelaarstools en de adresbalk niet bereikbaar zijn | alle | TVB | Open |
 | In Coolify alleen beheerders van TVB toegang geven, en het token van een App connector gebruiken die alleen deze ene GetConnector mag lezen | AF-10 | TVB (beheer van Coolify en AFAS) | Open |
 | Een GetConnector met alleen de velden die de app nodig heeft | AF-11 | TVB (AFAS-beheer) | Open, volgens TVB nu niet mogelijk |
 | Na de eerste deploy de controles van de container in GitHub Actions bekijken (job `container`) | alle | Ontwikkelaar | Open |
@@ -124,17 +129,25 @@ Bij de audit is het bestand `.env` niet gelezen en is er geen verzoek naar AFAS 
 
 **Status: Opgelost.** De test maakt bij iedere run een willekeurig wachtwoord. De vondst in commit 1b7a23b staat met uitleg in `.gitleaksignore`. Sindsdien stopt het commando voor een commit als gitleaks iets vindt.
 
-### AF-07 Iedere tablet krijgt de kenmerken van alle ingestelde gezichten
+### AF-07 Iedere tablet kreeg de kenmerken van alle ingestelde gezichten
 
-**Ernst: Middel.** Herkennen met de camera gebeurt in de browser van de tablet. Daarvoor krijgt iedere tablet van de server de kenmerken (128 getallen) van iedere medewerker met gezichtsherkenning. Dat zijn biometrische gegevens (AVG artikel 9). Wie de ontwikkelaarstools op een tablet kan openen, kan ze uitlezen.
+**Ernst: Middel.** Herkennen met de camera gebeurde in de browser van de tablet. Daarvoor kreeg iedere tablet van de server de kenmerken (128 getallen) van iedere medewerker met gezichtsherkenning. Dat zijn biometrische gegevens (AVG artikel 9). Wie de ontwikkelaarstools op een tablet kan openen, kan ze uitlezen.
 
-**Status: Deels opgelost.** De kenmerken staan op een tablet alleen in het geheugen en niet meer in de opslag van de browser (commit a87f390). Een tablet moet gekoppeld zijn door de beheerder. Een volledige oplossing is herkennen op de server: de tablet stuurt dan alleen de kenmerken van het gezicht voor de camera, en de server zoekt wie het is. Dat is een grotere verbouwing van de herkenning. **Besluit nodig van TVB** of dit vóór 16 december moet. Tot dan: de tablets in kioskmodus zetten, zodat de ontwikkelaarstools niet open kunnen.
+**Status: Opgelost (27 november 2026).** Eerst zijn de kenmerken uit de opslag van de browser gehaald (commit a87f390). Daarna is het herkennen naar de server verplaatst (commit bd1ad42). De tablet berekent de kenmerken van het gezicht voor de camera en stuurt alleen die naar `/api/recognize/face`. De server vergelijkt ze met de ingestelde gezichten van actieve medewerkers die niet ouder zijn dan een jaar, en geeft alleen terug wie het is, of niemand. Geen enkele browser krijgt nog kenmerken van de server, ook de beheerder niet. Alleen bij het instellen van een gezicht gaan de kenmerken één keer van de tablet naar de server.
 
-### AF-08 Iedere tablet heeft de koppeling tussen pasnummer en naam van alle medewerkers
+Zodat niemand de server kan laten raden, zijn per sessie maximaal 240 verzoeken per minuut toegestaan. Zonder verbinding met de server werkt herkennen met de camera niet. De tablet zegt dat dan en de medewerker zoekt zijn naam op. Een registratie zonder verbinding wordt nog steeds bewaard en later verstuurd.
 
-**Ernst: Middel.** Herkennen met de pas gebeurt ook op de tablet. Daarvoor heeft iedere tablet het pasnummer en de naam van iedere medewerker met een pas, ook in de opslag van de browser (om zonder verbinding te kunnen herkennen). Een pasnummer is openbaar: iedere telefoon met NFC kan het van de pas lezen. Met de lijst van een tablet weet iemand welk nummer bij wie hoort, en kan hij met een gekopieerd nummer op naam van een collega registreren.
+Tests: `ServerTest.php` ("geen browser krijgt de kenmerken van een gezicht, ook de beheerder niet", "de server vindt de actieve medewerker met het dichtstbijzijnde gezicht onder de drempel" en vier andere), `herkennen-op-server.test.js` en de browsertests met de echte server.
 
-**Status: Open.** Op te lossen door het pasnummer op de server op te zoeken in plaats van op de tablet. Dan werkt herkennen met de pas niet meer zonder verbinding. **Besluit nodig van TVB:** zonder verbinding met de pas kunnen registreren, of de koppeling niet meer op de tablets. Het blijft ook dan mogelijk een pas te kopiëren: dat is een eigenschap van passen die alleen een nummer hebben.
+### AF-08 Iedere tablet had de koppeling tussen pasnummer en naam van alle medewerkers
+
+**Ernst: Middel.** Herkennen met de pas gebeurde ook op de tablet. Daarvoor had iedere tablet het pasnummer en de naam van iedere medewerker met een pas, ook in de opslag van de browser (om zonder verbinding te kunnen herkennen). Een pasnummer is openbaar: iedere telefoon met NFC kan het van de pas lezen. Met de lijst van een tablet weet iemand welk nummer bij wie hoort, en kan hij met een gekopieerd nummer op naam van een collega registreren.
+
+**Status: Opgelost (27 november 2026, commit bd1ad42).** Een tablet kent geen pasnummers meer. Per medewerker weet hij alleen of er een pas gekoppeld is. Een scan gaat naar `/api/recognize/badge` en de server zoekt de actieve medewerker met dat nummer. Een pas koppelen bij "Snellere optie instellen" gaat via `/api/badge/link`. De server weigert een pas die al bij iemand anders hoort, en een tweede pas voor iemand die er al een heeft (een andere pas koppelen kan via de beheerder). Het logboek krijgt de naam, nooit het pasnummer. Alleen de beheerder ziet de pasnummers, voor de export van de pasjes. Ook hier geldt het maximum van 240 verzoeken per minuut, en zonder verbinding werkt herkennen met de pas niet.
+
+Wat blijft: een pas met alleen een nummer is te kopiëren. Dat is een eigenschap van de pas en valt buiten de app.
+
+Tests: `ServerTest.php` ("een tablet vindt de medewerker bij een pas, in iedere schrijfwijze, maar niet bij een inactieve", de twee tests "Pas koppelen" en de test van het maximum), `herkennen-op-server.test.js` en de browsertests "herkennen met de pas gebeurt op de server" en "snellere optie: Mark koppelt zelf zijn pas".
 
 ### AF-09 Snellere optie instellen controleert niet wie er voor de tablet staat
 
@@ -171,7 +184,7 @@ Bij de audit is het bestand `.env` niet gelezen en is er geen verzoek naar AFAS 
 - **Het token.** Staat alleen in `.env` (in `.gitignore` en `.dockerignore`) of in de omgeving van de server. In het geheugen zit het in een afgeschermde plek van `AfasConfig`, het staat niet in een dump van het object, niet in een foutmelding en niet in een logboek. De Dockerfile kopieert alleen wat nodig is, nooit "alles". Tests controleren dit (`SecretsTest.php`, `ConfigTest.php`).
 - **De Git-geschiedenis.** Gitleaks vond in alle 165 commits geen geheim (met de uitleg in `.gitleaksignore` voor AF-06).
 - **Alleen de server praat met AFAS.** De website heeft geen enkele verwijzing naar AFAS. `/api/afas/sync` geeft alleen een melding, opmerkingen en het resultaat terug, nooit rijen van AFAS of de kopregel.
-- **Rollen.** Een tablet krijgt geen looncodes, personeelsnummers, werkgevernummers, telefoonnummers van gasten en het logboek niet. Een tablet kan alleen registreren, een gast aanmaken, een pas koppelen aan iemand zonder pas en een gezicht instellen. De prijs, het werkgevernummer en de voorraad bepaalt de server zelf.
+- **Rollen.** Een tablet krijgt geen looncodes, personeelsnummers, werkgevernummers, telefoonnummers van gasten, pasnummers, kenmerken van gezichten en het logboek niet. Een tablet kan alleen registreren, een gast aanmaken, een gezicht instellen, de server vragen wie een gezicht of pas is, en via de server een pas koppelen aan iemand zonder pas. De prijs, het werkgevernummer en de voorraad bepaalt de server zelf.
 - **Inloggen.** Alleen een hash van het wachtwoord (Argon2id), sessies met een willekeurige sleutel waarvan alleen de hash in de database staat, cookies met `HttpOnly` en `SameSite=Strict`, en bij ieder schrijvend verzoek een controle op de eigen website (`Origin`, een eigen kopregel en een tweede sleutel).
 - **Foutmeldingen.** Een fout op de server geeft de browser alleen "Er ging iets mis op de server." en het logboek alleen het soort fout en de plek in de code. PHP toont geen fouten in de browser en geen waarden van argumenten (`zend.exception_ignore_args`).
 - **Afhankelijkheden.** Geen npm-pakketten en geen Composer-pakketten in de app. De meegeleverde face-api is versie 1.7.15, de nieuwste. `npm audit` op die versie vindt 0 kwetsbaarheden.
@@ -187,23 +200,24 @@ Bij de audit is het bestand `.env` niet gelezen en is er geen verzoek naar AFAS 
 | AF-04 | Laatste adres uit `X-Forwarded-For` | 24297ad | `ServerTest.php` (1) |
 | AF-05 | Kort logformaat voor de standaardsite | 24297ad | CI |
 | AF-06 | Willekeurig wachtwoord in de test, `.gitleaksignore` | c3c9d39 | gitleaks |
-| AF-07 | Kenmerken van gezichten niet in de opslag van de browser | a87f390 | `server-sync.test.js` (1) |
+| AF-07 | Kenmerken van gezichten niet in de opslag van de browser, daarna herkennen op de server | a87f390, bd1ad42 | `server-sync.test.js` (1), `ServerTest.php` (6), `herkennen-op-server.test.js` (8) |
+| AF-08 | Pas opzoeken en koppelen op de server, de tablet kent geen pasnummers | bd1ad42 | `ServerTest.php` (4), `herkennen-op-server.test.js` (11), browsertests (2) |
 
 ### 5.1 Hertest
 
 | Wat | Uitkomst |
 |---|---|
-| Tests van de backend (`php backend/tests/run.php`) | 158 geslaagd |
-| Unit tests (`npm test`) | 972 geslaagd |
-| Browsertests (`npm run test:e2e`), waarvan 8 met de echte server | 41 geslaagd |
-| Gitleaks over de hele geschiedenis | 165 commits, geen vondsten |
+| Tests van de backend (`php backend/tests/run.php`) | 169 geslaagd |
+| Unit tests (`npm test`) | 1008 geslaagd |
+| Browsertests (`npm run test:e2e`), waarvan 11 met de echte server | 44 geslaagd |
+| Gitleaks over de hele geschiedenis (alle branches) | 171 commits, geen vondsten |
 | `npm audit` op face-api 1.7.15 | 0 kwetsbaarheden |
 | Controles van de container in GitHub Actions | Niet bekeken (zie 2.2) |
 
 ## 6. Aanbevelingen
 
-1. Beslis vóór 16 december 2026 over AF-07 en AF-08: herkennen op de server, of de kenmerken en de pasnummers op de tablets houden met kioskmodus.
-2. Zet de tablets in kioskmodus, zodat de ontwikkelaarstools en de adresbalk niet bereikbaar zijn.
+1. Zet de tablets in kioskmodus, zodat de ontwikkelaarstools en de adresbalk niet bereikbaar zijn.
+2. Zorg voor een stabiele verbinding bij iedere tablet. Herkennen met de camera en de pas werkt alleen met verbinding met de server.
 3. Beperk de toegang tot Coolify en de server tot de beheerders van TVB (AF-10).
 4. Deploy regelmatig opnieuw, zodat de container de nieuwste versie van PHP 8.3 en Apache krijgt.
 5. Herhaal deze audit en de gitleaks-scan na iedere grote wijziging, en vóór de beoordeling op 16 december 2026.

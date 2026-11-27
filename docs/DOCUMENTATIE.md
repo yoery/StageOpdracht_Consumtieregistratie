@@ -103,7 +103,8 @@ Dit hoofdstuk noemt alle bestanden en mappen van het project met hun functie. He
 | `tests/geen-camerabeeld.test.js` | Tests dat het camerabeeld nooit te zien is en dat de vaste zin over het scannen er staat |
 | `tests/snellere-optie.test.js` | Tests voor `Snellere optie instellen`: welke opties er zijn, `Nee, liever niet` voor een jaar, gezicht, pas en allebei, en alleen met een server |
 | `tests/looncode-import-en-afdeling.test.js` | Tests voor `Looncodes importeren` (puntkomma's, komma's en tabs, andere namen voor de kolommen, personeelsnummers zonder voorloopnullen, de melding en het logboek met alleen aantallen) en de afdelingen uit AFAS (het overzicht, koppelen aan een consumptiepunt, een gekozen punt blijft, bewaren en laden) |
-| `tests/` | Unit tests (989) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/herkennen-op-server.test.js` | Tests voor herkennen op de server, met een nagebootste server: de tablet vraagt de server wie een gezicht of pas is en vergelijkt zelf niets, de regels van het startscherm (twee keer achter elkaar, een levend gezicht), een pas koppelen via de server, de meldingen zonder verbinding en wat `ServerApi` verstuurt |
+| `tests/` | Unit tests (1008) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
 | `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, iedere stylesheet precies één keer gelinkt in `index.html`, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
@@ -184,6 +185,7 @@ Geef alleen beheerders van TVB toegang tot Coolify: het token van AFAS is daar l
 | Producten en voorraad | Van het vaste consumptiepunt van de medewerker | Van de locatie van de tablet |
 | Gasten | Niet | `Ik ben een gast` op een tablet met een locatie |
 | Gezicht of pas instellen | Alleen na de pas of via de beheerder | Ook zelf, na jezelf opzoeken (`Snellere optie instellen`) |
+| Herkennen met de camera en de pas | De browser vergelijkt zelf, de kenmerken en pasnummers staan in deze browser | De server herkent. Een tablet krijgt geen kenmerken van gezichten en geen pasnummers. Zonder verbinding werkt herkennen niet, zelf opzoeken en registreren wel |
 | Medewerkers | De demogegevens en met de hand | Uit AFAS met `Nu synchroniseren`, en met de hand |
 | Bedrijven | De 13 bedrijven van de demo, zonder werkgevernummer | Uit AFAS met `Nu synchroniseren`, met de naam en het werkgevernummer |
 | Looncodes | Met de hand of `Looncodes importeren`, alleen in deze browser | Met de hand of `Looncodes importeren`, in de database voor iedere beheerder |
@@ -537,11 +539,13 @@ Met de server kun je zelf je gezicht of je pas instellen, na jezelf opzoeken. TV
 2. In het productvenster staat "Sneller registreren? Stel gezichtsherkenning of je pasje in." Tik op `Snellere optie instellen`.
 3. Kies `Gezichtsherkenning`, `Pasje` of `Allebei`. Je ziet alleen wat op deze tablet kan.
 4. **Gezichtsherkenning:** kijk recht naar de camera boven het scherm, zet het vinkje voor toestemming en tik op `Gezicht vastleggen`. Je ziet jezelf niet: het camerabeeld is nooit te zien. Je gezicht is een jaar geldig. Daarna vraagt de tablet om het opnieuw in te stellen.
-5. **Pasje:** houd je pas tegen de lezer als er "Houd je pas tegen de lezer" staat. Daarna staat er "Je pas is gekoppeld. Voortaan houd je je pas tegen de lezer."
+5. **Pasje:** houd je pas tegen de lezer als er "Houd je pas tegen de lezer" staat. Daarna staat er "Je pas is gekoppeld. Voortaan houd je je pas tegen de lezer." De server koppelt de pas. Hoort de pas al bij iemand anders, dan staat er "Deze pas is al gekoppeld aan iemand anders. Vraag het de beheerder." Heb je al een pas, dan kan een andere pas alleen via de beheerder.
 
 Wil je het niet, tik dan op `Nee, liever niet`. De vraag komt dan een jaar niet terug. Word je op het startscherm niet herkend, dan staat er "Zoek jezelf eerst op via de knop hieronder en stel een snellere optie in." en opent er niets.
 
 Er is geen controle of je echt jezelf kiest (keuze van TVB, 26 november 2026). Iedere koppeling staat met de naam in het logboek ("Pas gekoppeld door medewerker" of "Gezichtsherkenning ingesteld"), zodat de beheerder misbruik kan zien en terugdraaien (4.5 en 4.15).
+
+**Herkennen gebeurt op de server.** De tablet stuurt alleen de kenmerken van het gezicht voor de camera of het nummer van je pas naar de server, en de server zegt wie je bent. Op de tablet staan geen kenmerken van gezichten en geen pasnummers. Is de server niet bereikbaar, dan zegt de tablet dat, bijvoorbeeld "Herkennen werkt nu niet: geen verbinding met de server. Zoek je naam met de knop hieronder." Zoek jezelf dan op en registreer zoals altijd. De registratie gaat naar de server zodra de verbinding terug is.
 
 ### 4.26 Looncodes importeren uit een bestand
 
@@ -1042,9 +1046,9 @@ Herkent een pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.1
 
 Deze classes worden alleen gebruikt als `SERVER_API` in `deployment.js` is ingevuld (in de container en met `backend/dev-server.php`). In de repository is het leeg en werkt alles als demo.
 
-- **`ServerMode`** regelt het opstarten (`prepare`): het vraagt de server wie de browser is, toont anders alleen het inlogscherm en haalt de gegevens op. Daarna start `main.js` de website met `ServerDataStore`. `attach` past het beheer aan (geen demo-inloggen, geen `Alle gegevens wissen`, het tabblad `Tablets en AFAS`) en start `ServerSync`. `login` en `logout` worden door `AdminController` aangeroepen en halen daarna alle gegevens opnieuw op, omdat een beheerder meer mag zien dan een tablet. Op een lege server zet `seedEmptyServer` alleen de standaardproducten klaar: de bedrijven komen uit AFAS. `renderUnits` toont de afdelingen uit AFAS met een keuzelijst, en `saveUnitPoint` koppelt een afdeling aan een consumptiepunt met `RegistrationModel.assignUnitToPoint` (zie 4.27).
-- **`ServerApi`** doet de verzoeken aan `/api` met `fetch`. Bij ieder schrijvend verzoek gaan de kopregel `X-CR-Client` en de sleutel van de sessie (`X-CSRF-Token`) mee. Een fout wordt een `ServerError` met de status en de melding van de server.
-- **`ServerDataStore`** is een subclass van `DataStore`. Het model werkt er hetzelfde mee, maar de gegevens staan in het geheugen. `save` zet alleen wat is veranderd in een wachtrij (`pendingChanges`). `applyServerChanges` verwerkt wat er van de server komt. Alleen een tablet bewaart de gegevens en de wachtrij in `localStorage`, zonder gezichtskenmerken.
+- **`ServerMode`** regelt het opstarten (`prepare`): het vraagt de server wie de browser is, toont anders alleen het inlogscherm en haalt de gegevens op. Daarna start `main.js` de website met `ServerDataStore`. `attach` past het beheer aan (geen demo-inloggen, geen `Alle gegevens wissen`, het tabblad `Tablets en AFAS`) en start `ServerSync`. `login` en `logout` worden door `AdminController` aangeroepen en halen daarna alle gegevens opnieuw op, omdat een beheerder meer mag zien dan een tablet. Op een lege server zet `seedEmptyServer` alleen de standaardproducten klaar: de bedrijven komen uit AFAS. `renderUnits` toont de afdelingen uit AFAS met een keuzelijst, en `saveUnitPoint` koppelt een afdeling aan een consumptiepunt met `RegistrationModel.assignUnitToPoint` (zie 4.27). `recognizeFace`, `recognizeBadge` en `linkBadge` geven het herkennen en het koppelen van een pas door aan de server. Is de server niet bereikbaar, dan onthoudt `ServerMode` dat (`recognitionOffline`), zodat de tablet een eigen melding geeft in plaats van "niet herkend".
+- **`ServerApi`** doet de verzoeken aan `/api` met `fetch`. Bij ieder schrijvend verzoek gaan de kopregel `X-CR-Client` en de sleutel van de sessie (`X-CSRF-Token`) mee. Een fout wordt een `ServerError` met de status en de melding van de server. `recognizeFace` stuurt alleen de 128 getallen van het gezicht voor de camera, `recognizeBadge` alleen het pasnummer.
+- **`ServerDataStore`** is een subclass van `DataStore`. Het model werkt er hetzelfde mee, maar de gegevens staan in het geheugen. `save` zet alleen wat is veranderd in een wachtrij (`pendingChanges`). `applyServerChanges` verwerkt wat er van de server komt. Alleen een tablet bewaart de gegevens en de wachtrij in `localStorage`. Kenmerken van gezichten stuurt de server naar geen enkele browser, en pasnummers niet naar een tablet (die ziet alleen `badgeLinked`).
 - **`ServerSync`** stuurt de wachtrij kort na een wijziging naar de server (`push`) en haalt iedere 8 seconden de wijzigingen op (`pull`). Zonder verbinding probeert het na 5 seconden opnieuw.
 
 De server zelf staat in `backend/src/Server/` en is beschreven in `backend/README.md` en in het TO (hoofdstuk 6).
@@ -1228,6 +1232,8 @@ Ontbreken deze lijsten in oudere gegevens, dan krijgen die bij het laden twee le
 | `faceOffers` | Per medewerker het antwoord op de vraag na een passcan: `declined` (Nee gezegd) of `expired` (de instelling is verlopen), met `answeredAt` |
 
 Oudere gegevens zonder deze lijsten krijgen bij het laden twee lege lijsten, zonder melding. Bij het laden controleert `DataStore` ieder getal en slaat het een regel met een andere lengte, tekst, een extra veld of een datum in de toekomst over. De kenmerken komen niet in de CSV-export en niet in het logboek. De gezichtspunten van de controle op een levend gezicht worden nergens opgeslagen: ze staan hooguit 3 seconden in het geheugen.
+
+**Met de server (sinds versie 3.34).** De kenmerken staan alleen in de database van de server. Een browser krijgt `faceEnrollments` zonder `descriptor`, zodat hij wel weet wie een geldig gezicht heeft, maar de kenmerken niet kent. Een tablet krijgt bij een medewerker geen `badgeId`, alleen `badgeLinked` (waar of niet waar).
 
 ## 9. Belangrijke demo-beperkingen
 

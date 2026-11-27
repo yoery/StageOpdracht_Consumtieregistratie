@@ -36,8 +36,9 @@ Zonder server (de demo) gebruikt de website deze map niet. Met de server praat d
 | `bin/beheerder.php` | Een beheerder aanmaken (`php backend/bin/beheerder.php <e-mailadres>`), of met `--reset` een nieuw wachtwoord zetten. Het programma vraagt om een wachtwoord van minstens 12 tekens |
 | `src/Server/Database.php` en `RecordStore.php` | De database (standaard SQLite in `/data/consumptie.sqlite`) en de gegevens als JSON per regel in de tabel `records` |
 | `src/Server/Auth.php` | Inloggen, sessies in een cookie (HttpOnly, SameSite=Strict, via HTTPS ook Secure), gekoppelde tablets en de blokkade na foute pogingen |
-| `src/Server/Policy.php` | Wat een tablet mag lezen en schrijven. Een tablet krijgt geen looncodes, personeelsnummers, afwijkende werkgevernummers, telefoonnummers en afdelingen |
-| `src/Server/Api.php`, `Request.php` en `Response.php` | De API: `/health`, `/session`, `/login`, `/logout`, `/account/password`, `/changes`, `/devices` en `/afas/status` en `/afas/sync` |
+| `src/Server/Policy.php` | Wat een tablet mag lezen en schrijven. Een tablet krijgt geen looncodes, personeelsnummers, afwijkende werkgevernummers, telefoonnummers, afdelingen en pasnummers. Kenmerken van gezichten krijgt geen enkele browser |
+| `src/Server/Recognition.php` | Herkennen op de server (sinds versie 3.34): het gezicht zoeken bij de kenmerken die een tablet stuurt (afstand onder 0,5, niet ouder dan een jaar, alleen actieve medewerkers), de medewerker bij een pasnummer zoeken en een pas koppelen. Hooguit 240 verzoeken per minuut per sessie |
+| `src/Server/Api.php`, `Request.php` en `Response.php` | De API: `/health`, `/session`, `/login`, `/logout`, `/account/password`, `/changes`, `/recognize/face`, `/recognize/badge`, `/badge/link`, `/devices` en `/afas/status` en `/afas/sync` |
 | `src/Server/RecordEmployeeRepository.php` | Slaat de uitkomst van de synchronisatie met AFAS op in de database |
 
 De instellingen van de server komen uit de omgeving (in Coolify: Environment Variables):
