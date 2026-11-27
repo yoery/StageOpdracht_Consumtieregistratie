@@ -20,7 +20,7 @@ import { QuickSetupController } from "./controllers/QuickSetupController.js";
  * RegistrationApp — de controller: verbindt wat de gebruiker doet met het model en de view
  * (de "Controller" in MVC).
  *
- * De controller bestaat uit deze class en elf kleinere classes met elk één taak. RegistrationApp
+ * De controller bestaat uit deze class en dertien kleinere classes met elk één taak. RegistrationApp
  * maakt die onderdelen, koppelt de knoppen en toetsen eraan en is voor de rest van de app (en
  * voor de tests) het ene aanspreekpunt: iedere methode van een onderdeel is ook als methode van
  * RegistrationApp te gebruiken (zie de lijst DELEGATES onderaan dit bestand).
@@ -50,7 +50,9 @@ import { QuickSetupController } from "./controllers/QuickSetupController.js";
  *   - StandbyController: het startscherm (sinds versie 3.21): tonen bij het openen, na afloop van een
  *     registratie en na een tijd zonder invoer, en "Handmatig zoeken";
  *   - AutoScanController: het automatisch scannen op het startscherm met de intentie-drempel
- *     (FACE_DEMO.scanMode "auto"). De camera staat alleen aan op het startscherm.
+ *     (FACE_DEMO.scanMode "auto"). De camera staat alleen aan op het startscherm;
+ *   - GuestController: registreren als gast (sinds versie 3.33);
+ *   - QuickSetupController: "Snellere optie instellen", alleen met een server (sinds versie 3.33).
  * Ieder onderdeel krijgt deze controller mee en gebruikt het model, de view, persist en de
  * gedeelde toestand via this.app.
  *

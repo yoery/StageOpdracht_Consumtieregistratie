@@ -1,5 +1,5 @@
 /**
- * ControllerPart — de basisclass van de elf onderdelen van de controller.
+ * ControllerPart — de basisclass van de dertien onderdelen van de controller.
  *
  * RegistrationApp verdeelt zijn werk over onderdelen met ieder één taak, zoals AdminController,
  * FormController en StockController. Wat al die onderdelen gemeen hebben, staat hier één keer
@@ -9,7 +9,7 @@
  *
  * Verbonden met:
  *   - RegistrationApp: maakt de onderdelen en geeft zichzelf mee als `app`;
- *   - de elf onderdelen in deze map: erven van deze class.
+ *   - de dertien onderdelen in deze map: erven van deze class.
  */
 export class ControllerPart {
   // `app` is de controller (RegistrationApp) waar het onderdeel bij hoort.

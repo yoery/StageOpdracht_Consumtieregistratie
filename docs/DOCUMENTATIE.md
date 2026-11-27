@@ -6,7 +6,7 @@ Dit hoofdstuk beschrijft waarvoor dit document dient, voor wie het is geschreven
 
 ### 1.1 Doel van dit document
 
-Dit document legt de code en de bestanden van de applicatie Consumptieregistratie uit. Daarnaast is het de handleiding voor de medewerker en de beheerder. Het hoort bij het technisch ontwerp (`docs/TO-CONSUMPTIEREGISTRATIE.md`). Daarin staan de eisen en de ontwerpkeuzes. Dit document beschrijft hoe de demo die uitwerkt.
+Dit document legt de code en de bestanden van de applicatie Consumptieregistratie uit. Daarnaast is het de handleiding voor de medewerker en de beheerder. Het hoort bij het technisch ontwerp (`docs/TO-CONSUMPTIEREGISTRATIE.md`). Daarin staan de eisen en de ontwerpkeuzes. Dit document beschrijft hoe de app die uitwerkt: als demo en, sinds versie 3.33, met een server.
 
 ### 1.2 Lezers en leeswijzer
 
@@ -19,8 +19,8 @@ Dit document is geschreven voor:
 Hoofdstuk 4 is voor gebruikers. Hoofdstuk 5 tot en met 8 zijn voor ontwikkelaars. Wat er per hoofdstuk staat:
 
 - Hoofdstuk 2, Bestanden: alle bestanden en mappen van het project met hun functie.
-- Hoofdstuk 3, De website starten: de website lokaal of via een netwerkadres openen.
-- Hoofdstuk 4, Gebruikershandleiding: registreren, de pas, de camera, de koelkast en het beheer, stap voor stap.
+- Hoofdstuk 3, De website starten: de demo lokaal of via een netwerkadres openen, en de website met de server starten (op een eigen computer of met Coolify).
+- Hoofdstuk 4, Gebruikershandleiding: registreren, de pas, de camera en het beheer, stap voor stap, en vanaf 4.19 het werken met de server (inloggen, tablets, AFAS, gasten, pasjes, een snellere optie, looncodes importeren en afdelingen).
 - Hoofdstuk 5, Uitleg van `index.html`: de opbouw van de pagina, de vensters en het startscherm.
 - Hoofdstuk 6, Uitleg van de CSS: de stylesheets, hun volgorde, de kleuren en de layout.
 - Hoofdstuk 7, Uitleg van de JavaScript: de classes, hun taken en de belangrijkste methodes.
@@ -33,7 +33,9 @@ Hoofdstuk 4 is voor gebruikers. Hoofdstuk 5 tot en met 8 zijn voor ontwikkelaars
 
 Consumptieregistratie is een eenvoudige website waarmee medewerkers eten en drinken kunnen registreren. De standaardproducten zijn blikje (€0,65), sneetje brood (€0,10), boter (€0,10), zoet beleg (€0,20), glas melk (€0,20), beleg (€0,50), ei (€0,50) en yoghurt (€0,50). Een medewerker kiest de producten met `+` en `−` en slaat ze op met `Registreren`. Ieder gekozen product wordt dan één registratie. Persoonlijke aantallen en kosten zijn alleen zichtbaar voor de beheerder.
 
-Deze versie is een **frontend-demo**. De app slaat de gegevens op in `localStorage` van de gebruikte browser. Daardoor zijn de gegevens alleen in die browser op die computer beschikbaar en nog niet gedeeld tussen de gebruikers van een bedrijfsnetwerk.
+Zonder server is de app een **frontend-demo**. De app slaat de gegevens dan op in `localStorage` van de gebruikte browser. Daardoor zijn de gegevens alleen in die browser op die computer beschikbaar en niet gedeeld met andere tablets.
+
+**Sinds versie 3.33 (26 november 2026)** kan de app ook met een server werken. De administratie van TVB heeft op 25 november 2026 besloten dat de app in gebruik gaat. Met de server staan de gegevens in één database en zien alle tablets dezelfde gegevens. De beheerder logt in met een eigen wachtwoord, iedere tablet heeft een locatie, er is een optie voor gasten, de beheerder kan de pasjes exporteren en medewerkers stellen zelf een snellere optie in (gezicht of pas). De medewerkers en de bedrijven komen uit AFAS Profit. De beheerder kan de looncodes in één keer uit een bestand van de loonadministratie inlezen en iedere afdeling uit AFAS aan een consumptiepunt koppelen. Zonder server werkt alles als demo, zoals in de rest van dit document. Hoe je de server start, staat in 3.1 en 3.2. Wat er voor de gebruiker anders is, staat in 3.3 en in 4.19 tot en met 4.27. Volgens hetzelfde besluit is de slimme koelkast (het slot en de weegschalen) vervallen: die zit niet meer in de app.
 
 ## 2. Bestanden
 
@@ -42,30 +44,27 @@ Dit hoofdstuk noemt alle bestanden en mappen van het project met hun functie. He
 | Bestand | Functie |
 |---|---|
 | `index.html` | De HTML-structuur en alle zichtbare onderdelen van de website |
-| `assets/css/` | De vormgeving, kleuren, layout en mobiele weergave, verdeeld over achttien stylesheets, één per onderdeel (zie hoofdstuk 6). `index.html` laadt ze in een vaste volgorde |
+| `assets/css/` | De vormgeving, kleuren, layout en mobiele weergave, verdeeld over zeventien stylesheets, één per onderdeel (zie hoofdstuk 6). `index.html` laadt ze in een vaste volgorde |
 | `assets/js/main.js` | Startpunt: maakt opslag, model, view en controller aan en start de app |
-| `assets/js/config.js` | Vaste waarden: de opslagsleutel, de kleuren, de voorbeeldmedewerkers, de standaardproducten, de 13 bedrijven en de tijden van zonsopkomst en zonsondergang. Daarnaast de instellingen van de demo-gezichtsherkenning (`FACE_DEMO`) en de pasjeslezer (`BADGE_READER`). `ADMIN_IDLE_LOGOUT_MS` (5 minuten) bepaalt na hoeveel tijd zonder invoer de app de beheerder uitlogt. `EMPLOYEE_IDLE_CLOSE_MS` (75 seconden) bepaalt na hoeveel tijd zonder invoer het productvenster vanzelf sluit. `EMPLOYEE_IDLE_WARNING_MS` (10 seconden) bepaalt hoe lang vóór het sluiten de waarschuwing verschijnt. `SMART_FRIDGE` bevat de instellingen van de slimme koelkast (zie 4.17). `RECOGNITION_TARGET` bepaalt wat er opent na herkennen. `STANDBY` regelt het startscherm. `FACE_DEMO.scanMode` en `FACE_DEMO.autoScan` bepalen hoe de camera op het startscherm begint (zie 4.18). `FACE_DEMO.liveness` regelt de stille controle op een levend gezicht (zie 4.15). `MAX_PER_PRODUCT` (10) bepaalt hoe vaak één product in één keer kan worden gekozen. `BACKUP_RETENTION_DAYS` (30 dagen) bepaalt hoe lang een reservekopie bewaard blijft |
+| `assets/js/config.js` | Vaste waarden: de opslagsleutel, de kleuren, de voorbeeldmedewerkers, de standaardproducten, de 13 bedrijven en de tijden van zonsopkomst en zonsondergang. Daarnaast de instellingen van de demo-gezichtsherkenning (`FACE_DEMO`) en de pasjeslezer (`BADGE_READER`). `ADMIN_IDLE_LOGOUT_MS` (5 minuten) bepaalt na hoeveel tijd zonder invoer de app de beheerder uitlogt. `EMPLOYEE_IDLE_CLOSE_MS` (75 seconden) bepaalt na hoeveel tijd zonder invoer het productvenster vanzelf sluit. `EMPLOYEE_IDLE_WARNING_MS` (10 seconden) bepaalt hoe lang vóór het sluiten de waarschuwing verschijnt. `STANDBY` regelt het startscherm. `FACE_DEMO.scanMode` en `FACE_DEMO.autoScan` bepalen hoe de camera op het startscherm begint (zie 4.18). `FACE_DEMO.liveness` regelt de stille controle op een levend gezicht (zie 4.15). `MAX_PER_PRODUCT` (10) bepaalt hoe vaak één product in één keer kan worden gekozen. `BACKUP_RETENTION_DAYS` (30 dagen) bepaalt hoe lang een reservekopie bewaard blijft |
 | `assets/js/DataStore.js` | Opslag in `localStorage`, validatie en omzetting van oude gegevens |
 | `assets/js/RegistrationModel.js` | Gegevens en regels voor registraties, medewerkers, producten en logboek |
 | `assets/js/RegistrationView.js` | Weergave van alle onderdelen als HTML |
-| `assets/js/RegistrationApp.js` | Controller: maakt de twaalf onderdelen hieronder en koppelt ze, slaat op via `persist`, neemt wijzigingen uit een ander tabblad over, werkt de datum bij na middernacht en koppelt alle klikken en toetsen. Alle methodes van de onderdelen zijn ook via deze class te gebruiken |
-| `assets/js/controllers/ControllerPart.js` | Class `ControllerPart`: de basisclass van de twaalf onderdelen van de controller. Bevat de koppeling met `RegistrationApp` (`app`), `model`, `view`, `faceDemo` en de echte klok (`realClock`) |
+| `assets/js/RegistrationApp.js` | Controller: maakt de dertien onderdelen hieronder en koppelt ze, slaat op via `persist`, neemt wijzigingen uit een ander tabblad over, werkt de datum bij na middernacht en koppelt alle klikken en toetsen. Alle methodes van de onderdelen zijn ook via deze class te gebruiken |
+| `assets/js/controllers/ControllerPart.js` | Class `ControllerPart`: de basisclass van de dertien onderdelen van de controller. Bevat de koppeling met `RegistrationApp` (`app`), `model`, `view`, `faceDemo` en de echte klok (`realClock`) |
 | `assets/js/controllers/ModalManager.js` | Class `ModalManager` (onderdeel van de controller): vensters openen en sluiten, de focus terugzetten, Escape en Tab binnen een venster |
 | `assets/js/controllers/EmployeeController.js` | Class `EmployeeController` (onderdeel van de controller): zoeken en bedrijfsfilter op de beginpagina, het productvenster en registreren |
 | `assets/js/controllers/BadgeController.js` | Class `BadgeController` (onderdeel van de controller): herkennen met de pas, koppelt `BadgeReader` aan de app |
 | `assets/js/controllers/FaceController.js` | Class `FaceController` (onderdeel van de controller): het cameravenster van de demo-gezichtsherkenning, de scan na een tik, opslaan en uitzetten van een gezicht (zelf instellen alleen na de pas, uitzetten na de pas of de camera, en door de beheerder) en verlopen gezichten wissen |
-| `assets/js/controllers/RecognitionController.js` | Class `RecognitionController` (onderdeel van de controller): wat er opent na herkennen met de pas of de camera (koelkast of productvenster) en de vraag over gezichtsherkenning na een passcan |
-| `assets/js/controllers/StandbyController.js` | Class `StandbyController` (onderdeel van de controller): het startscherm. Tonen bij het openen, na afloop van een registratie of koelkastopening en na 2 minuten zonder invoer, de teksten en `Handmatig zoeken` (zie 4.18) |
+| `assets/js/controllers/RecognitionController.js` | Class `RecognitionController` (onderdeel van de controller): wat er opent na herkennen met de pas of de camera (altijd het productvenster) en de vraag over gezichtsherkenning na een passcan |
+| `assets/js/controllers/StandbyController.js` | Class `StandbyController` (onderdeel van de controller): het startscherm. Tonen bij het openen, na afloop van een registratie en na 2 minuten zonder invoer, de teksten en `Handmatig zoeken` (zie 4.18) |
 | `assets/js/controllers/AutoScanController.js` | Class `AutoScanController` (onderdeel van de controller): het automatisch scannen op het startscherm. Zet de camera alleen op het startscherm aan, zoekt gezichten en laat pas boven de intentiedrempel de kenmerken berekenen (zie 4.18) |
-| `assets/js/controllers/AdminController.js` | Class `AdminController` (onderdeel van de controller): inloggen, dashboard en tabbladen, logboek, export, `Alle gegevens wissen`, (de)activeren en verwijderen, en `requireAdmin` |
+| `assets/js/controllers/AdminController.js` | Class `AdminController` (onderdeel van de controller): inloggen, dashboard en tabbladen, logboek, export, `Pasjes exporteren`, `Looncodes importeren`, `Alle gegevens wissen`, (de)activeren en verwijderen, en `requireAdmin` |
 | `assets/js/controllers/CorrectionController.js` | Class `CorrectionController` (onderdeel van de controller): correcties `+` en `−` en het venster `Registratie verwijderen` |
 | `assets/js/controllers/StockController.js` | Class `StockController` (onderdeel van de controller): het tabblad Voorraad (leveringen, tellingen en minimum) |
 | `assets/js/controllers/FormController.js` | Class `FormController` (onderdeel van de controller): de formulieren voor medewerker, product, bedrijf en consumptiepunt, met de controle van de invoer |
-| `assets/js/controllers/FridgeController.js` | Class `FridgeController` (onderdeel van de controller): de slimme koelkast (demo), het koelkastvenster en het tabblad Koelkast (zie 4.17) |
-| `assets/js/FridgeView.js` | Class `FridgeView`: tekent het koelkastvenster en het tabblad Koelkast. `RegistrationView` maakt deze class en geeft de methodes door |
-| `assets/js/fridge/SmartFridge.js` | Class `SmartFridge`: de slimme koelkast. Weegt bij openen en sluiten en rekent het gewichtsverschil per schap om naar aantallen, met een tolerantie |
-| `assets/js/fridge/FridgeLock.js` en `assets/js/fridge/ShelfScale.js` | De afspraken (interfaces) voor het slot en de weegschaal per schap. In productie komen hier classes die via de backend werken |
-| `assets/js/fridge/SimulatedLock.js` en `assets/js/fridge/SimulatedShelfScale.js` | Het nagebootste slot (gaat na 10 seconden vanzelf dicht als de deur niet opengaat) en de nagebootste weegschaal van de demo |
+| `assets/js/controllers/GuestController.js` | Class `GuestController` (onderdeel van de controller): registreren als gast, het gastformulier en het opslaan van de gast (zie 4.23) |
+| `assets/js/controllers/QuickSetupController.js` | Class `QuickSetupController` (onderdeel van de controller): `Snellere optie instellen` met de server, kiezen tussen gezicht, pas of allebei, `Nee, liever niet` en de pas koppelen (zie 4.25) |
 | `assets/js/CsvExport.js` | Class `CsvExport`: CSV-export voor de loonadministratie (maand + 1) |
 | `assets/js/ThemeManager.js` | Class `ThemeManager`: licht en donker thema (Systeem, Auto of zelf kiezen met de slider) |
 | `assets/js/icons.js` | De SVG-iconen van de website, met de hulpfunctie `icon(naam)` |
@@ -74,24 +73,37 @@ Dit hoofdstuk noemt alle bestanden en mappen van het project met hun functie. He
 | `assets/js/FaceIntent.js` | Class `FaceIntent`: de intentiedrempel van het automatisch scannen. Beslist per camerabeeld of er precies één gezicht dichtbij en in het ovaal is en stilstaat (zie 4.18) |
 | `assets/js/FaceLiveness.js` | Class `FaceLiveness`: de stille controle op een levend gezicht. Kijkt met de 68 gezichtspunten van de herkenning of het gezicht knippert of licht vervormt, zodat een foto van een collega niet als die collega wordt herkend of ingesteld (zie 4.15) |
 | `assets/js/BadgeReader.js` | Class `BadgeReader`: herkennen met de pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.16) |
+| `assets/js/PayrollImport.js` | Class `PayrollImport`: looncodes importeren uit een CSV-bestand van de loonadministratie. Leest het bestand, zoekt de medewerkers op personeelsnummer en maakt de samenvatting voor de melding en het logboek (zie 4.26) |
+| `assets/js/deployment.js` | Zegt of de website met een server werkt (`SERVER_API`). In de repository leeg: dan is het de demo. De container en `backend/dev-server.php` leveren `docker/deployment.js` uit, met `/api` |
+| `assets/js/ServerMode.js` | Class `ServerMode`: opstarten met de server, het inlogscherm, inloggen en uitloggen en het tabblad `Tablets en AFAS`, met de afdelingen uit AFAS (zie 7, Met de server) |
+| `assets/js/ServerApi.js` | Classes `ServerApi` en `ServerError`: de verzoeken aan de API van de server |
+| `assets/js/ServerDataStore.js` | Class `ServerDataStore`: de opslag met de server, met de gegevens in het geheugen en een wachtrij voor de server |
+| `assets/js/ServerSync.js` | Class `ServerSync`: stuurt de wachtrij naar de server en haalt iedere 8 seconden de wijzigingen op |
 | `assets/fonts/` | De lettertypes DM Sans en Space Grotesk (woff2), zelf gehost in plaats van via Google Fonts. Licentie: SIL Open Font License 1.1 (`LICENSE.txt`) |
 | `assets/vendor/face-api/` | De bibliotheek face-api (`face-api.esm.js`, versie 1.7.15) en de drie modellen voor de demo-gezichtsherkenning, met de MIT-licentie (`LICENSE`). In de bibliotheek zit TensorFlow.js 4.22.0, met de Apache-licentie 2.0 (`LICENSE-TENSORFLOWJS`). Samen ongeveer 8 MB, waarvan 6,4 MB het herkenningsmodel. Wordt alleen geladen als iemand de demo gebruikt. `README.md` in deze map noemt de bron, een SHA-256-controlegetal per bestand en dat face-api niet meer wordt onderhouden (de repository is gearchiveerd, daarom alleen voor de demo) |
 | `archief/app.js` | Back-up van de originele versie in één bestand. Wordt niet meer geladen |
 | `archief/app.test.js` | Back-up van de oude tests bij die versie. Wordt niet meer uitgevoerd |
 | `README.md` | Korte startinformatie voor het project |
 | `tools/md-to-docx.cjs` en `tools/word-bijwerken.ps1` | Maken van `docs/TO-CONSUMPTIEREGISTRATIE.md` en `docs/DOCUMENTATIE.md` een Word-bestand (`.docx`) en een PDF in de TVB-huisstijl, op basis van het sjabloon `docs/tvbsjabloon.docx`: voorblad, inhoudsopgave, genummerde koppen, tabellen en opsommingstekens. Nodig: Node.js en Microsoft Word. De `.md`-bestanden blijven de bron: een wijziging die alleen in de `.docx` staat, is weg na de volgende keer maken |
-| `docs/` | Technisch ontwerp (met daarin ook de functionele eisen en de wireframes), databaseschema en deze documentatie |
+| `docs/` | Het technisch ontwerp (met daarin ook de functionele eisen en de wireframes), het databaseschema, deze documentatie, het pentestrapport van november 2026 (`PENTESTRAPPORT.md`) en het auditrapport van de security audit van 26 november 2026 (`AUDITRAPPORT.md`). De rapporten en de documenten staan er ook als Word en PDF |
 | `docs/wireframes/` | Low-fidelity (`lofi-…`), mid-fidelity (`midfi-…`) en high-fidelity (`w…`) wireframes van de schermen, gebruikt in het TO (hoofdstuk 9) |
-| `tests/slimme-koelkast.test.js` | Tests voor de slimme koelkast: omrekenen van gewicht naar aantallen (tolerantie, terugleggen, meerdere schappen, onverklaarbaar verschil), het slot met een nepklok, de weegschaal, registraties met voorraad en logboek, de indeling, de controle en migratie in `DataStore`, wissen, en het koelkastvenster met de pas (onbekende pas, tweede scan, deur te lang open, mislukt opslaan, herladen) |
-| `tests/startscherm.test.js` | Tests voor het startscherm en het automatisch scannen, met een nepklok, een nepcamera en nagebootste gezichten: het startscherm bij het openen, na 2 minuten, na een registratie en na de koelkast, `Handmatig zoeken`, een passcan op het startscherm, de camera alleen op het startscherm (uit bij een venster, `Handmatig zoeken` en een verborgen tabblad), geen kenmerken voor een gezicht op afstand, buiten het ovaal, in beweging of met twee gezichten, herkend naar de koelkast of het productvenster, niet herkend met melding en pauze, geen camera of geen toestemming, `scanMode` "tap" en `FaceIntent`, en een foto in het ovaal (opent niets, na 5 seconden "niet herkend") en een echt hoofd (herkend zonder opdracht) |
-| `tests/standby-en-gezicht.test.js` | Tests voor tik om te scannen (met `scanMode` "tap") en de vraag na een passcan, met een nepklok en een nepcamera: het startscherm na 2 minuten, `Handmatig zoeken` zonder klik-door, de camera alleen na een tik en uit na de scantijd, herkend naar de koelkast of het productvenster, de pas naar de koelkast, `Ja, instellen` en `Nee`, verlopen na 365 dagen, opslaan, controleren en wissen van de kenmerken, en niets in de CSV-export of het logboek |
+| `tests/startscherm.test.js` | Tests voor het startscherm en het automatisch scannen, met een nepklok, een nepcamera en nagebootste gezichten: het startscherm bij het openen, na 2 minuten, na een registratie, `Handmatig zoeken`, een passcan op het startscherm, de camera alleen op het startscherm (uit bij een venster, `Handmatig zoeken` en een verborgen tabblad), geen kenmerken voor een gezicht op afstand, buiten het ovaal, in beweging of met twee gezichten, herkend naar het productvenster, niet herkend met melding en pauze, geen camera of geen toestemming, `scanMode` "tap" en `FaceIntent`, en een foto in het ovaal (opent niets, na 5 seconden "niet herkend") en een echt hoofd (herkend zonder opdracht) |
+| `tests/standby-en-gezicht.test.js` | Tests voor tik om te scannen (met `scanMode` "tap") en de vraag na een passcan, met een nepklok en een nepcamera: het startscherm na 2 minuten, `Handmatig zoeken` zonder klik-door, de camera alleen na een tik en uit na de scantijd, herkend naar het productvenster, `Ja, instellen` en `Nee`, verlopen na 365 dagen, opslaan, controleren en wissen van de kenmerken, en niets in de CSV-export of het logboek |
 | `tests/generale-repetitie.test.js` | Regressietests voor de fouten uit de generale repetitie van de demo (versie 3.19): een pas in een ander tekstveld laat de oude inhoud staan (niet in `Pasnummer`), de melding per reden als de camera niet start, de binnenruimte van de velden in de voorraadtabel en het lege pictogram in `index.html` |
 | `tests/gezicht-instellen-veilig.test.js` | Tests voor veilig instellen van gezichtsherkenning, met een nepklok en een nepcamera: na kiezen op naam geen link en geen `Uitzetten` en weigert de controller instellen en uitzetten, na de pas wel instellen, na de camera wel uitzetten, de beheerder kan instellen en uitzetten (niet zonder inloggen, niet zonder camera, niets bewaard na uitloggen), de knoppen en de vervaldatum in het tabblad Medewerkers, verlopen na 365 dagen en opnieuw instellen alleen na de pas of via de beheerder met een nieuw vinkje, en het moment van toestemming (`consentAt`) met controle en migratie bij het laden |
 | `tests/levend-gezicht.test.js` | Tests voor de stille controle op een levend gezicht, met nagebootste gezichtspunten, een nepcamera en zonder face-api: een foto die schuift, draait en kantelt is nooit levend, een echt hoofd dat een paar graden beweegt of knippert wel, een stil hoofd zonder knipper faalt na 5 seconden, de gezichtspunten staan hooguit 3 seconden in het geheugen, `enabled` en `debug`, de waarden in `config.js`, `describeFace` en `checkLiveness`, en een foto wordt niet ingesteld en niet herkend in het cameravenster |
 | `tests/helpers-gezicht.js` | Hulpbestand voor `levend-gezicht.test.js` en `startscherm.test.js`: een nagebootst gezicht van 68 punten in drie dimensies (`face3d`), de projectie bij een draai van het hoofd (`project`), een foto als plat vlak (`photo`) en een kleine ruis (`jitter`) |
 | `tests/pentest-november.test.js` | Tests voor de oplossingen uit de pentest van november 2026 (zie `docs/PENTESTRAPPORT.md`): de controle op een levend gezicht per herkend gezicht (eerst zelf knipperen en dan een foto van een collega opent niets), een leesbare reservekopie zonder gezichtskenmerken die na 30 dagen verdwijnt, de grens van 10 per product (ook met een vastgehouden Enter), tijdstippen in de toekomst die bewaard blijven, en lege lijsten van het beheer na uitloggen |
 | `tests/looncode.test.js` | Tests voor de looncode in de export: het tellen van de medewerkers zonder looncode in een export (`countMissingPayrollCodes`), de melding na het exporteren en het label "Geen looncode" in het tabblad `Medewerkers` |
-| `tests/` | Unit tests (950) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
+| `tests/server-sync.test.js` | Tests voor de website met een server, met een nagebootste server: de wachtrij, twee tablets, wat de server aanvult of weigert, zonder verbinding, bewaren in de browser (nooit gezichtskenmerken) en `ServerApi` |
+| `tests/server-mode.test.js` | Tests voor het opstarten met een server: het inlogscherm, een tablet, de beheerder, zonder verbinding, inloggen en uitloggen op een tablet en de locatie van de tablet |
+| `tests/zoeken-en-locatie.test.js` | Tests voor zoeken zonder namenlijst ("Typ je naam") en de locatie van de tablet (bovenaan, producten en voorraad) |
+| `tests/gasten.test.js` | Tests voor registreren als gast: het telefoonnummer, het formulier, de groep "Gasten", het beheer en de export zonder gasten |
+| `tests/pasjes-dataset.test.js` | Tests voor `Pasjes exporteren`: de kolommen, geen formules, het moment van koppelen, alleen voor de beheerder en het logboek |
+| `tests/geen-camerabeeld.test.js` | Tests dat het camerabeeld nooit te zien is en dat de vaste zin over het scannen er staat |
+| `tests/snellere-optie.test.js` | Tests voor `Snellere optie instellen`: welke opties er zijn, `Nee, liever niet` voor een jaar, gezicht, pas en allebei, en alleen met een server |
+| `tests/looncode-import-en-afdeling.test.js` | Tests voor `Looncodes importeren` (puntkomma's, komma's en tabs, andere namen voor de kolommen, personeelsnummers zonder voorloopnullen, de melding en het logboek met alleen aantallen) en de afdelingen uit AFAS (het overzicht, koppelen aan een consumptiepunt, een gekozen punt blijft, bewaren en laden) |
+| `tests/` | Unit tests (989) voor de regels, de opslag, de export, het thema, de welkom- en gezichtsherkenningsfuncties, herkennen met de pas, de controller, de beveiliging en regressietests voor opgeloste bugs |
 | `tests/opslag-model-export.test.js` | Tests voor de reservekopieën, het wissen van gegevens, de strengere controle bij het laden, de voorraadtelling (`countedAt`), nieuwe modelmethodes en de beveiliging van de CSV-export, verboden id's, maximale tekstlengtes en een opslag die niet te lezen is |
 | `tests/controller-robuustheid.test.js` | Tests voor de robuustheid van controller en view: na middernacht, correcties in een oude maand, logboek en wijziging in één keer opslaan, grenzen bij de voorraad, verouderde formulieren en knoppen, de camera, de focus na sluiten, veilige HTML, `Alle gegevens wissen`, en exporteren en wissen alleen voor een ingelogde beheerder |
 | `tests/beveiliging-config.test.js` | Tests voor de configuratie: geen externe bronnen, iedere stylesheet precies één keer gelinkt in `index.html`, de Content-Security-Policy, lokale lettertypes en face-api (met de SHA-256-controlegetallen), en de CI-workflow |
@@ -103,18 +115,23 @@ Dit hoofdstuk noemt alle bestanden en mappen van het project met hun functie. He
 | `tests/avg-toets.test.js` | Tests voor de aanpassingen uit de AVG-toets: automatisch uitloggen van de beheerder na 5 minuten zonder invoer (met een nepklok: net onder en precies op 5 minuten, iedere invoer begint opnieuw, open beheerformulieren gaan dicht, de melding en de timer van 10 seconden) en de uitleg over de inhouding op het loon in het productvenster |
 | `tests/ux-review.test.js` | Tests voor de verbeteringen uit de UX-review van oktober 2026 (UX 1 tot en met UX 12 in de naam van iedere test, daarna 13 en 14): het productvenster dat na 75 seconden vanzelf sluit (met een nepklok, de waarschuwing en iedere invoer die opnieuw begint), een pas terwijl een venster open is, de knopbalk met `Registreren`, zoekveld en bedrijfsfilter leeg na registreren, de compacte banner, de pashint, de opmaak van een gekozen product, de grootte van knoppen, de statusregel en de meldingsregio's voor schermlezers, de leesbaarheid, de nieuwe teksten, `Registreren` zonder keuze, een productvenster zonder producten zonder knopbalk en loonregel (13) en vensters die altijd bovenaan openen (14) |
 | `tests/review-oktober.test.js` | Regressietests voor de review van oktober 2026 (D1 tot en met D7, U1 tot en met U7, R1 tot en met R3 in de naam van iedere test): beschadigde lijsten en volle opslag, dubbele passen, niet-bestaande datums, pasnummers gelijkmaken, mislukt wissen, gezichtsherkenning alleen met actieve medewerkers, een scan in het veld `Pasnummer` en in het bedrijfsfilter, dubbelklik op `Registreren`, een ingedrukt gehouden Enter, de focus na opslaan en (de)activeren, het datumveld na middernacht, toegankelijkheid (live region, tabbladen, bedrijfsfilter) en de cijfervelden |
-| `tests/rollenspel-oktober.test.js` | Regressietests voor de fouten uit de rollenspeltests en de FMEA van oktober 2026 (punt 1 tot en met 14 in de naam van iedere test): zoekveld leeg na sluiten zonder registreren, geen spookklik na een dubbeltik op `Deur dicht`, de naam in de open koelkast en "Controle nodig" bij de pas van een collega, twee tabbladen op één opslag, de weging met het gemeten gemiddelde gewicht (eieren en blikjes), verwacht en geteld bij een telling, oude en nieuwe waarden in het logboek, de lege demokeuze, tikdoelen en hover, voorraad 0, negatieve getallen in de CSV, het SQL-schema en teksten in het TO |
+| `tests/rollenspel-oktober.test.js` | Regressietests voor de fouten uit de rollenspeltests en de FMEA van oktober 2026 (punt 1 tot en met 14 in de naam van iedere test): zoekveld leeg na sluiten zonder registreren, geen spookklik na een dubbeltik op `Deur dicht`, de naam in de open koelkast en "Controle nodig" bij de pas van een collega, twee tabbladen op één opslag, de weging met het gemeten gemiddelde gewicht (eieren en blikjes), verwacht en geteld bij een telling, oude en nieuwe waarden in het logboek, de lege demokeuze, tikdoelen en hover, voorraad 0, negatieve getallen in de CSV, het SQL-schema en teksten in het TO Sinds versie 3.33 zonder de tests van de slimme koelkast. |
 | `uitleg-video/` | Het script van het uitlegfilmpje voor de bedrijvenmarkt: `video.json` met de scènes, teksten en tijden, en in `assets/` de nagetekende schermen. De namen zijn verzonnen. Het mp4-bestand staat niet in Git (zie `uitleg-video/.gitignore`). Hoort niet op de webserver |
-| `.env.example` | Voorbeeld van de instellingen voor de AFAS-koppeling: `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`, alleen de namen en geen waarden. Het echte bestand `.env` staat in `.gitignore` en komt nooit in Git |
-| `backend/` | Het serverdeel in PHP: de koppeling met AFAS Profit (`backend/src/Afas/`), twee hulpprogramma's (`backend/bin/`) en de tests (`backend/tests/`, te draaien met `php backend/tests/run.php`). De website in de browser laadt niets uit deze map. Zie `backend/README.md` en het TO, hoofdstuk 11 |
-| `.gitignore` | Bestanden die niet in Git horen: `node_modules/`, editorbestanden, tijdelijke Word-bestanden, de schermafdrukken van mislukte browsertests en `.env` (geheimen van een latere backend) |
+| `.env.example` | De namen van alle instellingen, zonder waarden: `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR` voor de AFAS-koppeling, en `CR_BEHEER_EMAIL`, `CR_BEHEER_WACHTWOORD`, `CR_DB_DSN`, `CR_DB_GEBRUIKER` en `CR_DB_WACHTWOORD` voor de server. Het echte bestand `.env` staat in `.gitignore` en `.dockerignore` en komt nooit in Git of in de container |
+| `backend/` | Het serverdeel in PHP: de koppeling met AFAS Profit (`backend/src/Afas/`), sinds versie 3.33 de server met de API en de database (`backend/src/Server/`, met `backend/public/index.php` als enige bestand dat de webserver uitvoert), de ontwikkelserver `backend/dev-server.php`, hulpprogramma's (`backend/bin/`, ook `beheerder.php`) en de tests (`backend/tests/`, te draaien met `php backend/tests/run.php`). Zie `backend/README.md` en het TO, hoofdstuk 6 en 11 |
+| `Dockerfile` en `docker-compose.yml` | De container voor de server van TVB (Coolify, zie 3.2): Apache met PHP 8.3, de website, de API en een volume voor de database |
+| `docker/` | De instellingen van de container: `apache.conf`, `php.ini`, `start.sh` (maakt de eerste beheerder aan) en `deployment.js` |
+| `.dockerignore` | Wat niet in de container mag: `.env`, de tests, de documenten en de database van de ontwikkelserver |
+| `start-lokaal.cmd` | Start de website met de server op een eigen computer, zonder Docker (zie 3.1) |
+| `.gitignore` | Bestanden die niet in Git horen: `node_modules/`, editorbestanden, tijdelijke Word-bestanden, de schermafdrukken van mislukte browsertests en `.env` (de geheimen van de server) en `backend/data/` (de database van de ontwikkelserver) |
+| `.gitleaksignore` | Een bekend vals alarm van de geheimenscan Gitleaks, met de uitleg erbij (zie het auditrapport, AF-06) |
 | `.gitattributes` | Zorgt dat Git de bestanden in `assets/vendor/` en `assets/fonts/` niet aanpast (geen omzetting van regeleinden), zodat de controlegetallen blijven kloppen |
-| `tests/e2e/` | Browsertests (end-to-end). `app.e2e.test.js` test de echte pagina in headless Edge of Chrome. De 37 tests tikken na het openen eerst op `Handmatig zoeken`. Ze testen het laden zonder fouten, zoeken, registreren (ook zonder keuze en met een dubbelklik), Escape en focus, inloggen, het thema, een pas koppelen en herkennen, de CSV-export en het beheer (focus na opslaan, letters in een cijferveld). Ook testen ze het productvenster: vanzelf sluiten, geen producten, een leeg zoekveld na registreren en `Registreren` in beeld op een liggende tablet, een telefoon en bij 200% zoom. Verder: vensters die bovenaan openen, gezichtsherkenning instellen, een scan in een tekstveld of terwijl een venster open is, de slimme koelkast, het startscherm, de vraag na een passcan, de rollenspeltests van oktober 2026 en drie bevindingen uit de pentest van november 2026. `browser.js` bevat de webserver en bestuurt de browser via het Chrome DevTools Protocol. De tests klikken pas als het element stilstaat. Bij een mislukte test volgen het scenario, de toestand van de pagina, de laatste meldingen uit de console en een schermafdruk in `test-results/e2e`. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
-| `.github/workflows/ci.yml` | Voert de unit tests en daarna de browsertests (in Google Chrome) automatisch uit op GitHub met Node.js 24 (LTS), met alleen leesrechten en actions die op een commit-SHA zijn vastgezet |
+| `tests/e2e/` | Browsertests (end-to-end) in headless Edge of Chrome, 42 in totaal. `app.e2e.test.js` (33 tests) test de echte pagina als demo. De tests tikken na het openen eerst op `Handmatig zoeken`. Ze testen het laden zonder fouten, zoeken, registreren (ook zonder keuze en met een dubbelklik), Escape en focus, inloggen, het thema, een pas koppelen en herkennen, de CSV-export en het beheer (focus na opslaan, letters in een cijferveld). Ook testen ze het productvenster: vanzelf sluiten, geen producten, een leeg zoekveld na registreren en `Registreren` in beeld op een liggende tablet, een telefoon en bij 200% zoom. Verder: vensters die bovenaan openen, gezichtsherkenning instellen, een scan in een tekstveld of terwijl een venster open is, het startscherm, dat het camerabeeld nooit te zien is, de vraag na een passcan, de rollenspeltests van oktober 2026 en drie bevindingen uit de pentest van november 2026. `server.e2e.test.js` (9 tests) draait de pagina met de echte API in PHP (`backend/dev-server.php`) en een eigen database in een tijdelijke map: inloggen, een tablet koppelen, registreren, een tweede tablet, een gast, en looncodes importeren met een afdeling koppelen. Die tests lezen geen `.env`, gaan nooit naar AFAS en worden zonder PHP overgeslagen. `browser.js` bevat de webserver en bestuurt de browser via het Chrome DevTools Protocol. Bij een mislukte test volgen het scenario, de toestand van de pagina, de laatste meldingen uit de console en een schermafdruk in `test-results/e2e`. Draaien met `npm run test:e2e`, zonder npm-pakketten. Een andere browser kies je met `BROWSER_PATH` |
+| `.github/workflows/ci.yml` | Voert automatisch uit op GitHub: de unit tests, de tests van de backend (PHP), de browsertests (in Google Chrome) en sinds versie 3.33 het bouwen en controleren van de container. Met Node.js 24 (LTS), alleen leesrechten, actions die op een commit-SHA zijn vastgezet en zonder geheimen |
 
 ## 3. De website starten
 
-Dit hoofdstuk beschrijft hoe je de website start, wat daarvoor nodig is en wat niet werkt. Het is bedoeld voor een ontwikkelaar of beheerder die de demo op een computer of tablet wil draaien.
+Dit hoofdstuk beschrijft hoe je de website start, wat daarvoor nodig is en wat niet werkt. Het is bedoeld voor een ontwikkelaar of beheerder die de demo op een computer of tablet wil draaien. Paragraaf 3.1 tot en met 3.3 gaan over de website met de server (sinds versie 3.33).
 
 1. Open de projectmap in VS Code.
 2. Klik met de rechtermuisknop op `index.html` en kies **Open with Live Server** (extensie "Live Server"). Een andere lokale webserver werkt ook. Draai de demo op een eigen poort en niet tegelijk met andere projecten op dezelfde poort: alle pagina's op hetzelfde adres en dezelfde poort delen dezelfde opslag van de browser en kunnen elkaars gegevens lezen (pentest november 2026, PT-05).
@@ -125,9 +142,54 @@ Alle bestanden staan in het project zelf: ook de lettertypes (`assets/fonts/`) e
 
 De website werkt ook via een netwerkadres, bijvoorbeeld `http://192.168.1.20:5500` op een tablet in hetzelfde netwerk. Alleen de demo-gezichtsherkenning is dan niet beschikbaar, omdat browsers de camera alleen via `https://` of `http://localhost` toestaan.
 
-Voor de website is geen `.env`-bestand nodig, ook niet op een webserver. Alleen de AFAS-koppeling in `backend/` leest er een (zie `.env.example`). De website heeft geen eigen server en leest geen omgevingsvariabelen. Alle instellingen staan in `assets/js/config.js`, en daarin staan geen wachtwoorden of sleutels. Zet daar ook nooit een geheim in, want iedere gebruiker kan alles lezen wat de browser laadt. Een `.env` komt pas bij een backend, alleen op de server en nooit in Git (zie hoofdstuk 11 en het TO, hoofdstuk 16, paragraaf Installatie en deployment).
+Voor de demo is geen `.env`-bestand nodig, ook niet op een webserver. De website zelf leest geen omgevingsvariabelen. Alle instellingen van de website staan in `assets/js/config.js`, en daarin staan geen wachtwoorden of sleutels. Zet daar ook nooit een geheim in, want iedere gebruiker kan alles lezen wat de browser laadt. Alleen de server in `backend/` gebruikt instellingen uit de omgeving of uit een `.env`-bestand (zie `.env.example`, met alleen de namen). Die staan alleen op de server en nooit in Git (zie 3.2 en het TO, hoofdstuk 16, paragraaf Installatie en deployment).
 
 Dubbelklikken op `index.html` werkt niet: de JavaScript is opgedeeld in modules, en browsers blokkeren modules die via `file://` worden geopend. De pagina toont dan een waarschuwing.
+
+### 3.1 Met de server op een eigen computer
+
+Sinds versie 3.33 kan de website ook met de server draaien. Op een eigen computer gaat dat zonder Docker, met PHP 8.3 of hoger:
+
+1. Maak eerst een beheerder aan. Zet in een opdrachtvenster `CR_DB_DSN` op de database in `backend/data/` (zoals in `start-lokaal.cmd`) en voer `php backend/bin/beheerder.php jouw@adres.nl` uit. Het programma vraagt om een wachtwoord van minstens 12 tekens.
+2. Dubbelklik op `start-lokaal.cmd`, of start `php -S 127.0.0.1:8080 backend/dev-server.php` vanuit de projectmap.
+3. Open `http://127.0.0.1:8080`. Je ziet het inlogscherm van de server (4.19).
+
+De database komt in `backend/data/` en die map staat in `.gitignore`. De ontwikkelserver levert alleen `index.html`, `assets/` en `/api` uit, nooit `.env`, de tests of de documenten. Op de computer zelf werkt de server zonder HTTPS. Op een ander adres weigert de API een verzoek zonder HTTPS. Gebruik op een eigen computer alleen gegevens van de testomgeving van AFAS.
+
+### 3.2 Op de server van TVB zetten met Coolify
+
+TVB zet de app op een eigen server met Coolify. Coolify bouwt de container uit `Dockerfile` (Apache met PHP 8.3) met `docker-compose.yml`.
+
+1. Maak in Coolify een nieuwe resource vanuit de repository (branch `main`, of `development` om te testen) en kies bij "Build Pack" voor **Docker Compose**.
+2. Vul onder Environment Variables in:
+   - `CR_BEHEER_EMAIL`: het e-mailadres van de eerste beheerder.
+   - `SERVICE_PASSWORD_BEHEER`: dit verzint Coolify zelf. Het is het wachtwoord van de eerste beheerder (in de container heet het `CR_BEHEER_WACHTWOORD`).
+   - `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`: de koppeling met AFAS. Het token staat alleen hier, nooit in Git.
+   - Alleen voor een andere database dan SQLite: `CR_DB_DSN`, `CR_DB_GEBRUIKER` en `CR_DB_WACHTWOORD`.
+3. Koppel een domein. Coolify zet er een proxy met HTTPS voor. De container heeft bewust geen eigen poort, en Apache stuurt een verzoek zonder HTTPS door naar HTTPS.
+4. Deploy. Het volume `consumptie-data` bewaart de database, ook na een nieuwe deploy. Bij het starten maakt de container de eerste beheerder aan als die nog niet bestaat.
+5. Open het adres van de server, log in (4.19), klik in `Tablets en AFAS` op `Nu synchroniseren` (4.21) en koppel iedere tablet aan zijn locatie (4.20).
+
+Een volgende beheerder of een nieuw wachtwoord maak je in de terminal van de container in Coolify: `su -s /bin/sh www-data -c "php /var/www/backend/bin/beheerder.php <e-mailadres>"`, met `--reset` achter het e-mailadres voor een nieuw wachtwoord.
+
+Geef alleen beheerders van TVB toegang tot Coolify: het token van AFAS is daar leesbaar (zie het auditrapport, AF-10).
+
+### 3.3 Wat er met de server anders is dan in de demo
+
+| Onderdeel | Demo (zonder server) | Met de server |
+|---|---|---|
+| Gegevens | In `localStorage` van één browser | In één database op de server, gedeeld door alle tablets |
+| Inloggen | Ieder ingevuld wachtwoord werkt | Een eigen account met wachtwoord, blokkade na vijf foute pogingen |
+| Beginpagina | Alle namen staan er meteen | Pas namen na typen ("Typ je naam") |
+| Producten en voorraad | Van het vaste consumptiepunt van de medewerker | Van de locatie van de tablet |
+| Gasten | Niet | `Ik ben een gast` op een tablet met een locatie |
+| Gezicht of pas instellen | Alleen na de pas of via de beheerder | Ook zelf, na jezelf opzoeken (`Snellere optie instellen`) |
+| Medewerkers | De demogegevens en met de hand | Uit AFAS met `Nu synchroniseren`, en met de hand |
+| Bedrijven | De 13 bedrijven van de demo, zonder werkgevernummer | Uit AFAS met `Nu synchroniseren`, met de naam en het werkgevernummer |
+| Looncodes | Met de hand of `Looncodes importeren`, alleen in deze browser | Met de hand of `Looncodes importeren`, in de database voor iedere beheerder |
+| Consumptiepunt van een medewerker | Met de hand | Met de hand, of via de afdeling uit AFAS |
+| `Alle gegevens wissen` | Kan | Kan niet |
+| Camerabeeld | Nooit te zien | Nooit te zien |
 
 ## 4. Gebruikershandleiding
 
@@ -197,6 +259,7 @@ Open het tabblad `Medewerkers`.
 - Klik op `Opslaan` om een medewerker toe te voegen. `Opslaan + opnieuw` houdt het bedrijf en consumptiepunt vast voor de volgende collega.
 - Gebruik `Wijzigen` om medewerkergegevens aan te passen.
 - Heeft een medewerker nog geen looncode, dan staat achter zijn naam het oranje label "Geen looncode". Dat is zo bij de demogegevens en bij een medewerker die later uit AFAS komt, want AFAS geeft geen looncode mee. Klik op `Wijzigen`, vul de looncode in en sla op. Het label verdwijnt dan.
+- Looncodes van veel medewerkers tegelijk: gebruik `Looncodes importeren` met een bestand van de loonadministratie (zie 4.26).
 - Gebruik `Deactiveren` of `Activeren` om de medewerkerstatus te wijzigen.
 - Gezichtsherkenning (demo): bij een actieve medewerker staat `Gezichtsherkenning instellen`. Laat de medewerker zelf voor de camera staan en zelf het vinkje voor toestemming zetten, en klik dan op `Gezicht vastleggen`. Daarna staat in de lijst "Gezichtsherkenning ingesteld tot 27-10-2027" (een jaar later) met `Uitzetten`. Het logboek krijgt "Gezichtsherkenning ingesteld door beheerder" of "Gezichtsherkenning uitgezet door beheerder" met de naam. Zonder camera is de knop uitgeschakeld met "Geen camera gevonden. Instellen kan alleen met een camera." Staat de demo uit, dan zijn er geen knoppen. Zie 4.15.
 
@@ -254,10 +317,12 @@ Het tabblad `Logboek` toont standaard maximaal 20 wijzigingen. Met `Meer laden` 
 Onder het logboek staat de rode knop `Alle gegevens wissen`. Daarmee wis je alle persoonsgegevens op de tablet, bijvoorbeeld als de tablet ergens anders wordt gebruikt (recht op vergetelheid uit de AVG).
 
 1. Klik op `Alle gegevens wissen`.
-2. De browser vraagt: "Alle medewerkers, registraties, producten, voorraad, koelkastopeningen, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?" Klik op OK.
+2. De browser vraagt: "Alle medewerkers, registraties, producten, voorraad, ingestelde gezichten, het logboek en de reservekopieën op deze tablet wissen?" Klik op OK.
 3. De browser vraagt nog een keer: "Weet je het zeker? Dit kan niet ongedaan worden gemaakt." Klik op OK.
 
 Daarna zijn alle gegevens, beide reservekopieën en de ingestelde gezichten van de demo gewist. Je bent uitgelogd, het beheervenster is dicht en de demogegevens staan er weer (8 voorbeeldmedewerkers, de standaardproducten, de 13 bedrijven en het consumptiepunt Hoofdkantoor). Er verschijnt de melding "Alle gegevens zijn gewist. De demogegevens staan er weer." Klik je bij een van de twee vragen op `Annuleren`, dan verandert er niets. Andere open tabbladen laden de nieuwe demogegevens vanzelf in. Lukt het wissen niet, dan blijft alles staan en verschijnt "De gegevens konden niet worden gewist. Probeer het opnieuw."
+
+Met de server (sinds versie 3.33) staat deze knop er niet: de gegevens staan op de server en gelden voor alle tablets. Komt de vraag toch, dan verschijnt "Alle gegevens wissen kan niet: de gegevens staan op de server."
 
 ### 4.11 Modal sluiten en uitloggen
 
@@ -299,9 +364,11 @@ Als een medewerker het productvenster opent, verschijnt een persoonlijke begroet
 
 Dit is een demo. In het TO (hoofdstuk 13, Privacy) staat waarom gezichtsherkenning niet geschikt is voor de echte toepassing.
 
+**Sinds versie 3.33** is het camerabeeld nooit te zien, ook niet in de demo. Op het startscherm en in het cameravenster staat alleen een icoon, met de vaste zin "Deze tablet scant gezichten voor de consumptieregistratie. Het camerabeeld wordt niet getoond en niet bewaard." Met de server is de gezichtsherkenning geen demo meer: dan stel je je gezicht zelf in via `Snellere optie instellen` (4.25) en staan de kenmerken op de server van TVB.
+
 1. Houd je pas tegen de lezer. Heb je nog geen gezichtsherkenning, dan vraagt de tablet "Gezichtsherkenning nog niet ingesteld. Wil je dit?" Kies `Ja, instellen`. Opent na je pas het productvenster, dan staat daar ook de link `Gezichtsherkenning instellen (demo)`.
-2. De camera van de tablet of laptop gaat aan. Plaats je gezicht in het kader, zet het vinkje voor vrijwillige deelname en klik op `Gezicht vastleggen`. Daarna gaat de koelkast (of het productvenster) open.
-3. Voortaan kijk je op het startscherm in het ovaal (4.18), of klik je op de beginpagina op `Herken mij met de camera (demo)`. Word je herkend, dan gaat de koelkast voor je open (of je eigen productvenster, zie `RECOGNITION_TARGET` in 4.18).
+2. De camera van de tablet of laptop gaat aan. Je ziet jezelf niet: er staat alleen een icoon. Kijk recht naar de camera boven het scherm, zet het vinkje voor vrijwillige deelname en klik op `Gezicht vastleggen`. Daarna gaat het productvenster open.
+3. Voortaan kijk je op het startscherm in het ovaal (4.18), of klik je op de beginpagina op `Herken mij met de camera (demo)`. Word je herkend, dan gaat je eigen productvenster open.
 
 Met `Nee` komt de vraag niet meer terug. Wil je het later toch, open dan met je pas het productvenster en kies de link, of vraag het de beheerder (4.5).
 
@@ -331,7 +398,7 @@ Medewerkers kunnen zich ook laten herkennen met hun pas, via een USB-NFC-lezer d
 
 1. De beheerder koppelt eerst de pas aan de medewerker (zie 4.5, veld `Pasnummer`).
 2. Op de beginpagina houdt de medewerker zijn pas tegen de lezer. Er hoeft niets aangeklikt te worden.
-3. Hoort de pas bij een actieve medewerker, dan gaat de slimme koelkast voor hem open (als die aanstaat en zijn consumptiepunt een schapindeling heeft), met de begroeting plus "Je bent herkend met je pas." In de koelkast staat de knop "Liever brood of beleg? Open het productvenster". Anders opent zijn productvenster met dezelfde tekst. Heeft hij nog geen gezichtsherkenning en heeft de tablet een camera, dan komt eerst de vraag uit 4.15.
+3. Hoort de pas bij een actieve medewerker, dan opent zijn productvenster, met de begroeting plus "Je bent herkend met je pas." Heeft hij nog geen gezichtsherkenning en heeft de tablet een camera, dan komt eerst de vraag uit 4.15.
 4. Is de pas onbekend of hoort hij bij een inactieve medewerker, dan verschijnt de melding "Deze pas is niet gekoppeld aan een medewerker. Kies je naam in de lijst of vraag de beheerder om de pas te koppelen." Een onbekende en een inactieve pas krijgen bewust dezelfde melding, zodat er niets over een andere medewerker uitlekt.
 
 Een medewerker herkennen gebeurt op de beginpagina en als het productvenster open is. Staat het productvenster van een collega nog open, dan sluit dat venster zonder op te slaan en opent het venster van de pas. Staat het eigen venster al open, dan blijft het open met de keuze die er al stond. Staat er een ander venster open (het beheer, een formulier of de camera), dan opent er niets en verschijnt "Sluit eerst het open venster om je pas te gebruiken." De website houdt dan wel de Enter of Tab tegen waarmee de lezer een scan afsluit, zodat die niet de knop met de focus indrukt.
@@ -343,6 +410,8 @@ De instellingen staan in `BADGE_READER` in `config.js` (minimaal 4 tekens, net a
 Let op: het nummer van een pas is niet geheim en kan met goedkope apparatuur worden gekopieerd. Herkennen met de pas is dus gemak, geen bewijs van identiteit. Zie het TO voor de beveiliging en voor hoe de passen in productie worden gekoppeld ("Herkomst van het pasnummer").
 
 ### 4.17 Slimme koelkast (demo)
+
+**Vervallen sinds versie 3.33.** De administratie van TVB heeft op 25 november 2026 besloten dat het slot en de weegschalen niet doorgaan. De slimme koelkast zit niet meer in de app. Na herkennen met de pas of de camera opent altijd het productvenster. Deze paragraaf beschrijft de demo tot en met versie 3.32.
 
 De slimme koelkast laat zien hoe het advies uit het TO (bijlage B) zou werken: een koelkast met een slot en een weegschaal per schap, die je opent met je pas. Wat je pakt, wordt aan de hand van het gewicht vanzelf geregistreerd. Het slot en de weegschalen zijn nagebootst. De simulatie staat aan met `SMART_FRIDGE.enabled` in `config.js`. Staat die op `false`, dan zijn de knop en het tabblad Koelkast weg. Registreren met `+` en `−` werkt daarnaast gewoon.
 
@@ -379,14 +448,14 @@ Meestal hoeft de medewerker niet eerst op `Slimme koelkast (demo)` te tikken: ee
 De website opent op een zwart startscherm, ook in het lichte thema. Bovenaan staat klein het TVB-logo met "Consumptieregistratie", in het midden een ovaal voor het gezicht, daaronder een korte tekst en de knop `Handmatig zoeken`. Het startscherm verschijnt:
 
 - bij het openen van de website.
-- na afloop van een registratie of een koelkastopening, zodat de volgende persoon weer op het startscherm begint.
+- na afloop van een registratie, zodat de volgende persoon weer op het startscherm begint.
 - als een venster dat na de pas of de camera opende, vanzelf of zonder registreren sluit.
 - als de beginpagina 2 minuten niet is gebruikt en er geen venster open is. Het zoekveld en het bedrijfsfilter worden dan leeggemaakt.
 
 Er zijn drie manieren om te beginnen:
 
-1. **De pas.** Houd je pas tegen de lezer. Dat werkt altijd, ook op het startscherm. De koelkast (of het productvenster) gaat open en het startscherm verdwijnt. De vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" komt zoals in 4.15. Een onbekende pas geeft een melding en het startscherm blijft staan.
-2. **Het gezicht.** Kijk in het ovaal. Onder het ovaal staat "Kijk in het ovaal" en "Of houd je pas tegen de lezer." Sta je dichtbij en stil in het ovaal, dan wordt het ovaal groen met "Even stil blijven…". Na ongeveer een seconde vergelijkt de demo je gezicht. Word je herkend, dan gaat de camera uit, staat er bijvoorbeeld "Goedemorgen Lotte." in het ovaal en gaat daarna de koelkast voor je open (of je productvenster). Word je na drie pogingen niet herkend, dan wordt het ovaal oranje met "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig." en wacht de camera vijf seconden voordat hij het opnieuw probeert. Staan er twee mensen dichtbij, dan staat er "Graag één persoon tegelijk".
+1. **De pas.** Houd je pas tegen de lezer. Dat werkt altijd, ook op het startscherm. Je productvenster gaat open en het startscherm verdwijnt. De vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" komt zoals in 4.15. Een onbekende pas geeft een melding en het startscherm blijft staan.
+2. **Het gezicht.** Kijk in het ovaal. Onder het ovaal staat "Kijk in het ovaal" en "Of houd je pas tegen de lezer." Sta je dichtbij en stil in het ovaal, dan wordt het ovaal groen met "Even stil blijven…". Na ongeveer een seconde vergelijkt de demo je gezicht. Word je herkend, dan gaat de camera uit, staat er bijvoorbeeld "Goedemorgen Lotte." in het ovaal en gaat daarna je productvenster open. Word je na drie pogingen niet herkend, dan wordt het ovaal oranje met "Je bent niet herkend. Houd je pas tegen de lezer of zoek handmatig." en wacht de camera vijf seconden voordat hij het opnieuw probeert. Staan er twee mensen dichtbij, dan staat er "Graag één persoon tegelijk".
 3. **Handmatig zoeken.** De knop toont de beginpagina met de lijst, het zoekveld en het bedrijfsfilter (4.1). Met het toetsenbord (Enter of spatie) gaat de focus daarna in het zoekveld. Na een tik niet, zodat het schermtoetsenbord niet over de lijst schuift. Een tik vlak daarna drukt niets in wat onder de knop ligt.
 
 De camera kijkt alleen als het startscherm in beeld is, de demo aanstaat, er een camera is en iemand zijn gezicht heeft ingesteld. Hij zoekt drie keer per seconde in een laag camerabeeld (320 × 240 pixels) alleen naar gezichten: waar ze zijn en hoe groot. De demo berekent de kenmerken van een gezicht pas als er precies één gezicht dichtbij is (minstens 45 procent van de breedte van het ovaal), het midden ervan in het ovaal valt en het een seconde stilstaat. Een collega die verderop langsloopt of naast het ovaal staat, krijgt dus nooit kenmerken. De demo bewaart en verstuurt geen beelden. Dat staat ook onderaan het startscherm: "De camera zoekt alleen een gezicht dichtbij in het ovaal. Er worden geen beelden bewaard of verstuurd." De camera gaat uit bij `Handmatig zoeken`, bij ieder venster (ook het beheer), als het tabblad niet zichtbaar is en na herkennen, en weer aan als het startscherm terugkomt. Is er geen camera, geen toestemming of heeft nog niemand een gezicht ingesteld, dan toont het startscherm alleen "Houd je pas tegen de lezer" en `Handmatig zoeken`, zonder foutmelding. Na een geweigerde camera probeert de demo het die sessie niet opnieuw.
@@ -402,9 +471,122 @@ De instellingen in `config.js`:
 - `FACE_DEMO.autoScan`: de drempels van het automatisch scannen. `detectIntervalMs` (333, drie keer per seconde), `minFaceWidth` (0,45 van de breedte van het ovaal), `stillMs` (1000), `maxMovement` (0,12 van de breedte van het ovaal), `attempts` (3), `retryPauseMs` (5000), `greetingMs` (1200) en de resolutie `videoWidth` en `videoHeight` (320 × 240).
 - `FACE_DEMO.liveness`: de stille controle op een levend gezicht (zie 4.15). Een platte foto in het ovaal opent niets en geeft na 5 seconden "Je bent niet herkend.", net als een onbekend gezicht.
 - `FACE_DEMO.validityDays` (365), `FACE_DEMO.offerAfterBadge` (de vraag na een passcan aan of uit) en `FACE_DEMO.offerIdleCloseMs` (na 60 seconden sluit een onbeantwoorde vraag, en dan komt het startscherm terug).
-- `RECOGNITION_TARGET`: "fridge" (standaard) opent na herkennen met de pas of de camera de koelkast, "products" altijd het productvenster.
 
 Let op: met "auto" kijkt de camera de hele tijd zolang het startscherm in beeld is, en ziet hij ook voorbijgangers (alleen zoeken naar gezichten, geen kenmerken). Dat is een bewuste keuze voor de demo, op verzoek van de opdrachtgever. Het TO (bijlage B, punt 7 van "Afweging, advies en besluiten", en hoofdstuk 13) legt uit waarom het advies voor productie de pas blijft.
+
+### 4.19 Inloggen met de server
+
+Met de server (3.1 en 3.2) toont de website op een browser die nog niets is alleen een inlogscherm: "Log in als beheerder om het beheer te openen of deze tablet te koppelen." Er staan dan geen namen in de pagina.
+
+1. Vul je e-mailadres en wachtwoord in en klik op `Inloggen`.
+2. De pagina start opnieuw en het beheer gaat meteen open.
+
+Een fout wachtwoord geeft "Het e-mailadres of het wachtwoord klopt niet." Na vijf foute pogingen kun je een kwartier niet inloggen ("Te veel mislukte pogingen. Probeer het over een kwartier opnieuw."). Het demo-inloggen ("Demo: elk ingevuld wachtwoord werkt.") bestaat met de server niet. Na een half uur zonder verzoek aan de server moet je opnieuw inloggen, en na 5 minuten zonder invoer logt de website je uit, net als in de demo.
+
+### 4.20 Een tablet koppelen en de locatie kiezen
+
+Iedere tablet wordt één keer door de beheerder gekoppeld:
+
+1. Open op de tablet het adres van de server en log in (4.19).
+2. Open in het beheer het tabblad `Tablets en AFAS`.
+3. Vul bij "Deze tablet" een naam in, bijvoorbeeld "Tablet kantine", en kies de locatie: het consumptiepunt waar de tablet staat.
+4. Klik op `Deze browser koppelen als tablet`. Er verschijnt "Deze browser is gekoppeld als tablet. Log uit om hem als tablet te gebruiken."
+5. Klik op `Uitloggen` en sluit het beheer. De tablet is klaar. Looncodes, personeelsnummers, afdelingen en telefoonnummers staan dan niet meer op de tablet.
+
+Onder "Gekoppelde tablets" staan alle tablets. Kies daar een andere locatie en klik op `Locatie opslaan`, of klik op `Intrekken` als een tablet weg moet. Een ingetrokken tablet toont daarna weer het inlogscherm.
+
+Een tablet bewaart registraties ook als de verbinding even wegvalt ("Geen verbinding met de server. Registraties worden bewaard en later verstuurd.") en stuurt ze later alsnog ("De verbinding met de server is terug."). Iedere 8 seconden haalt de tablet op wat er op andere tablets is gebeurd.
+
+### 4.21 Medewerkers uit AFAS (Nu synchroniseren)
+
+In het tabblad `Tablets en AFAS` staat onder "Medewerkers uit AFAS" wanneer de laatste synchronisatie was en hoe die afliep. Met `Nu synchroniseren` haalt de server de medewerkers uit AFAS op. Daarna staat er "De medewerkers zijn gesynchroniseerd met AFAS." of "Synchroniseren met AFAS is mislukt. Er is niets gewijzigd.", met de opmerkingen van de synchronisatie.
+
+- Nieuwe medewerkers komen erbij, gewijzigde namen, bedrijven en afdelingen worden bijgewerkt, en wie niet meer in AFAS staat, wordt inactief. Er wordt nooit iemand verwijderd en de registraties blijven.
+- **Bedrijven:** een nieuwe server begint zonder bedrijven. Een werkgever die de app nog niet kent, wordt bij de synchronisatie een nieuw bedrijf, met de naam en het werkgevernummer uit AFAS. Het nummer heeft een voorloopnul, bijvoorbeeld "01". Een opmerking zegt welke werkgever nieuw is. Een tweede synchronisatie maakt geen tweede bedrijf. Pas je de naam van zo'n bedrijf aan in het tabblad `Bedrijven`, dan blijft jouw naam staan.
+- **Iemand staat vaker in AFAS.** AFAS geeft één rij per dienstverband of functie. Dan telt de rij met de laatste datum in dienst (bij dezelfde datum het laagste werkgevernummer). Verschilt de werkgever tussen die rijen, dan zegt een opmerking welke werkgever telt. Klopt dat niet, vul dan bij de medewerker een afwijkend werkgevernummer in (4.5). De synchronisatie gaat gewoon door.
+- Drie gegevens komen definitief niet uit AFAS: TVB mocht ze niet krijgen en dat verandert niet. Daarvoor is een andere manier gebouwd:
+  - **Looncode:** de beheerder vult hem per medewerker in (4.5) of leest alle looncodes in één keer in uit een bestand van de loonadministratie (4.26). Bij wie nog geen looncode heeft, staat het label "Geen looncode", en bij de export volgt een melding (4.12).
+  - **Werklocatie:** de afdeling uit AFAS komt wel mee. Koppel iedere afdeling aan een consumptiepunt (4.27), dan krijgen de medewerkers van die afdeling dat punt. Daarnaast bepaalt de locatie van de tablet de producten en de voorraad, en staan bovenaan de medewerkers met dat consumptiepunt en wie het vaakst op die tablet registreert (4.22).
+  - **Datum uit dienst:** is niet nodig. Wie niet meer in de lijst van AFAS staat, wordt inactief en zijn registraties blijven.
+- Ontbreekt een van de drie instellingen van AFAS op de server, dan zegt de server welke, en verandert er niets.
+- Een nachtelijke synchronisatie is er nog niet. Klik na een wijziging in AFAS zelf op `Nu synchroniseren`.
+
+### 4.22 Zoeken op een tablet
+
+Op een gekoppelde tablet staan er na `Handmatig zoeken` geen namen in beeld. Er staat "Typ je naam". Typ een paar letters van je voor- of achternaam en tik op je naam. Bovenaan staat een groep met de naam van de locatie van de tablet: de medewerkers van die locatie en wie hier vaak iets pakt. Kom je van een andere locatie, dan vind je jezelf gewoon door te typen. Je registreert altijd op je eigen naam. In het productvenster staan de producten van de plek waar de tablet staat, en daar gaat de voorraad omlaag.
+
+### 4.23 Registreren als gast
+
+Een gast is iemand van buiten TVB die niet in AFAS staat. Op een tablet met een locatie:
+
+1. Tik op `Handmatig zoeken` en daarna op `Ik ben een gast` (onder "Typ je naam", of onder "Geen medewerker gevonden" als je je naam al had getypt).
+2. Vul je voornaam, achternaam en telefoonnummer in en tik op `Verder`. Het telefoonnummer heeft 8 tot 15 cijfers, bijvoorbeeld 06 12345678.
+3. Je productvenster opent. Kies je producten en tik op `Registreren`.
+
+De volgende keer zoek je jezelf op: je staat in de groep "Gasten". De administratie belt je over de betaling. Je telefoonnummer ziet alleen de beheerder: in het tabblad `Medewerkers` staat bij een gast het label "Gast" met het telefoonnummer. Gasten staan niet in het CSV-bestand voor de loonadministratie. Na het exporteren zegt een melding hoeveel gasten er niet in staan.
+
+### 4.24 Pasjes exporteren
+
+In het tabblad `Medewerkers` staat naast `Medewerker toevoegen` de knop `Pasjes exporteren`. Die maakt een CSV-bestand, bijvoorbeeld `pasjes-2026-11-26.csv`, met per gekoppelde pas het serienummer, het personeelsnummer, de naam, of de medewerker actief is en de datum van koppelen. Het bestand is bedoeld voor de ontwikkelaars, om de passen te kunnen uitlezen. In het logboek komt "Pasjes geëxporteerd" met alleen het aantal. Zijn er nog geen passen gekoppeld, dan verschijnt "Er zijn nog geen pasjes gekoppeld."
+
+### 4.25 Snellere optie instellen
+
+Met de server kun je zelf je gezicht of je pas instellen, na jezelf opzoeken. TVB heeft geen foto's, dus iedereen begint met zichzelf opzoeken.
+
+1. Zoek jezelf op (4.22) en tik op je naam.
+2. In het productvenster staat "Sneller registreren? Stel gezichtsherkenning of je pasje in." Tik op `Snellere optie instellen`.
+3. Kies `Gezichtsherkenning`, `Pasje` of `Allebei`. Je ziet alleen wat op deze tablet kan.
+4. **Gezichtsherkenning:** kijk recht naar de camera boven het scherm, zet het vinkje voor toestemming en tik op `Gezicht vastleggen`. Je ziet jezelf niet: het camerabeeld is nooit te zien. Je gezicht is een jaar geldig. Daarna vraagt de tablet om het opnieuw in te stellen.
+5. **Pasje:** houd je pas tegen de lezer als er "Houd je pas tegen de lezer" staat. Daarna staat er "Je pas is gekoppeld. Voortaan houd je je pas tegen de lezer."
+
+Wil je het niet, tik dan op `Nee, liever niet`. De vraag komt dan een jaar niet terug. Word je op het startscherm niet herkend, dan staat er "Zoek jezelf eerst op via de knop hieronder en stel een snellere optie in." en opent er niets.
+
+Er is geen controle of je echt jezelf kiest (keuze van TVB, 26 november 2026). Iedere koppeling staat met de naam in het logboek ("Pas gekoppeld door medewerker" of "Gezichtsherkenning ingesteld"), zodat de beheerder misbruik kan zien en terugdraaien (4.5 en 4.15).
+
+### 4.26 Looncodes importeren uit een bestand
+
+AFAS geeft geen looncode. Je kunt de looncode per medewerker invullen (4.5), maar je kunt ook alle looncodes in één keer inlezen uit een bestand van de loonadministratie. Dat werkt in de demo en met de server.
+
+**Het bestand.** Een CSV-bestand met bovenaan een kopregel. Er moet een kolom `Personeelsnummer` (of `Medewerker`) en een kolom `Looncode` in staan. Andere kolommen, zoals de naam, worden overgeslagen. De kolommen zijn gescheiden door een puntkomma, een komma of een tab. In Excel maak je zo'n bestand met `Opslaan als` en dan `CSV (gescheiden door lijstscheidingsteken)`. Het bestand is hooguit 2 MB. Een voorbeeld:
+
+```text
+Personeelsnummer;Naam;Looncode
+5003;Daan Smit;303
+42;Sanne Bakker;105
+```
+
+**Zo importeer je:**
+
+1. Log in als beheerder en open het tabblad `Medewerkers`.
+2. Klik op `Looncodes importeren` en kies het bestand.
+3. Lees de melding, bijvoorbeeld "Looncodes: 1 bijgewerkt, 0 al goed, 1 onbekend personeelsnummer. Controleer regel 3 van het bestand." De regels met een probleem staan erbij (hooguit tien): een personeelsnummer dat niet in de app staat, een regel zonder geldig personeelsnummer of met een looncode die niet alleen uit cijfers bestaat, of een personeelsnummer dat al eerder in het bestand stond. Pas die regels aan en importeer het bestand opnieuw. Wat al goed was, telt dan als "al goed".
+
+Goed om te weten:
+
+- Alleen de looncodes die anders zijn, worden opgeslagen. Verder verandert er niets aan de medewerker.
+- Excel laat voorloopnullen weg. Een personeelsnummer `42` wordt daarom ook gevonden bij de medewerker met `0042`, als dat bij precies één medewerker past. Een looncode verliest in Excel ook zijn voorloopnullen. Heeft een looncode voorloopnullen, zet de kolom in Excel dan op tekst.
+- Gasten hebben geen personeelsnummer en krijgen nooit een looncode.
+- Het bestand wordt alleen in je eigen browser gelezen en niet bewaard. In het logboek komt "Looncodes geïmporteerd" met alleen de aantallen, zonder namen of nummers.
+- Een bestand zonder de twee kolommen geeft "Het bestand moet een kopregel hebben met de kolommen Personeelsnummer en Looncode." Een leeg bestand geeft "Het bestand is leeg." en een te groot bestand "Het bestand is te groot (hooguit 2 MB)." Er verandert dan niets.
+
+**Met de server** gaan de geïmporteerde looncodes naar de database van de server. Iedere beheerder ziet ze dus, op iedere locatie en op iedere computer, en het label "Geen looncode" verdwijnt overal. Je hoeft het bestand maar één keer te importeren. Tablets krijgen de looncodes niet. **Zonder server** (de demo) staan de looncodes alleen in de browser waarin je importeert.
+
+### 4.27 Afdelingen uit AFAS koppelen aan een consumptiepunt
+
+Met de server komt bij iedere medewerker uit AFAS ook zijn afdeling mee (de organisatorische eenheid). In het tabblad `Medewerkers` staat die achter "afd.". Via de afdeling krijgen medewerkers vanzelf het juiste consumptiepunt:
+
+1. Open het tabblad `Tablets en AFAS`. Onder "Afdelingen uit AFAS" staat iedere afdeling met het aantal medewerkers.
+2. Kies bij een afdeling het consumptiepunt en klik op `Opslaan`.
+3. De melding zegt hoeveel medewerkers het punt kregen, bijvoorbeeld "Service is opgeslagen. 1 medewerker kreeg dit consumptiepunt."
+
+Goed om te weten:
+
+- Alleen medewerkers die nog geen consumptiepunt hebben, krijgen het punt, en alleen als het punt bij hun eigen bedrijf hoort. Een punt dat je bij een medewerker zelf koos, blijft.
+- Nieuwe medewerkers van die afdeling krijgen het punt bij de volgende `Nu synchroniseren`.
+- Een afdeling hoort bij hooguit één punt. Kies `Geen consumptiepunt` om de koppeling weg te halen.
+- In het logboek komt "Afdeling gekoppeld" met de afdeling en het punt.
+- Staan er nog geen afdelingen, dan staat er "Er zijn nog geen afdelingen. Ze komen uit AFAS na Nu synchroniseren."
+- Tablets krijgen de afdeling niet.
 
 ## 5. Uitleg van `index.html`
 
@@ -420,7 +602,7 @@ In de `<head>` staan:
 - De titel en beschrijving voor browser en zoekmachines.
 - `referrer` op `no-referrer`: de browser stuurt bij links en verzoeken het adres van de pagina niet mee.
 - Een Content-Security-Policy (`http-equiv="Content-Security-Policy"`): de browser laadt alleen bestanden van de eigen server. De twee inline scripts (het themascript in de `<head>` en de `file://`-waarschuwing onderaan) zijn toegestaan via hun sha256-hash. Wijzig je zo'n script, dan moet de hash in de CSP meeveranderen. `tests/beveiliging-config.test.js` controleert dat. `frame-ancestors` werkt niet in een meta-tag. In productie moet de webserver die als HTTP-header meesturen (zie het TO, hoofdstuk 13).
-- De achttien stylesheets uit `assets/css/` voor de vormgeving, elk met een eigen `<link rel="stylesheet">`, van `base.css` tot en met `responsive.css` (zie hoofdstuk 6). `base.css` laadt de lettertypes met `@font-face` uit `assets/fonts/`, niet van Google Fonts.
+- De zeventien stylesheets uit `assets/css/` voor de vormgeving, elk met een eigen `<link rel="stylesheet">`, van `base.css` tot en met `responsive.css` (zie hoofdstuk 6). `base.css` laadt de lettertypes met `@font-face` uit `assets/fonts/`, niet van Google Fonts.
 - `assets/js/main.js` als startpunt van de JavaScript.
 
 ### Navigatiebalk
@@ -469,19 +651,25 @@ Ieder venster is een `.modal-backdrop` over de website heen. Een venster sluit m
 
 | Id | Venster |
 |---|---|
-| `adminModal` | Loginformulier (`loginView`) en beheerdashboard (`adminView`) met zes tabbladen |
+| `adminModal` | Loginformulier (`loginView`) en beheerdashboard (`adminView`) met zes tabbladen. Met de server komt er een zevende bij: `Tablets en AFAS` (`data-tab="server"`) |
 | `employeeProductsModal` | Productvenster van een medewerker, met begroeting, voorstel `Zelfde als vorige keer` (alleen na herkenning met pas of camera), de regel voor de demo-gezichtsherkenning (`faceEnrollArea`: de link alleen na de pas, `Uitzetten` na de pas of de camera en na kiezen op naam alleen de uitleg), een knopbalk die onderaan in beeld blijft (`.employee-products-actions`) met de waarschuwing vlak voor het automatisch sluiten (`productIdleWarning`), de uitleg bij een uitgeschakelde knop (`registerHint`) en `Registreren`, en daaronder de uitleg over de inhouding op het loon (`employeePrivacyNote`) |
 | `employeeFormModal` | Medewerker toevoegen of wijzigen |
 | `productFormModal` | Product toevoegen of wijzigen |
 | `companyFormModal` | Bedrijf toevoegen of wijzigen |
 | `pointFormModal` | Consumptiepunt toevoegen of het aanbod wijzigen |
-| `faceModal` | Camerabeeld van de demo-gezichtsherkenning (instellen of herkennen) |
+| `faceModal` | Het cameravenster van de gezichtsherkenning (instellen of herkennen). Het camerabeeld is nooit te zien, alleen een icoon met de vaste zin over het scannen |
+| `faceOfferModal` | De vraag na een passcan: "Gezichtsherkenning nog niet ingesteld. Wil je dit?" |
+| `removeRegistrationModal` | Het venster `Registratie verwijderen` bij de correctie `−` |
+| `guestModal` | Het formulier voor een gast (4.23) |
+| `quickSetupModal` | `Snellere optie instellen`: kiezen tussen gezicht, pas of allebei (4.25) |
+| `badgeLinkModal` | "Houd je pas tegen de lezer" bij het zelf koppelen van een pas (4.25) |
+| `serverGate` | Alleen met de server: het inlogscherm voor een browser die nog niets is (4.19) |
 
 De elementen `toast` (`role="status"`, gewone meldingen) en `toastAlert` (`role="alert"`, foutmeldingen) tonen de korte meldingen onderaan het scherm. Ze blijven altijd op de pagina staan, zodat een schermlezer ze voorleest (zie `showToast`).
 
 De knop met `data-close-modal` sluit het admin-venster en logt de beheerder daarbij ook uit (zie 4.11). De knop `Uitloggen` logt uit zonder het venster te sluiten. Daarna staat het loginformulier in hetzelfde venster.
 
-Onder het logboek (`auditTab`) staan een uitleg en de knop `Alle gegevens wissen` (id `wipeDataButton`, zie 4.10).
+Onder het logboek (`auditTab`) staan een uitleg en de knop `Alle gegevens wissen` (id `wipeDataButton`, zie 4.10). In het tabblad `Medewerkers` staan naast `Medewerker toevoegen` de knoppen `Pasjes exporteren` (`exportBadgesButton`, 4.24) en `Looncodes importeren` (`importPayrollButton`, met het verborgen bestandsveld `payrollImportFile`, 4.26).
 
 ### Startscherm
 
@@ -497,7 +685,7 @@ Dit hoofdstuk beschrijft de vormgeving van de website: welke stylesheets er zijn
 
 ### Bestanden en volgorde
 
-De vormgeving staat in achttien stylesheets, één per onderdeel. Bovenaan ieder bestand staat een korte uitleg.
+De vormgeving staat in zeventien stylesheets, één per onderdeel. Bovenaan ieder bestand staat een korte uitleg.
 
 `index.html` laadt de bestanden met losse `<link rel="stylesheet">`-regels in deze volgorde. Die volgorde is belangrijk: hebben twee regels dezelfde sterkte, dan wint de regel die later komt. Zet de bestanden dus niet in een andere volgorde.
 
@@ -519,8 +707,7 @@ De vormgeving staat in achttien stylesheets, één per onderdeel. Bovenaan ieder
 | 14 | `directory-tools.css` | De hint voor de pas, de demoknoppen en zoekveld en filter naast elkaar |
 | 15 | `face.css` | De demo-gezichtsherkenning |
 | 16 | `start-screen.css` | Het startscherm |
-| 17 | `fridge.css` | De slimme koelkast en het tabblad Koelkast |
-| 18 | `responsive.css` | De mediaqueries voor telefoon en tablet. Staat als laatste |
+| 17 | `responsive.css` | De mediaqueries voor telefoon en tablet. Staat als laatste |
 
 Een nieuwe regel hoort in het bestand van het onderdeel. Komt er een nieuw bestand bij, link het dan ook in `index.html`. `tests/beveiliging-config.test.js` controleert dat ieder bestand in `assets/css/` precies één keer wordt geladen. De unit tests lezen alle CSS samen met `readAllCss()` uit `tests/helpers.js`, in de volgorde van `index.html`.
 
@@ -551,7 +738,7 @@ De stylesheets zijn geordend van algemeen naar specifiek:
 2. Basislayout en navigatie (`topbar.css` en `home.css`).
 3. Hoofdcomponenten zoals hero, kaarten, medewerkerregels, vensters en het productvenster.
 4. Admincomponenten, tabellen en meldingen.
-5. De demo-onderdelen: gezichtsherkenning, het startscherm en de slimme koelkast.
+5. De demo-onderdelen: gezichtsherkenning en het startscherm.
 6. Responsive regels voor kleinere schermen (`responsive.css`).
 
 Herbruikbare stijlen staan gegroepeerd in componentselectors, bijvoorbeeld `.card`, `.primary-button`, `.stat-card` en `.admin-search`. Zo staat iedere stijl op één plek en hoef je hem niet te kopiëren.
@@ -666,7 +853,7 @@ Naast de gegevens zelf kunnen er twee reservekopieën in `localStorage` staan: `
 
 ### Objectgeoriënteerde structuur
 
-De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in negenentwintig classes, ieder in een eigen bestand. Veertien daarvan vormen samen de controller: `RegistrationApp`, de basisclass `ControllerPart` en de twaalf onderdelen `ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController`, `FormController`, `FridgeController`, `RecognitionController`, `StandbyController` en `AutoScanController`. Negen zijn `DataStore`, `RegistrationModel`, `RegistrationView`, `CsvExport`, `ThemeManager` (licht en donker thema), `FaceRecognitionDemo` (demo-gezichtsherkenning), `FaceIntent` (de intentiedrempel van het automatisch scannen), `FaceLiveness` (de stille controle op een levend gezicht) en `BadgeReader` (pasjeslezer). De laatste zes horen bij de slimme koelkast (demo): `FridgeView` en, in de map `assets/js/fridge/`, `SmartFridge`, `FridgeLock`, `SimulatedLock`, `ShelfScale` en `SimulatedShelfScale`. Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
+De JavaScript-code volgt het principe van objectgeoriënteerd programmeren (OOP) en het MVC-patroon (Model, View, Controller). De code is opgedeeld in dertig classes, bijna allemaal in een eigen bestand (`ServerError` staat bij `ServerApi`). Vijftien daarvan vormen samen de controller: `RegistrationApp`, de basisclass `ControllerPart` en de dertien onderdelen `ModalManager`, `EmployeeController`, `BadgeController`, `FaceController`, `AdminController`, `CorrectionController`, `StockController`, `FormController`, `GuestController`, `QuickSetupController`, `RecognitionController`, `StandbyController` en `AutoScanController`. Tien zijn `DataStore`, `RegistrationModel`, `RegistrationView`, `CsvExport`, `PayrollImport` (looncodes importeren), `ThemeManager` (licht en donker thema), `FaceRecognitionDemo` (gezichtsherkenning), `FaceIntent` (de intentiedrempel van het automatisch scannen), `FaceLiveness` (de stille controle op een levend gezicht) en `BadgeReader` (pasjeslezer). De laatste vijf worden alleen met een server gebruikt: `ServerMode`, `ServerApi`, `ServerError`, `ServerDataStore` en `ServerSync`. De zes classes van de slimme koelkast zijn in versie 3.33 vervallen. Iedere class heeft één duidelijke verantwoordelijkheid, en bovenaan ieder bestand staat in een comment waarvoor de class is en met welke andere classes hij verbonden is.
 
 ```text
 DataStore ──► RegistrationModel ──► RegistrationView
@@ -679,22 +866,26 @@ DataStore ──► RegistrationModel ──► RegistrationView
                           AdminController, CorrectionController, StockController, FormController,
                           RecognitionController, StandbyController (startscherm),
                           AutoScanController ──► FaceIntent,
-                          FridgeController ──► SmartFridge ──► FridgeLock (SimulatedLock)
-                                                           └──► ShelfScale (SimulatedShelfScale)
+                          GuestController, QuickSetupController
 
 FaceRecognitionDemo ──► FaceLiveness (stille controle op een levend gezicht)
 
 ThemeManager (los: alleen het thema van de pagina)
+
+PayrollImport (looncodes uit een bestand, via AdminController)
+
+Alleen met een server: ServerMode ──► ServerApi
+                      └──► ServerSync ──► ServerDataStore (subclass van DataStore)
 ```
 
-`main.js` maakt alle objecten één keer aan en geeft ze aan elkaar door (compositie). `config.js`, `icons.js` en `ids.js` bevatten alleen vaste waarden of een hulpfunctie en zijn daarom geen class.
+`main.js` maakt alle objecten één keer aan en geeft ze aan elkaar door (compositie). `config.js`, `deployment.js`, `icons.js` en `ids.js` bevatten alleen vaste waarden of een hulpfunctie en zijn daarom geen class.
 
 Toegepaste OOP-principes:
 
 - **Encapsulatie:** iedere class beheert zijn eigen gegevens. Andere classes lezen de gegevens van het model via getters (`model.employees`, `model.products`) en wijzigen ze alleen via methodes (`model.addRegistration`, `model.saveCompany`).
-- **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class. Ook de besturing zelf is verdeeld: ieder onderdeel van de controller heeft één taak (vensters, beginpagina, pas, camera, beheer, correcties, voorraad, formulieren, koelkast, na herkennen, startscherm en automatisch scannen).
-- **Overerving:** de twaalf onderdelen van de controller erven van de basisclass `ControllerPart` (`class AdminController extends ControllerPart`). Wat ze gemeen hebben, staat daar één keer: de koppeling met `RegistrationApp`, de toegang tot het model, de view en de demo-gezichtsherkenning, en de echte klok. Ook het nagebootste slot en de nagebootste weegschaal erven, van `FridgeLock` en `ShelfScale`.
-- **Compositie:** de controller krijgt het model, de view, de export, de demo-gezichtsherkenning, de pasjeslezer en de klok voor het automatisch uitloggen mee in de constructor, in plaats van ze zelf te maken. Daardoor kunnen de tests een nepview of nepexport meegeven. De controller maakt wel zelf zijn twaalf onderdelen en geeft zichzelf daarbij mee. Ook de slimme koelkast (`SmartFridge`) gaat mee in de constructor, zodat de tests een koelkast met een nepklok kunnen gebruiken.
+- **Eén verantwoordelijkheid per class:** opslag, regels, weergave, besturing en export staan elk in een eigen class. Ook de besturing zelf is verdeeld: ieder onderdeel van de controller heeft één taak (vensters, beginpagina, pas, camera, beheer, correcties, voorraad, formulieren, gasten, snellere optie, na herkennen, startscherm en automatisch scannen).
+- **Overerving:** de dertien onderdelen van de controller erven van de basisclass `ControllerPart` (`class AdminController extends ControllerPart`). Wat ze gemeen hebben, staat daar één keer: de koppeling met `RegistrationApp`, de toegang tot het model, de view en de demo-gezichtsherkenning, en de echte klok. Ook `ServerDataStore` erft, van `DataStore`.
+- **Compositie:** de controller krijgt het model, de view, de export, de demo-gezichtsherkenning, de pasjeslezer en de klok voor het automatisch uitloggen mee in de constructor, in plaats van ze zelf te maken. Daardoor kunnen de tests een nepview of nepexport meegeven. De controller maakt wel zelf zijn dertien onderdelen en geeft zichzelf daarbij mee. Met een server geeft `main.js` een `ServerDataStore` mee in plaats van een `DataStore`, en de rest van de app werkt daarmee zonder verschil.
 - **Losse koppeling:** de view weet niets van de controller en verandert geen gegevens. De opslag kan worden vervangen door een andere class met dezelfde methodes `load()` en `save()`.
 
 #### `DataStore`
@@ -735,7 +926,7 @@ Verzorgt alleen de presentatie in de browser. Deze class rendert de medewerkerli
 
 #### `RegistrationApp`
 
-Vormt de controller van de applicatie. `RegistrationApp` maakt in de constructor twaalf kleinere onderdelen, elk met één taak (zie hieronder), en houdt zelf alleen wat bij de hele app hoort:
+Vormt de controller van de applicatie. `RegistrationApp` maakt in de constructor dertien kleinere onderdelen, elk met één taak (zie hieronder), en houdt zelf alleen wat bij de hele app hoort:
 
 - het starten (`initialize`) en de dagwissel (`refreshIfNewDay`, `renderTodayLabel`).
 - de melding bij beschadigde opgeslagen gegevens (`showLoadProblem`).
@@ -752,35 +943,36 @@ Ieder onderdeel krijgt `RegistrationApp` mee in de constructor (`this.app`). Het
 
 #### Onderdelen van de controller
 
-**`ControllerPart`** is de basisclass van de twaalf onderdelen hieronder. De constructor bewaart de controller (`app`). De getters `model`, `view` en `faceDemo` geven de onderdelen van `RegistrationApp` door. `realClock` levert de echte klok van de browser, voor de onderdelen met een timer.
+**`ControllerPart`** is de basisclass van de dertien onderdelen hieronder. De constructor bewaart de controller (`app`). De getters `model`, `view` en `faceDemo` geven de onderdelen van `RegistrationApp` door. `realClock` levert de echte klok van de browser, voor de onderdelen met een timer.
 
 **`ModalManager`** opent en sluit de vensters. `openModal` onthoudt welk element de focus had (`rememberOpener`), en `closeModal` zet de focus daar weer op, als dat element nog zichtbaar op de pagina staat. Is de lijst met die knop intussen opnieuw getekend, dan zoekt `findFocusReplacement` de nieuwe knop met dezelfde data-attributen (bijvoorbeeld `[data-edit-product="blikje"]`, gemaakt door `focusSelector`), of een logisch alternatief als het item weg is (zoals `Medewerker toevoegen`). `preserveFocus` doet hetzelfde rond het opnieuw tekenen van lijsten na opslaan, (de)activeren, verwijderen en een wijziging in een ander tabblad. `registerModalClose` koppelt de sluitknoppen en de donkere achtergrond van een venster en onthoudt de sluitactie (`modalCloseActions`) voor de Escape-toets. `topModal` geeft het bovenste open venster, en `keepFocusInModal` houdt de Tab-toets binnen dat venster. `show` en `hide` tonen of verbergen een element. `scrollModalToTop` zet een venster dat opengaat bovenaan (de scrollpositie van het venster en de achtergrond op 0). `openModal` doet dat altijd, en `EmployeeController.openEmployeeProducts` doet het voor het productvenster, met daarna `focus({ preventScroll: true })` op de eerste `+`. Zonder die stap zet de browser de scrollpositie van de vorige keer terug, waardoor het venster een stukje omlaag gescrold opent.
 
 **`EmployeeController`** is de kant van de medewerker: het zoekveld en het bedrijfsfilter (`clearSearch`, `onCompanyFilterInput`, `selectCompanyFilterOption`), het productvenster (`openEmployeeProducts`, `renderProductWindow`, `incrementProduct`, `decrementProduct`, `repeatLastSelection`, `closeEmployeeProducts`) en registreren (`registerSelectedProducts`, zie hieronder). `removeUnavailableSelections` haalt producten uit de keuze die het consumptiepunt intussen niet meer aanbiedt. `setCompanyOptionsOpen` en `closeCompanyOptions` openen en sluiten de keuzelijst van het bedrijfsfilter en houden `aria-expanded` bij (Escape sluit de lijst). `isGhostRowClick` negeert een klik op een medewerkerrij die de tweede klik van een dubbelklik is of minder dan 500 ms na het sluiten van het productvenster komt, zodat een dubbelklik op `Registreren` niet het venster van een collega opent. `handleEmployeeRowKey` opent het venster met Enter of spatie, maar niet bij een ingedrukt gehouden toets (`event.repeat`). `resetEmployeeSearch` maakt na registreren het zoekveld en het bedrijfsfilter leeg (ook `dataset.value` en `aria-selected`) en zet de lijst bovenaan in beeld. `startProductIdleWatch`, `noteProductActivity` en `closeProductWindowIfIdle` sluiten het productvenster na 75 seconden zonder invoer (`EMPLOYEE_IDLE_CLOSE_MS` in `config.js`). De timer kijkt iedere seconde. Iedere tik, toets of scroll in het venster begint de tijd opnieuw. In de laatste 10 seconden toont `setIdleWarning` de waarschuwing, en daarna gaat het venster dicht zonder op te slaan. De klok gaat net als bij `AdminController` mee in de constructor, zodat de tests met een nepklok werken.
 
-**`BadgeController`** verbindt `BadgeReader` met de app. De constructor zet de callbacks `onScan` en `onStart` van de pasjeslezer. `handleBadgeKey` geeft iedere toets door. `rememberSearchBeforeScan` en `restoreSearchAfterScan` zorgen dat er geen pasnummer in het zoekveld of het bedrijfsfilter blijft staan, en dat de bedrijfskeuze terugkomt. `restoreOtherFieldAfterScan` doet dat voor ieder ander tekstveld met de focus en vuurt daarna een input-event af, zodat een zoekveld in het beheer de lijst opnieuw tekent. `isOtherTextField` bepaalt welke velden dat zijn: niet het zoekveld, het bedrijfsfilter en `Pasnummer`, en geen vinkjes of knoppen. `fillBadgeFieldAfterScan` vervangt bij een scan in het veld `Pasnummer` het oude nummer. `recognizeBadge` zoekt na een scan de medewerker op en geeft hem door aan `RecognitionController.afterRecognition` (de vraag over gezichtsherkenning, daarna de koelkast of het productvenster). Staat er een ander venster open dan het productvenster, dan meldt `recognizeBadge` "Sluit eerst het open venster om je pas te gebruiken." Staat het productvenster open, dan beslist `replaceProductWindow`: het eigen venster blijft open, het venster van een collega gaat dicht zonder op te slaan en het venster van de pas opent.
+**`BadgeController`** verbindt `BadgeReader` met de app. De constructor zet de callbacks `onScan` en `onStart` van de pasjeslezer. `handleBadgeKey` geeft iedere toets door. `rememberSearchBeforeScan` en `restoreSearchAfterScan` zorgen dat er geen pasnummer in het zoekveld of het bedrijfsfilter blijft staan, en dat de bedrijfskeuze terugkomt. `restoreOtherFieldAfterScan` doet dat voor ieder ander tekstveld met de focus en vuurt daarna een input-event af, zodat een zoekveld in het beheer de lijst opnieuw tekent. `isOtherTextField` bepaalt welke velden dat zijn: niet het zoekveld, het bedrijfsfilter en `Pasnummer`, en geen vinkjes of knoppen. `fillBadgeFieldAfterScan` vervangt bij een scan in het veld `Pasnummer` het oude nummer. `recognizeBadge` zoekt na een scan de medewerker op en geeft hem door aan `RecognitionController.afterRecognition` (de vraag over gezichtsherkenning, daarna het productvenster). Staat er een ander venster open dan het productvenster, dan meldt `recognizeBadge` "Sluit eerst het open venster om je pas te gebruiken." Staat het productvenster open, dan beslist `replaceProductWindow`: het eigen venster blijft open, het venster van een collega gaat dicht zonder op te slaan en het venster van de pas opent.
 
-**`FaceController`** bestuurt het cameravenster van de demo-gezichtsherkenning (`openFaceModal`, `scanForFace`, `captureEnrollment`, `closeFaceModal`). Ieder venster krijgt een eigen sessienummer (`faceSession`), zodat een zoektocht of vastlegging stopt als het venster sluit. `stopCameraAfterTimeout` en `scheduleEnrollTimeout` zetten de camera uit als er bij herkennen binnen `FACE_DEMO.scanTimeoutMs` (20 seconden) niemand is herkend, of als er bij instellen in die tijd geen gezicht is vastgelegd. Het venster blijft open met een melding. `closeFaceModal` ruimt een wachtende time-out op. `startWakeScan` opent na een tik op het ovaal van het startscherm (`scanMode` "tap") de korte scan (`faceMode` "wake", `FACE_DEMO.wakeScanMs`, de knop heet `Stoppen`). `endWakeScan` zet daarna de camera uit en sluit het venster als niemand is herkend. Na herkenning gaat `continueAfterRecognition` verder (koelkast of productvenster).
+**`FaceController`** bestuurt het cameravenster van de demo-gezichtsherkenning (`openFaceModal`, `scanForFace`, `captureEnrollment`, `closeFaceModal`). Ieder venster krijgt een eigen sessienummer (`faceSession`), zodat een zoektocht of vastlegging stopt als het venster sluit. `stopCameraAfterTimeout` en `scheduleEnrollTimeout` zetten de camera uit als er bij herkennen binnen `FACE_DEMO.scanTimeoutMs` (20 seconden) niemand is herkend, of als er bij instellen in die tijd geen gezicht is vastgelegd. Het venster blijft open met een melding. `closeFaceModal` ruimt een wachtende time-out op. `startWakeScan` opent na een tik op het ovaal van het startscherm (`scanMode` "tap") de korte scan (`faceMode` "wake", `FACE_DEMO.wakeScanMs`, de knop heet `Stoppen`). `endWakeScan` zet daarna de camera uit en sluit het venster als niemand is herkend. Na herkenning opent `continueAfterRecognition` het productvenster.
 
 `captureEnrollment` slaat de kenmerken met de datum op via `persist` en `model.saveFaceEnrollment`, met de logboekregel "Gezichtsherkenning ingesteld", en `forgetFace` wist ze met "Gezichtsherkenning uitgezet". `loadSavedFaces` zet de geldige opgeslagen gezichten in het geheugen van `FaceRecognitionDemo`, en `expireFaces` wist gezichten van 365 dagen en ouder met "Gezichtsherkenning verlopen". `startFaceEnrollmentFor` opent het instelvenster na `Ja, instellen` en onthoudt wat er daarna verder gaat (`enrollContinuation`). `canSelfEnroll` en `canSelfForget` bepalen wie zelf mag instellen (alleen na de pas, `recognizedBy` is "badge") en uitzetten (na de pas of de camera). `startFaceEnrollment`, `startFaceEnrollmentFor` (alleen met `how` "badge") en `forgetFace` weigeren anders met een melding, zonder de camera aan te zetten. `startAdminFaceEnrollment` en `adminForgetFace` zijn voor de beheerder in het tabblad Medewerkers (alleen na `requireAdmin`), met `enrollByAdmin` zodat het logboek "door beheerder" zegt en het cameravenster bij uitloggen sluit. `faceSetupState` geeft "ready", "noCamera" of "off" terug voor de knop in het beheer. `captureEnrollment` bewaart ook het moment van toestemming (`consentAt`) en zegt na verlopen "Gezichtsherkenning opnieuw ingesteld".
 
 `scanForFace` (`Herken mij` en de scan na een tik) telt een herkenning alleen als `FaceRecognitionDemo.checkLiveness` "alive" geeft, en anders zoekt hij door tot de tijd om is. `readFaceForEnrollment` leest bij het instellen tot er een levend gezicht is gezien (dan de descriptor), tot de controle "failed" geeft (dan `null` en "Geen gezicht gevonden. …") of tot er vijf keer geen gezicht is gevonden.
 
-**`RecognitionController`** bepaalt wat er opent na herkennen. `afterRecognition` krijgt de medewerker en hoe hij is herkend ("badge" of "face"). Na een passcan opent `openFaceOffer` eerst de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" als `shouldOfferFace` dat zegt (demo aan, camera aanwezig, geen geldige instelling, niet eerder `Nee`). `acceptFaceOffer`, `declineFaceOffer` en `dismissFaceOffer` horen bij `Ja, instellen`, `Nee` en het kruisje of Escape. `continueAfterRecognition` opent met `RECOGNITION_TARGET` "fridge" de koelkast (`openFridgeFor`) als dat kan, en anders het productvenster. `closeFaceOfferIfIdle` sluit een onbeantwoorde vraag na 60 seconden.
+**`RecognitionController`** bepaalt wat er opent na herkennen. `afterRecognition` krijgt de medewerker en hoe hij is herkend ("badge" of "face"). Na een passcan opent `openFaceOffer` eerst de vraag "Gezichtsherkenning nog niet ingesteld. Wil je dit?" als `shouldOfferFace` dat zegt (demo aan, camera aanwezig, geen geldige instelling, niet eerder `Nee`). `acceptFaceOffer`, `declineFaceOffer` en `dismissFaceOffer` horen bij `Ja, instellen`, `Nee` en het kruisje of Escape. `continueAfterRecognition` opent altijd het productvenster. `closeFaceOfferIfIdle` sluit een onbeantwoorde vraag na 60 seconden.
 
-**`StandbyController`** is het startscherm (zie 4.18). In de code heet de toestand "standby": `standbyActive` betekent dat het startscherm in beeld is. `startStandbyWatch` start één timer die iedere seconde `tickStandby` aanroept: die sluit een onbeantwoorde vraag, wist eens per minuut verlopen gezichten, werkt het startscherm bij (`refreshStartScreen`) en laat `checkStandby` kijken of de beginpagina 2 minuten niet is gebruikt zonder venster. `enterStandby` toont het startscherm (`view.showStartScreen` en `view.renderStartScreen` met de teksten van `startScreenTexts`). `returnToStartScreen` laat het terugkomen na een registratie, de koelkast of een venster dat vanzelf sluit. `wakeFromStandby` verbergt het, bijvoorbeeld als na herkennen een venster opent (`ModalManager.openModal`, `EmployeeController.openEmployeeProducts` en `RecognitionController` roepen het aan). `handleManualSearch` is de knop `Handmatig zoeken`, `handleStandbyTap` de tik op het ovaal bij `scanMode` "tap", en `swallowStandbyGhostClick` houdt een klik binnen 500 ms na een tik op het startscherm tegen. De klok gaat mee in de constructor, zodat de tests met een nepklok werken.
+**`StandbyController`** is het startscherm (zie 4.18). In de code heet de toestand "standby": `standbyActive` betekent dat het startscherm in beeld is. `startStandbyWatch` start één timer die iedere seconde `tickStandby` aanroept: die sluit een onbeantwoorde vraag, wist eens per minuut verlopen gezichten, werkt het startscherm bij (`refreshStartScreen`) en laat `checkStandby` kijken of de beginpagina 2 minuten niet is gebruikt zonder venster. `enterStandby` toont het startscherm (`view.showStartScreen` en `view.renderStartScreen` met de teksten van `startScreenTexts`). `returnToStartScreen` laat het terugkomen na een registratie of een venster dat vanzelf sluit. `wakeFromStandby` verbergt het, bijvoorbeeld als na herkennen een venster opent (`ModalManager.openModal`, `EmployeeController.openEmployeeProducts` en `RecognitionController` roepen het aan). `handleManualSearch` is de knop `Handmatig zoeken`, `handleStandbyTap` de tik op het ovaal bij `scanMode` "tap", en `swallowStandbyGhostClick` houdt een klik binnen 500 ms na een tik op het startscherm tegen. De klok gaat mee in de constructor, zodat de tests met een nepklok werken.
 
-**`AutoScanController`** is het automatisch scannen op het startscherm (`FACE_DEMO.scanMode` "auto"). `updateAutoScan` zet de camera aan of uit naar `shouldAutoScan`: alleen als het startscherm in beeld is, de demo aanstaat, er zeker een camera is, iemand een gezicht heeft ingesteld en het tabblad zichtbaar is. `startAutoScan` zet eerst de camera aan (320 × 240) en laadt daarna het model, zodat een tablet zonder camera of toestemming de bibliotheek niet laadt. `scanTick` laat `FaceRecognitionDemo.detectFaces` drie keer per seconde gezichten zoeken en geeft het resultaat aan `FaceIntent`. Pas als die "ready" zegt, berekent `recognizeFace` met `describeFace` de kenmerken van dat ene gezicht en vergelijkt ze. Herkend: `greet` zet de camera uit, toont de begroeting en opent na 1,2 seconden de koelkast of het productvenster. Niet herkend na drie pogingen: `pauseAfterUnknown` toont de melding en pauzeert vijf seconden. `recognizeFace` begroet alleen als de bevestiging klopt én `checkLiveness` "alive" geeft. Geeft de controle "failed" (bijvoorbeeld bij een foto), dan volgt meteen `pauseAfterUnknown`, met dezelfde melding en zonder te zeggen waarom. Mislukt het starten van de camera, dan wordt `cameraBlocked` waar en toont het startscherm alleen de pas en `Handmatig zoeken`, zonder melding in de console.
+**`AutoScanController`** is het automatisch scannen op het startscherm (`FACE_DEMO.scanMode` "auto"). `updateAutoScan` zet de camera aan of uit naar `shouldAutoScan`: alleen als het startscherm in beeld is, de demo aanstaat, er zeker een camera is, iemand een gezicht heeft ingesteld en het tabblad zichtbaar is. `startAutoScan` zet eerst de camera aan (320 × 240) en laadt daarna het model, zodat een tablet zonder camera of toestemming de bibliotheek niet laadt. `scanTick` laat `FaceRecognitionDemo.detectFaces` drie keer per seconde gezichten zoeken en geeft het resultaat aan `FaceIntent`. Pas als die "ready" zegt, berekent `recognizeFace` met `describeFace` de kenmerken van dat ene gezicht en vergelijkt ze. Herkend: `greet` zet de camera uit, toont de begroeting en opent na 1,2 seconden het productvenster. Niet herkend na drie pogingen: `pauseAfterUnknown` toont de melding en pauzeert vijf seconden. `recognizeFace` begroet alleen als de bevestiging klopt én `checkLiveness` "alive" geeft. Geeft de controle "failed" (bijvoorbeeld bij een foto), dan volgt meteen `pauseAfterUnknown`, met dezelfde melding en zonder te zeggen waarom. Mislukt het starten van de camera, dan wordt `cameraBlocked` waar en toont het startscherm alleen de pas en `Handmatig zoeken`, zonder melding in de console.
 
 **`AdminController`** is het beheerscherm:
 
 - `requireAdmin`: iedere beheeractie begint hiermee, ook in `CorrectionController`, `StockController` en `FormController` (formulieren openen en opslaan, verwijderen, (de)activeren, correcties, leveringen en tellingen, export en `Alle gegevens wissen`). Is er geen beheerder ingelogd, dan gebeurt er niets en verschijnt "Log eerst in als beheerder." Zo werkt een beheeractie ook niet als een verborgen knop toch wordt ingedrukt of de methode op een andere manier wordt aangeroepen. Registreren door een medewerker zelf vraagt geen login.
 - `openAdmin`, `login`, `logout`, `closeAdmin`, `showDashboard`, `switchTab` en `loadMoreAudit`: inloggen, uitloggen, het dashboard, de tabbladen en het logboek (zie Adminfuncties hieronder). De tabbladen hebben `role="tab"` en `switchTab` zet `aria-selected` op het gekozen tabblad.
 - `startIdleWatch`, `noteAdminActivity` en `logoutIfIdle`: automatisch uitloggen. `startIdleWatch` start bij het opstarten een timer die iedere 10 seconden `logoutIfIdle` aanroept. `noteAdminActivity` onthoudt bij iedere muisbeweging, klik, toets, aanraking of scroll het tijdstip, maar alleen als de beheerder is ingelogd. `logoutIfIdle` sluit na 5 minuten zonder invoer de open beheerformulieren en het beheervenster en toont de melding. De klok (tijd en timer) gaat mee in de constructor, net als bij `BadgeReader`, zodat de tests met een nepklok werken.
-- `renderAdminLists`: tekent alle lijsten en tabellen van het beheer opnieuw (filters, registraties, medewerkers, correctielijst, producten, bedrijven, voorraad, logboek en het tabblad Koelkast). `finishAdminChange`, `showDashboard` en de synchronisatie tussen tabbladen gebruiken deze methode.
+- `renderAdminLists`: tekent alle lijsten en tabellen van het beheer opnieuw (filters, registraties, medewerkers, correctielijst, producten, bedrijven, voorraad en logboek). `finishAdminChange`, `showDashboard` en de synchronisatie tussen tabbladen gebruiken deze methode.
 - `finishAdminChange`: tekent na een beheerwijziging alle beheeronderdelen opnieuw, ook de registratietabel (zodat bijvoorbeeld een nieuwe productnaam daar meteen staat), zonder nog eens apart op te slaan. De focus blijft daarbij op de knop met dezelfde id (`preserveFocus`).
 - `showMissing`: knoppen en formulieren van iets dat niet meer bestaat, geven hiermee een melding in plaats van het gegeven opnieuw aan te maken.
 - `exportCsv`: laat `CsvExport` het bestand maken (zie CSV-export hieronder).
+- `exportBadges` en `importPayrollCodes`: de knoppen `Pasjes exporteren` (4.24) en `Looncodes importeren` (4.26, met `PayrollImport`). Beide doen niets zonder ingelogde beheerder en schrijven in het logboek alleen aantallen.
 - `wipeAllData`: de knop `Alle gegevens wissen`. Doet niets als er geen beheerder is ingelogd. Vraagt twee keer om bevestiging, laat het model alles wissen (`wipeAll`), slaat de nieuwe demogegevens op, vergeet de ingestelde gezichten, logt de beheerder uit en tekent alles opnieuw. Lukt het wissen van de opslag niet (`wipeAll` geeft `false`), dan blijven de gegevens staan, blijft het beheer open en verschijnt "De gegevens konden niet worden gewist. Probeer het opnieuw."
 - `toggleEmployee`, `removeEmployee`, `removeProduct`, `removeCompany` en `removePoint`: de knoppen in de beheerlijsten.
 
@@ -795,9 +987,13 @@ Ieder onderdeel krijgt `RegistrationApp` mee in de constructor (`this.app`). Het
 
 **`FormController`** regelt de vier beheerformulieren (medewerker, product, bedrijf en consumptiepunt): openen (`openEmployeeForm`, `openEditEmployeeForm` enzovoort), controleren en opslaan (`saveEmployee`, `saveProduct`, `saveCompany`, `savePoint`) en sluiten. `prepareForm` maakt een formulier leeg en zet klaar of het om toevoegen of wijzigen gaat. `beginSave` doet voor alle vier de formulieren het begin van opslaan: er moet een beheerder zijn ingelogd en het gegeven dat wordt gewijzigd moet nog bestaan. De controles staan in `validateRequiredFields`, `validateNumberFields`, `isValidPrice`, `isDigitsOnly`, `validateBadgeField` en `validateEmployeeAssignment`. `setSaveButtons` zet de opslagknoppen van het medewerkers- en productformulier goed. Bij toevoegen staan er `Opslaan` (secundair) en `Opslaan + opnieuw` (primair), bij wijzigen alleen `Opslaan`, en die is dan primair. Bij het openen van een wijzigformulier onthoudt `rememberEditing` een kopie van het gegeven. `closeStaleForms` vergelijkt die kopie bij een wijziging in een ander tabblad en sluit het formulier als het gegeven intussen is verwijderd of gewijzigd.
 
-**`FridgeController`** is de slimme koelkast (zie 4.17). `openFridgeWindow` opent het koelkastvenster. Een scan gaat via `BadgeController.recognizeBadge` naar `fridgeScan` als het koelkastvenster bovenaan staat. `startFridgeOpening` controleert de medewerker, neemt de indeling van zijn consumptiepunt (`model.fridgeLayout`), vult in de simulatie de schappen met de voorraad (`stockSimulatedShelves`) en laat `SmartFridge` het slot openen. `takeFromShelf` en `returnToShelf` bootsen pakken en terugleggen na, en `addForeignWeight` legt in de demo iets anders op een schap. `closeFridgeDoor` laat `SmartFridge` het slot sluiten en wegen, en slaat via `persist` in één keer de opening, de registraties en één logboekregel op (`openingAudit`). `checkFridgeTimers` geeft na 60 seconden de waarschuwing bij een open deur en sluit het venster met de deur dicht na 60 seconden zonder invoer. `saveFridgeShelves` slaat in het beheer de indeling op. `openFridgeFor` opent de koelkast meteen na herkenning op de beginpagina (`canOpenFridgeFor` controleert of het consumptiepunt een schapindeling heeft), en `switchFridgeToProducts` hoort bij de knop "Liever brood of beleg? Open het productvenster".
+**`GuestController`** is registreren als gast (zie 4.23). `openGuestForm` opent het formulier. `saveGuest` controleert de velden (een telefoonnummer met 8 tot 15 cijfers, `GuestController.isValidPhone`), maakt de gast met `RegistrationModel.addGuest` (of vindt de gast met dezelfde naam en hetzelfde telefoonnummer) via `persist` met de logboekregel "Gast geregistreerd" en de naam, en opent het productvenster.
+
+**`QuickSetupController`** is `Snellere optie instellen` (zie 4.25, alleen met een server). `quickSetupOptions` zegt wat kan: een gezicht als er een camera kan zijn en nog geen geldig gezicht is, een pas als de pasjeslezer aanstaat en er nog geen pas is. `quickSetupState` zegt of de vraag in het productvenster staat ("offer", "expired" of niets na `Nee, liever niet`, 365 dagen). `chooseQuickSetup` start het cameravenster (`FaceController.startQuickFaceEnrollment`), "Houd je pas tegen de lezer" (`startBadgeLink`) of eerst het een en dan het ander. Zolang dat venster open is, geeft `BadgeController.recognizeBadge` een scan aan `linkScannedBadge`, die de pas koppelt met de logboekregel "Pas gekoppeld door medewerker".
 
 #### Slimme koelkast (`assets/js/fridge/`)
+
+**Vervallen sinds versie 3.33.** Deze classes, `FridgeController` en `FridgeView` zijn met de slimme koelkast uit de app gehaald. De beschrijving hieronder is van de demo tot en met versie 3.32.
 
 - **`SmartFridge`** weegt bij het openen ieder schap (`start`), opent het slot, en weegt bij het sluiten opnieuw (`finish`). `countShelf` rekent het verschil van één schap om naar een aantal: verschil gedeeld door het gewicht van één product, afgerond als het binnen de tolerantie valt (`SMART_FRIDGE.toleranceRatio`). Valt het erbuiten of is er iets bijgekomen, dan krijgt het schap een markering (`mismatch`, `added` of `unknown`) en wordt het niet geteld. `statusOf` geeft de status van de opening: `registered`, `nothing` of `check`. `SmartFridge.createSimulated()` maakt de koelkast van de demo.
 - **`FridgeLock`** en **`ShelfScale`** zijn afspraken (interfaces): ze beschrijven alleen welke methodes een slot (`unlock`, `lock`, `cancelAutoLock`, `isLocked`) en een weegschaal (`read`) hebben.
@@ -808,11 +1004,17 @@ In productie stuurt alleen de backend het echte slot en de weegschalen aan. De b
 
 #### `FridgeView`
 
+**Vervallen sinds versie 3.33.**
+
 Tekent het koelkastvenster (`renderFridgeWindow`, met de drie stappen deur dicht, deur open en overzicht), de statusregel (`setFridgeStatus`), de live region (`announceFridge`), de waarschuwing bij een open deur (`setDoorWarning`) en het tabblad Koelkast (`renderFridgeAdmin`). `RegistrationView` maakt deze class en geeft de methodes door, zodat de controller alleen met `RegistrationView` praat.
 
 #### `CsvExport`
 
 Maakt het CSV-bestand voor de loonadministratie (zie verderop).
+
+#### `PayrollImport`
+
+Looncodes importeren (zie 4.26). `parse` leest de tekst van het bestand: het zoekt de kopregel, kiest het scheidingsteken dat daarin het vaakst voorkomt (`separatorOf`), splitst iedere regel met aandacht voor aanhalingstekens (`splitLine`) en zoekt de kolommen voor het personeelsnummer en de looncode. `plan` zoekt bij iedere regel de medewerker, eerst precies en dan zonder voorloopnullen (alleen als dat bij één medewerker past), en geeft de looncodes die veranderen (`updates`), het aantal dat al klopte en de regelnummers met een probleem. `summary` en `problemLines` maken de tekst voor de melding en het logboek, zonder namen of nummers. De class weet niets van de pagina. `AdminController.importPayrollCodes` leest het bestand, slaat de wijzigingen met `RegistrationModel.setPayrollCodes` en `persist` op en toont de melding.
 
 #### `ThemeManager`
 
@@ -835,6 +1037,17 @@ De stille controle op een levend gezicht (zie 4.15). `check(points, now)` krijgt
 #### `BadgeReader`
 
 Herkent een pas via een USB-NFC-lezer die zich als toetsenbord gedraagt (zie 4.16). De controller geeft iedere toets door aan `handleKey` (via `BadgeController.handleBadgeKey`), ook als er een venster open is. Dan herkent `recognizeBadge` niemand, maar de afsluitende Enter of Tab wordt wel tegengehouden. De class houdt een buffer bij van snel getypte tekens met het tijdstip van de laatste toets. Een scan is minstens `minLength` tekens, elk binnen `maxKeyIntervalMs` na het vorige (gemeten met `keyTime`: het tijdstip waarop de toets binnenkwam, `event.timeStamp`, zodat een trage tablet een scan niet als typen ziet), afgesloten met Enter of Tab, óf `endDelayMs` stilte na de laatste toets (`scheduleEnd`, `finishAfterSilence`). Komt een teken te laat, dan begint er een nieuwe buffer. Zo wordt menselijk typen nooit een scan. De Enter of Tab die een scan afsluit, wordt tegengehouden (`preventDefault` en `stopPropagation`), zodat die geen andere actie start. `normalize` haalt spaties, `:` en `-` weg en maakt alles hoofdletters. Het medewerkersformulier en `DataStore` (bij het laden) brengen een pasnummer op dezelfde manier in één vaste vorm. Na een scan roept de class `onScan(code)` aan. De controller zoekt dan de medewerker op (`BadgeController.recognizeBadge`, met `RegistrationModel.findEmployeeByBadge`). `onStart` wordt aangeroepen als er een nieuwe buffer begint. De controller onthoudt dan welk veld de focus had en wat er in het zoekveld, het bedrijfsfilter en een ander tekstveld met de focus stond (`rememberSearchBeforeScan`), en zet dat na de scan terug (`restoreSearchAfterScan` en `restoreOtherFieldAfterScan`). Begon de scan in het veld `Pasnummer`, dan zet `fillBadgeFieldAfterScan` alleen het nieuwe pasnummer in dat veld. De tijd en de timers (`clock`) kunnen worden meegegeven, zodat de unit tests met een nepklok werken.
+
+#### Met de server: `ServerMode`, `ServerApi`, `ServerSync` en `ServerDataStore`
+
+Deze classes worden alleen gebruikt als `SERVER_API` in `deployment.js` is ingevuld (in de container en met `backend/dev-server.php`). In de repository is het leeg en werkt alles als demo.
+
+- **`ServerMode`** regelt het opstarten (`prepare`): het vraagt de server wie de browser is, toont anders alleen het inlogscherm en haalt de gegevens op. Daarna start `main.js` de website met `ServerDataStore`. `attach` past het beheer aan (geen demo-inloggen, geen `Alle gegevens wissen`, het tabblad `Tablets en AFAS`) en start `ServerSync`. `login` en `logout` worden door `AdminController` aangeroepen en halen daarna alle gegevens opnieuw op, omdat een beheerder meer mag zien dan een tablet. Op een lege server zet `seedEmptyServer` alleen de standaardproducten klaar: de bedrijven komen uit AFAS. `renderUnits` toont de afdelingen uit AFAS met een keuzelijst, en `saveUnitPoint` koppelt een afdeling aan een consumptiepunt met `RegistrationModel.assignUnitToPoint` (zie 4.27).
+- **`ServerApi`** doet de verzoeken aan `/api` met `fetch`. Bij ieder schrijvend verzoek gaan de kopregel `X-CR-Client` en de sleutel van de sessie (`X-CSRF-Token`) mee. Een fout wordt een `ServerError` met de status en de melding van de server.
+- **`ServerDataStore`** is een subclass van `DataStore`. Het model werkt er hetzelfde mee, maar de gegevens staan in het geheugen. `save` zet alleen wat is veranderd in een wachtrij (`pendingChanges`). `applyServerChanges` verwerkt wat er van de server komt. Alleen een tablet bewaart de gegevens en de wachtrij in `localStorage`, zonder gezichtskenmerken.
+- **`ServerSync`** stuurt de wachtrij kort na een wijziging naar de server (`push`) en haalt iedere 8 seconden de wijzigingen op (`pull`). Zonder verbinding probeert het na 5 seconden opnieuw.
+
+De server zelf staat in `backend/src/Server/` en is beschreven in `backend/README.md` en in het TO (hoofdstuk 6).
 
 #### `icons.js`
 
@@ -954,6 +1167,7 @@ Dit hoofdstuk beschrijft per lijst de velden van de gegevens die de demo als Jav
 | `name` | Naam van het punt, bijv. `Kantine begane grond` |
 | `companyId` | Verwijzing naar het bedrijf |
 | `products` | Per product-id: `offered` (aangeboden ja/nee), `stock` (voorraad), `minimum` en, als er is geteld, `countedAt` (tijdstip van de laatste telling) |
+| `units` | Alleen met de server: de afdelingen uit AFAS die bij dit punt horen (4.27). Een afdeling hoort bij hooguit één punt |
 
 ### Medewerkers
 
@@ -968,6 +1182,9 @@ Dit hoofdstuk beschrijft per lijst de velden van de gegevens die de demo als Jav
 | `active` | Actief of inactief |
 | `color` | Kleur van de avatar |
 | `badgeId` | Pasnummer van de NFC-pas, genormaliseerd (alleen `A-Z` en `0-9`, hooguit 64 tekens). `""` = geen pas. Uniek per medewerker. Staat niet in de CSV-export en niet in het logboek |
+| `unit` | Alleen met de server: de afdeling uit AFAS (de organisatorische eenheid). Een tablet krijgt dit veld niet (4.27) |
+| `badgeLinkedAt` | Het moment van koppelen van de pas (voor `Pasjes exporteren`, 4.24). Ontbreekt zonder pas |
+| `guest` en `phone` | Alleen bij een gast (4.23): `guest` is `true` en `phone` is het telefoonnummer. Een tablet met de server krijgt het telefoonnummer niet |
 
 ### Registraties
 
@@ -980,7 +1197,8 @@ Dit hoofdstuk beschrijft per lijst de velden van de gegevens die de demo als Jav
 | `employerNumber` | Werkgevernummer op het moment van registreren (voor de CSV-export, zie `RegistrationModel.registrationEmployerNumber`). Ontbreekt als er toen nog geen nummer was. Dan gebruikt de export het huidige nummer |
 | `pointId` | Consumptiepunt waar de voorraad van af ging. Bij een correctie gaat het product hier weer naartoe terug. Leeg (`null`) als het punt het product niet aanbiedt en er dus geen voorraad af ging |
 | `correction` | Alleen aanwezig (`true`) als de beheerder de registratie met `+` heeft toegevoegd |
-| `source` en `openingId` | Alleen aanwezig bij een registratie van de slimme koelkast: `source` is dan `"fridge"` en `openingId` de opening waarbij het product is gepakt |
+| `source` en `openingId` | Vervallen sinds versie 3.33. Waren alleen aanwezig bij een registratie van de slimme koelkast. Oude registraties met deze velden laden nog, en de velden vallen bij het opslaan weg |
+| `deviceId` | Alleen met de server: de tablet waarop is geregistreerd. De server zet het erbij en gebruikt het om bovenaan te zetten wie het vaakst op die tablet registreert (4.22) |
 | `createdAt` | Datum en tijd van registratie. Bij een correctie `+` met een eerdere datum is dat 12:00 uur op die dag |
 
 `DataStore.migrateCompanies` zet oude gegevens uit een eerdere versie bij het laden automatisch om: de vrij ingevulde bedrijfsnaam wordt een bedrijf, het eerste werkgevernummer wordt de standaard van dat bedrijf (een afwijkend nummer blijft bij de medewerker staan) en ieder bedrijf met medewerkers krijgt één consumptiepunt met alle producten.
@@ -992,6 +1210,8 @@ Een medewerker met registraties kan niet definitief worden verwijderd (alleen ge
 Voor de CSV-export wordt de prijs gebruikt die bij iedere registratie is bewaard (`price`). Oude registraties zonder prijs gebruiken de huidige prijs uit het productbeheer. Het bestand bevat per medewerker per loonmaand het aantal en de totale prijs. Deze gegevens zijn alleen zichtbaar voor de beheerder.
 
 ### Slimme koelkast
+
+**Vervallen sinds versie 3.33.** Deze lijsten worden niet meer gebruikt. Oude gegevens met deze lijsten laden zonder melding, en de lijsten vallen bij het volgende opslaan weg.
 
 | Lijst | Inhoud |
 |---|---|
@@ -1010,6 +1230,8 @@ Ontbreken deze lijsten in oudere gegevens, dan krijgen die bij het laden twee le
 Oudere gegevens zonder deze lijsten krijgen bij het laden twee lege lijsten, zonder melding. Bij het laden controleert `DataStore` ieder getal en slaat het een regel met een andere lengte, tekst, een extra veld of een datum in de toekomst over. De kenmerken komen niet in de CSV-export en niet in het logboek. De gezichtspunten van de controle op een levend gezicht worden nergens opgeslagen: ze staan hooguit 3 seconden in het geheugen.
 
 ## 9. Belangrijke demo-beperkingen
+
+**Met de server (sinds versie 3.33)** gelden een deel van deze beperkingen niet meer: de gegevens staan in één database, de login is echt, de server controleert de rechten en het logboek staat op de server (zie 3.3). De beperkingen hieronder gelden voor de demo zonder server. Wat er met de server nog overblijft, staat in het auditrapport (`docs/AUDITRAPPORT.md`) en in het TO, hoofdstuk 13 en 16.
 
 Deze versie is bedoeld als prototype:
 
@@ -1030,7 +1252,6 @@ Deze versie is bedoeld als prototype:
 - Bescherming tegen inbedden in een frame (`frame-ancestors` of `X-Frame-Options`) kan alleen met een HTTP-header van de webserver en zit dus niet in de demo.
 - De gezichtsherkenning is alleen een demo. De kenmerken van ingestelde gezichten blijven een jaar op de tablet bewaard (onversleuteld in `localStorage`), om "jaarlijks opnieuw instellen" te laten zien. Met `scanMode` "auto" kijkt de camera de hele tijd zolang het startscherm in beeld is en ziet hij ook voorbijgangers. Hij zoekt dan alleen naar gezichten en berekent pas kenmerken boven de intentiedrempel. Met `scanMode` "tap" gaat de camera alleen aan na een tik. Voor productie is het advies de pas (TO, bijlage B). De drempels zijn alleen nagebootst getest en nog niet afgesteld op de echte tablet en de plek bij de koelkast. Een stille controle op een levend gezicht houdt een platte geprinte foto en een stilstaande foto op een telefoon tegen. Een video op een telefoon, een gevouwen print en twee prints die elkaar afwisselen, houdt de controle niet tegen (zie 4.15). De drempels van die controle zijn ook nog niet op de tablet afgesteld. Hoe vaak de verkeerde persoon wordt herkend, is niet gemeten. Bij het laden toont de console één onschadelijke CSP-melding over `wasm-eval`, omdat de bibliotheek test of WebAssembly werkt. De bibliotheek face-api wordt niet meer onderhouden (de repository is gearchiveerd) en krijgt dus geen beveiligingsupdates. Ze staat met een vaste versie en controlegetallen in het project en is alleen voor de demo bedoeld. Zie het TO (hoofdstuk 13) voor de privacyregels en de beveiliging.
 - Herkennen met de pas is gemak, geen bewijs van identiteit: het nummer van een pas is niet geheim en kan worden gekopieerd. TVB heeft geen centraal systeem met pasnummers (navraag 29 oktober 2026). Medewerkers gebruiken de passen nu bij de printers en voegen ze daar zelf toe. TVB onderzoekt een centraal systeem voor de passen met opslag van de serienummers. Komt dat er, dan haalt de backend het pasnummer daaruit. Tot dan krijgt de koppeling eenmalig de serienummers van de passen (als die te krijgen zijn), of koppelt de medewerker zelf zijn pas met een code per e-mail. Zie het TO, "Herkomst van het pasnummer".
-- De slimme koelkast is een simulatie. Er is geen echt slot en geen echte weegschaal. De browser opent het nagebootste slot zelf en rekent zelf om. In productie mag alleen de backend het slot openen. De tolerantie en de gewichten per stuk zijn schattingen, en in het vak "Demo zonder pasjeslezer" kan iedere actieve medewerker worden gekozen.
 
 Voor productie is een backend met een gedeelde database, echte authenticatie, autorisatie, back-ups en auditlogging nodig. Het TO (hoofdstuk 13) bevat de volledige lijst van wat vóór productie moet gebeuren.
 
@@ -1046,7 +1267,7 @@ De applicatie volgt het principe van separation of concerns:
 6. `ThemeManager` weet welk thema (licht of donker) actief moet zijn.
 7. `FaceRecognitionDemo` weet hoe de camera en de demo-gezichtsherkenning werken.
 8. `BadgeReader` weet wanneer snel getypte tekens een scan van de pasjeslezer zijn.
-9. `SmartFridge` weet hoe je een gewichtsverschil per schap omrekent naar een aantal producten. Het slot en de weegschalen zitten achter de interfaces `FridgeLock` en `ShelfScale`, zodat echte versies (via de backend) later de nagebootste kunnen vervangen.
+9. `ServerMode`, `ServerSync` en `ServerDataStore` weten hoe de website met de server werkt: inloggen, de wachtrij en iedere 8 seconden de wijzigingen ophalen. `PayrollImport` weet hoe een bestand met looncodes eruitziet.
 
 De schermen zelf staan als screenshots in het TO, hoofdstuk 9, paragraaf Wireframes (`docs/wireframes/`). Die zijn handig om tijdens een presentatie te laten zien welke code bij welk scherm hoort.
 
@@ -1055,6 +1276,8 @@ De HTML bevat de componenten en vaste ankerpunten met `id`-waarden. De CSS bepaa
 ## 11. Vervolgstappen voor productie
 
 Dit hoofdstuk noemt de stappen om van de demo een systeem voor productie te maken. Het is bedoeld voor de ontwikkelaar die de app verder bouwt en voor TVB als opdrachtgever. De beperkingen waar deze stappen een antwoord op geven, staan in hoofdstuk 9.
+
+Sinds versie 3.33 is een deel hiervan gedaan: er is een server in PHP met een database (stap 1), de website praat met de API in plaats van alleen met `localStorage` (stap 3), de beheerder heeft een echte login (stap 4) en het logboek staat op de server (stap 5), nog zonder de naam van de beheerder. De geheimen staan alleen in de omgeving van de server (stap 9). Op 26 november 2026 is de server gecontroleerd in een security audit (`docs/AUDITRAPPORT.md`). Nog niet gedaan: het relationele schema uit `docs/DATABASE-SCHEMA.sql` (de server bewaart de gegevens nu als JSON per regel), back-ups van de database, de nachtelijke synchronisatie met AFAS en een test met meerdere echte tablets.
 
 1. Kies een backend, bijvoorbeeld PHP, Node.js of een beheerde dienst.
 2. Maak de tabellen uit `docs/DATABASE-SCHEMA.sql` aan (onder andere medewerkers, registraties, producten, bedrijven, consumptiepunten en het logboek). `point_products.counted_at` bewaart het tijdstip van de laatste telling (zoals `countedAt` in de demo), en een beheerder heeft de rol `admin` (beheerder) of `system_admin` (systeembeheerder).
