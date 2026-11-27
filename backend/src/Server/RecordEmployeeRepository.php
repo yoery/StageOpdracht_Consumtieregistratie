@@ -44,7 +44,8 @@ final class RecordEmployeeRepository implements EmployeeRepository
                 self::text($employee->payrollCode ?? ''),
                 is_string($employee->companyId ?? null) ? $employee->companyId : null,
                 is_string($employee->pointId ?? null) ? $employee->pointId : null,
-                ($employee->active ?? false) === true
+                ($employee->active ?? false) === true,
+                self::text($employee->unit ?? '')
             );
         }
 
@@ -69,7 +70,8 @@ final class RecordEmployeeRepository implements EmployeeRepository
         $points = [];
         foreach ($this->store->all('points') as $point) {
             if (is_string($point->id ?? null) && is_string($point->companyId ?? null)) {
-                $points[] = ['id' => $point->id, 'companyId' => $point->companyId, 'name' => self::text($point->name ?? '')];
+                $units = is_array($point->units ?? null) ? array_values(array_filter($point->units, 'is_string')) : [];
+                $points[] = ['id' => $point->id, 'companyId' => $point->companyId, 'name' => self::text($point->name ?? ''), 'units' => $units];
             }
         }
 
@@ -95,6 +97,9 @@ final class RecordEmployeeRepository implements EmployeeRepository
                 $employee->lastName = $addition['lastName'];
                 $employee->payrollCode = $addition['payrollCode'];
                 $employee->personnelNumber = $addition['personnelNumber'];
+                if (($addition['unit'] ?? '') !== '') {
+                    $employee->unit = $addition['unit'];
+                }
                 $employee->employerNumber = '';
                 $employee->companyId = $addition['companyId'];
                 $employee->pointId = $addition['pointId'];

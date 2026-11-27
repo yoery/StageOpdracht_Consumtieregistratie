@@ -543,6 +543,8 @@ export class DataStore {
       this.isSafeOptionalId(employee.pointId) &&
       // Een gast (FR-98): `guest` is true of ontbreekt, en het telefoonnummer is korte tekst.
       (employee.badgeLinkedAt === undefined || this.isValidDateTime(employee.badgeLinkedAt, Infinity)) &&
+      // De afdeling uit AFAS (FR-102): korte tekst, of geen.
+      (employee.unit === undefined || this.isText(employee.unit)) &&
       (employee.guest === undefined || typeof employee.guest === "boolean") &&
       (employee.phone === undefined || this.isText(employee.phone, 32))
     );
@@ -637,7 +639,9 @@ export class DataStore {
       this.isText(point.name) &&
       this.isSafeId(point.companyId) &&
       this.isObject(point.products) &&
-      this.hasSafeStockKeys(point.products)
+      this.hasSafeStockKeys(point.products) &&
+      // De afdelingen uit AFAS die bij dit punt horen (FR-102): een lijst met korte teksten, of geen.
+      (point.units === undefined || (Array.isArray(point.units) && point.units.length <= 500 && point.units.every((unit) => this.isText(unit, MAX_TEXT, { required: true }))))
     );
   }
 

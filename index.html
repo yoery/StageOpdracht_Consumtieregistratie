@@ -344,6 +344,9 @@
           <button class="primary-button" id="addEmployeeButton" type="button"><span data-icon="plus"></span> Medewerker toevoegen</button>
           <!-- De pasjes-dataset: serienummer van iedere gekoppelde pas en de persoon (FR-99). Alleen in het beheer. -->
           <button class="secondary-button" id="exportBadgesButton" type="button"><span data-icon="download"></span> Pasjes exporteren</button>
+          <!-- Looncodes uit een CSV-bestand van de loonadministratie (FR-101). Het bestand blijft in de browser. -->
+          <button class="secondary-button" id="importPayrollButton" type="button"><span data-icon="upload"></span> Looncodes importeren</button>
+          <input type="file" id="payrollImportFile" accept=".csv,text/csv" hidden>
           <!-- Zoekveld om de juiste medewerker te vinden om te wijzigen, (de)activeren of verwijderen. -->
           <label class="admin-search employee-management-search">
             <span>Medewerker zoeken, wijzigen of activeren</span>
@@ -406,6 +409,10 @@
           <p class="muted" id="serverAfasStatus"></p>
           <button class="secondary-button" id="serverAfasButton" type="button">Nu synchroniseren</button>
           <ul class="muted" id="serverAfasNotes"></ul>
+          <!-- De afdelingen uit AFAS koppelen aan een consumptiepunt (FR-102). ServerMode.renderUnits vult dit. -->
+          <h3>Afdelingen uit AFAS</h3>
+          <p class="muted">Koppel iedere afdeling aan een consumptiepunt. Medewerkers van die afdeling zonder consumptiepunt krijgen het meteen, nieuwe medewerkers bij de volgende synchronisatie. Een punt dat je bij een medewerker zelf koos, blijft. Alleen een punt van het eigen bedrijf van de medewerker telt.</p>
+          <div id="serverUnitList" class="admin-company-list"></div>
         </div>
       </div>
     </div>

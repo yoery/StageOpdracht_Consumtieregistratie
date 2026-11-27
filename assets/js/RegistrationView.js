@@ -547,7 +547,8 @@ export class RegistrationView {
               ${this.escapeHtml(this.model.companyName(employee.companyId))} ·
               ${this.escapeHtml(this.model.findPoint(employee.pointId)?.name || "Geen consumptiepunt")} ·
               ${this.escapeHtml(employee.personnelNumber || "Geen personeelsnummer")}
-              ${employee.employerNumber ? ` · werkgevernr. ${this.escapeHtml(employee.employerNumber)} (afwijkend)` : ""}`;
+              ${employee.employerNumber ? ` · werkgevernr. ${this.escapeHtml(employee.employerNumber)} (afwijkend)` : ""}
+              ${employee.unit ? ` · afd. ${this.escapeHtml(employee.unit)}` : ""}`;
         return `<div class="admin-employee-item">
           <span>
             <strong>${this.escapeHtml(employee.name)}${employee.badgeId ? ` <span class="badge-linked">Pas gekoppeld</span>` : ""}${label}</strong>

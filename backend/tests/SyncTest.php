@@ -31,6 +31,7 @@ test('EmployeeSync: een nieuw personeelsnummer wordt een actieve medewerker met 
         'firstName' => 'Lotte',
         'lastName' => 'van Dijk',
         'payrollCode' => '101',
+        'unit' => 'Hoofdkantoor',
         'companyId' => 'bedrijf-tvb',
         'pointId' => 'punt-hoofdkantoor',
         'active' => true,
@@ -75,18 +76,43 @@ test('EmployeeSync: een andere naam of looncode wordt bijgewerkt', function (): 
     same([['id' => 'medewerker-lotte', 'personnelNumber' => '5001', 'changes' => ['firstName' => 'Charlotte', 'lastName' => 'van den Berg', 'payrollCode' => '102']]], $plan->updates);
 });
 
-test('EmployeeSync: het consumptiepunt van een bestaande medewerker blijft, ook als de werklocatie anders is', function (): void {
+// Sinds 26 november 2026 (FR-102) is de werklocatie de afdeling uit AFAS. Een andere afdeling wordt
+// bijgewerkt, maar het consumptiepunt dat de beheerder koos, blijft. Wie nog geen punt heeft, krijgt
+// het punt van zijn afdeling.
+test('EmployeeSync: het consumptiepunt van een bestaande medewerker blijft, ook als de afdeling anders is', function (): void {
     $plan = planFor([afasRow(['Werklocatie' => 'Ergens anders'])], [stored(['pointId' => 'punt-hoofdkantoor'])]);
 
-    ok($plan->isEmpty(), 'de werklocatie verandert een bestaande medewerker niet');
+    same([['id' => 'medewerker-lotte', 'personnelNumber' => '5001', 'changes' => ['unit' => 'Ergens anders']]], $plan->updates, 'de afdeling wordt bijgewerkt');
 
     $withoutPoint = planFor([afasRow()], [stored(['pointId' => null])]);
-    ok($withoutPoint->isEmpty(), 'een bestaande medewerker zonder punt krijgt er niet vanzelf een');
+    same([['id' => 'medewerker-lotte', 'personnelNumber' => '5001', 'changes' => ['pointId' => 'punt-hoofdkantoor']]], $withoutPoint->updates, 'zonder punt: het punt van de afdeling');
+
+    $unknownUnit = planFor([afasRow(['Werklocatie' => 'Onbekende afdeling'])], [stored(['pointId' => null, 'unit' => 'Onbekende afdeling'])]);
+    ok($unknownUnit->isEmpty(), 'een afdeling zonder punt geeft geen punt');
+});
+
+test('EmployeeSync: een afdeling die de beheerder aan een punt koppelde, geeft dat punt, ook met een andere naam (FR-102)', function (): void {
+    $points = [
+        ['id' => 'punt-hoofdkantoor', 'companyId' => 'bedrijf-tvb', 'name' => 'Hoofdkantoor', 'units' => ['Installatie Utrecht', 'Service']],
+        ['id' => 'punt-kantine-it', 'companyId' => 'bedrijf-it', 'name' => 'Kantine IT', 'units' => ['Installatie Utrecht']],
+    ];
+    $plan = (new EmployeeSync())->plan(
+        fullMapper()->map([afasRow(['Werklocatie' => 'installatie utrecht']), afasRow(['Personeelsnummer' => '5003', 'Voornaam' => 'Tom', 'Werklocatie' => 'Service'])]),
+        [],
+        ['4711' => 'bedrijf-tvb', '4712' => 'bedrijf-it'],
+        $points,
+        '2026-11-26',
+        null
+    );
+
+    // Het punt van het eigen bedrijf (4711 = TVB), niet dat van IT Supervision met dezelfde afdeling.
+    same(['punt-hoofdkantoor', 'punt-hoofdkantoor'], array_column($plan->additions, 'pointId'));
+    same(['installatie utrecht', 'Service'], array_column($plan->additions, 'unit'));
 });
 
 test('EmployeeSync: bij een ander bedrijf volgt het consumptiepunt van de werklocatie, of geen punt', function (): void {
     $moved = planFor([afasRow(['Werkgever' => '4712', 'Werklocatie' => 'Kantine IT'])], [stored()]);
-    same(['companyId' => 'bedrijf-it', 'pointId' => 'punt-kantine-it'], $moved->updates[0]['changes']);
+    same(['unit' => 'Kantine IT', 'companyId' => 'bedrijf-it', 'pointId' => 'punt-kantine-it'], $moved->updates[0]['changes']);
 
     $unknownPlace = planFor([afasRow(['Werkgever' => '4712', 'Werklocatie' => 'Hoofdkantoor'])], [stored()]);
     same(['companyId' => 'bedrijf-it', 'pointId' => null], $unknownPlace->updates[0]['changes']);

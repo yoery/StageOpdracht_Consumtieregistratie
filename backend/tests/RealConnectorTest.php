@@ -19,7 +19,7 @@ test('Connector van TVB: Medewerker is het personeelsnummer en Roepnaam de voorn
 
     same([], $mapped->problems);
     same('Medewerker', $mapper->sortField());
-    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Voorvoegsel', 'Werkgever_2'], $mapper->fieldNames());
+    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Voorvoegsel', 'Werkgever_2', 'Organisatorische_Eenheid'], $mapper->fieldNames());
     $employee = $mapped->employees[0];
     same('5001', $employee->personnelNumber);
     same('Lotte', $employee->firstName);
@@ -27,12 +27,12 @@ test('Connector van TVB: Medewerker is het personeelsnummer en Roepnaam de voorn
     same('4711', $employee->employerNumber);
 });
 
-test('Connector van TVB: looncode, werklocatie en datum uit dienst komen niet uit AFAS', function (): void {
+test('Connector van TVB: looncode en datum uit dienst komen niet uit AFAS, de afdeling wel (FR-102)', function (): void {
     // Ook als een rij toevallig zo'n veld heeft, wordt het niet gelezen: het staat uit.
     $employee = (new EmployeeMapper())->map([realRow(['Looncode' => '999', 'Werklocatie' => 'Hoofdkantoor', 'DatumUitDienst' => '2020-01-01'])])->employees[0];
 
     same(null, $employee->payrollCode);
-    same('', $employee->workLocation);
+    same('Hoofdkantoor', $employee->workLocation, 'de afdeling komt uit Organisatorische_Eenheid, niet uit Werklocatie');
     same(null, $employee->endDate);
     ok($employee->isActiveOn('2026-11-25'));
 });
@@ -87,7 +87,7 @@ test('Connector van TVB: de vier vaste velden kunnen niet worden uitgezet', func
         throws(AfasException::class, fn () => new EmployeeMapper([$key => null]));
     }
     // De andere wel, en ze kunnen weer aan als de connector het veld later krijgt.
-    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever_2'], (new EmployeeMapper(['prefix' => null]))->fieldNames());
+    same(['Medewerker', 'Roepnaam', 'Achternaam', 'Werkgever_2', 'Organisatorische_Eenheid'], (new EmployeeMapper(['prefix' => null]))->fieldNames());
     ok(in_array('Looncode', (new EmployeeMapper(['payrollCode' => 'Looncode']))->fieldNames(), true));
 });
 
@@ -97,7 +97,8 @@ test('Connector van TVB: een nieuwe medewerker komt zonder looncode binnen, met 
 
     same('', $plan->additions[0]['payrollCode']);
     same('bedrijf-tvb', $plan->additions[0]['companyId']);
-    same(null, $plan->additions[0]['pointId'], 'zonder werklocatie kiest de beheerder het consumptiepunt');
+    same('punt-hoofdkantoor', $plan->additions[0]['pointId'], 'de afdeling Hoofdkantoor heeft een punt met die naam');
+    same('Hoofdkantoor', $plan->additions[0]['unit']);
     ok(str_contains(implode("\n", $plan->notes), 'Personeelsnummer 5001 is toegevoegd zonder looncode'));
 });
 

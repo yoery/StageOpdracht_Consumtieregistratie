@@ -328,6 +328,57 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     assert.ok(!JSON.stringify(audit).includes("12345678"), "het telefoonnummer staat in het logboek");
   });
 
+  scenario("de beheerder importeert looncodes uit een bestand en koppelt een afdeling uit AFAS aan een consumptiepunt", async () => {
+    // Een medewerker zoals hij uit AFAS komt: met een afdeling, zonder looncode en zonder consumptiepunt.
+    const seeded = await asAdmin("POST", "/changes", { changes: [{
+      collection: "employees", id: "mw-sanne",
+      data: { id: "mw-sanne", name: "Sanne Bakker", firstName: "Sanne", lastName: "Bakker", payrollCode: "", personnelNumber: "5003", employerNumber: "", companyId: "bedrijf-tvb", pointId: null, active: true, color: "#e3eef6", badgeId: "", unit: "Service" }
+    }] });
+    assert.deepEqual(seeded.json.rejected, []);
+
+    // Inloggen als beheerder op deze tablet (eerst weg van het startscherm).
+    await browser.manualSearch();
+    await browser.click("#adminOpenButton");
+    await browser.waitFor(`!document.querySelector("#loginView").classList.contains("hidden")`);
+    await browser.click("#loginEmail");
+    await browser.insertText(ADMIN_EMAIL);
+    await browser.click("#loginPassword");
+    await browser.insertText(ADMIN_PASSWORD);
+    await browser.click("#loginForm button[type=submit]");
+    await browser.waitFor(`!document.querySelector("#adminView").classList.contains("hidden")`, { message: "Het beheer ging niet open." });
+
+    // Looncodes importeren met het verborgen bestandsveld (FR-101).
+    await browser.click(`.tab[data-tab="employees"]`);
+    const csv = path.join(tempDir, "looncodes.csv");
+    fs.writeFileSync(csv, "﻿Personeelsnummer;Looncode\r\n5003;303\r\n9999;1\r\n");
+    const { root } = await browser.send("DOM.getDocument");
+    const { nodeId } = await browser.send("DOM.querySelector", { nodeId: root.nodeId, selector: "#payrollImportFile" });
+    await browser.send("DOM.setFileInputFiles", { nodeId, files: [csv] });
+    await waitForToast("Looncodes: 1 bijgewerkt, 0 al goed, 1 onbekend personeelsnummer. Controleer regel 3 van het bestand.");
+
+    // De afdeling Service koppelen aan Hoofdkantoor (FR-102).
+    await browser.click(`.tab[data-tab="server"]`);
+    await browser.waitFor(`document.querySelector("#serverUnitList").textContent.includes("Service")`, { message: "De afdeling staat niet in de lijst." });
+    await browser.evaluate(`document.querySelector('#serverUnitList select[aria-label="Consumptiepunt van Service"]').value = "punt-hk"`);
+    await browser.click(`#serverUnitList .table-action`);
+    await waitForToast("Service is opgeslagen. 1 medewerker kreeg dit consumptiepunt.");
+
+    // Op de server: de looncode, het consumptiepunt en de afdeling bij het punt.
+    let sanne = null;
+    let point = null;
+    for (let attempt = 0; attempt < 50 && !(sanne?.payrollCode === "303" && sanne?.pointId === "punt-hk"); attempt += 1) {
+      await sleep(200);
+      const changes = (await asAdmin("GET", "/changes?since=0")).json.changes;
+      sanne = changes.find((change) => change.id === "mw-sanne")?.data;
+      point = changes.find((change) => change.id === "punt-hk")?.data;
+    }
+    assert.deepEqual([sanne.payrollCode, sanne.pointId], ["303", "punt-hk"]);
+    assert.deepEqual(point.units, ["Service"]);
+    assert.equal(point.products.blikje.offered, true, "het aanbod van het punt is veranderd");
+    const audit = (await asAdmin("GET", "/changes?since=0")).json.changes.filter((change) => change.collection === "auditLog").map((change) => change.data.action);
+    assert.ok(audit.includes("Looncodes geïmporteerd") && audit.includes("Afdeling gekoppeld"), audit.join(", "));
+  });
+
   scenario("zonder inloggen geeft de API niets, en de server levert geen andere bestanden uit", async () => {
     assert.equal((await call("GET", "/changes?since=0")).status, 401);
     assert.equal((await call("GET", "/devices")).status, 401);

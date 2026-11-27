@@ -25,6 +25,7 @@ const ICON_PATHS = {
   alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  upload: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   recycle: '<path d="M13.2 6l4.3 7.5M14.7 12.2l2.8 1.3.3-3.1M17 18H8.5M11 16.2 8.5 18l2.5 1.8M6.2 15.5l4.4-7.7M7.8 9.1l2.8-1.3.3 3.1"/>',

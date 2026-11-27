@@ -527,6 +527,15 @@ export class RegistrationApp {
     this.onClick("#loadMoreAuditButton", () => this.loadMoreAudit());
     this.onClick("#exportButton", () => this.exportCsv());
     this.view.$("#exportBadgesButton")?.addEventListener("click", () => this.exportBadges());
+    // Looncodes importeren (FR-101): de knop opent het verborgen bestandsveld. Na het kiezen wordt het
+    // veld leeggemaakt, zodat hetzelfde bestand nog een keer gekozen kan worden.
+    const payrollFile = this.view.$("#payrollImportFile");
+    this.view.$("#importPayrollButton")?.addEventListener("click", () => payrollFile?.click());
+    payrollFile?.addEventListener("change", () => {
+      const [file] = payrollFile.files ?? [];
+      payrollFile.value = "";
+      if (file) this.importPayrollCodes(file);
+    });
     this.onClick("#wipeDataButton", () => this.wipeAllData());
 
     // Iedere muisbeweging, klik, toets, aanraking of scroll telt als gebruik van het beheer
@@ -750,7 +759,7 @@ const DELEGATES = {
       "requireAdmin", "showMissing", "finishAdminChange", "renderAdminLists", "renderAuditLog",
       "openAdmin", "showLogin", "login", "logout", "closeAdmin", "showDashboard", "switchTab",
       "startIdleWatch", "stopIdleWatch", "noteAdminActivity", "logoutIfIdle", "idleLogoutMessage",
-      "loadMoreAudit", "exportCsv", "exportBadges", "wipeAllData", "noteFutureTimes",
+      "loadMoreAudit", "exportCsv", "exportBadges", "importPayrollCodes", "wipeAllData", "noteFutureTimes",
       "toggleEmployee", "removeEmployee", "removeProduct", "removeCompany", "removePoint"
     ],
     fields: ["auditLogLimit", "lastAdminActivity", "idleTimer", "idleLogoutMs"]

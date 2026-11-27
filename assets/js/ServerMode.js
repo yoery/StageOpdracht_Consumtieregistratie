@@ -363,6 +363,7 @@ export class ServerMode {
       : "Deze browser is nog geen tablet. Koppel hem hieronder, kies de locatie en log daarna uit.";
     $("#serverDeviceName").value = this.device?.name ?? "";
 
+    this.renderUnits();
     try {
       const [{ devices }, { afas }] = await Promise.all([this.api.devices(), this.api.afasStatus()]);
       this.renderDevices(devices);
@@ -372,12 +373,12 @@ export class ServerMode {
     }
   }
 
-  // De keuzelijst met consumptiepunten, met "Geen locatie" bovenaan.
-  fillPointSelect(select, selected) {
+  // De keuzelijst met consumptiepunten, met "Geen locatie" (of een andere tekst) bovenaan.
+  fillPointSelect(select, selected, noneLabel = "Geen locatie") {
     select.replaceChildren();
     const none = this.doc.createElement("option");
     none.value = "";
-    none.textContent = "Geen locatie";
+    none.textContent = noneLabel;
     select.append(none);
     for (const point of this.app?.model?.points ?? []) {
       const option = this.doc.createElement("option");
@@ -429,6 +430,66 @@ export class ServerMode {
       item.append(label, actions);
       list.append(item);
     }
+  }
+
+  // De afdelingen uit AFAS met het aantal medewerkers en een keuzelijst voor het consumptiepunt (FR-102).
+  renderUnits() {
+    const list = this.doc.querySelector("#serverUnitList");
+    if (!list) return;
+    list.replaceChildren();
+    const units = this.app?.model?.unitsOverview?.() ?? [];
+    if (units.length === 0) {
+      list.textContent = "Er zijn nog geen afdelingen. Ze komen uit AFAS na Nu synchroniseren.";
+      return;
+    }
+
+    for (const { unit, count, pointId } of units) {
+      const item = this.doc.createElement("div");
+      item.className = "admin-employee-item";
+      const name = this.doc.createElement("strong");
+      name.textContent = unit;
+      const amount = this.doc.createElement("small");
+      amount.textContent = count === 1 ? "1 medewerker" : `${count} medewerkers`;
+      const select = this.doc.createElement("select");
+      select.setAttribute("aria-label", `Consumptiepunt van ${unit}`);
+      this.fillPointSelect(select, pointId, "Geen consumptiepunt");
+      const label = this.doc.createElement("span");
+      label.append(name, amount, select);
+
+      const actions = this.doc.createElement("div");
+      actions.className = "admin-item-actions";
+      const save = this.doc.createElement("button");
+      save.type = "button";
+      save.className = "table-action";
+      save.textContent = "Opslaan";
+      save.addEventListener("click", () => this.saveUnitPoint(unit, select.value || null));
+      actions.append(save);
+
+      item.append(label, actions);
+      list.append(item);
+    }
+  }
+
+  // Koppelt een afdeling aan een consumptiepunt (of los). Medewerkers zonder punt krijgen het meteen.
+  saveUnitPoint(unit, pointId) {
+    let assigned = 0;
+    const pointName = pointId ? this.pointName(pointId) : "geen consumptiepunt";
+    const saved = this.app.persist(
+      () => {
+        const result = this.app.model.assignUnitToPoint(unit, pointId);
+        assigned = result === false ? 0 : result;
+        return result !== false;
+      },
+      { action: "Afdeling gekoppeld", details: `${unit}: ${pointName}` }
+    );
+    if (!saved) return false;
+    this.app.view.renderAll?.();
+    const message = assigned === 0
+      ? `${unit} is opgeslagen.`
+      : `${unit} is opgeslagen. ${assigned === 1 ? "1 medewerker kreeg" : `${assigned} medewerkers kregen`} dit consumptiepunt.`;
+    this.app.view.showToast(message, { tone: "success", duration: 5000 });
+    this.renderUnits();
+    return true;
   }
 
   renderAfasStatus(afas, notes = []) {

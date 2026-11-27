@@ -602,10 +602,13 @@ test('AFAS opslaan: een nieuwe medewerker komt in de database, zonder looncode e
 
     $response = $server->call('POST', '/afas/sync', '{}');
     same(200, $response->status);
-    ok(str_contains($response->body['message'], '3 rijen uit AFAS, 1 toegevoegd, 1 gewijzigd'), $response->body['message']);
+    // Lotte en Mark krijgen hun afdeling, Mark wordt weer actief.
+    ok(str_contains($response->body['message'], '3 rijen uit AFAS, 1 toegevoegd, 2 gewijzigd'), $response->body['message']);
 
     $sanne = array_values(array_filter($server->store->all('employees'), static fn (stdClass $employee): bool => $employee->personnelNumber === '6001'))[0];
-    same(['Sanne Bakker', 'Sanne', 'Bakker', '', '', 'bedrijf-tvb', null, true, ''], [$sanne->name, $sanne->firstName, $sanne->lastName, $sanne->payrollCode, $sanne->employerNumber, $sanne->companyId, $sanne->pointId, $sanne->active, $sanne->badgeId]);
+    // Haar afdeling Hoofdkantoor heeft een consumptiepunt met die naam bij haar bedrijf (FR-102).
+    same('Hoofdkantoor', $sanne->unit);
+    same(['Sanne Bakker', 'Sanne', 'Bakker', '', '', 'bedrijf-tvb', 'punt-hk', true, ''], [$sanne->name, $sanne->firstName, $sanne->lastName, $sanne->payrollCode, $sanne->employerNumber, $sanne->companyId, $sanne->pointId, $sanne->active, $sanne->badgeId]);
     ok(preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $sanne->id) === 1, $sanne->id);
     ok(!str_contains($sanne->id, '6001'), 'het personeelsnummer staat in de id');
     ok(in_array($sanne->color, RecordEmployeeRepository::COLORS, true));
@@ -683,7 +686,7 @@ test('RecordEmployeeRepository: geeft de synchronisatie de medewerkers, bedrijve
 
     same(['5001', '5002'], array_map(static fn ($employee): string => $employee->personnelNumber, $repository->employees()));
     same(['01' => 'bedrijf-tvb'], $repository->companyIdsByEmployerNumber());
-    same([['id' => 'punt-hk', 'companyId' => 'bedrijf-tvb', 'name' => 'Hoofdkantoor']], $repository->points());
+    same([['id' => 'punt-hk', 'companyId' => 'bedrijf-tvb', 'name' => 'Hoofdkantoor', 'units' => []]], $repository->points());
     same(null, $repository->lastReceivedCount());
 
     $repository->apply(new SyncPlan([], [], [], 12, 0), testMoment());

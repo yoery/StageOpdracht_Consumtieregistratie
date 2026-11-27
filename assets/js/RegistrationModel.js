@@ -510,6 +510,69 @@ export class RegistrationModel {
     return Boolean(point) && point.companyId === companyId;
   }
 
+  // Zet de looncodes uit een import (FR-101, zie PayrollImport). `updates` is [{ employeeId, payrollCode }].
+  // Alleen de looncode verandert. Geeft het aantal gewijzigde medewerkers terug.
+  setPayrollCodes(updates) {
+    const codes = new Map(updates.map(({ employeeId, payrollCode }) => [employeeId, payrollCode]));
+    let changed = 0;
+    this.state.employees = this.employees.map((employee) => {
+      if (!codes.has(employee.id) || employee.payrollCode === codes.get(employee.id)) return employee;
+      changed += 1;
+      return { ...employee, payrollCode: codes.get(employee.id) };
+    });
+    return changed;
+  }
+
+  // De afdelingen uit AFAS (het veld Organisatorische eenheid, FR-102): iedere afdeling één keer, met
+  // het aantal actieve medewerkers en het consumptiepunt waaraan de beheerder haar heeft gekoppeld.
+  // Op alfabet.
+  unitsOverview() {
+    const units = new Map();
+    for (const employee of this.employees) {
+      const unit = String(employee.unit ?? "").trim();
+      if (!unit || !employee.active) continue;
+      const key = unit.toLowerCase();
+      const entry = units.get(key) ?? { unit, count: 0, pointId: this.pointForUnit(unit)?.id ?? null };
+      entry.count += 1;
+      units.set(key, entry);
+    }
+    return [...units.values()].sort((a, b) => a.unit.localeCompare(b.unit, "nl"));
+  }
+
+  // Het consumptiepunt waaraan een afdeling is gekoppeld, of undefined. Hoofdletters tellen niet mee.
+  pointForUnit(unit) {
+    const key = String(unit ?? "").trim().toLowerCase();
+    if (!key) return undefined;
+    return this.points.find((point) => (point.units ?? []).some((item) => item.toLowerCase() === key));
+  }
+
+  // Koppelt een afdeling aan een consumptiepunt (of los met pointId null). Een afdeling hoort bij
+  // hooguit één punt. Actieve medewerkers van die afdeling die nog geen consumptiepunt hebben, krijgen
+  // het punt meteen, als het punt bij hun bedrijf hoort. Een punt dat de beheerder zelf koos, blijft.
+  // Geeft het aantal medewerkers terug dat het punt kreeg, of false als het punt niet bestaat.
+  assignUnitToPoint(unit, pointId) {
+    const name = String(unit ?? "").trim();
+    const key = name.toLowerCase();
+    if (!name || (pointId && !this.findPoint(pointId))) return false;
+
+    this.state.points = this.points.map((point) => {
+      const units = (point.units ?? []).filter((item) => item.toLowerCase() !== key);
+      if (point.id === pointId) units.push(name);
+      return units.length === (point.units ?? []).length && point.id !== pointId ? point : { ...point, units };
+    });
+    if (!pointId) return 0;
+
+    const point = this.findPoint(pointId);
+    let assigned = 0;
+    this.state.employees = this.employees.map((employee) => {
+      const matches = String(employee.unit ?? "").trim().toLowerCase() === key;
+      if (!matches || !employee.active || employee.pointId || employee.companyId !== point.companyId) return employee;
+      assigned += 1;
+      return { ...employee, pointId };
+    });
+    return assigned;
+  }
+
   // Maakt een gast aan (FR-98): iemand van buiten TVB, zonder looncode, personeelsnummer of bedrijf.
   // Bestaat er al een actieve gast met dezelfde naam en hetzelfde telefoonnummer, dan wordt die
   // gebruikt. Geeft de id van de gast terug.

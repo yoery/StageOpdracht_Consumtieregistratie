@@ -16,10 +16,11 @@ namespace Tvb\Consumptie\Afas;
  *     medewerker. Geeft AFAS geen looncode, dan komt hij zonder looncode binnen en vult de beheerder
  *     die in de app in. Die krijgt het consumptiepunt met dezelfde naam als de werklocatie, als dat bij zijn
  *     bedrijf bestaat. Wie al uit dienst is, wordt niet toegevoegd;
- *   - gewijzigd (stap 6): zijn naam, bedrijf of looncode anders, dan worden ze bijgewerkt. Het
- *     consumptiepunt van een bestaande medewerker blijft zoals de beheerder het heeft gekozen. Alleen
- *     als de medewerker naar een ander bedrijf gaat, past het oude punt niet meer en volgt het punt
- *     van de werklocatie (of geen punt);
+ *   - gewijzigd (stap 6): zijn naam, bedrijf, afdeling of looncode anders, dan worden ze bijgewerkt.
+ *     Het consumptiepunt van een bestaande medewerker blijft zoals de beheerder het heeft gekozen.
+ *     Heeft hij nog geen punt, dan krijgt hij het punt van zijn afdeling (als de beheerder die afdeling
+ *     aan een punt heeft gekoppeld, FR-102). Gaat hij naar een ander bedrijf, dan past het oude punt
+ *     niet meer en volgt het punt van de afdeling (of geen punt);
  *   - uit dienst of niet meer in AFAS (stap 7): de medewerker wordt inactief en nooit verwijderd.
  *     Komt iemand weer in dienst, dan wordt hij weer actief;
  *   - een rij die is afgekeurd, verandert niets: die medewerker staat wel in AFAS en blijft zoals hij is.
@@ -93,6 +94,7 @@ final class EmployeeSync
                     'firstName' => $employee->firstName,
                     'lastName' => $employee->lastName,
                     'payrollCode' => $employee->payrollCode ?? '',
+                    'unit' => $employee->workLocation,
                     'companyId' => $companyId,
                     'pointId' => $this->pointFor($employee->workLocation, $companyId, $points),
                     'active' => true,
@@ -181,9 +183,18 @@ final class EmployeeSync
         }
         // Een onbekende werkgever verandert het bedrijf niet. Bij een ander bedrijf hoort het oude
         // consumptiepunt niet meer bij de medewerker.
+        if ($existing->unit !== $employee->workLocation) {
+            $changes['unit'] = $employee->workLocation;
+        }
         if ($companyId !== null && $existing->companyId !== $companyId) {
             $changes['companyId'] = $companyId;
             $changes['pointId'] = $this->pointFor($employee->workLocation, $companyId, $points);
+        } elseif ($existing->pointId === null) {
+            // Nog geen consumptiepunt: het punt van de afdeling, als die aan een punt is gekoppeld.
+            $point = $this->pointFor($employee->workLocation, $existing->companyId, $points);
+            if ($point !== null) {
+                $changes['pointId'] = $point;
+            }
         }
         if ($existing->active !== $active) {
             $changes['active'] = $active;
@@ -193,18 +204,26 @@ final class EmployeeSync
     }
 
     /**
-     * Het consumptiepunt met dezelfde naam als de werklocatie, binnen het bedrijf van de medewerker.
-     * Hoofdletters tellen niet mee. Bestaat zo'n punt niet, dan kiest de beheerder later een punt.
+     * Het consumptiepunt van de afdeling (of werklocatie) binnen het bedrijf van de medewerker: eerst een
+     * punt waaraan de beheerder deze afdeling heeft gekoppeld (`units`, FR-102), anders een punt met
+     * dezelfde naam. Hoofdletters tellen niet mee. Anders null: dan kiest de beheerder later een punt.
      *
-     * @param list<array{id: string, companyId: string, name: string}> $points
+     * @param list<array{id: string, companyId: string, name: string, units?: list<string>}> $points
      */
     private function pointFor(string $workLocation, ?string $companyId, array $points): ?string
     {
         if ($workLocation === '' || $companyId === null) {
             return null;
         }
+        $wanted = $this->lower($workLocation);
         foreach ($points as $point) {
-            if ($point['companyId'] === $companyId && $this->lower($point['name']) === $this->lower($workLocation)) {
+            $units = array_map(fn (string $unit): string => $this->lower($unit), $point['units'] ?? []);
+            if ($point['companyId'] === $companyId && in_array($wanted, $units, true)) {
+                return $point['id'];
+            }
+        }
+        foreach ($points as $point) {
+            if ($point['companyId'] === $companyId && $this->lower($point['name']) === $wanted) {
                 return $point['id'];
             }
         }

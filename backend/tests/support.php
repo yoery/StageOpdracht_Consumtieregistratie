@@ -124,6 +124,7 @@ function realRow(array $changes = []): array
         'Voorvoegsel' => 'van',
         'Werkgever' => 'Voorbeeld Installaties B.V.',
         'Werkgever_2' => '4711',
+        'Organisatorische_Eenheid' => 'Hoofdkantoor',
         'Voorletters' => 'L.',
         'Geboortedatum' => '1990-01-01T00:00:00Z',
         'Straat' => 'Voorbeeldstraat',
@@ -269,6 +270,7 @@ function stored(array $changes = []): StoredEmployee
         'companyId' => 'bedrijf-tvb',
         'pointId' => 'punt-hoofdkantoor',
         'active' => true,
+        'unit' => 'Hoofdkantoor',
     ], $changes);
 
     return new StoredEmployee(
@@ -279,6 +281,7 @@ function stored(array $changes = []): StoredEmployee
         $values['payrollCode'],
         $values['companyId'],
         $values['pointId'],
-        $values['active']
+        $values['active'],
+        $values['unit']
     );
 }

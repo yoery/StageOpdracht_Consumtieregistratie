@@ -15,7 +15,7 @@ namespace Tvb\Consumptie\Afas;
 final class SyncPlan
 {
     /**
-     * @param list<array{personnelNumber: string, firstName: string, lastName: string, payrollCode: string, companyId: string|null, pointId: string|null, active: bool}> $additions
+     * @param list<array{personnelNumber: string, firstName: string, lastName: string, payrollCode: string, unit?: string, companyId: string|null, pointId: string|null, active: bool}> $additions
      * @param list<array{id: string, personnelNumber: string, changes: array<string, mixed>}> $updates
      * @param list<string> $notes
      */

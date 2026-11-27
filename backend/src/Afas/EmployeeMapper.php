@@ -35,7 +35,9 @@ final class EmployeeMapper
         'lastName' => 'Achternaam',
         'prefix' => 'Voorvoegsel',
         'employer' => 'Werkgever_2',
-        'workLocation' => null,
+        // De werklocatie zit niet in de GetConnector (TVB mag dat veld niet krijgen). De afdeling
+        // (organisatorische eenheid) wel: die bepaalt via de beheerder het consumptiepunt (FR-102).
+        'workLocation' => 'Organisatorische_Eenheid',
         'payrollCode' => null,
         'endDate' => null,
     ];

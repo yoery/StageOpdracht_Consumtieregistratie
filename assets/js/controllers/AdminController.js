@@ -1,5 +1,6 @@
 import { ADMIN_IDLE_LOGOUT_MS } from "../config.js";
 import { ControllerPart } from "./ControllerPart.js";
+import { PayrollImport } from "../PayrollImport.js";
 
 /**
  * AdminController — het beheerscherm: inloggen en uitloggen, het dashboard met de tabbladen,
@@ -390,6 +391,44 @@ export class AdminController extends ControllerPart {
     if (messages.length > 0) {
       this.view.showToast(messages.join(" "), { tone: missing > 0 ? "error" : "info", duration: 8000 });
     }
+  }
+
+  // Knop "Looncodes importeren" in het tabblad Medewerkers (FR-101): leest een CSV-bestand met
+  // personeelsnummer en looncode (zie PayrollImport) en zet de looncodes die anders zijn. Alleen voor een
+  // ingelogde beheerder. Het bestand blijft in de browser. Het logboek krijgt alleen de aantallen.
+  // `file` is het gekozen bestand (of iets met `size` en `text()`, in de tests).
+  async importPayrollCodes(file) {
+    if (!this.requireAdmin() || !file) return null;
+    if (file.size > PayrollImport.MAX_BYTES) {
+      this.view.showToast(PayrollImport.MESSAGES.tooLarge, { tone: "error" });
+      return null;
+    }
+
+    let text;
+    try {
+      text = await file.text();
+    } catch (error) {
+      this.view.showToast("Het bestand kon niet worden gelezen.", { tone: "error" });
+      return null;
+    }
+    const parsed = PayrollImport.parse(text);
+    if (parsed.error) {
+      this.view.showToast(parsed.error, { tone: "error", duration: 6000 });
+      return null;
+    }
+
+    const result = PayrollImport.plan(this.model.employees, parsed.rows);
+    const summary = PayrollImport.summary(result);
+    if (result.updates.length > 0) {
+      const saved = this.app.persist(() => this.model.setPayrollCodes(result.updates) > 0, { action: "Looncodes geïmporteerd", details: summary });
+      if (!saved) return null;
+      this.redrawEmployeeLists();
+      this.renderAuditLog();
+    }
+    const problems = PayrollImport.problemLines(result);
+    const message = `Looncodes: ${summary}.${problems ? ` Controleer regel ${problems} van het bestand.` : ""}`;
+    this.view.showToast(message, { tone: problems ? "error" : "success", duration: 8000 });
+    return result;
   }
 
   // Knop "Pasjes exporteren" in het tabblad Medewerkers (FR-99): een CSV-bestand met het openbare

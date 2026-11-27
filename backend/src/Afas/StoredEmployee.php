@@ -20,7 +20,9 @@ final class StoredEmployee
         public readonly string $payrollCode,
         public readonly ?string $companyId,
         public readonly ?string $pointId,
-        public readonly bool $active
+        public readonly bool $active,
+        // De afdeling uit AFAS (organisatorische eenheid), zoals die in de app staat. Leeg = geen.
+        public readonly string $unit = ''
     ) {
     }
 }

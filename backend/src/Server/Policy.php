@@ -46,7 +46,7 @@ final class Policy
     public const DEVICE_REGISTRATION_DAYS = 40;
 
     private const DEVICE_READ = ['employees', 'products', 'companies', 'points', 'registrations', 'faceEnrollments', 'faceOffers'];
-    private const EMPLOYEE_FIELDS_HIDDEN = ['payrollCode', 'personnelNumber', 'employerNumber', 'phone'];
+    private const EMPLOYEE_FIELDS_HIDDEN = ['payrollCode', 'personnelNumber', 'employerNumber', 'phone', 'unit'];
     private const COLORS = ['#d8f1e8', '#e3eef6', '#f8e9d9', '#e9e0f4', '#e4f0d8'];
     private const FACE_ENROLLMENT_FIELDS = ['id', 'employeeId', 'descriptor', 'enrolledAt', 'consentAt'];
     private const FACE_OFFER_FIELDS = ['id', 'employeeId', 'answer', 'answeredAt'];
