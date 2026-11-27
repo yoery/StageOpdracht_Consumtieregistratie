@@ -46,10 +46,18 @@ export class ServerMode {
     online: "De verbinding met de server is terug.",
     rejected: "De server heeft een wijziging geweigerd. De gegevens zijn opnieuw opgehaald.",
     noConnection: "Geen verbinding met de server. Controleer het netwerk en probeer het opnieuw.",
-    notConfigured: "Er is nog geen beheerder op de server. Vul CR_BEHEER_EMAIL en CR_BEHEER_WACHTWOORD in bij de instellingen van de server en start hem opnieuw.",
+    notConfigured: "Er is nog geen beheerder op de server. Vul CR_BEHEER_NAAM en CR_BEHEER_WACHTWOORD in bij de instellingen van de server en start hem opnieuw.",
     gate: "Log in als beheerder om het beheer te openen of deze tablet te koppelen.",
     badgeOffline: "Herkennen met de pas werkt nu niet: geen verbinding met de server. Zoek je naam in de lijst.",
     linkOffline: "Geen verbinding met de server. De pas is niet gekoppeld. Probeer het opnieuw."
+  };
+
+  // "Wachtwoord wijzigen" in het blok Mijn account (zie changePassword).
+  static PASSWORD_TEXTS = {
+    required: "Vul je huidige wachtwoord in en twee keer het nieuwe wachtwoord.",
+    tooShort: "Het nieuwe wachtwoord moet minstens 12 tekens hebben.",
+    different: "De twee nieuwe wachtwoorden zijn niet gelijk.",
+    changed: "Je wachtwoord is gewijzigd. Log voortaan in met het nieuwe wachtwoord."
   };
 
   // `reload` en `doc` zijn mee te geven, zodat de tests zonder browser werken.
@@ -67,7 +75,7 @@ export class ServerMode {
     });
     this.role = null;
     this.device = null;
-    this.email = null;
+    this.username = null;
     this.app = null;
   }
 
@@ -86,7 +94,7 @@ export class ServerMode {
 
     this.role = session.role || null;
     this.device = session.device || null;
-    this.email = session.email || null;
+    this.username = session.username || null;
     if (!this.role) {
       // Geen tablet (meer): wat er nog in de browser stond, wordt gewist.
       this.store.forgetCache();
@@ -144,7 +152,7 @@ export class ServerMode {
 
     // Het demo-inloggen bestaat hier niet.
     $(".login-hint")?.classList.add("hidden");
-    if ($("#loginEmail")) $("#loginEmail").value = "";
+    if ($("#loginUsername")) $("#loginUsername").value = "";
     // "Alle gegevens wissen" zet de demogegevens terug. Met een server zou dat alles van iedereen wissen.
     $("#wipeDataButton")?.classList.add("hidden");
     $("#wipeDataButton")?.previousElementSibling?.classList.add("hidden");
@@ -161,6 +169,7 @@ export class ServerMode {
 
     $("#tab-server")?.classList.remove("hidden");
     $("#serverDeviceForm")?.addEventListener("submit", (event) => this.linkThisDevice(event));
+    $("#serverPasswordForm")?.addEventListener("submit", (event) => this.changePassword(event));
     $("#serverAfasButton")?.addEventListener("click", () => this.runAfasSync());
     $("#tab-server")?.addEventListener("click", () => this.renderServerTab());
 
@@ -267,18 +276,18 @@ export class ServerMode {
   // ------------------------------------------------------------------
 
   // Logt de beheerder in. Geeft { ok: true } of { ok: false, message }.
-  async login(email, password) {
+  async login(username, password) {
     // Wat de tablet nog in de wachtrij had, gaat eerst weg met de rechten van de tablet.
     await this.sync.push().catch(() => {});
     let result;
     try {
-      result = await this.api.login(email, password);
+      result = await this.api.login(username, password);
     } catch (error) {
       return { ok: false, message: error.message };
     }
 
     this.role = "admin";
-    this.email = result.email || null;
+    this.username = result.username || null;
     this.device = result.device || this.device;
     this.store.setCaching(false);
     try {
@@ -320,7 +329,7 @@ export class ServerMode {
     }
 
     this.role = "device";
-    this.email = null;
+    this.username = null;
     this.device = result.device || this.device;
     this.store.setCaching(true);
     try {
@@ -357,7 +366,7 @@ export class ServerMode {
       $("#serverGateForm").addEventListener("submit", (event) => this.submitGate(event));
       $("#serverGateRetry").addEventListener("click", () => this.reload());
     }
-    if (form) $("#serverGateEmail").focus();
+    if (form) $("#serverGateUsername").focus();
   }
 
   async submitGate(event) {
@@ -365,19 +374,19 @@ export class ServerMode {
     const $ = (selector) => this.doc.querySelector(selector);
     const error = $("#serverGateError");
     const button = $("#serverGateForm button[type=submit]");
-    const email = $("#serverGateEmail").value.trim();
+    const username = $("#serverGateUsername").value.trim();
     const password = $("#serverGatePassword").value;
 
     error.classList.add("hidden");
-    if (!email || !password) {
-      error.textContent = "Vul een e-mailadres en wachtwoord in.";
+    if (!username || !password) {
+      error.textContent = "Vul een gebruikersnaam en wachtwoord in.";
       error.classList.remove("hidden");
       return;
     }
 
     button.disabled = true;
     try {
-      await this.api.login(email, password);
+      await this.api.login(username, password);
     } catch (failure) {
       error.textContent = failure.message;
       error.classList.remove("hidden");
@@ -397,6 +406,8 @@ export class ServerMode {
     if (this.role !== "admin" || !this.app?.adminLoggedIn) return;
     const $ = (selector) => this.doc.querySelector(selector);
 
+    const account = $("#serverAccountName");
+    if (account) account.textContent = this.username ? `Je bent ingelogd als ${this.username}.` : "";
     this.fillPointSelect($("#serverDevicePoint"), this.pointId);
     $("#serverDeviceStatus").textContent = this.device
       ? `Deze browser is gekoppeld als tablet "${this.device.name}" (${this.pointName(this.device.pointId)}).`
@@ -411,6 +422,51 @@ export class ServerMode {
     } catch (error) {
       $("#serverDeviceList").textContent = error.message;
     }
+  }
+
+  // "Wachtwoord wijzigen" in het blok Mijn account. De server controleert het huidige wachtwoord (met
+  // dezelfde blokkade als bij inloggen), zet het nieuwe en beëindigt alle andere sessies van deze
+  // beheerder. Deze browser blijft ingelogd met een nieuwe sessie. Lukt het niet, dan staat de reden
+  // onder het formulier.
+  async changePassword(event) {
+    event?.preventDefault?.();
+    const $ = (selector) => this.doc.querySelector(selector);
+    const current = $("#serverPasswordCurrent");
+    const next = $("#serverPasswordNew");
+    const repeat = $("#serverPasswordRepeat");
+    const error = $("#serverPasswordError");
+    const button = $("#serverPasswordForm button[type=submit]");
+    const show = (message) => {
+      error.textContent = message;
+      error.classList.toggle("hidden", !message);
+    };
+    const { PASSWORD_TEXTS } = ServerMode;
+
+    show("");
+    if (!current.value || !next.value || !repeat.value) return show(PASSWORD_TEXTS.required);
+    if (next.value.length < 12) return show(PASSWORD_TEXTS.tooShort);
+    if (next.value !== repeat.value) return show(PASSWORD_TEXTS.different);
+
+    if (button) button.disabled = true;
+    let result;
+    try {
+      result = await this.api.changePassword(current.value, next.value);
+    } catch (failure) {
+      if (button) button.disabled = false;
+      current.value = "";
+      return show(failure.message);
+    }
+    if (button) button.disabled = false;
+    current.value = "";
+    next.value = "";
+    repeat.value = "";
+    // Kon de server geen nieuwe sessie maken, dan is de beheerder uitgelogd.
+    if (result?.role !== "admin") {
+      this.sync.stop();
+      this.reload();
+      return;
+    }
+    this.app?.view?.showToast?.(PASSWORD_TEXTS.changed, { tone: "success", duration: 6000 });
   }
 
   // De keuzelijst met consumptiepunten, met "Geen locatie" (of een andere tekst) bovenaan.

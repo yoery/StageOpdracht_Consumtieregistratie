@@ -22,7 +22,7 @@ import { launch, sleep, PROJECT_ROOT } from "./browser.js";
 const PHP = process.env.PHP_PATH || "php";
 const phpAvailable = spawnSync(PHP, ["-v"], { stdio: "ignore" }).status === 0;
 
-const ADMIN_EMAIL = "beheer@voorbeeld.test";
+const ADMIN_USERNAME = "beheerder";
 // Bij iedere testrun een nieuw willekeurig wachtwoord voor de tijdelijke testdatabase. Zo staat er
 // geen vast wachtwoord in de code (gitleaks zou dat terecht als mogelijk geheim melden).
 const ADMIN_PASSWORD = `nep-${randomUUID()}`;
@@ -99,7 +99,7 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
 
     const created = spawnSync(PHP, ["backend/bin/beheerder.php", "--uit-omgeving"], {
       cwd: PROJECT_ROOT,
-      env: { ...environment, CR_BEHEER_EMAIL: ADMIN_EMAIL, CR_BEHEER_WACHTWOORD: ADMIN_PASSWORD },
+      env: { ...environment, CR_BEHEER_NAAM: ADMIN_USERNAME, CR_BEHEER_WACHTWOORD: ADMIN_PASSWORD },
       encoding: "utf8"
     });
     assert.equal(created.status, 0, created.stderr);
@@ -118,7 +118,7 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     }
 
     // Gegevens klaarzetten als beheerder: een bedrijf, een consumptiepunt, een product en twee medewerkers.
-    const login = await call("POST", "/login", { body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
+    const login = await call("POST", "/login", { body: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD } });
     assert.equal(login.status, 200);
     admin.cookies = login.cookies;
     admin.csrf = login.json.csrf;
@@ -174,18 +174,18 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     const html = await pageText();
     for (const hidden of ["Lotte", "Jansen", "5001"]) assert.ok(!html.includes(hidden), `de pagina bevat ${hidden}`);
     assert.equal(await browser.evaluate(`document.querySelector(".app-shell").hasAttribute("inert")`), true);
-    assert.equal(await browser.evaluate(`document.activeElement?.id`), "serverGateEmail");
+    assert.equal(await browser.evaluate(`document.activeElement?.id`), "serverGateUsername");
   });
 
   scenario("een fout wachtwoord in het inlogscherm geeft een melding", async () => {
-    await browser.click("#serverGateEmail");
-    await browser.insertText(ADMIN_EMAIL);
+    await browser.click("#serverGateUsername");
+    await browser.insertText(ADMIN_USERNAME);
     await browser.click("#serverGatePassword");
     await browser.insertText("verkeerd-wachtwoord");
     await browser.click("#serverGateForm button[type=submit]");
     await browser.waitFor(`!document.querySelector("#serverGateError").classList.contains("hidden")`);
 
-    assert.equal(await browser.evaluate(`document.querySelector("#serverGateError").textContent`), "Het e-mailadres of het wachtwoord klopt niet.");
+    assert.equal(await browser.evaluate(`document.querySelector("#serverGateError").textContent`), "De gebruikersnaam of het wachtwoord klopt niet.");
     assert.equal(await browser.evaluate(`document.querySelector("#serverGatePassword").value`), "");
     // Het fout ingevoerde wachtwoord geeft een 401, en die staat als fout in de console van de browser.
     browser.errors.length = 0;
@@ -242,7 +242,7 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
 
     const session = await browser.evaluate(`fetch("/api/session").then((response) => response.json())`);
     assert.equal(session.role, "device");
-    assert.equal(session.email, null);
+    assert.equal(session.username, null);
   });
 
   scenario("de tablet registreert en de server bewaart het met de prijs, het werkgevernummer en de voorraad van de server", async () => {
@@ -432,8 +432,8 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     await browser.manualSearch();
     await browser.click("#adminOpenButton");
     await browser.waitFor(`!document.querySelector("#loginView").classList.contains("hidden")`);
-    await browser.click("#loginEmail");
-    await browser.insertText(ADMIN_EMAIL);
+    await browser.click("#loginUsername");
+    await browser.insertText(ADMIN_USERNAME);
     await browser.click("#loginPassword");
     await browser.insertText(ADMIN_PASSWORD);
     await browser.click("#loginForm button[type=submit]");
@@ -469,6 +469,36 @@ describe("Browsertests met de server", { skip: phpAvailable ? false : "PHP is ni
     assert.equal(point.products.blikje.offered, true, "het aanbod van het punt is veranderd");
     const audit = (await asAdmin("GET", "/changes?since=0")).json.changes.filter((change) => change.collection === "auditLog").map((change) => change.data.action);
     assert.ok(audit.includes("Looncodes geïmporteerd") && audit.includes("Afdeling gekoppeld"), audit.join(", "));
+  });
+
+  scenario("de beheerder wijzigt zijn wachtwoord bij Mijn account, en daarna werkt alleen het nieuwe", async () => {
+    // Het beheer staat nog open van de vorige test.
+    await browser.click(`.tab[data-tab="server"]`);
+    await browser.waitFor(`document.querySelector("#serverAccountName").textContent === "Je bent ingelogd als ${ADMIN_USERNAME}."`, { message: "Mijn account noemt de gebruikersnaam niet." });
+    const newPassword = `nieuw-${randomUUID()}`;
+    const type = async (selector, text) => {
+      await browser.evaluate(`document.querySelector(${JSON.stringify(selector)}).value = ""`);
+      await browser.click(selector);
+      await browser.insertText(text);
+    };
+
+    // Twee verschillende nieuwe wachtwoorden: een melding, en de server is niets gevraagd.
+    await type("#serverPasswordCurrent", ADMIN_PASSWORD);
+    await type("#serverPasswordNew", newPassword);
+    await type("#serverPasswordRepeat", `${newPassword}-anders`);
+    await browser.click("#serverPasswordForm button[type=submit]");
+    await browser.waitFor(`document.querySelector("#serverPasswordError").textContent === "De twee nieuwe wachtwoorden zijn niet gelijk."`);
+
+    await type("#serverPasswordRepeat", newPassword);
+    await browser.click("#serverPasswordForm button[type=submit]");
+    await waitForToast("Je wachtwoord is gewijzigd. Log voortaan in met het nieuwe wachtwoord.");
+    assert.equal(await browser.evaluate(`document.querySelector("#serverPasswordNew").value`), "");
+
+    // Op de server: het oude wachtwoord werkt niet meer, het nieuwe wel. Deze browser blijft ingelogd.
+    assert.equal((await call("POST", "/login", { body: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD } })).status, 401);
+    assert.equal((await call("POST", "/login", { body: { username: ADMIN_USERNAME, password: newPassword } })).status, 200);
+    const session = await browser.evaluate(`fetch("/api/session").then((response) => response.json())`);
+    assert.deepEqual([session.role, session.username], ["admin", ADMIN_USERNAME]);
   });
 
   scenario("zonder inloggen geeft de API niets, en de server levert geen andere bestanden uit", async () => {

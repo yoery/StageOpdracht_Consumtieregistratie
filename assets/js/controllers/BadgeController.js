@@ -64,7 +64,7 @@ export class BadgeController extends ControllerPart {
   //     wist de bedrijfskeuze en opent de keuzelijst (zie EmployeeController.onCompanyFilterInput).
   // restoreSearchAfterScan en fillBadgeFieldAfterScan (focus in het veld "Pasnummer") zetten dat
   // na de scan goed.
-  // Staat de focus in een ander tekstveld (bijvoorbeeld het e-mailadres bij het inloggen, een zoekveld
+  // Staat de focus in een ander tekstveld (bijvoorbeeld de gebruikersnaam bij het inloggen, een zoekveld
   // in het beheer of de naam in het medewerkersformulier), dan wordt ook dat veld met zijn inhoud
   // onthouden (field en fieldValue), zodat restoreSearchAfterScan het pasnummer er weer uit haalt.
   rememberSearchBeforeScan() {
@@ -120,7 +120,7 @@ export class BadgeController extends ControllerPart {
   }
 
   // Begon de scan in een ander tekstveld (zie rememberSearchBeforeScan), dan heeft de lezer het
-  // pasnummer daar ingetypt, bijvoorbeeld "04A1B2C3admin@tvb.nl" in het e-mailadres van het inloggen
+  // pasnummer daar ingetypt, bijvoorbeeld "04A1B2C3beheerder" in de gebruikersnaam van het inloggen
   // of "Lotte04A1B2C3" in de voornaam. Dan krijgt het veld de inhoud van vóór de scan terug. Daarna
   // volgt een input-event, zodat een zoekveld in het beheer de lijst weer tekent met de oude inhoud.
   restoreOtherFieldAfterScan(start) {

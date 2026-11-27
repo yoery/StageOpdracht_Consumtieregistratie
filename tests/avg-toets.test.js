@@ -46,7 +46,7 @@ const createApp = () => {
 
 // Logt in via het loginformulier (demo: ieder ingevuld wachtwoord werkt).
 const login = (app, view) => {
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "geheim";
   app.openAdmin();
   app.login({ preventDefault() {} });

@@ -3,7 +3,7 @@
 // (810×1080 en 1080×810), zonder camera en zonder pasjeslezer, via localhost en als los bestand.
 //   1. Een pas die tegen de lezer wordt gehouden terwijl de focus in een ander tekstveld staat (het
 //      e-mailadres bij het inloggen, een zoekveld in het beheer, de naam in het medewerkersformulier),
-//      liet het pasnummer in dat veld staan, bijvoorbeeld "04A1B2C3admin@tvb.nl". Nu krijgt het veld
+//      liet het pasnummer in dat veld staan, bijvoorbeeld "04A1B2C3beheerder". Nu krijgt het veld
 //      zijn oude inhoud terug, net als het zoekveld en het bedrijfsfilter op de beginpagina.
 //   2. Startte de camera niet, dan stond er altijd "Geen toegang tot de camera. Geef toestemming in de
 //      browser", ook op een laptop zonder camera of met een camera die al in een videogesprek zit.
@@ -97,16 +97,16 @@ const typeInto = (app, clock, field, text, { intervalMs = 4, terminator = "Enter
   if (terminator) app.handleBadgeKey(keyEvent(terminator));
 };
 
-test("generale repetitie 1: een pas in het e-mailveld van het inloggen laat het e-mailadres staan", () => {
+test("generale repetitie 1: een pas in het veld gebruikersnaam van het inloggen laat de gebruikersnaam staan", () => {
   const { app, view, clock, openModals } = createApp();
   openModals.push(view.$("#adminModal"));
-  const email = createField({ id: "loginEmail", type: "email", value: "admin@tvb.nl" });
-  globalThis.document.activeElement = email;
+  const username = createField({ id: "loginUsername", type: "text", value: "beheerder" });
+  globalThis.document.activeElement = username;
 
-  typeInto(app, clock, email, "04A1B2C3");
+  typeInto(app, clock, username, "04A1B2C3");
 
-  assert.equal(email.value, "admin@tvb.nl", "eerst stond hier 04A1B2C3admin@tvb.nl");
-  assert.deepEqual(email.events, ["input"]);
+  assert.equal(username.value, "beheerder", "eerst stond hier 04A1B2C3beheerder");
+  assert.deepEqual(username.events, ["input"]);
   assert.deepEqual(view.toasts.map(({ message }) => message), [BadgeController.CLOSE_WINDOW_FIRST]);
   assert.equal(app.selectedEmployeeId, null);
 });
@@ -142,20 +142,20 @@ test("generale repetitie 1: in het veld Pasnummer komt nog steeds het gescande n
 test("generale repetitie 1: gewoon typen in een tekstveld blijft staan (dat is geen scan)", () => {
   const { app, view, clock, openModals } = createApp();
   openModals.push(view.$("#adminModal"));
-  const email = createField({ id: "loginEmail", type: "email", value: "" });
-  globalThis.document.activeElement = email;
+  const username = createField({ id: "loginUsername", type: "text", value: "" });
+  globalThis.document.activeElement = username;
 
-  typeInto(app, clock, email, "beheer@tvb.nl", { intervalMs: 150, terminator: null });
+  typeInto(app, clock, username, "beheerder", { intervalMs: 150, terminator: null });
   clock.advance(1000);
 
-  assert.equal(email.value, "beheer@tvb.nl");
-  assert.deepEqual(email.events, []);
+  assert.equal(username.value, "beheerder");
+  assert.deepEqual(username.events, []);
   assert.deepEqual(view.toasts, []);
 });
 
 test("generale repetitie 1: welke velden worden na een scan teruggezet", () => {
   const field = (props) => createFakeElement({ tagName: "INPUT", type: "text", ...props });
-  assert.equal(BadgeController.isOtherTextField(field({ id: "loginEmail", type: "email" })), true);
+  assert.equal(BadgeController.isOtherTextField(field({ id: "loginUsername", type: "text" })), true);
   assert.equal(BadgeController.isOtherTextField(field({ id: "", type: "number" })), true, "voorraadveld");
   assert.equal(BadgeController.isOtherTextField(field({ id: "x", tagName: "TEXTAREA", type: undefined })), true);
   // Het zoekveld en het bedrijfsfilter hebben hun eigen herstel, in Pasnummer hoort het nummer.

@@ -173,7 +173,7 @@ final class Api
         return Response::ok([
             'role' => $admin !== null ? Policy::ROLE_ADMIN : ($device !== null ? Policy::ROLE_DEVICE : null),
             'csrf' => $session['csrf'] ?? null,
-            'email' => $admin !== null ? $this->auth->adminEmail($admin['subjectId']) : null,
+            'username' => $admin !== null ? $this->auth->adminName($admin['subjectId']) : null,
             'device' => $device !== null ? $this->auth->device($device['subjectId']) : null,
             'configured' => $this->auth->adminCount() > 0,
             'serverTime' => $now->format('Y-m-d\TH:i:s\Z'),
@@ -183,26 +183,26 @@ final class Api
     /** @param array{kind: string, subjectId: string, csrf: string}|null $device */
     private function login(Request $request, ?array $device, \DateTimeImmutable $now): Response
     {
-        $email = $request->body->email ?? null;
+        $username = $request->body->username ?? null;
         $password = $request->body->password ?? null;
-        if (!is_string($email) || !is_string($password) || $email === '' || $password === '') {
-            return Response::error(400, 'Vul het e-mailadres en het wachtwoord in.');
+        if (!is_string($username) || !is_string($password) || trim($username) === '' || $password === '') {
+            return Response::error(400, 'Vul de gebruikersnaam en het wachtwoord in.');
         }
 
-        $result = $this->auth->login($email, $password, $request->address, $now);
+        $result = $this->auth->login($username, $password, $request->address, $now);
         if ($result['status'] === 'blocked') {
             ($this->log)('Inloggen geblokkeerd: te veel mislukte pogingen.');
 
             return Response::error(429, 'Te veel mislukte pogingen. Probeer het over een kwartier opnieuw.');
         }
         if ($result['status'] !== 'ok') {
-            return Response::error(401, 'Het e-mailadres of het wachtwoord klopt niet.');
+            return Response::error(401, 'De gebruikersnaam of het wachtwoord klopt niet.');
         }
 
         return Response::ok([
             'role' => Policy::ROLE_ADMIN,
             'csrf' => $result['csrf'],
-            'email' => $result['email'],
+            'username' => $result['username'],
             'device' => $device !== null ? $this->auth->device($device['subjectId']) : null,
         ])->withCookie(self::COOKIE_ADMIN, $result['token'], Auth::ADMIN_MAX_SECONDS);
     }
@@ -232,16 +232,16 @@ final class Api
     {
         $current = $request->body->current ?? null;
         $new = $request->body->new ?? null;
-        $email = $this->auth->adminEmail($admin['subjectId']);
-        if (!is_string($current) || !is_string($new) || $email === null) {
+        $username = $this->auth->adminName($admin['subjectId']);
+        if (!is_string($current) || !is_string($new) || $username === null) {
             return Response::error(400, 'Vul het huidige en het nieuwe wachtwoord in.');
         }
         // Het huidige wachtwoord wordt gecontroleerd met dezelfde regels als inloggen (ook de blokkade).
-        $check = $this->auth->login($email, $current, $request->address, $now);
+        $check = $this->auth->login($username, $current, $request->address, $now);
         if ($check['status'] !== 'ok') {
             return Response::error($check['status'] === 'blocked' ? 429 : 401, 'Het huidige wachtwoord klopt niet.');
         }
-        $problem = $this->auth->setPassword($email, $new);
+        $problem = $this->auth->setPassword($username, $new);
         if ($problem !== null) {
             $this->auth->endSession($check['token']);
 
@@ -249,7 +249,7 @@ final class Api
         }
 
         // Alle oude sessies zijn beëindigd. De beheerder gaat verder met een nieuwe.
-        $fresh = $this->auth->login($email, $new, $request->address, $now);
+        $fresh = $this->auth->login($username, $new, $request->address, $now);
         if ($fresh['status'] !== 'ok') {
             return Response::ok(['role' => null])->withoutCookie(self::COOKIE_ADMIN);
         }

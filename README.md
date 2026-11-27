@@ -10,11 +10,11 @@ Open de map in VS Code en start [index.html](./index.html) met de extensie **Liv
 
 Dubbelklikken op `index.html` werkt niet: de JavaScript bestaat uit modules en browsers blokkeren die via `file://`.
 
-Met de server op een eigen computer (PHP 8.3+): maak eerst een beheerder met `php backend/bin/beheerder.php <e-mailadres>` (met `CR_DB_DSN` zoals in `start-lokaal.cmd`), start dan `start-lokaal.cmd` of `php -S 127.0.0.1:8080 backend/dev-server.php` en open `http://127.0.0.1:8080`. Op de server van TVB bouwt Coolify de container uit `Dockerfile` en `docker-compose.yml`. De instellingen (`CR_BEHEER_EMAIL`, `SERVICE_PASSWORD_BEHEER`, `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`) staan alleen in Coolify, nooit in Git. Zie [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md), hoofdstuk 3.
+Met de server op een eigen computer (PHP 8.3+): maak eerst een beheerder met `php backend/bin/beheerder.php <gebruikersnaam>` (met `CR_DB_DSN` zoals in `start-lokaal.cmd`), start dan `start-lokaal.cmd` of `php -S 127.0.0.1:8080 backend/dev-server.php` en open `http://127.0.0.1:8080`. Op de server van TVB bouwt Coolify de container uit `Dockerfile` en `docker-compose.yml`. De instellingen (`CR_BEHEER_NAAM`, `SERVICE_PASSWORD_BEHEER`, `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`) staan alleen in Coolify, nooit in Git. Zie [`docs/DOCUMENTATIE.md`](./docs/DOCUMENTATIE.md), hoofdstuk 3.
 
 Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
 
-Tests van de backend draaien (de server en de AFAS-koppeling, 173 tests, PHP 8.3+): `php backend/tests/run.php`
+Tests van de backend draaien (de server en de AFAS-koppeling, 175 tests, PHP 8.3+): `php backend/tests/run.php`
 
 Browsertests (end-to-end) draai je met `npm run test:e2e`. Ze openen de echte pagina zonder venster in Microsoft Edge (Windows) of Google Chrome (Linux). Staat de browser ergens anders, zet dan `BROWSER_PATH` op het pad van de browser, bijvoorbeeld `BROWSER_PATH="/usr/bin/chromium" npm run test:e2e`. Er hoeft niets met npm te worden geïnstalleerd. Er zijn 42 browsertests: 33 in `tests/e2e/app.e2e.test.js` (de demo) en 9 in `tests/e2e/server.e2e.test.js` (met de echte server in PHP en een tijdelijke database, zonder PHP overgeslagen). In GitHub Actions draaien ze automatisch na de unit tests. Met `E2E_CPU_THROTTLE=4` draait de browser vier keer trager, zoals op een drukke server. Mislukt een browsertest, dan staan het scenario, de toestand van de pagina en de laatste meldingen uit de console in de foutuitvoer en komt er een schermafdruk in `test-results/e2e` (in GitHub Actions bewaard als artifact).
 
@@ -91,8 +91,8 @@ docs/
 tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests (ook readAllCss: alle CSS in de volgorde van index.html)
   helpers-gezicht.js        # Nagebootst gezicht van 68 punten, een foto als plat vlak en ruis (voor de controle op een levend gezicht)
-  e2e/                      # 44 browsertests in headless Edge of Chrome (npm run test:e2e): 33 met de demo, 11 met de echte server in PHP. Hulpcode in browser.js
-  *.test.js                 # 1014 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm, gezicht-instellen-veilig, levend-gezicht, pentest-november, looncode, server-sync, server-mode, zoeken-en-locatie, gasten, pasjes-dataset, geen-camerabeeld, snellere-optie, looncode-import-en-afdeling, herkennen-op-server)
+  e2e/                      # 45 browsertests in headless Edge of Chrome (npm run test:e2e): 33 met de demo, 12 met de echte server in PHP. Hulpcode in browser.js
+  *.test.js                 # 1016 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm, gezicht-instellen-veilig, levend-gezicht, pentest-november, looncode, server-sync, server-mode, zoeken-en-locatie, gasten, pasjes-dataset, geen-camerabeeld, snellere-optie, looncode-import-en-afdeling, herkennen-op-server)
 backend/                    # Serverdeel in PHP (zie backend/README.md)
   public/index.php          # Het enige bestand dat de webserver uitvoert: de API onder /api
   dev-server.php            # Ontwikkelserver: php -S 127.0.0.1:8080 backend/dev-server.php (website en API op een eigen computer)
@@ -124,7 +124,7 @@ archief/
 - Medewerkerlijst met zoeken en een persoonlijk productvenster waarin meerdere producten met `+` en `−` kunnen worden gekozen en daarna tegelijk geregistreerd.
 - Medewerkers zijn gekoppeld aan een bedrijf en een consumptiepunt, en worden per bedrijf gegroepeerd en gefilterd.
 - Automatische datum/tijd en lokale opslag via `localStorage` (in de demo, met de server in de database van de server).
-- Admin-demo via de knop rechtsboven (in de demo werkt elk ingevuld wachtwoord, met de server is er een echte login).
+- Admin-demo via de knop rechtsboven (in de demo werkt elk ingevuld wachtwoord, met de server log je in met een eigen gebruikersnaam en wachtwoord en wijzig je je wachtwoord bij `Mijn account`).
 - Admin-overzicht met medewerker- en maandfilters.
 - Registraties corrigeren met `+` en `−`, medewerkers toevoegen/wijzigen en actief/inactief zetten.
 - Inactieve medewerkers zonder registraties kunnen daarna ook definitief worden verwijderd (na bevestiging). Medewerkers met registraties worden alleen gedeactiveerd, zodat de export klopt. Een actieve medewerker moet eerst op inactief worden gezet. Ook het model controleert dit.
@@ -150,7 +150,7 @@ archief/
 - Vraag na een passcan (demo): wie met de pas wordt herkend en nog geen gezichtsherkenning heeft, krijgt "Gezichtsherkenning nog niet ingesteld. Wil je dit?" met `Ja, instellen` en `Nee`. `Nee` wordt onthouden.
 - Na herkennen met de pas of de camera opent altijd het productvenster. De slimme koelkast (slot en weegschalen) is sinds versie 3.33 vervallen.
 - Herkennen met de pas: een USB-NFC-lezer die zich als toetsenbord gedraagt typt het pasnummer. De beheerder koppelt de pas in het medewerkersformulier. Geen bibliotheek of driver nodig. Uit te zetten in `config.js`.
-- Met de server (sinds versie 3.33): alle tablets delen één database, de beheerder logt in met een eigen wachtwoord (blokkade na vijf foute pogingen), en iedere tablet wordt in het tabblad `Tablets en AFAS` gekoppeld aan een locatie. Een tablet krijgt geen looncodes, personeelsnummers, afdelingen, telefoonnummers, pasnummers of kenmerken van gezichten. Herkennen met de camera en de pas gebeurt sinds versie 3.34 op de server. Zonder verbinding blijven registraties in een wachtrij.
+- Met de server (sinds versie 3.33): alle tablets delen één database, de beheerder logt in met een eigen gebruikersnaam en wachtwoord (blokkade na vijf foute pogingen) en wijzigt zijn wachtwoord in de app, en iedere tablet wordt in het tabblad `Tablets en AFAS` gekoppeld aan een locatie. Een tablet krijgt geen looncodes, personeelsnummers, afdelingen, telefoonnummers, pasnummers of kenmerken van gezichten. Herkennen met de camera en de pas gebeurt sinds versie 3.34 op de server. Zonder verbinding blijven registraties in een wachtrij.
 - Zoeken op een tablet zonder namenlijst: pas na typen verschijnen de namen. Bovenaan staan de medewerkers van de locatie van de tablet, en de producten en de voorraad zijn die van de locatie.
 - Gasten (iemand van buiten TVB): registreren met naam en telefoonnummer. Het telefoonnummer ziet alleen de beheerder en gasten staan niet in het bestand voor de loonadministratie.
 - `Pasjes exporteren`: een CSV-bestand met het serienummer van iedere gekoppelde pas en de persoon erbij.

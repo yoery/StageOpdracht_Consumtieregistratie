@@ -2,8 +2,9 @@
 # Start de container: zet de database en de eerste beheerder klaar en start Apache.
 #
 # Instellingen (in Coolify: Environment Variables):
-#   CR_BEHEER_EMAIL + CR_BEHEER_WACHTWOORD   de eerste beheerder. Die wordt alleen aangemaakt als hij
-#                                            nog niet bestaat. Het wachtwoord heeft minstens 12 tekens.
+#   CR_BEHEER_NAAM + CR_BEHEER_WACHTWOORD    de eerste beheerder (gebruikersnaam en wachtwoord). Die wordt
+#                                            alleen aangemaakt als hij nog niet bestaat. Het wachtwoord heeft
+#                                            minstens 12 tekens en is daarna in de app te wijzigen.
 #   CR_DB_DSN, CR_DB_GEBRUIKER, CR_DB_WACHTWOORD   de database (standaard SQLite in /data)
 #   AFAS_TOKEN, AFAS_BASE_URL, AFAS_CONNECTOR      de koppeling met AFAS
 #
@@ -21,7 +22,7 @@ fi
 
 # De eerste beheerder, als gebruiker www-data zodat het databasebestand van Apache blijft.
 su -s /bin/sh www-data -c "php /var/www/backend/bin/beheerder.php --uit-omgeving" || \
-  echo "Consumptieregistratie: de beheerder kon niet worden aangemaakt. Controleer CR_BEHEER_EMAIL en CR_BEHEER_WACHTWOORD." >&2
+  echo "Consumptieregistratie: de beheerder kon niet worden aangemaakt. Controleer CR_BEHEER_NAAM en CR_BEHEER_WACHTWOORD." >&2
 
 if [ -z "$AFAS_TOKEN" ] || [ -z "$AFAS_BASE_URL" ] || [ -z "$AFAS_CONNECTOR" ]; then
   echo "Consumptieregistratie: de koppeling met AFAS is niet (volledig) ingesteld. Synchroniseren werkt pas met AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR."

@@ -530,7 +530,7 @@ test("controle 2, punt 6: wijzigen van een medewerker of product zet de focus op
 
 test("controle 2, punt 7: het admin-venster heet 'Overzicht' na inloggen en 'Welkom terug' na uitloggen", () => {
   const { app, view } = createApp();
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "geheim";
 
   app.login({ preventDefault() {} });
@@ -539,7 +539,7 @@ test("controle 2, punt 7: het admin-venster heet 'Overzicht' na inloggen en 'Wel
 
   app.logout();
   assert.equal(view.$("#adminModal").getAttribute("aria-labelledby"), "adminTitle");
-  assert.equal(view.$("#loginEmail").focused, true);
+  assert.equal(view.$("#loginUsername").focused, true);
 });
 
 test("controle 2, punt 7: index.html heeft de kop 'Overzicht' met id dashboardTitle", () => {

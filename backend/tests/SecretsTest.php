@@ -16,7 +16,7 @@ test('Geheimen: .env.example bevat alleen de namen van de instellingen, zonder w
     ));
 
     same(
-        ['AFAS_TOKEN=', 'AFAS_BASE_URL=', 'AFAS_CONNECTOR=', 'CR_BEHEER_EMAIL=', 'CR_BEHEER_WACHTWOORD=', 'CR_DB_DSN=', 'CR_DB_GEBRUIKER=', 'CR_DB_WACHTWOORD='],
+        ['AFAS_TOKEN=', 'AFAS_BASE_URL=', 'AFAS_CONNECTOR=', 'CR_BEHEER_NAAM=', 'CR_BEHEER_WACHTWOORD=', 'CR_DB_DSN=', 'CR_DB_GEBRUIKER=', 'CR_DB_WACHTWOORD='],
         $lines
     );
 });
@@ -40,7 +40,7 @@ test('Geheimen: .env staat in .dockerignore en de container kopieert alleen de w
 
 test('Geheimen: in de Docker-bestanden staat geen waarde van een geheim, alleen de naam van de instelling', function (): void {
     $compose = (string) file_get_contents(PROJECT_ROOT . '/docker-compose.yml');
-    foreach (['AFAS_TOKEN', 'AFAS_BASE_URL', 'AFAS_CONNECTOR', 'CR_DB_WACHTWOORD', 'CR_DB_GEBRUIKER', 'CR_BEHEER_EMAIL'] as $name) {
+    foreach (['AFAS_TOKEN', 'AFAS_BASE_URL', 'AFAS_CONNECTOR', 'CR_DB_WACHTWOORD', 'CR_DB_GEBRUIKER', 'CR_BEHEER_NAAM'] as $name) {
         ok(str_contains($compose, "- $name=\${" . $name . ':-}'), "$name heeft een vaste waarde in docker-compose.yml");
     }
     ok(str_contains($compose, '- CR_BEHEER_WACHTWOORD=${SERVICE_PASSWORD_BEHEER}'), 'het wachtwoord van de beheerder komt niet van Coolify');

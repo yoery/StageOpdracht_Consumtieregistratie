@@ -526,13 +526,13 @@ test("ServerApi: een schrijvend verzoek heeft de kopregel van de eigen website e
 
 test("ServerApi: een fout van de server wordt een ServerError met de status en de melding", async () => {
   const { fetchFunction } = fakeFetch([
-    { status: 401, body: { ok: false, message: "Het e-mailadres of het wachtwoord klopt niet." } },
+    { status: 401, body: { ok: false, message: "De gebruikersnaam of het wachtwoord klopt niet." } },
     new TypeError("Failed to fetch"),
     { status: 500, body: undefined }
   ]);
   const api = new ServerApi("/api", fetchFunction);
 
-  await assert.rejects(api.login("x", "y"), (error) => error instanceof ServerError && error.status === 401 && error.message === "Het e-mailadres of het wachtwoord klopt niet.");
+  await assert.rejects(api.login("x", "y"), (error) => error instanceof ServerError && error.status === 401 && error.message === "De gebruikersnaam of het wachtwoord klopt niet.");
   await assert.rejects(api.session(), (error) => error.status === 0 && error.message === "Geen verbinding met de server.");
   await assert.rejects(api.session(), (error) => error.status === 500);
 });

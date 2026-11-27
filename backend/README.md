@@ -33,7 +33,7 @@ Zonder server (de demo) gebruikt de website deze map niet. Met de server praat d
 |---|---|
 | `public/index.php` | Het enige bestand dat de webserver uitvoert. Alle verzoeken aan `/api` komen hier binnen. De rest van de map staat buiten de map die de webserver uitlevert |
 | `dev-server.php` | De ontwikkelserver voor een eigen computer: `php -S 127.0.0.1:8080 backend/dev-server.php` levert `index.html`, `assets/` en `/api` uit, nooit `.env`, de tests of de documenten. `start-lokaal.cmd` in de projectmap start hem |
-| `bin/beheerder.php` | Een beheerder aanmaken (`php backend/bin/beheerder.php <e-mailadres>`), of met `--reset` een nieuw wachtwoord zetten. Het programma vraagt om een wachtwoord van minstens 12 tekens |
+| `bin/beheerder.php` | Een beheerder aanmaken (`php backend/bin/beheerder.php <gebruikersnaam>`), of met `--reset` een nieuw wachtwoord zetten. Het programma vraagt om een wachtwoord van minstens 12 tekens |
 | `src/Server/Database.php` en `RecordStore.php` | De database (standaard SQLite in `/data/consumptie.sqlite`) en de gegevens als JSON per regel in de tabel `records` |
 | `src/Server/Auth.php` | Inloggen, sessies in een cookie (HttpOnly, SameSite=Strict, via HTTPS ook Secure), gekoppelde tablets en de blokkade na foute pogingen |
 | `src/Server/Policy.php` | Wat een tablet mag lezen en schrijven. Een tablet krijgt geen looncodes, personeelsnummers, afwijkende werkgevernummers, telefoonnummers, afdelingen en pasnummers. Kenmerken van gezichten krijgt geen enkele browser |
@@ -44,7 +44,7 @@ Zonder server (de demo) gebruikt de website deze map niet. Met de server praat d
 De instellingen van de server komen uit de omgeving (in Coolify: Environment Variables):
 
 - `CR_DB_DSN`, `CR_DB_GEBRUIKER` en `CR_DB_WACHTWOORD`: de database. Zonder `CR_DB_DSN` is het SQLite in `/data`. Op een eigen computer zet `start-lokaal.cmd` de database in `backend/data/` (in `.gitignore`).
-- `CR_BEHEER_EMAIL` en `CR_BEHEER_WACHTWOORD`: de eerste beheerder. De container maakt die bij het starten aan als hij nog niet bestaat. In Coolify heet het wachtwoord `SERVICE_PASSWORD_BEHEER` (Coolify verzint het zelf).
+- `CR_BEHEER_NAAM` en `CR_BEHEER_WACHTWOORD`: de gebruikersnaam (3 tot 64 tekens: letters, cijfers, een punt, een streepje of een liggend streepje, hoofdletters tellen niet mee) en het wachtwoord van de eerste beheerder. Het wachtwoord kan de beheerder daarna in de app wijzigen (Mijn account). De container maakt die bij het starten aan als hij nog niet bestaat. In Coolify heet het wachtwoord `SERVICE_PASSWORD_BEHEER` (Coolify verzint het zelf).
 - `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`: de koppeling met AFAS (zie Instellen).
 
 Een lege server krijgt bij de eerste beheerder alleen de standaardproducten. De bedrijven komen uit AFAS (zie Regels van de synchronisatie). Hoe je de server op de server van TVB zet, staat in `docs/DOCUMENTATIE.md`, paragraaf 3.2.
@@ -55,7 +55,7 @@ Een lege server krijgt bij de eerste beheerder alleen de standaardproducten. De 
 2. Vul `AFAS_TOKEN` in: het token van de App connector, al in Base64. Niet opnieuw coderen.
 3. Vul `AFAS_BASE_URL` in, bijvoorbeeld `https://<deelnemernummer>.rest.afas.online/ProfitRestServices`.
 4. Vul `AFAS_CONNECTOR` in met de naam van de GetConnector. `php backend/bin/afas-metainfo.php` toont welke connectors er zijn. Zolang de naam ontbreekt, geeft de koppeling de melding "AFAS_CONNECTOR ontbreekt" en haalt ze niets op.
-5. Voor de server op een eigen computer: zet `CR_DB_DSN` zoals in `start-lokaal.cmd`, maak een beheerder met `php backend/bin/beheerder.php <e-mailadres>` en start `start-lokaal.cmd`. De instellingen `CR_*` horen niet in `.env` maar in de omgeving (zie De server hierboven).
+5. Voor de server op een eigen computer: zet `CR_DB_DSN` zoals in `start-lokaal.cmd`, maak een beheerder met `php backend/bin/beheerder.php <gebruikersnaam>` en start `start-lokaal.cmd`. De instellingen `CR_*` horen niet in `.env` maar in de omgeving (zie De server hierboven).
 
 Staan dezelfde namen in de omgeving van de server, dan gaan die voor het bestand. Het adres moet met `https://` beginnen, bij AFAS horen (`.afas.online`) en eindigen op `/ProfitRestServices`, zonder iets erachter. Zo gaat het token nooit onversleuteld of naar een andere server, en kan een opvraag van de metadata nooit per ongeluk de gegevens van een connector ophalen. De naam van de connector hoort alleen in `AFAS_CONNECTOR`.
 
@@ -77,7 +77,7 @@ Vanuit de projectmap:
 php backend/tests/run.php          de tests (geen verbinding met AFAS)
 php backend/bin/afas-metainfo.php  de connectors en de veldnamen bij AFAS opvragen (geen gegevens)
 php backend/bin/afas-sync.php      proefdraaien: medewerkers ophalen en alleen aantallen tonen
-php backend/bin/beheerder.php <e-mailadres>          een beheerder aanmaken (met --reset: een nieuw wachtwoord)
+php backend/bin/beheerder.php <gebruikersnaam>       een beheerder aanmaken (met --reset: een nieuw wachtwoord)
 php -S 127.0.0.1:8080 backend/dev-server.php    de website met de server op een eigen computer
 ```
 

@@ -532,7 +532,7 @@ test("inloggen zonder wachtwoord toont de foutmelding en logt niet in", () => {
   const { app, view } = createApp();
   app.adminLoggedIn = false; // deze test begint zonder ingelogde beheerder
   view.$("#loginError").classList.add("hidden");
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "";
 
   app.login({ preventDefault() {} });
@@ -541,9 +541,9 @@ test("inloggen zonder wachtwoord toont de foutmelding en logt niet in", () => {
   assert.equal(view.$("#loginError").classList.contains("hidden"), false);
 });
 
-test("inloggen met e-mailadres en wachtwoord, en uitloggen wist het wachtwoord", () => {
+test("inloggen met gebruikersnaam en wachtwoord, en uitloggen wist het wachtwoord", () => {
   const { app, view } = createApp();
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "geheim";
 
   app.login({ preventDefault() {} });

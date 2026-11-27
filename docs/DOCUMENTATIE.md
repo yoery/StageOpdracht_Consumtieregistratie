@@ -118,7 +118,7 @@ Dit hoofdstuk noemt alle bestanden en mappen van het project met hun functie. He
 | `tests/review-oktober.test.js` | Regressietests voor de review van oktober 2026 (D1 tot en met D7, U1 tot en met U7, R1 tot en met R3 in de naam van iedere test): beschadigde lijsten en volle opslag, dubbele passen, niet-bestaande datums, pasnummers gelijkmaken, mislukt wissen, gezichtsherkenning alleen met actieve medewerkers, een scan in het veld `Pasnummer` en in het bedrijfsfilter, dubbelklik op `Registreren`, een ingedrukt gehouden Enter, de focus na opslaan en (de)activeren, het datumveld na middernacht, toegankelijkheid (live region, tabbladen, bedrijfsfilter) en de cijfervelden |
 | `tests/rollenspel-oktober.test.js` | Regressietests voor de fouten uit de rollenspeltests en de FMEA van oktober 2026 (punt 1 tot en met 14 in de naam van iedere test): zoekveld leeg na sluiten zonder registreren, geen spookklik na een dubbeltik op `Deur dicht`, de naam in de open koelkast en "Controle nodig" bij de pas van een collega, twee tabbladen op één opslag, de weging met het gemeten gemiddelde gewicht (eieren en blikjes), verwacht en geteld bij een telling, oude en nieuwe waarden in het logboek, de lege demokeuze, tikdoelen en hover, voorraad 0, negatieve getallen in de CSV, het SQL-schema en teksten in het TO Sinds versie 3.33 zonder de tests van de slimme koelkast. |
 | `uitleg-video/` | Het script van het uitlegfilmpje voor de bedrijvenmarkt: `video.json` met de scènes, teksten en tijden, en in `assets/` de nagetekende schermen. De namen zijn verzonnen. Het mp4-bestand staat niet in Git (zie `uitleg-video/.gitignore`). Hoort niet op de webserver |
-| `.env.example` | De namen van alle instellingen, zonder waarden: `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR` voor de AFAS-koppeling, en `CR_BEHEER_EMAIL`, `CR_BEHEER_WACHTWOORD`, `CR_DB_DSN`, `CR_DB_GEBRUIKER` en `CR_DB_WACHTWOORD` voor de server. Het echte bestand `.env` staat in `.gitignore` en `.dockerignore` en komt nooit in Git of in de container |
+| `.env.example` | De namen van alle instellingen, zonder waarden: `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR` voor de AFAS-koppeling, en `CR_BEHEER_NAAM`, `CR_BEHEER_WACHTWOORD`, `CR_DB_DSN`, `CR_DB_GEBRUIKER` en `CR_DB_WACHTWOORD` voor de server. Het echte bestand `.env` staat in `.gitignore` en `.dockerignore` en komt nooit in Git of in de container |
 | `backend/` | Het serverdeel in PHP: de koppeling met AFAS Profit (`backend/src/Afas/`), sinds versie 3.33 de server met de API en de database (`backend/src/Server/`, met `backend/public/index.php` als enige bestand dat de webserver uitvoert), de ontwikkelserver `backend/dev-server.php`, hulpprogramma's (`backend/bin/`, ook `beheerder.php`) en de tests (`backend/tests/`, te draaien met `php backend/tests/run.php`). Zie `backend/README.md` en het TO, hoofdstuk 6 en 11 |
 | `Dockerfile` en `docker-compose.yml` | De container voor de server van TVB (Coolify, zie 3.2): Apache met PHP 8.3, de website, de API en een volume voor de database |
 | `docker/` | De instellingen van de container: `apache.conf`, `php.ini`, `start.sh` (maakt de eerste beheerder aan) en `deployment.js` |
@@ -163,15 +163,15 @@ TVB zet de app op een eigen server met Coolify. Coolify bouwt de container uit `
 
 1. Maak in Coolify een nieuwe resource vanuit de repository (branch `main`, of `development` om te testen) en kies bij "Build Pack" voor **Docker Compose**.
 2. Vul onder Environment Variables in:
-   - `CR_BEHEER_EMAIL`: het e-mailadres van de eerste beheerder.
-   - `SERVICE_PASSWORD_BEHEER`: dit verzint Coolify zelf. Het is het wachtwoord van de eerste beheerder (in de container heet het `CR_BEHEER_WACHTWOORD`).
+   - `CR_BEHEER_NAAM`: de gebruikersnaam van de eerste beheerder, bijvoorbeeld `beheerder` (3 tot 64 tekens: letters, cijfers, een punt, een streepje of een liggend streepje, hoofdletters tellen niet mee).
+   - `SERVICE_PASSWORD_BEHEER`: dit verzint Coolify zelf. Het is het wachtwoord van de eerste beheerder (in de container heet het `CR_BEHEER_WACHTWOORD`). Na de eerste keer inloggen kies je in de app een eigen wachtwoord (4.19).
    - `AFAS_TOKEN`, `AFAS_BASE_URL` en `AFAS_CONNECTOR`: de koppeling met AFAS. Het token staat alleen hier, nooit in Git.
    - Alleen voor een andere database dan SQLite: `CR_DB_DSN`, `CR_DB_GEBRUIKER` en `CR_DB_WACHTWOORD`.
 3. Koppel een domein. Coolify zet er een proxy met HTTPS voor. De container heeft bewust geen eigen poort, en Apache stuurt een verzoek zonder HTTPS door naar HTTPS.
 4. Deploy. Het volume `consumptie-data` bewaart de database, ook na een nieuwe deploy. Bij het starten maakt de container de eerste beheerder aan als die nog niet bestaat.
 5. Open het adres van de server, log in (4.19), klik in `Tablets en AFAS` op `Nu synchroniseren` (4.21) en koppel iedere tablet aan zijn locatie (4.20).
 
-Een volgende beheerder of een nieuw wachtwoord maak je in de terminal van de container in Coolify: `su -s /bin/sh www-data -c "php /var/www/backend/bin/beheerder.php <e-mailadres>"`, met `--reset` achter het e-mailadres voor een nieuw wachtwoord.
+Een volgende beheerder of een nieuw wachtwoord maak je in de terminal van de container in Coolify: `su -s /bin/sh www-data -c "php /var/www/backend/bin/beheerder.php <gebruikersnaam>"`, met `--reset` achter de gebruikersnaam als iemand zijn wachtwoord kwijt is.
 
 Geef alleen beheerders van TVB toegang tot Coolify: het token van AFAS is daar leesbaar (zie het auditrapport, AF-10).
 
@@ -226,9 +226,11 @@ Loop je weg zonder te registreren, dan sluit het productvenster na 75 seconden v
 ### 4.3 Admin-dashboard openen
 
 1. Klik rechtsboven op `Admin login`.
-2. Vul een e-mailadres in.
+2. Vul een gebruikersnaam in. In de demo staat `beheerder` al ingevuld.
 3. Vul een wachtwoord in.
 4. Klik op `Inloggen`.
+
+In de demo zonder server werkt ieder wachtwoord: zonder server kan de website een wachtwoord niet echt controleren. Met de server log je in met je eigen gebruikersnaam en wachtwoord (4.19).
 
 De demo controleert niet of het wachtwoord klopt. Elk ingevuld wachtwoord werkt. Dit is alleen geschikt voor demonstratie en niet voor productie.
 
@@ -405,7 +407,7 @@ Medewerkers kunnen zich ook laten herkennen met hun pas, via een USB-NFC-lezer d
 
 Een medewerker herkennen gebeurt op de beginpagina en als het productvenster open is. Staat het productvenster van een collega nog open, dan sluit dat venster zonder op te slaan en opent het venster van de pas. Staat het eigen venster al open, dan blijft het open met de keuze die er al stond. Staat er een ander venster open (het beheer, een formulier of de camera), dan opent er niets en verschijnt "Sluit eerst het open venster om je pas te gebruiken." De website houdt dan wel de Enter of Tab tegen waarmee de lezer een scan afsluit, zodat die niet de knop met de focus indrukt.
 
-Staat de focus in het zoekveld, dan haalt de website de getypte tekens van de lezer daar weer uit. Het zoekveld heeft na een scan dezelfde inhoud als ervoor. Hetzelfde geldt voor het bedrijfsfilter: daar komt na een scan ook het gekozen bedrijf terug en gaat de keuzelijst dicht. Dat geldt ook voor ieder ander tekstveld met de focus, bijvoorbeeld het e-mailadres bij het inloggen, een zoekveld in het beheer of de naam in het medewerkersformulier: na de scan staat daar weer wat er stond. In het veld `Pasnummer` van het medewerkersformulier vervangt een scan het nummer dat er al stond. Gewoon typen in het zoekveld werkt zoals altijd: een mens typt veel trager dan de lezer, en dat ziet de website nooit als een scan.
+Staat de focus in het zoekveld, dan haalt de website de getypte tekens van de lezer daar weer uit. Het zoekveld heeft na een scan dezelfde inhoud als ervoor. Hetzelfde geldt voor het bedrijfsfilter: daar komt na een scan ook het gekozen bedrijf terug en gaat de keuzelijst dicht. Dat geldt ook voor ieder ander tekstveld met de focus, bijvoorbeeld de gebruikersnaam bij het inloggen, een zoekveld in het beheer of de naam in het medewerkersformulier: na de scan staat daar weer wat er stond. In het veld `Pasnummer` van het medewerkersformulier vervangt een scan het nummer dat er al stond. Gewoon typen in het zoekveld werkt zoals altijd: een mens typt veel trager dan de lezer, en dat ziet de website nooit als een scan.
 
 De instellingen staan in `BADGE_READER` in `config.js` (minimaal 4 tekens, net als het kortste pasnummer in het medewerkersformulier, hooguit 40 milliseconden tussen twee tekens, en 120 milliseconden stilte als einde van de scan voor lezers zonder Enter). Met `BADGE_READER.enabled = false` staat herkennen met de pas helemaal uit en verdwijnt ook de hint boven het zoekveld. `Alle gegevens wissen` wist ook de gekoppelde pasnummers, want die horen bij de medewerkers.
 
@@ -480,10 +482,12 @@ Let op: met "auto" kijkt de camera de hele tijd zolang het startscherm in beeld 
 
 Met de server (3.1 en 3.2) toont de website op een browser die nog niets is alleen een inlogscherm: "Log in als beheerder om het beheer te openen of deze tablet te koppelen." Er staan dan geen namen in de pagina.
 
-1. Vul je e-mailadres en wachtwoord in en klik op `Inloggen`.
+1. Vul je gebruikersnaam en wachtwoord in en klik op `Inloggen`. Hoofdletters in de gebruikersnaam tellen niet mee.
 2. De pagina start opnieuw en het beheer gaat meteen open.
 
-Een fout wachtwoord geeft "Het e-mailadres of het wachtwoord klopt niet." Na vijf foute pogingen kun je een kwartier niet inloggen ("Te veel mislukte pogingen. Probeer het over een kwartier opnieuw."). Het demo-inloggen ("Demo: elk ingevuld wachtwoord werkt.") bestaat met de server niet. Na een half uur zonder verzoek aan de server moet je opnieuw inloggen, en na 5 minuten zonder invoer logt de website je uit, net als in de demo.
+Een fout wachtwoord geeft "De gebruikersnaam of het wachtwoord klopt niet." Na vijf foute pogingen kun je een kwartier niet inloggen ("Te veel mislukte pogingen. Probeer het over een kwartier opnieuw."). Het demo-inloggen ("Demo zonder server: elk ingevuld wachtwoord werkt.") bestaat met de server niet. Na een half uur zonder verzoek aan de server moet je opnieuw inloggen, en na 5 minuten zonder invoer logt de website je uit, net als in de demo.
+
+**Je wachtwoord wijzigen.** Open het beheer en het tabblad `Tablets en AFAS`. Bovenaan staat `Mijn account` met "Je bent ingelogd als beheerder." Vul je huidige wachtwoord in, en twee keer je nieuwe wachtwoord (minstens 12 tekens). Klik op `Wachtwoord wijzigen`. Daarna staat er "Je wachtwoord is gewijzigd. Log voortaan in met het nieuwe wachtwoord." Je blijft ingelogd. Waar je verder nog was ingelogd, moet je opnieuw inloggen. Doe dit meteen na de eerste keer inloggen met het wachtwoord uit Coolify. Ben je je wachtwoord kwijt, dan zet iemand met toegang tot Coolify een nieuw (3.2).
 
 ### 4.20 Een tablet koppelen en de locatie kiezen
 

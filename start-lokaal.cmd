@@ -4,7 +4,7 @@ rem De database komt in backend\data\ (staat in .gitignore). Sluit dit venster o
 rem
 rem De eerste keer: maak eerst een beheerder aan met
 rem   set CR_DB_DSN=sqlite:%~dp0backend\data\consumptie.sqlite
-rem   php backend\bin\beheerder.php jouw@adres.nl
+rem   php backend\bin\beheerder.php beheerder
 cd /d "%~dp0"
 if not exist "backend\data" mkdir "backend\data"
 set CR_DB_DSN=sqlite:%~dp0backend\data\consumptie.sqlite

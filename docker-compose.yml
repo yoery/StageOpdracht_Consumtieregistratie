@@ -4,7 +4,9 @@
 #   vervangen door een eigen domein. De website is alleen via dat adres bereikbaar: er staat bewust
 #   geen "ports:" in dit bestand, zodat de container niet zonder HTTPS te bereiken is.
 # - SERVICE_PASSWORD_BEHEER: Coolify verzint een sterk wachtwoord voor de eerste beheerder. Het staat
-#   onder Environment Variables. Vul daar zelf CR_BEHEER_EMAIL in (het e-mailadres van de beheerder).
+#   onder Environment Variables. Vul daar zelf CR_BEHEER_NAAM in (de gebruikersnaam van de beheerder,
+#   bijvoorbeeld beheerder). Na de eerste keer inloggen kies je in de app een eigen wachtwoord
+#   (Beheer, tabblad Tablets en AFAS, Mijn account).
 # - AFAS_TOKEN, AFAS_BASE_URL en AFAS_CONNECTOR: vul ze in onder Environment Variables. Zet ze nooit
 #   in dit bestand of ergens anders in Git.
 # - Het volume consumptie-data bewaart de database, ook na een nieuwe deploy.
@@ -16,7 +18,7 @@ services:
       - "80"
     environment:
       - SERVICE_FQDN_CONSUMPTIE_80
-      - CR_BEHEER_EMAIL=${CR_BEHEER_EMAIL:-}
+      - CR_BEHEER_NAAM=${CR_BEHEER_NAAM:-}
       - CR_BEHEER_WACHTWOORD=${SERVICE_PASSWORD_BEHEER}
       # Een andere database (bijvoorbeeld PostgreSQL uit Coolify)? Vul deze drie in.
       - CR_DB_DSN=${CR_DB_DSN:-sqlite:/data/consumptie.sqlite}

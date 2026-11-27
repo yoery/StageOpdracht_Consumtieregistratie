@@ -247,8 +247,8 @@
       <h2 id="serverGateTitle">Inloggen</h2>
       <p class="muted" id="serverGateText"></p>
       <form id="serverGateForm" novalidate>
-        <label>E-mailadres
-          <input type="email" id="serverGateEmail" autocomplete="username" required>
+        <label>Gebruikersnaam
+          <input type="text" id="serverGateUsername" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required>
         </label>
         <label>Wachtwoord
           <input type="password" id="serverGatePassword" autocomplete="current-password" required>
@@ -276,15 +276,15 @@
         <h2 id="adminTitle">Welkom terug</h2>
         <p class="muted">Log in om registraties en medewerkers te beheren.</p>
         <form id="loginForm" novalidate>
-          <label>E-mailadres
-            <input type="email" id="loginEmail" value="admin@tvb.nl" required>
+          <label>Gebruikersnaam
+            <input type="text" id="loginUsername" value="beheerder" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required>
           </label>
           <label>Wachtwoord
             <input type="password" id="loginPassword" placeholder="••••••••" required>
           </label>
-          <p class="login-hint">Demo: elk ingevuld wachtwoord werkt.</p>
+          <p class="login-hint">Demo zonder server: elk ingevuld wachtwoord werkt. In de echte app log je in met je eigen gebruikersnaam en wachtwoord.</p>
           <button class="primary-button full-width" type="submit">Inloggen <span data-icon="arrowRight"></span></button>
-          <p class="form-error hidden" id="loginError">Vul een e-mailadres en wachtwoord in.</p>
+          <p class="form-error hidden" id="loginError">Vul een gebruikersnaam en wachtwoord in.</p>
         </form>
       </div>
 
@@ -392,6 +392,22 @@
         </div>
         <!-- Tablets koppelen aan een locatie en de medewerkers ophalen uit AFAS. ServerMode.js vult dit tabblad. -->
         <div id="serverTab" class="hidden" role="tabpanel" aria-labelledby="tab-server">
+          <!-- Het eigen account van de beheerder: het wachtwoord wijzigen. ServerMode.changePassword. -->
+          <h3>Mijn account</h3>
+          <p class="muted" id="serverAccountName"></p>
+          <form class="add-employee-form employee-fields" id="serverPasswordForm" novalidate>
+            <label>Huidig wachtwoord
+              <input type="password" id="serverPasswordCurrent" autocomplete="current-password" maxlength="200">
+            </label>
+            <label>Nieuw wachtwoord (minstens 12 tekens)
+              <input type="password" id="serverPasswordNew" autocomplete="new-password" maxlength="200">
+            </label>
+            <label>Herhaal het nieuwe wachtwoord
+              <input type="password" id="serverPasswordRepeat" autocomplete="new-password" maxlength="200">
+            </label>
+            <button class="primary-button" type="submit">Wachtwoord wijzigen</button>
+            <p class="form-error hidden" id="serverPasswordError" role="alert"></p>
+          </form>
           <h3>Deze tablet</h3>
           <p class="muted" id="serverDeviceStatus"></p>
           <form class="add-employee-form employee-fields" id="serverDeviceForm" novalidate>

@@ -107,7 +107,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   // Logt in als beheerder met de demo-inloggegevens (ieder ingevuld wachtwoord werkt).
   const loginAsAdmin = async () => {
     await browser.click("#adminOpenButton");
-    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
+    await browser.waitFor(`document.activeElement?.id === "loginUsername"`);
     await browser.click("#loginPassword");
     await browser.insertText("demo-wachtwoord");
     await browser.click("#loginForm button[type=submit]");
@@ -234,8 +234,8 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
 
     // Zonder wachtwoord lukt inloggen niet.
     await browser.click("#adminOpenButton");
-    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
-    assert.equal(await browser.evaluate(`document.querySelector("#loginEmail").value`), "admin@tvb.nl");
+    await browser.waitFor(`document.activeElement?.id === "loginUsername"`);
+    assert.equal(await browser.evaluate(`document.querySelector("#loginUsername").value`), "beheerder");
     await browser.click("#loginForm button[type=submit]");
     await browser.waitFor(`!document.querySelector("#loginError").classList.contains("hidden")`);
     assert.equal(await isHidden("#adminView"), true);
@@ -1128,12 +1128,12 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   });
 
   scenario("generale repetitie: een pas in het inlogvenster of een zoekveld van het beheer laat geen pasnummer achter, en 'Aantal' past op een tablet", async () => {
-    // Pas in het e-mailveld van het inloggen: het e-mailadres blijft staan, er komt een melding.
+    // Pas in het veld gebruikersnaam van het inloggen: de gebruikersnaam blijft staan, er komt een melding.
     await browser.click("#adminOpenButton");
-    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
+    await browser.waitFor(`document.activeElement?.id === "loginUsername"`);
     await browser.scanBadge("04A1B2C3");
     await waitForToast("Sluit eerst het open venster om je pas te gebruiken.");
-    assert.equal(await browser.evaluate(`document.querySelector("#loginEmail").value`), "admin@tvb.nl");
+    assert.equal(await browser.evaluate(`document.querySelector("#loginUsername").value`), "beheerder");
 
     // Pas in het zoekveld van Medewerkers: het veld blijft leeg en de lijst blijft staan.
     await browser.click("#loginPassword");
@@ -1180,7 +1180,7 @@ describe("Browsertests (end-to-end)", { timeout: 480000 }, () => {
   };
   const login = async () => {
     await browser.click("#adminOpenButton");
-    await browser.waitFor(`document.activeElement?.id === "loginEmail"`);
+    await browser.waitFor(`document.activeElement?.id === "loginUsername"`);
     await browser.click("#loginPassword");
     await browser.insertText("demo-wachtwoord");
     await browser.click("#loginForm button[type=submit]");

@@ -40,13 +40,13 @@ export class ServerApi {
     this.csrf = null;
   }
 
-  // Wie ben ik voor de server: { role: "admin" | "device" | null, email, device, configured }.
+  // Wie ben ik voor de server: { role: "admin" | "device" | null, username, device, configured }.
   session() {
     return this.request("GET", "/session");
   }
 
-  login(email, password) {
-    return this.request("POST", "/login", { email, password });
+  login(username, password) {
+    return this.request("POST", "/login", { username, password });
   }
 
   logout() {

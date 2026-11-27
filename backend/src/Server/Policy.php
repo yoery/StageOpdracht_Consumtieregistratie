@@ -8,7 +8,7 @@ namespace Tvb\Consumptie\Server;
  * Policy — wie mag wat lezen en schrijven.
  *
  * Er zijn twee rollen:
- *   - de beheerder (ingelogd met e-mailadres en wachtwoord) mag alles lezen en wijzigen;
+ *   - de beheerder (ingelogd met gebruikersnaam en wachtwoord) mag alles lezen en wijzigen;
  *   - een gekoppelde tablet mag alleen wat nodig is om te registreren.
  *
  * Wat een tablet krijgt (dataminimalisatie):

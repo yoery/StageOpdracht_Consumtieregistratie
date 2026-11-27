@@ -34,7 +34,7 @@ function withDevServer(callable $body): void
     file_put_contents($root . '/docs/notitie.md', 'NEPGEHEIM');
     $database = $root . DIRECTORY_SEPARATOR . 'test.sqlite';
     $pdo = Database::connect('sqlite:' . $database);
-    (new Auth($pdo))->createAdmin(TEST_EMAIL, TEST_PASSWORD, new DateTimeImmutable('now'));
+    (new Auth($pdo))->createAdmin(TEST_USERNAME, TEST_PASSWORD, new DateTimeImmutable('now'));
     $pdo = null;
 
     $probe = stream_socket_server('tcp://127.0.0.1:0');
@@ -141,10 +141,10 @@ test('Ontwikkelserver: de API werkt over HTTP, en de cookie van het inloggen is 
         same(null, json_decode(httpCall('GET', "$server/api/session")['body'], true)['role']);
 
         $own = ['Origin: ' . $server, 'X-CR-Client: 1'];
-        $login = json_encode(['email' => TEST_EMAIL, 'password' => TEST_PASSWORD]);
+        $login = json_encode(['username' => TEST_USERNAME, 'password' => TEST_PASSWORD]);
         same(403, httpCall('POST', "$server/api/login", $login, ['Origin: https://kwaad.voorbeeld.test', 'X-CR-Client: 1'])['status']);
         same(403, httpCall('POST', "$server/api/login", $login)['status']);
-        same(401, httpCall('POST', "$server/api/login", json_encode(['email' => TEST_EMAIL, 'password' => 'verkeerd-wachtwoord']), $own)['status']);
+        same(401, httpCall('POST', "$server/api/login", json_encode(['username' => TEST_USERNAME, 'password' => 'verkeerd-wachtwoord']), $own)['status']);
 
         $response = httpCall('POST', "$server/api/login", $login, $own);
         same(200, $response['status']);

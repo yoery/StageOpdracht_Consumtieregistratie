@@ -28,13 +28,13 @@ const createApi = ({ role = null, device = null, configured = true } = {}) => {
     role, device, configured, offline: false, calls: [], pushed: [], password: "een-lang-nepwachtwoord",
     check() { if (api.offline) throw new ServerError(0, "Geen verbinding met de server."); },
     employee() { return api.role === "admin" ? LOTTE : { ...LOTTE, payrollCode: "", personnelNumber: "" }; },
-    session: async () => { api.calls.push("session"); api.check(); return { ok: true, role: api.role, device: api.role ? api.device : null, email: api.role === "admin" ? "beheer@voorbeeld.test" : null, configured: api.configured }; },
-    login: async (email, password) => {
+    session: async () => { api.calls.push("session"); api.check(); return { ok: true, role: api.role, device: api.role ? api.device : null, username: api.role === "admin" ? "beheerder" : null, configured: api.configured }; },
+    login: async (username, password) => {
       api.calls.push("login");
       api.check();
-      if (password !== api.password) throw new ServerError(401, "Het e-mailadres of het wachtwoord klopt niet.");
+      if (password !== api.password) throw new ServerError(401, "De gebruikersnaam of het wachtwoord klopt niet.");
       api.role = "admin";
-      return { ok: true, role: "admin", email, device: api.device };
+      return { ok: true, role: "admin", username, device: api.device };
     },
     logout: async () => { api.calls.push("logout"); api.check(); api.role = api.device ? "device" : null; return { ok: true, role: api.role, device: api.device }; },
     pull: async (since) => {
@@ -203,7 +203,7 @@ test("ServerMode: een fout wachtwoord geeft de melding van de server en verander
   await server.prepare();
   const { model } = startApp(server);
 
-  assert.deepEqual(await server.login("beheer@voorbeeld.test", "verkeerd-wachtwoord"), { ok: false, message: "Het e-mailadres of het wachtwoord klopt niet." });
+  assert.deepEqual(await server.login("beheerder", "verkeerd-wachtwoord"), { ok: false, message: "De gebruikersnaam of het wachtwoord klopt niet." });
   assert.equal(server.role, "device");
   assert.equal(model.findEmployee("mw-lotte").personnelNumber, "");
 });
@@ -253,15 +253,15 @@ test("ServerMode: het demo-inloggen bestaat niet met een server, en 'Alle gegeve
   assert.equal(doc.querySelector(".login-hint").classList.contains("hidden"), true);
   assert.equal(doc.querySelector("#wipeDataButton").classList.contains("hidden"), true);
   assert.equal(doc.querySelector("#tab-server").classList.contains("hidden"), false);
-  assert.equal(doc.querySelector("#loginEmail").value, "");
+  assert.equal(doc.querySelector("#loginUsername").value, "");
 
   // Een verkeerd wachtwoord logt niet in, ook al is er iets ingevuld (in de demo zou dat wel werken).
-  view.$("#loginEmail").value = "beheer@voorbeeld.test";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "verkeerd-wachtwoord";
   app.login({ preventDefault() {} });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(app.adminLoggedIn, false);
-  assert.equal(view.$("#loginError").textContent, "Het e-mailadres of het wachtwoord klopt niet.");
+  assert.equal(view.$("#loginError").textContent, "De gebruikersnaam of het wachtwoord klopt niet.");
   assert.equal(view.$("#loginPassword").value, "");
 
   view.$("#loginPassword").value = "een-lang-nepwachtwoord";
@@ -360,4 +360,71 @@ test("ServerMode: de locatie van de tablet gaat naar het model, en 'Ik ben een g
   const second = startApp(without.server);
   assert.equal(second.model.locationPointId, null);
   assert.ok(buttons.every((button) => button.classList.contains("hidden")));
+});
+
+// ------------------------------------------------------------------
+// Mijn account: wachtwoord wijzigen
+// ------------------------------------------------------------------
+
+test("ServerMode: 'Wachtwoord wijzigen' controleert eerst de velden, daarna het huidige wachtwoord op de server", async () => {
+  const api = createApi({ role: "admin" });
+  api.changePassword = async (current, next) => {
+    api.calls.push("password");
+    if (current !== api.password) throw new ServerError(401, "Het huidige wachtwoord klopt niet.");
+    api.password = next;
+    return { ok: true, role: "admin", csrf: "nieuwe-sleutel" };
+  };
+  const { server, doc } = createMode(api);
+  await server.prepare();
+  const { view } = startApp(server);
+  assert.equal(server.username, "beheerder");
+
+  const fill = (current, next, repeat) => {
+    doc.querySelector("#serverPasswordCurrent").value = current;
+    doc.querySelector("#serverPasswordNew").value = next;
+    doc.querySelector("#serverPasswordRepeat").value = repeat;
+  };
+  const submit = () => server.changePassword({ preventDefault() {} });
+  const error = () => doc.querySelector("#serverPasswordError").textContent;
+
+  fill("", "", "");
+  await submit();
+  assert.equal(error(), ServerMode.PASSWORD_TEXTS.required);
+  fill("een-lang-nepwachtwoord", "kort", "kort");
+  await submit();
+  assert.equal(error(), ServerMode.PASSWORD_TEXTS.tooShort);
+  fill("een-lang-nepwachtwoord", "een-nieuw-lang-wachtwoord", "een-ander-lang-wachtwoord");
+  await submit();
+  assert.equal(error(), ServerMode.PASSWORD_TEXTS.different);
+  assert.equal(api.calls.includes("password"), false, "de server is nog niets gevraagd");
+
+  // Het huidige wachtwoord klopt niet: de melding van de server, en het veld is leeg.
+  fill("verkeerd-wachtwoord", "een-nieuw-lang-wachtwoord", "een-nieuw-lang-wachtwoord");
+  await submit();
+  assert.equal(error(), "Het huidige wachtwoord klopt niet.");
+  assert.equal(doc.querySelector("#serverPasswordCurrent").value, "");
+
+  // Gelukt: een melding, de velden zijn leeg en de beheerder blijft ingelogd.
+  fill("een-lang-nepwachtwoord", "een-nieuw-lang-wachtwoord", "een-nieuw-lang-wachtwoord");
+  await submit();
+  assert.equal(api.password, "een-nieuw-lang-wachtwoord");
+  assert.equal(doc.querySelector("#serverPasswordError").classList.contains("hidden"), true);
+  assert.deepEqual(["#serverPasswordCurrent", "#serverPasswordNew", "#serverPasswordRepeat"].map((id) => doc.querySelector(id).value), ["", "", ""]);
+  assert.equal(view.toasts.at(-1).message, "Je wachtwoord is gewijzigd. Log voortaan in met het nieuwe wachtwoord.");
+  assert.equal(server.role, "admin");
+});
+
+test("ServerMode: geeft de server na het wijzigen geen nieuwe sessie, dan start de pagina opnieuw (uitgelogd)", async () => {
+  const api = createApi({ role: "admin" });
+  api.changePassword = async () => ({ ok: true, role: null });
+  const state = createMode(api);
+  await state.server.prepare();
+  startApp(state.server);
+  state.doc.querySelector("#serverPasswordCurrent").value = "een-lang-nepwachtwoord";
+  state.doc.querySelector("#serverPasswordNew").value = "een-nieuw-lang-wachtwoord";
+  state.doc.querySelector("#serverPasswordRepeat").value = "een-nieuw-lang-wachtwoord";
+
+  await state.server.changePassword({ preventDefault() {} });
+
+  assert.equal(state.reloads, 1);
 });

@@ -8,9 +8,9 @@ namespace Tvb\Consumptie\Server;
  * Auth — inloggen op de server: beheerders, gekoppelde tablets en hun sessies.
  *
  * Er zijn twee soorten toegang:
- *   - een beheerder logt in met e-mailadres en wachtwoord. Van het wachtwoord staat alleen een hash
- *     in de database (Argon2id, of bcrypt als de server dat niet heeft). Na vijf foute pogingen
- *     binnen een kwartier is inloggen voor dat e-mailadres tijdelijk geblokkeerd;
+ *   - een beheerder logt in met een gebruikersnaam en een wachtwoord. Van het wachtwoord staat alleen
+ *     een hash in de database (Argon2id, of bcrypt als de server dat niet heeft). Na vijf foute
+ *     pogingen binnen een kwartier is inloggen met die gebruikersnaam tijdelijk geblokkeerd;
  *   - een tablet wordt één keer door een ingelogde beheerder gekoppeld. De tablet krijgt dan een
  *     eigen sleutel in een cookie en hoort bij een consumptiepunt (de locatie van de tablet). De
  *     beheerder kan een tablet weer intrekken.
@@ -34,7 +34,7 @@ final class Auth
     public const DEVICE_MAX_SECONDS = 34560000;
 
     public const MIN_PASSWORD_LENGTH = 12;
-    public const MAX_FAILED_PER_EMAIL = 5;
+    public const MAX_FAILED_PER_NAME = 5;
     public const MAX_FAILED_PER_ADDRESS = 30;
     public const ATTEMPT_WINDOW_SECONDS = 900;
 
@@ -51,53 +51,62 @@ final class Auth
         return (int) $this->pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn();
     }
 
-    public function adminExists(string $email): bool
+    public function adminExists(string $username): bool
     {
-        $statement = $this->pdo->prepare('SELECT 1 FROM admins WHERE email = ?');
-        $statement->execute([self::normalizeEmail($email)]);
+        $statement = $this->pdo->prepare('SELECT 1 FROM admins WHERE username = ?');
+        $statement->execute([self::normalizeName($username)]);
 
         return $statement->fetchColumn() !== false;
     }
 
     /**
-     * Maakt een beheerder. Geeft de reden terug als het e-mailadres of het wachtwoord niet goed is,
+     * Maakt een beheerder. Geeft de reden terug als de gebruikersnaam of het wachtwoord niet goed is,
      * anders null.
      */
-    public function createAdmin(string $email, #[\SensitiveParameter] string $password, \DateTimeImmutable $now): ?string
+    public function createAdmin(string $username, #[\SensitiveParameter] string $password, \DateTimeImmutable $now): ?string
     {
-        $email = self::normalizeEmail($email);
-        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false || strlen($email) > 190) {
-            return 'Het e-mailadres is niet geldig.';
-        }
-        $problem = self::passwordProblem($password);
+        $username = self::normalizeName($username);
+        $problem = self::usernameProblem($username) ?? self::passwordProblem($password);
         if ($problem !== null) {
             return $problem;
         }
-        if ($this->adminExists($email)) {
-            return 'Er bestaat al een beheerder met dit e-mailadres.';
+        if ($this->adminExists($username)) {
+            return 'Er bestaat al een beheerder met deze gebruikersnaam.';
         }
         $this->pdo
-            ->prepare('INSERT INTO admins (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
-            ->execute([self::randomId(), $email, self::hash($password), self::stamp($now)]);
+            ->prepare('INSERT INTO admins (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)')
+            ->execute([self::randomId(), $username, self::hash($password), self::stamp($now)]);
 
         return null;
     }
 
     /** Zet een nieuw wachtwoord en beëindigt alle sessies van die beheerder. */
-    public function setPassword(string $email, #[\SensitiveParameter] string $password): ?string
+    public function setPassword(string $username, #[\SensitiveParameter] string $password): ?string
     {
         $problem = self::passwordProblem($password);
         if ($problem !== null) {
             return $problem;
         }
-        $admin = $this->adminByEmail($email);
+        $admin = $this->adminByName($username);
         if ($admin === null) {
-            return 'Er is geen beheerder met dit e-mailadres.';
+            return 'Er is geen beheerder met deze gebruikersnaam.';
         }
         $this->pdo->prepare('UPDATE admins SET password_hash = ? WHERE id = ?')->execute([self::hash($password), $admin['id']]);
         $this->pdo->prepare('DELETE FROM sessions WHERE kind = ? AND subject_id = ?')->execute([self::KIND_ADMIN, $admin['id']]);
 
         return null;
+    }
+
+    /**
+     * Een gebruikersnaam heeft 3 tot 64 tekens: letters, cijfers, een punt, een streepje of een liggend
+     * streepje, zonder spaties (bijvoorbeeld "beheerder" of "kantine.beheer"). Hoofdletters tellen niet
+     * mee: "Beheerder" is dezelfde gebruikersnaam als "beheerder".
+     */
+    public static function usernameProblem(string $username): ?string
+    {
+        return preg_match('/^[a-z0-9][a-z0-9._-]{2,63}$/', self::normalizeName($username)) === 1
+            ? null
+            : 'Een gebruikersnaam heeft 3 tot 64 tekens: letters, cijfers, een punt, een streepje of een liggend streepje, zonder spaties.';
     }
 
     public static function passwordProblem(#[\SensitiveParameter] string $password): ?string
@@ -113,44 +122,45 @@ final class Auth
     }
 
     /**
-     * Logt een beheerder in. De uitkomst is "ok" (met de sleutels van de sessie), "wrong" (verkeerd
-     * e-mailadres of wachtwoord, zonder te zeggen welke van de twee) of "blocked" (te veel pogingen).
+     * Logt een beheerder in. De uitkomst is "ok" (met de sleutels van de sessie), "wrong" (verkeerde
+     * gebruikersnaam of verkeerd wachtwoord, zonder te zeggen welke van de twee) of "blocked" (te veel
+     * pogingen).
      *
-     * @return array{status: 'ok', token: string, csrf: string, email: string}|array{status: 'wrong'|'blocked'}
+     * @return array{status: 'ok', token: string, csrf: string, username: string}|array{status: 'wrong'|'blocked'}
      */
-    public function login(string $email, #[\SensitiveParameter] string $password, string $address, \DateTimeImmutable $now): array
+    public function login(string $username, #[\SensitiveParameter] string $password, string $address, \DateTimeImmutable $now): array
     {
-        $email = self::normalizeEmail($email);
-        $emailKey = hash('sha256', 'email:' . $email);
+        $username = self::normalizeName($username);
+        $nameKey = hash('sha256', 'naam:' . $username);
         $addressKey = hash('sha256', 'adres:' . $address);
         $since = self::stamp($now->modify('-' . self::ATTEMPT_WINDOW_SECONDS . ' seconds'));
         $this->pdo->prepare('DELETE FROM login_attempts WHERE attempted_at < ?')->execute([$since]);
 
-        if ($this->attempts($emailKey) >= self::MAX_FAILED_PER_EMAIL || $this->attempts($addressKey) >= self::MAX_FAILED_PER_ADDRESS) {
+        if ($this->attempts($nameKey) >= self::MAX_FAILED_PER_NAME || $this->attempts($addressKey) >= self::MAX_FAILED_PER_ADDRESS) {
             return ['status' => 'blocked'];
         }
 
-        $admin = $this->adminByEmail($email);
+        $admin = $this->adminByName($username);
         // Ook zonder beheerder wordt een hash gecontroleerd, zodat de duur van het verzoek minder goed
-        // verraadt of het e-mailadres bestaat. Dit is de hash van een willekeurige tekst die niemand
+        // verraadt of de gebruikersnaam bestaat. Dit is de hash van een willekeurige tekst die niemand
         // kent en die daarna is weggegooid. Het is geen wachtwoord van iemand.
         $hash = $admin['password_hash'] ?? '$2y$12$Lq0XUnvZDsxG8xuiZ/UdA.QZ9x4Pa6YczUa4hYDBJf1HzLljwHtz2';
         $valid = password_verify($password, $hash) && $admin !== null;
         if (!$valid) {
             $insert = $this->pdo->prepare('INSERT INTO login_attempts (attempt_key, attempted_at) VALUES (?, ?)');
-            $insert->execute([$emailKey, self::stamp($now)]);
+            $insert->execute([$nameKey, self::stamp($now)]);
             $insert->execute([$addressKey, self::stamp($now)]);
 
             return ['status' => 'wrong'];
         }
 
-        $this->pdo->prepare('DELETE FROM login_attempts WHERE attempt_key = ?')->execute([$emailKey]);
+        $this->pdo->prepare('DELETE FROM login_attempts WHERE attempt_key = ?')->execute([$nameKey]);
         if (password_needs_rehash($admin['password_hash'], self::algorithm())) {
             $this->pdo->prepare('UPDATE admins SET password_hash = ? WHERE id = ?')->execute([self::hash($password), $admin['id']]);
         }
         $session = $this->createSession(self::KIND_ADMIN, (string) $admin['id'], $now, self::ADMIN_MAX_SECONDS);
 
-        return ['status' => 'ok', 'token' => $session['token'], 'csrf' => $session['csrf'], 'email' => (string) $admin['email']];
+        return ['status' => 'ok', 'token' => $session['token'], 'csrf' => $session['csrf'], 'username' => (string) $admin['username']];
     }
 
     /** Beëindigt een sessie (uitloggen, of een tablet ontkoppelen vanaf de tablet zelf). */
@@ -199,14 +209,14 @@ final class Auth
         return ['kind' => (string) $row['kind'], 'subjectId' => (string) $row['subject_id'], 'csrf' => (string) $row['csrf']];
     }
 
-    /** Het e-mailadres van een beheerder, voor in het logboek van de app. */
-    public function adminEmail(string $id): ?string
+    /** De gebruikersnaam van een beheerder (voor "Mijn account" en het wijzigen van het wachtwoord). */
+    public function adminName(string $id): ?string
     {
-        $statement = $this->pdo->prepare('SELECT email FROM admins WHERE id = ?');
+        $statement = $this->pdo->prepare('SELECT username FROM admins WHERE id = ?');
         $statement->execute([$id]);
-        $email = $statement->fetchColumn();
+        $username = $statement->fetchColumn();
 
-        return is_string($email) ? $email : null;
+        return is_string($username) ? $username : null;
     }
 
     // ------------------------------------------------------------------
@@ -302,19 +312,19 @@ final class Auth
         return (int) $statement->fetchColumn();
     }
 
-    /** @return array{id: string, email: string, password_hash: string}|null */
-    private function adminByEmail(string $email): ?array
+    /** @return array{id: string, username: string, password_hash: string}|null */
+    private function adminByName(string $username): ?array
     {
-        $statement = $this->pdo->prepare('SELECT id, email, password_hash FROM admins WHERE email = ?');
-        $statement->execute([self::normalizeEmail($email)]);
+        $statement = $this->pdo->prepare('SELECT id, username, password_hash FROM admins WHERE username = ?');
+        $statement->execute([self::normalizeName($username)]);
         $row = $statement->fetch();
 
-        return $row === false ? null : ['id' => (string) $row['id'], 'email' => (string) $row['email'], 'password_hash' => (string) $row['password_hash']];
+        return $row === false ? null : ['id' => (string) $row['id'], 'username' => (string) $row['username'], 'password_hash' => (string) $row['password_hash']];
     }
 
-    private static function normalizeEmail(string $email): string
+    private static function normalizeName(string $username): string
     {
-        return strtolower(trim($email));
+        return strtolower(trim($username));
     }
 
     private static function algorithm(): string|int

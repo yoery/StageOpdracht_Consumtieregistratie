@@ -266,7 +266,7 @@ test("J: na sluiten van het cameravenster staat de camera niet meer klaar", asyn
 
 test("K: na een mislukte login en opnieuw openen is de foutmelding weg", () => {
   const { app, view } = createApp();
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "";
   app.login({ preventDefault() {} });
   assert.equal(view.$("#loginError").classList.contains("hidden"), false);
@@ -418,7 +418,7 @@ test("Q: sluiten van het admin-venster (ook met Escape of de achtergrond) logt d
   const { app, view } = createApp();
   globalThis.document = { querySelectorAll: () => [], addEventListener() {} };
   app.registerAdminEvents();
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "geheim";
   app.openAdmin();
   app.login({ preventDefault() {} });

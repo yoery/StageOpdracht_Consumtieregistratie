@@ -151,31 +151,31 @@ export class AdminController extends ControllerPart {
     this.app.hide("#loginError");
     this.app.show("#loginView");
     this.view.$("#adminModal").setAttribute("aria-labelledby", "adminTitle");
-    this.view.$("#loginEmail").focus();
+    this.view.$("#loginUsername").focus();
   }
 
-  // Demo-login: ieder ingevuld e-mailadres en wachtwoord wordt geaccepteerd.
+  // Demo-login: iedere ingevulde gebruikersnaam en ieder wachtwoord wordt geaccepteerd.
   login(event) {
     event.preventDefault();
 
-    const email = this.view.$("#loginEmail").value;
+    const username = this.view.$("#loginUsername").value.trim();
     const password = this.view.$("#loginPassword").value;
 
-    if (!email || !password) {
+    if (!username || !password) {
       this.showLoginError(AdminController.LOGIN_REQUIRED);
       return;
     }
-    // Met een server controleert de server het e-mailadres en het wachtwoord (zie serverLogin).
+    // Met een server controleert de server de gebruikersnaam en het wachtwoord (zie serverLogin).
     // Het demo-inloggen hieronder bestaat dan niet.
     if (this.app.server) {
-      this.serverLogin(email, password);
+      this.serverLogin(username, password);
       return;
     }
     this.completeLogin();
   }
 
   // De tekst onder het inlogformulier als er niets is ingevuld.
-  static LOGIN_REQUIRED = "Vul een e-mailadres en wachtwoord in.";
+  static LOGIN_REQUIRED = "Vul een gebruikersnaam en wachtwoord in.";
 
   showLoginError(message) {
     const error = this.view.$("#loginError");
@@ -196,10 +196,10 @@ export class AdminController extends ControllerPart {
   // ServerMode alle gegevens opnieuw opgehaald (de beheerder krijgt meer dan een tablet) en het model
   // opnieuw laten laden. Pas daarna gaat het dashboard open. Mislukt het, dan staat de melding van
   // de server onder het formulier.
-  async serverLogin(email, password) {
+  async serverLogin(username, password) {
     const button = this.view.$("#loginForm button[type=submit]");
     if (button) button.disabled = true;
-    const result = await this.app.server.login(email, password);
+    const result = await this.app.server.login(username, password);
     if (button) button.disabled = false;
 
     if (!result.ok) {

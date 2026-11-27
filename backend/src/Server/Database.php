@@ -81,7 +81,7 @@ final class Database
             'CREATE INDEX IF NOT EXISTS records_version ON records (version)',
             'CREATE TABLE IF NOT EXISTS admins (
                 id VARCHAR(64) PRIMARY KEY,
-                email VARCHAR(190) NOT NULL UNIQUE,
+                username VARCHAR(190) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
                 created_at VARCHAR(32) NOT NULL
             )',
@@ -109,6 +109,23 @@ final class Database
         ];
         foreach ($statements as $statement) {
             $pdo->exec($statement);
+        }
+        // Sinds versie 3.35 logt een beheerder in met een gebruikersnaam in plaats van een e-mailadres.
+        // Een database van daarvoor heeft de kolom `email`. Die krijgt de nieuwe naam, zodat een
+        // bestaande beheerder kan inloggen met zijn oude e-mailadres als gebruikersnaam.
+        if (self::hasColumn($pdo, 'admins', 'email')) {
+            $pdo->exec('ALTER TABLE admins RENAME COLUMN email TO username');
+        }
+    }
+
+    private static function hasColumn(\PDO $pdo, string $table, string $column): bool
+    {
+        try {
+            $pdo->query(sprintf('SELECT %s FROM %s WHERE 1 = 0', $column, $table));
+
+            return true;
+        } catch (\PDOException) {
+            return false;
         }
     }
 

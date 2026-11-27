@@ -171,7 +171,7 @@ Tests: `ServerTest.php` ("een tablet vindt de medewerker bij een pas, in iedere 
 
 ### AF-12 Vijf foute pogingen sluiten de beheerder een kwartier buiten
 
-**Ernst: Laag.** Na vijf foute pogingen voor één e-mailadres is inloggen met dat adres een kwartier geblokkeerd. Iemand die het e-mailadres van de beheerder kent, kan hem zo buitensluiten.
+**Ernst: Laag.** Na vijf foute pogingen voor één gebruikersnaam (tot 27 november 2026 een e-mailadres) is inloggen met die naam een kwartier geblokkeerd. Iemand die de gebruikersnaam van de beheerder kent, kan hem zo buitensluiten.
 
 **Status: Geaccepteerd.** Dit is de gebruikelijke afweging tegen het raden van een wachtwoord. Een tablet blijft werken, want die logt niet in met het wachtwoord.
 
@@ -209,9 +209,9 @@ Tests: `ServerTest.php` ("een tablet vindt de medewerker bij een pas, in iedere 
 
 | Wat | Uitkomst |
 |---|---|
-| Tests van de backend (`php backend/tests/run.php`) | 173 geslaagd |
-| Unit tests (`npm test`) | 1014 geslaagd |
-| Browsertests (`npm run test:e2e`), waarvan 11 met de echte server | 44 geslaagd |
+| Tests van de backend (`php backend/tests/run.php`) | 175 geslaagd |
+| Unit tests (`npm test`) | 1016 geslaagd |
+| Browsertests (`npm run test:e2e`), waarvan 12 met de echte server | 45 geslaagd |
 | Gitleaks over de hele geschiedenis (alle branches) | 171 commits, geen vondsten |
 | `npm audit` op face-api 1.7.15 | 0 kwetsbaarheden |
 | Controles van de container in GitHub Actions | Geslaagd (job `container`, run van commit bd1ad42 op 27 november 2026) |

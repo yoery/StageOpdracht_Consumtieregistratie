@@ -142,7 +142,7 @@ jobs:
           NEP_WACHTWOORD: een-lang-nepwachtwoord-voor-ci
         run: |
           docker run -d --name cr -p 127.0.0.1:8080:80 \
-            -e CR_BEHEER_EMAIL=beheer@voorbeeld.test -e CR_BEHEER_WACHTWOORD="$NEP_WACHTWOORD" \
+            -e CR_BEHEER_NAAM=beheerder -e CR_BEHEER_WACHTWOORD="$NEP_WACHTWOORD" \
             consumptieregistratie:test
           for poging in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && break; sleep 1; done
           status() { curl -s -o /dev/null -w '%{http_code}' --path-as-is "$@"; }
@@ -156,9 +156,9 @@ jobs:
             case "$code" in 400|403|404) ;; *) echo "$pad geeft $code"; exit 1 ;; esac
           done
           # Inloggen met de nepbeheerder: lukt alleen van de eigen website, en de cookie is HttpOnly.
-          test "$(status -X POST -H 'Content-Type: application/json' -d '{"email":"beheer@voorbeeld.test","password":"'"$NEP_WACHTWOORD"'"}' http://127.0.0.1:8080/api/login)" = 403
+          test "$(status -X POST -H 'Content-Type: application/json' -d '{"username":"beheerder","password":"'"$NEP_WACHTWOORD"'"}' http://127.0.0.1:8080/api/login)" = 403
           curl -s -D kop.txt -o antwoord.json -X POST -H 'Origin: http://127.0.0.1:8080' -H 'X-CR-Client: 1' -H 'Content-Type: application/json' \
-            -d '{"email":"beheer@voorbeeld.test","password":"'"$NEP_WACHTWOORD"'"}' http://127.0.0.1:8080/api/login
+            -d '{"username":"beheerder","password":"'"$NEP_WACHTWOORD"'"}' http://127.0.0.1:8080/api/login
           grep -qi '^set-cookie: cr_beheer=.*httponly' kop.txt
           grep -qi 'samesite=strict' kop.txt
           grep -q '"role":"admin"' antwoord.json

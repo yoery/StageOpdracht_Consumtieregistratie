@@ -22,7 +22,7 @@ use Tvb\Consumptie\Server\Request;
 use Tvb\Consumptie\Server\Response;
 
 const TEST_PASSWORD = 'een-lang-nepwachtwoord';
-const TEST_EMAIL = 'beheer@voorbeeld.test';
+const TEST_USERNAME = 'beheerder';
 
 /** Een object uit JSON-tekst, zoals de website het stuurt. */
 function record(string $json): stdClass
@@ -63,7 +63,7 @@ final class TestServer
         $this->api = new Api($this->pdo, $syncRunner, function (string $line): void {
             $this->log[] = $line;
         });
-        same(null, $this->auth->createAdmin(TEST_EMAIL, TEST_PASSWORD, testMoment()));
+        same(null, $this->auth->createAdmin(TEST_USERNAME, TEST_PASSWORD, testMoment()));
 
         $now = testMoment();
         $this->store->put('companies', 'bedrijf-tvb', record('{"id":"bedrijf-tvb","name":"TVB","employerNumber":"01"}'), $now);
@@ -115,7 +115,7 @@ final class TestServer
 
     public function loginAsAdmin(): void
     {
-        $response = $this->call('POST', '/login', json_encode(['email' => TEST_EMAIL, 'password' => TEST_PASSWORD]));
+        $response = $this->call('POST', '/login', json_encode(['username' => TEST_USERNAME, 'password' => TEST_PASSWORD]));
         same(200, $response->status);
     }
 
@@ -201,7 +201,7 @@ test('RecordStore: een onbekende lijst, een onveilige id, een verkeerde id in de
 
 test('Auth: van het wachtwoord staat alleen een hash in de database, en van een sessie alleen een hash van de sleutel', function (): void {
     $server = new TestServer();
-    $login = $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment());
+    $login = $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment());
     same('ok', $login['status']);
 
     $dump = json_encode([
@@ -213,43 +213,46 @@ test('Auth: van het wachtwoord staat alleen een hash in de database, en van een 
     ok(str_contains($dump, hash('sha256', $login['token'])));
 });
 
-test('Auth: een te kort wachtwoord, een ongeldig e-mailadres en een dubbele beheerder worden geweigerd', function (): void {
+test('Auth: een te kort wachtwoord, een ongeldige gebruikersnaam en een dubbele beheerder worden geweigerd', function (): void {
     $auth = new Auth(Database::connect('sqlite::memory:'));
 
-    ok(str_contains((string) $auth->createAdmin(TEST_EMAIL, 'tekort', testMoment()), 'minstens 12 tekens'));
-    ok($auth->createAdmin('geen-adres', TEST_PASSWORD, testMoment()) !== null);
-    same(null, $auth->createAdmin('  Beheer@Voorbeeld.TEST ', TEST_PASSWORD, testMoment()));
-    ok($auth->adminExists(TEST_EMAIL), 'hoofdletters en spaties tellen niet mee');
-    ok(str_contains((string) $auth->createAdmin(TEST_EMAIL, TEST_PASSWORD, testMoment()), 'bestaat al'));
+    ok(str_contains((string) $auth->createAdmin(TEST_USERNAME, 'tekort', testMoment()), 'minstens 12 tekens'));
+    foreach (['ab', 'met spatie', 'teken!', '.punt-vooraan', str_repeat('a', 65), ''] as $wrong) {
+        ok(str_contains((string) $auth->createAdmin($wrong, TEST_PASSWORD, testMoment()), 'Een gebruikersnaam heeft 3 tot 64 tekens'), "'$wrong' is geen geldige gebruikersnaam");
+    }
+    same(0, $auth->adminCount());
+    same(null, $auth->createAdmin('  Beheerder ', TEST_PASSWORD, testMoment()));
+    ok($auth->adminExists(TEST_USERNAME), 'hoofdletters en spaties tellen niet mee');
+    ok(str_contains((string) $auth->createAdmin(TEST_USERNAME, TEST_PASSWORD, testMoment()), 'bestaat al'));
     same(1, $auth->adminCount());
 });
 
-test('Auth: een verkeerd wachtwoord en een onbekend e-mailadres geven dezelfde uitkomst', function (): void {
+test('Auth: een verkeerd wachtwoord en een onbekende gebruikersnaam geven dezelfde uitkomst', function (): void {
     $server = new TestServer();
 
-    same(['status' => 'wrong'], $server->auth->login(TEST_EMAIL, 'verkeerd-wachtwoord', '203.0.113.7', testMoment()));
-    same(['status' => 'wrong'], $server->auth->login('niemand@voorbeeld.test', TEST_PASSWORD, '203.0.113.7', testMoment()));
+    same(['status' => 'wrong'], $server->auth->login(TEST_USERNAME, 'verkeerd-wachtwoord', '203.0.113.7', testMoment()));
+    same(['status' => 'wrong'], $server->auth->login('niemand', TEST_PASSWORD, '203.0.113.7', testMoment()));
 });
 
 test('Auth: na vijf foute pogingen is inloggen een kwartier geblokkeerd, ook met het goede wachtwoord', function (): void {
     $server = new TestServer();
-    for ($attempt = 0; $attempt < Auth::MAX_FAILED_PER_EMAIL; $attempt++) {
-        same('wrong', $server->auth->login(TEST_EMAIL, 'verkeerd-wachtwoord', '203.0.113.7', testMoment())['status']);
+    for ($attempt = 0; $attempt < Auth::MAX_FAILED_PER_NAME; $attempt++) {
+        same('wrong', $server->auth->login(TEST_USERNAME, 'verkeerd-wachtwoord', '203.0.113.7', testMoment())['status']);
     }
 
-    same('blocked', $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:05:00Z'))['status']);
-    same('ok', $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:16:00Z'))['status']);
+    same('blocked', $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:05:00Z'))['status']);
+    same('ok', $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:16:00Z'))['status']);
 });
 
 test('Auth: een sessie van de beheerder verloopt na een half uur niets doen en altijd na twaalf uur', function (): void {
     $server = new TestServer();
-    $token = $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:00:00Z'))['token'];
+    $token = $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:00:00Z'))['token'];
 
     ok($server->auth->session($token, Auth::KIND_ADMIN, testMoment('2026-11-26T09:20:00Z')) !== null);
     ok($server->auth->session($token, Auth::KIND_ADMIN, testMoment('2026-11-26T09:45:00Z')) !== null, 'de tijd begint opnieuw na een verzoek');
     same(null, $server->auth->session($token, Auth::KIND_ADMIN, testMoment('2026-11-26T10:20:00Z')), 'een half uur niets gedaan');
 
-    $long = $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:00:00Z'))['token'];
+    $long = $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment('2026-11-26T09:00:00Z'))['token'];
     for ($minutes = 20; $minutes <= 700; $minutes += 20) {
         ok($server->auth->session($long, Auth::KIND_ADMIN, testMoment('2026-11-26T09:00:00Z')->modify("+$minutes minutes")) !== null, "na $minutes minuten");
     }
@@ -272,12 +275,12 @@ test('Auth: een sleutel van een tablet werkt niet als sessie van een beheerder, 
 
 test('Auth: een nieuw wachtwoord beëindigt de oude sessies', function (): void {
     $server = new TestServer();
-    $token = $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment())['token'];
+    $token = $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment())['token'];
 
-    same(null, $server->auth->setPassword(TEST_EMAIL, 'een-ander-lang-wachtwoord'));
+    same(null, $server->auth->setPassword(TEST_USERNAME, 'een-ander-lang-wachtwoord'));
     same(null, $server->auth->session($token, Auth::KIND_ADMIN, testMoment()));
-    same('wrong', $server->auth->login(TEST_EMAIL, TEST_PASSWORD, '203.0.113.7', testMoment())['status']);
-    same('ok', $server->auth->login(TEST_EMAIL, 'een-ander-lang-wachtwoord', '203.0.113.7', testMoment())['status']);
+    same('wrong', $server->auth->login(TEST_USERNAME, TEST_PASSWORD, '203.0.113.7', testMoment())['status']);
+    same('ok', $server->auth->login(TEST_USERNAME, 'een-ander-lang-wachtwoord', '203.0.113.7', testMoment())['status']);
 });
 
 // ------------------------------------------------------------------
@@ -302,12 +305,12 @@ test('API: zonder inloggen is alleen /health bereikbaar, en dat geeft geen gegev
 test('API: inloggen zet een cookie en geeft de sleutel van de sessie, een fout wachtwoord geeft 401', function (): void {
     $server = new TestServer();
 
-    $wrong = $server->call('POST', '/login', json_encode(['email' => TEST_EMAIL, 'password' => 'verkeerd-wachtwoord']));
+    $wrong = $server->call('POST', '/login', json_encode(['username' => TEST_USERNAME, 'password' => 'verkeerd-wachtwoord']));
     same(401, $wrong->status);
-    same('Het e-mailadres of het wachtwoord klopt niet.', $wrong->body['message']);
+    same('De gebruikersnaam of het wachtwoord klopt niet.', $wrong->body['message']);
     same([], $wrong->cookies);
 
-    $response = $server->call('POST', '/login', json_encode(['email' => TEST_EMAIL, 'password' => TEST_PASSWORD]));
+    $response = $server->call('POST', '/login', json_encode(['username' => TEST_USERNAME, 'password' => TEST_PASSWORD]));
     same(200, $response->status);
     same('admin', $response->body['role']);
     same(Api::COOKIE_ADMIN, $response->cookies[0]['name']);
@@ -321,16 +324,16 @@ test('API: inloggen zet een cookie en geeft de sleutel van de sessie, een fout w
 
 test('API: na te veel foute pogingen geeft inloggen 429', function (): void {
     $server = new TestServer();
-    for ($attempt = 0; $attempt < Auth::MAX_FAILED_PER_EMAIL; $attempt++) {
-        $server->call('POST', '/login', json_encode(['email' => TEST_EMAIL, 'password' => 'verkeerd-wachtwoord']));
+    for ($attempt = 0; $attempt < Auth::MAX_FAILED_PER_NAME; $attempt++) {
+        $server->call('POST', '/login', json_encode(['username' => TEST_USERNAME, 'password' => 'verkeerd-wachtwoord']));
     }
 
-    same(429, $server->call('POST', '/login', json_encode(['email' => TEST_EMAIL, 'password' => TEST_PASSWORD]))->status);
+    same(429, $server->call('POST', '/login', json_encode(['username' => TEST_USERNAME, 'password' => TEST_PASSWORD]))->status);
 });
 
 test('API: een schrijvend verzoek van een andere website, zonder kopregel of zonder sleutel wordt geweigerd', function (): void {
     $server = new TestServer();
-    $login = json_encode(['email' => TEST_EMAIL, 'password' => TEST_PASSWORD]);
+    $login = json_encode(['username' => TEST_USERNAME, 'password' => TEST_PASSWORD]);
 
     same(403, $server->call('POST', '/login', $login, ['origin' => 'https://kwaad.voorbeeld.test'])->status);
     same(403, $server->call('POST', '/login', $login, ['origin' => null])->status);
@@ -379,7 +382,7 @@ test('API: een beheerder koppelt een tablet aan een consumptiepunt, en na uitlog
     $session = $server->call('GET', '/session')->body;
     same('device', $session['role']);
     same('Tablet kantine', $session['device']['name']);
-    same(null, $session['email']);
+    same(null, $session['username']);
 });
 
 test('API: een tablet ziet medewerkers zonder looncode, personeelsnummer en werkgevernummer, en geen logboek', function (): void {
@@ -577,7 +580,7 @@ test('API: de beheerder wijzigt zijn wachtwoord, alleen met het huidige wachtwoo
     same(400, $server->call('POST', '/account/password', json_encode(['current' => TEST_PASSWORD, 'new' => 'kort']))->status);
     same(200, $server->call('POST', '/account/password', json_encode(['current' => TEST_PASSWORD, 'new' => 'een-ander-lang-wachtwoord']))->status);
     same('admin', $server->call('GET', '/session')->body['role']);
-    same('ok', $server->auth->login(TEST_EMAIL, 'een-ander-lang-wachtwoord', '203.0.113.7', testMoment())['status']);
+    same('ok', $server->auth->login(TEST_USERNAME, 'een-ander-lang-wachtwoord', '203.0.113.7', testMoment())['status']);
 });
 
 // ------------------------------------------------------------------
@@ -1068,4 +1071,34 @@ test('Database: een transactie neemt meteen het schrijfrecht, zodat een ander ve
             }
         }
     }
+});
+
+test('Auth: een database van vóór versie 3.35 (inloggen met e-mailadres) gaat over op de gebruikersnaam', function (): void {
+    $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo->exec('CREATE TABLE admins (id VARCHAR(64) PRIMARY KEY, email VARCHAR(190) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, created_at VARCHAR(32) NOT NULL)');
+    $pdo->prepare('INSERT INTO admins (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
+        ->execute(['beheer-oud', 'oud@voorbeeld.test', password_hash(TEST_PASSWORD, PASSWORD_BCRYPT), '2026-11-20T09:00:00Z']);
+
+    Database::migrate($pdo);
+    Database::migrate($pdo); // mag vaker
+
+    $auth = new Auth($pdo);
+    same('ok', $auth->login('oud@voorbeeld.test', TEST_PASSWORD, '203.0.113.7', testMoment())['status'], 'de bestaande beheerder logt in met zijn oude e-mailadres als gebruikersnaam');
+    same(null, $auth->setPassword('oud@voorbeeld.test', 'een-ander-lang-wachtwoord'));
+    same(null, $auth->createAdmin(TEST_USERNAME, TEST_PASSWORD, testMoment()));
+    same(2, $auth->adminCount());
+});
+
+test('API: inloggen met de gebruikersnaam (hoofdletters en spaties tellen niet mee), de sessie noemt die naam', function (): void {
+    $server = new TestServer();
+
+    $login = $server->call('POST', '/login', json_encode(['username' => '  Beheerder ', 'password' => TEST_PASSWORD]));
+    same([200, 'beheerder'], [$login->status, $login->body['username']]);
+    $session = $server->call('GET', '/session')->body;
+    same('beheerder', $session['username']);
+    ok(!array_key_exists('email', $session), 'de sessie noemt nog een e-mailadres');
+
+    // Het oude veld "email" telt niet meer.
+    $old = $server->call('POST', '/login', json_encode(['email' => TEST_USERNAME, 'password' => TEST_PASSWORD]));
+    same([400, 'Vul de gebruikersnaam en het wachtwoord in.'], [$old->status, $old->body['message']]);
 });

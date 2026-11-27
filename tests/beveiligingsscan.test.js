@@ -132,7 +132,7 @@ test("scan 1: zonder ingelogde beheerder doet geen enkele beheeractie iets en vo
 
 test("scan 1: na inloggen werkt een correctie wel, na het sluiten van het beheer niet meer", () => {
   const { app, model, view } = createApp();
-  view.$("#loginEmail").value = "admin@tvb.nl";
+  view.$("#loginUsername").value = "beheerder";
   view.$("#loginPassword").value = "geheim";
 
   app.login({ preventDefault() {} });
