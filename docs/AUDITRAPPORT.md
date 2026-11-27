@@ -2,7 +2,7 @@
 
 **Datum:** 26 november 2026
 
-**Bijgewerkt:** 27 november 2026. AF-07 en AF-08 zijn opgelost: herkennen met de camera en met de pas gebeurt nu op de server (commit bd1ad42). De hertest is herhaald.
+**Bijgewerkt:** 27 november 2026. AF-07 en AF-08 zijn opgelost: herkennen met de camera en met de pas gebeurt nu op de server (commit bd1ad42). Een onafhankelijke review van die wijziging vond geen lek, wel zes kleinere fouten. Die zijn opgelost in commit d116eff. De hertest is herhaald.
 
 ## Samenvatting
 
@@ -38,7 +38,7 @@ Er blijven twee risico's over die alleen buiten de code op te lossen zijn: het t
 | De tablets in kioskmodus zetten, zodat de ontwikkelaarstools en de adresbalk niet bereikbaar zijn | alle | TVB | Open |
 | In Coolify alleen beheerders van TVB toegang geven, en het token van een App connector gebruiken die alleen deze ene GetConnector mag lezen | AF-10 | TVB (beheer van Coolify en AFAS) | Open |
 | Een GetConnector met alleen de velden die de app nodig heeft | AF-11 | TVB (AFAS-beheer) | Open, volgens TVB nu niet mogelijk |
-| Na de eerste deploy de controles van de container in GitHub Actions bekijken (job `container`) | alle | Ontwikkelaar | Open |
+| De controles van de container in GitHub Actions bekijken (job `container`) | alle | Ontwikkelaar | Gedaan (27 november 2026): geslaagd |
 
 ---
 
@@ -70,7 +70,7 @@ Bij de audit is het bestand `.env` niet gelezen en is er geen verzoek naar AFAS 
 
 ### 2.2 Wat niet is gecontroleerd
 
-- De container is op deze computer niet gebouwd (er staat geen Docker op). De controles van de container draaien in GitHub Actions (job `container`). De uitkomst daarvan is hier niet bekeken.
+- De container is op deze computer niet gebouwd (er staat geen Docker op). De controles van de container draaien in GitHub Actions (job `container`). Op 27 november 2026 is de uitkomst bekeken: geslaagd.
 - De instellingen van Coolify, de server van TVB en de App connector in AFAS zijn niet bekeken. Die vallen buiten de code.
 - Er is geen aanval op een draaiende server gedaan. De API is getest met de ontwikkelserver op deze computer en een eigen database.
 
@@ -137,7 +137,9 @@ Bij de audit is het bestand `.env` niet gelezen en is er geen verzoek naar AFAS 
 
 Zodat niemand de server kan laten raden, zijn per sessie maximaal 240 verzoeken per minuut toegestaan. Zonder verbinding met de server werkt herkennen met de camera niet. De tablet zegt dat dan en de medewerker zoekt zijn naam op. Een registratie zonder verbinding wordt nog steeds bewaard en later verstuurd.
 
-Tests: `ServerTest.php` ("geen browser krijgt de kenmerken van een gezicht, ook de beheerder niet", "de server vindt de actieve medewerker met het dichtstbijzijnde gezicht onder de drempel" en vier andere), `herkennen-op-server.test.js` en de browsertests met de echte server.
+Na de review (commit d116eff) weigert de server ook een gezicht dat meer dan een dag in de toekomst is ingesteld (een tablet met een verkeerde klok) of waarvan de toestemming na het instellen ligt, en herkent hij daar niet mee. Anders zouden er kenmerken blijven die geen browser toont en die dus niemand kan uitzetten. Iedere medewerker heeft op de server hooguit één gezicht: een nieuw gezicht vervangt het oude.
+
+Tests: `ServerTest.php` ("geen browser krijgt de kenmerken van een gezicht, ook de beheerder niet", "de server vindt de actieve medewerker met het dichtstbijzijnde gezicht onder de drempel" en zes andere), `herkennen-op-server.test.js` en de browsertests met de echte server.
 
 ### AF-08 Iedere tablet had de koppeling tussen pasnummer en naam van alle medewerkers
 
@@ -200,19 +202,19 @@ Tests: `ServerTest.php` ("een tablet vindt de medewerker bij een pas, in iedere 
 | AF-04 | Laatste adres uit `X-Forwarded-For` | 24297ad | `ServerTest.php` (1) |
 | AF-05 | Kort logformaat voor de standaardsite | 24297ad | CI |
 | AF-06 | Willekeurig wachtwoord in de test, `.gitleaksignore` | c3c9d39 | gitleaks |
-| AF-07 | Kenmerken van gezichten niet in de opslag van de browser, daarna herkennen op de server | a87f390, bd1ad42 | `server-sync.test.js` (1), `ServerTest.php` (6), `herkennen-op-server.test.js` (8) |
-| AF-08 | Pas opzoeken en koppelen op de server, de tablet kent geen pasnummers | bd1ad42 | `ServerTest.php` (4), `herkennen-op-server.test.js` (11), browsertests (2) |
+| AF-07 | Kenmerken van gezichten niet in de opslag van de browser, daarna herkennen op de server, met dezelfde datumregels als in de browser en één gezicht per medewerker | a87f390, bd1ad42, d116eff | `server-sync.test.js` (1), `ServerTest.php` (8), `herkennen-op-server.test.js` (10) |
+| AF-08 | Pas opzoeken en koppelen op de server, de tablet kent geen pasnummers | bd1ad42, d116eff | `ServerTest.php` (5), `herkennen-op-server.test.js` (15), browsertests (2) |
 
 ### 5.1 Hertest
 
 | Wat | Uitkomst |
 |---|---|
-| Tests van de backend (`php backend/tests/run.php`) | 169 geslaagd |
-| Unit tests (`npm test`) | 1008 geslaagd |
+| Tests van de backend (`php backend/tests/run.php`) | 173 geslaagd |
+| Unit tests (`npm test`) | 1014 geslaagd |
 | Browsertests (`npm run test:e2e`), waarvan 11 met de echte server | 44 geslaagd |
 | Gitleaks over de hele geschiedenis (alle branches) | 171 commits, geen vondsten |
 | `npm audit` op face-api 1.7.15 | 0 kwetsbaarheden |
-| Controles van de container in GitHub Actions | Niet bekeken (zie 2.2) |
+| Controles van de container in GitHub Actions | Geslaagd (job `container`, run van commit bd1ad42 op 27 november 2026) |
 
 ## 6. Aanbevelingen
 

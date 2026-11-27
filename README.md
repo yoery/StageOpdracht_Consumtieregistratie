@@ -14,7 +14,7 @@ Met de server op een eigen computer (PHP 8.3+): maak eerst een beheerder met `ph
 
 Tests draaien (Node.js 22+, de CI gebruikt Node.js 24 LTS): `npm test`
 
-Tests van de backend draaien (de server en de AFAS-koppeling, 169 tests, PHP 8.3+): `php backend/tests/run.php`
+Tests van de backend draaien (de server en de AFAS-koppeling, 173 tests, PHP 8.3+): `php backend/tests/run.php`
 
 Browsertests (end-to-end) draai je met `npm run test:e2e`. Ze openen de echte pagina zonder venster in Microsoft Edge (Windows) of Google Chrome (Linux). Staat de browser ergens anders, zet dan `BROWSER_PATH` op het pad van de browser, bijvoorbeeld `BROWSER_PATH="/usr/bin/chromium" npm run test:e2e`. Er hoeft niets met npm te worden geïnstalleerd. Er zijn 42 browsertests: 33 in `tests/e2e/app.e2e.test.js` (de demo) en 9 in `tests/e2e/server.e2e.test.js` (met de echte server in PHP en een tijdelijke database, zonder PHP overgeslagen). In GitHub Actions draaien ze automatisch na de unit tests. Met `E2E_CPU_THROTTLE=4` draait de browser vier keer trager, zoals op een drukke server. Mislukt een browsertest, dan staan het scenario, de toestand van de pagina en de laatste meldingen uit de console in de foutuitvoer en komt er een schermafdruk in `test-results/e2e` (in GitHub Actions bewaard als artifact).
 
@@ -92,7 +92,7 @@ tests/
   helpers.js                # Gedeelde hulpfuncties voor de tests (ook readAllCss: alle CSS in de volgorde van index.html)
   helpers-gezicht.js        # Nagebootst gezicht van 68 punten, een foto als plat vlak en ruis (voor de controle op een levend gezicht)
   e2e/                      # 44 browsertests in headless Edge of Chrome (npm run test:e2e): 33 met de demo, 11 met de echte server in PHP. Hulpcode in browser.js
-  *.test.js                 # 1008 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm, gezicht-instellen-veilig, levend-gezicht, pentest-november, looncode, server-sync, server-mode, zoeken-en-locatie, gasten, pasjes-dataset, geen-camerabeeld, snellere-optie, looncode-import-en-afdeling, herkennen-op-server)
+  *.test.js                 # 1014 unit tests (basis, datastore, model, csv-export, view-en-controller, thema, welkom-en-gezichtsherkenning, controller, regressie, codecontrole4-model, codecontrole4-ui, opslag-model-export, controller-robuustheid, beveiliging-config, gegevens-en-tabbladen, werkgever-en-correctiedatum, to-controle, pasjeslezer, beveiligingsscan, avg-toets, review-oktober, ux-review, rollenspel-oktober, standby-en-gezicht, generale-repetitie, startscherm, gezicht-instellen-veilig, levend-gezicht, pentest-november, looncode, server-sync, server-mode, zoeken-en-locatie, gasten, pasjes-dataset, geen-camerabeeld, snellere-optie, looncode-import-en-afdeling, herkennen-op-server)
 backend/                    # Serverdeel in PHP (zie backend/README.md)
   public/index.php          # Het enige bestand dat de webserver uitvoert: de API onder /api
   dev-server.php            # Ontwikkelserver: php -S 127.0.0.1:8080 backend/dev-server.php (website en API op een eigen computer)
