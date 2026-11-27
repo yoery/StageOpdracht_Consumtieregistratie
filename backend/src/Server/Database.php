@@ -112,8 +112,18 @@ final class Database
         }
     }
 
+    /** @var \WeakMap<\PDO, true>|null De verbindingen waarop nu een transactie loopt. */
+    private static ?\WeakMap $open = null;
+
     /**
      * Voert `$work` uit in één transactie. Gaat er iets mis, dan wordt alles teruggedraaid.
+     *
+     * Een transactie neemt meteen het recht om te schrijven. Anders kan een ander verzoek schrijven
+     * tussen het lezen en het schrijven van deze transactie in. SQLite (in WAL-modus) geeft dan meteen
+     * "database is locked", ook met busy_timeout, en in PostgreSQL en MySQL zou de transactie verder
+     * werken met wat ze eerder las (bijvoorbeeld twee keer dezelfde pas koppelen). Daarom: in SQLite
+     * `BEGIN IMMEDIATE` (wacht met busy_timeout tot een ander klaar is), en in PostgreSQL en MySQL eerst
+     * een slot op de teller van de volgnummers, die iedere schrijvende transactie toch al ophoogt.
      *
      * @template T
      * @param \Closure(): T $work
@@ -121,20 +131,42 @@ final class Database
      */
     public static function transaction(\PDO $pdo, \Closure $work): mixed
     {
-        if ($pdo->inTransaction()) {
+        self::$open ??= new \WeakMap();
+        if ($pdo->inTransaction() || isset(self::$open[$pdo])) {
             return $work();
         }
-        $pdo->beginTransaction();
+        $sqlite = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'sqlite';
+        if ($sqlite) {
+            $pdo->exec('BEGIN IMMEDIATE');
+        } else {
+            $pdo->beginTransaction();
+        }
+        self::$open[$pdo] = true;
         try {
+            if (!$sqlite) {
+                $pdo->exec("UPDATE counters SET value = value WHERE name = 'version'");
+            }
             $result = $work();
-            $pdo->commit();
+            if ($sqlite) {
+                $pdo->exec('COMMIT');
+            } else {
+                $pdo->commit();
+            }
 
             return $result;
         } catch (\Throwable $error) {
-            if ($pdo->inTransaction()) {
+            if ($sqlite) {
+                try {
+                    $pdo->exec('ROLLBACK');
+                } catch (\PDOException) {
+                    // De transactie was al afgebroken.
+                }
+            } elseif ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             throw $error;
+        } finally {
+            unset(self::$open[$pdo]);
         }
     }
 }

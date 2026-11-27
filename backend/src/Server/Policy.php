@@ -54,6 +54,9 @@ final class Policy
 
     private const ISO_DATE_TIME = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?$/';
 
+    // Hoe ver een gezichtsinstelling in de toekomst mag liggen: een dag, zoals MAX_FUTURE_MS in DataStore.js.
+    public const MAX_FUTURE_SECONDS = 86400;
+
     public function __construct(private readonly RecordStore $store)
     {
     }
@@ -120,8 +123,9 @@ final class Policy
      * regel wordt verwijderd, false als de wijziging niet mag, of true als de wijziging mag maar er
      * niets wordt opgeslagen.
      */
-    public function accept(string $role, string $collection, string $id, ?\stdClass $incoming, ?string $deviceId = null): \stdClass|bool|null
+    public function accept(string $role, string $collection, string $id, ?\stdClass $incoming, ?string $deviceId = null, ?\DateTimeImmutable $now = null): \stdClass|bool|null
     {
+        $now ??= new \DateTimeImmutable('now');
         if (!in_array($collection, RecordStore::COLLECTIONS, true) || !RecordStore::isSafeId($id)) {
             return false;
         }
@@ -139,8 +143,20 @@ final class Policy
             $incoming = clone $incoming;
             $incoming->descriptor = $stored->descriptor;
         }
-        // Een beheerder kent het pasnummer wel. Laat hij het weg, dan blijft het pasnummer staan.
+        // Een beheerder kent het pasnummer wel en stuurt het mee (leeg = de pas ontkoppelen). Ontbreekt
+        // het veld helemaal, dan blijft het pasnummer staan.
         if ($role === self::ROLE_ADMIN) {
+            if ($collection === 'employees' && $incoming !== null && !property_exists($incoming, 'badgeId')) {
+                $stored = $this->store->get($collection, $id);
+                if ($stored !== null && property_exists($stored, 'badgeId')) {
+                    $incoming = clone $incoming;
+                    $incoming->badgeId = $stored->badgeId;
+                    if (property_exists($stored, 'badgeLinkedAt')) {
+                        $incoming->badgeLinkedAt = $stored->badgeLinkedAt;
+                    }
+                }
+            }
+
             return $incoming;
         }
         if ($role !== self::ROLE_DEVICE) {
@@ -155,7 +171,7 @@ final class Policy
             // omdat de tablet de pasnummers van anderen niet kent en dus niet kan zien of een pas vrij is.
             'employees' => $incoming !== null && $existing === null ? $this->newGuest($incoming) : false,
             'points' => $incoming !== null && $existing !== null,
-            'faceEnrollments' => $this->faceEnrollment($incoming, $existing),
+            'faceEnrollments' => $this->faceEnrollment($incoming, $existing, $now),
             'faceOffers' => $incoming !== null ? $this->faceOffer($incoming) : false,
             'auditLog' => $incoming !== null && $existing === null ? $this->auditEntry($incoming) : false,
             default => false,
@@ -274,12 +290,17 @@ final class Policy
         $this->store->put('points', $pointId, $point, $now);
     }
 
-    // Een gezichtsinstelling: alleen voor een actieve medewerker, met precies 128 getallen. Verwijderen
-    // (uitzetten of verlopen) mag ook vanaf een tablet.
-    private function faceEnrollment(?\stdClass $incoming, ?\stdClass $existing): \stdClass|false|null
+    // Een gezichtsinstelling: alleen voor een actieve medewerker, met precies 128 getallen en dezelfde
+    // regels voor de datums als in de browser (DataStore.isValidFaceEnrollment): het instellen hooguit
+    // een dag in de toekomst (een tablet met een verkeerde klok) en de toestemming niet na het instellen.
+    // Een instelling die de browser zou afkeuren, ziet niemand en kan dus ook niemand uitzetten.
+    // Verwijderen (uitzetten of verlopen) mag ook vanaf een tablet. Is de instelling er al niet meer
+    // (de server haalde een oudere instelling weg toen dezelfde medewerker een nieuwe kreeg, zie
+    // faceEnrollmentStored), dan is er niets te doen.
+    private function faceEnrollment(?\stdClass $incoming, ?\stdClass $existing, \DateTimeImmutable $now): \stdClass|bool|null
     {
         if ($incoming === null) {
-            return $existing === null ? false : null;
+            return $existing === null ? true : null;
         }
         if (!$this->onlyFields($incoming, self::FACE_ENROLLMENT_FIELDS) || !$this->activeEmployee($incoming->employeeId ?? null)) {
             return false;
@@ -294,7 +315,41 @@ final class Policy
             }
         }
 
-        return $this->isDateTime($incoming->enrolledAt ?? null) && $this->isDateTime($incoming->consentAt ?? null) ? $incoming : false;
+        return self::validFaceDates($incoming, $now) ? $incoming : false;
+    }
+
+    /**
+     * Kloppen de datums van een gezichtsinstelling: `enrolledAt` hooguit een dag in de toekomst en
+     * `consentAt` niet na `enrolledAt`? Ook gebruikt bij het herkennen (Recognition::matchFace).
+     */
+    public static function validFaceDates(\stdClass $entry, \DateTimeImmutable $now): bool
+    {
+        $enrolledAt = $entry->enrolledAt ?? null;
+        $consentAt = $entry->consentAt ?? null;
+        if (!is_string($enrolledAt) || !is_string($consentAt)
+            || preg_match(self::ISO_DATE_TIME, $enrolledAt) !== 1 || preg_match(self::ISO_DATE_TIME, $consentAt) !== 1) {
+            return false;
+        }
+        $enrolled = strtotime($enrolledAt);
+        $consent = strtotime($consentAt);
+
+        return $enrolled !== false && $consent !== false
+            && $enrolled <= $now->getTimestamp() + self::MAX_FUTURE_SECONDS
+            && $consent <= $enrolled;
+    }
+
+    /**
+     * Na het opslaan van een gezichtsinstelling: iedere medewerker heeft hooguit één instelling, net als
+     * in de browser (DataStore.onePerEmployee). Een oudere instelling van dezelfde medewerker gaat weg,
+     * zodat er geen kenmerken achterblijven die niemand ziet en niemand kan uitzetten.
+     */
+    public function faceEnrollmentStored(\stdClass $enrollment, \DateTimeImmutable $now): void
+    {
+        foreach ($this->store->all('faceEnrollments') as $other) {
+            if (($other->employeeId ?? null) === ($enrollment->employeeId ?? null) && is_string($other->id ?? null) && $other->id !== ($enrollment->id ?? null)) {
+                $this->store->delete('faceEnrollments', $other->id, $now);
+            }
+        }
     }
 
     private function faceOffer(\stdClass $incoming): \stdClass|false

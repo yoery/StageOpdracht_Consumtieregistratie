@@ -572,6 +572,11 @@ test("server: gezichtskenmerken komen op een tablet nooit in de opslag van de br
   const stored = cache.getItem("tvb-test-server");
   assert.ok(stored.includes("Lotte van Dijk"));
   assert.ok(!stored.includes("0.125"), "de kenmerken staan in de opslag van de browser");
+  // Wie een gezicht heeft ingesteld (zonder kenmerken) staat er wel, zodat een tablet die zonder
+  // verbinding start, weet dat er gezichten zijn en scant zodra de server terug is.
+  const restarted = new ServerDataStore("tvb-test", cache);
+  assert.notEqual(restarted.restoreCache(), null);
+  assert.deepEqual(JSON.parse(restarted.text).faceEnrollments.map(({ id, descriptor }) => [id, descriptor]), [["g-lotte", undefined]]);
 
   // Ook een nieuw gezicht in de wachtrij komt niet in de opslag.
   server.offline = true;

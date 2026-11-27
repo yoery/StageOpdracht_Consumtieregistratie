@@ -296,7 +296,7 @@ final class Api
                     $rejected[] = ['collection' => is_string($collection) ? $collection : '', 'id' => is_string($id) ? $id : ''];
                     continue;
                 }
-                $accepted = $this->policy->accept($role, $collection, $id, $incoming, $deviceId);
+                $accepted = $this->policy->accept($role, $collection, $id, $incoming, $deviceId, $now);
                 if ($accepted === false) {
                     $rejected[] = ['collection' => $collection, 'id' => $id];
                     continue;
@@ -308,6 +308,9 @@ final class Api
                         $this->store->put($collection, $id, $accepted, $now);
                         if ($role === Policy::ROLE_DEVICE && $collection === 'registrations') {
                             $this->policy->registrationStored($accepted, $now);
+                        }
+                        if ($collection === 'faceEnrollments') {
+                            $this->policy->faceEnrollmentStored($accepted, $now);
                         }
                     }
                     $saved++;

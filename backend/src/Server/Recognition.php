@@ -76,7 +76,10 @@ final class Recognition
         foreach ($this->store->all('faceEnrollments') as $entry) {
             $employeeId = $entry->employeeId ?? null;
             $enrolledAt = is_string($entry->enrolledAt ?? null) ? strtotime($entry->enrolledAt) : false;
-            if (!is_string($employeeId) || !isset($active[$employeeId]) || $enrolledAt === false || $enrolledAt <= $oldest) {
+            // Dezelfde regels als in de browser: niet verlopen, niet meer dan een dag in de toekomst en de
+            // toestemming niet na het instellen (Policy::validFaceDates). Een instelling die de browser
+            // afkeurt, ziet niemand en kan niemand uitzetten, dus die herkent ook niet.
+            if (!is_string($employeeId) || !isset($active[$employeeId]) || $enrolledAt === false || $enrolledAt <= $oldest || !Policy::validFaceDates($entry, $now)) {
                 continue;
             }
             $known = $entry->descriptor ?? null;

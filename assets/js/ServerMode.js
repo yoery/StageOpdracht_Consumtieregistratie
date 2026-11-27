@@ -29,6 +29,7 @@
  */
 import { DEFAULT_PRODUCTS } from "./config.js";
 import { icon } from "./icons.js";
+import { ServerError } from "./ServerApi.js";
 import { ServerDataStore } from "./ServerDataStore.js";
 import { ServerSync } from "./ServerSync.js";
 
@@ -223,16 +224,17 @@ export class ServerMode {
   // Herkennen op de server (security audit AF-07 en AF-08)
   // ------------------------------------------------------------------
 
-  // Wie is dit gezicht? Geeft de id van de medewerker of null. Is de server niet bereikbaar, dan ook
-  // null, en staat `recognitionOffline` aan zodat de melding dat kan zeggen (FaceController,
-  // AutoScanController). Bij het volgende gelukte verzoek gaat die weer uit.
+  // Wie is dit gezicht? Geeft de id van de medewerker of null. Is de server niet bereikbaar (geen
+  // verbinding, geen antwoord binnen 5 seconden, een fout op de server of een foutpagina van de proxy),
+  // dan ook null, en staat `recognitionOffline` aan zodat de melding dat kan zeggen (FaceController,
+  // AutoScanController). Ieder volgend verzoek zet de vlag opnieuw.
   async recognizeFace(descriptor) {
     try {
       const result = await this.api.recognizeFace(descriptor);
       this.recognitionOffline = false;
       return typeof result.employeeId === "string" ? result.employeeId : null;
     } catch (error) {
-      this.recognitionOffline = error?.status === 0 || error?.status >= 500;
+      this.recognitionOffline = ServerError.isUnreachable(error);
       return null;
     }
   }
@@ -244,7 +246,7 @@ export class ServerMode {
       const result = await this.api.recognizeBadge(code);
       return { ok: true, employeeId: typeof result.employeeId === "string" ? result.employeeId : null };
     } catch (error) {
-      return { ok: false, message: error?.status === 0 ? ServerMode.MESSAGES.badgeOffline : error.message };
+      return { ok: false, message: ServerError.isUnreachable(error) ? ServerMode.MESSAGES.badgeOffline : error.message };
     }
   }
 
@@ -254,7 +256,7 @@ export class ServerMode {
     try {
       await this.api.linkBadge(employeeId, code);
     } catch (error) {
-      return { ok: false, message: error?.status === 0 ? ServerMode.MESSAGES.linkOffline : error.message };
+      return { ok: false, message: ServerError.isUnreachable(error) ? ServerMode.MESSAGES.linkOffline : error.message };
     }
     await this.sync.pull().catch(() => {});
     return { ok: true };

@@ -209,20 +209,23 @@ export class ServerDataStore extends DataStore {
     return `${this.key}-server`;
   }
 
-  // De kenmerken van gezichten (faceEnrollments) zijn biometrische gegevens. Die komen nooit in de
-  // opslag van de browser: ze staan alleen in het geheugen en komen bij iedere start opnieuw van de
-  // server. Zonder verbinding bij het starten werkt herkennen met de camera dus pas als de verbinding
-  // terug is. Een gezicht dat nog in de wachtrij stond, moet dan opnieuw worden ingesteld.
+  // De kenmerken van gezichten (`descriptor`) zijn biometrische gegevens. Die komen nooit in de opslag
+  // van de browser. De server stuurt ze ook niet (security audit AF-07): wat er bewaard wordt, is alleen
+  // wie een gezicht heeft ingesteld en wanneer. Zo weet een tablet die zonder verbinding start nog
+  // steeds dat er gezichten zijn, en scant hij zodra de server weer bereikbaar is. Een nieuw gezicht
+  // dat nog in de wachtrij staat (met kenmerken), wordt niet bewaard: dat moet na opnieuw starten
+  // zonder verbinding opnieuw worden ingesteld. Uitzetten in de wachtrij (zonder kenmerken) wel.
   writeCache() {
     if (!this.caching) return;
     try {
       let text = this.text;
       if (text) {
         const state = JSON.parse(text);
-        state.faceEnrollments = [];
+        state.faceEnrollments = (Array.isArray(state.faceEnrollments) ? state.faceEnrollments : [])
+          .map(({ descriptor, ...rest }) => rest);
         text = JSON.stringify(state);
       }
-      const pending = this.pendingChanges().filter((change) => change.collection !== "faceEnrollments");
+      const pending = this.pendingChanges().filter((change) => change.collection !== "faceEnrollments" || change.data === null);
       this.cache.setItem(this.cacheKey(), JSON.stringify({ version: this.version ?? 0, text, pending }));
     } catch (error) {
       // De opslag van de browser is vol of geblokkeerd. De gegevens staan nog in het geheugen en

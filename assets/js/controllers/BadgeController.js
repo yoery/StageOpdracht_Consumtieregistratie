@@ -192,14 +192,23 @@ export class BadgeController extends ControllerPart {
   }
 
   // Vraagt de server van wie de pas is, en gaat daarna verder zoals in de demo. Is de server niet
-  // bereikbaar, dan zegt een melding dat. Kwam er intussen een ander venster in beeld, dan opent er niets.
+  // bereikbaar, dan zegt een melding dat. Het antwoord kan even op zich laten wachten (hooguit 5
+  // seconden, ServerApi.RECOGNITION_TIMEOUT_MS). Is er intussen iets veranderd, dan opent er niets:
+  // een nieuwere scan telt, een ander venster blijft staan en een productvenster dat een collega
+  // intussen zelf opende, wordt niet vervangen.
   async recognizeBadgeOnServer(code) {
+    const scan = (this.serverScan ?? 0) + 1;
+    this.serverScan = scan;
+    const before = { modal: this.app.topModal(), employeeId: this.app.selectedEmployeeId };
+
     const result = await this.app.server.recognizeBadge(code);
+    if (scan !== this.serverScan) return;
     if (!result.ok) {
       this.view.showToast(result.message, { tone: "error", duration: 6000 });
       return;
     }
     if (!this.canOpenAfterScan()) return;
+    if (this.app.topModal() !== before.modal || this.app.selectedEmployeeId !== before.employeeId) return;
     this.openAfterScan(result.employeeId ? this.model.findEmployee(result.employeeId) : null);
   }
 

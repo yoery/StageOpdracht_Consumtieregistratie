@@ -74,6 +74,7 @@ export class AutoScanController extends ControllerPart {
     this.greetingTimer = null;     // time-out tussen de begroeting en het openen van het venster
     this.greetingFor = null;       // de medewerker die nu wordt begroet
     this.descriptorCount = 0;      // hoe vaak er kenmerken zijn berekend (voor de tests en het TO)
+    this.serverOffline = false;    // was de server bij de laatste poging niet bereikbaar?
     this.intent = new FaceIntent(this.autoSettings);
   }
 
@@ -242,11 +243,18 @@ export class AutoScanController extends ControllerPart {
     const activeIds = this.model.employees.filter((employee) => employee.active).map((employee) => employee.id);
     const match = descriptor ? await this.app.matchFace(descriptor, activeIds) : null;
     if (session !== this.scanSession) return;
+    // Alleen een verzoek van deze keer telt (niet een fout van een eerdere keer).
+    this.serverOffline = Boolean(descriptor) && Boolean(this.app.server?.recognitionOffline);
     const candidate = match && this.model.findEmployee(match)?.active ? match : null;
     const employeeId = this.faceDemo.confirm(candidate);
     const live = this.faceDemo.checkLiveness(this.clock.now());
     if (employeeId && live === "alive") {
       this.greet(employeeId);
+      return;
+    }
+    // Geen verbinding met de server: meteen zeggen, zonder eerst drie pogingen af te wachten.
+    if (this.serverOffline) {
+      this.pauseAfterUnknown();
       return;
     }
     // Geen levend gezicht gezien binnen liveness.maxMs (bijvoorbeeld een foto): dezelfde vriendelijke
@@ -266,8 +274,9 @@ export class AutoScanController extends ControllerPart {
     const badge = Boolean(this.app.badgeReader?.isEnabled?.());
     const { MESSAGES } = AutoScanController;
     let message = this.app.server ? MESSAGES.notRecognizedSetup : badge ? MESSAGES.notRecognized : MESSAGES.notRecognizedNoBadge;
-    // Met een server die niet bereikbaar is: dat zeggen, in plaats van "niet herkend".
-    if (this.app.server?.recognitionOffline) message = MESSAGES.offline;
+    // Met een server die bij de laatste poging niet bereikbaar was: dat zeggen, in plaats van "niet herkend".
+    if (this.serverOffline) message = MESSAGES.offline;
+    this.serverOffline = false;
     this.setScanState("unknown", message);
     this.resetScan();
     this.scanPausedUntil = now + this.autoSettings.retryPauseMs;

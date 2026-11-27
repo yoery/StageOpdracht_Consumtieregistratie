@@ -110,29 +110,63 @@ test("herkennen op de server: is het startscherm intussen gestopt, dan telt het 
   assert.deepEqual(greeted, []);
 });
 
-test("herkennen op de server: zonder verbinding zegt het startscherm dat, in plaats van 'niet herkend'", () => {
+// Een nagebootste server die niet bereikbaar is: zoals ServerMode.recognizeFace dan doet.
+const offlineFaceServer = () => {
   const server = createServer();
-  server.recognitionOffline = true;
+  server.recognizeFace = async (descriptor) => { server.calls.push(["face", descriptor]); server.recognitionOffline = true; return null; };
+  return server;
+};
+
+test("herkennen op de server: zonder verbinding zegt het startscherm dat meteen, in plaats van 'niet herkend'", async () => {
+  const { app } = createApp({ server: offlineFaceServer() });
+  const states = [];
+  app.autoScan.setScanState = (state, message) => states.push([state, message]);
+  app.faceDemo.describeFace = async () => DESCRIPTOR;
+  app.autoScan.scanSession = 2;
+
+  await app.autoScan.recognizeFace({}, 2);
+
+  assert.deepEqual(states.at(-1), ["unknown", AutoScanController.MESSAGES.offline], "al na de eerste poging, niet pas na drie");
+  assert.ok(app.autoScan.scanPausedUntil > 0, "daarna een pauze, zodat de tablet niet blijft vragen");
+  assert.equal(AutoScanController.MESSAGES.offline, "Herkennen werkt nu niet: geen verbinding met de server. Zoek je naam met de knop hieronder.");
+});
+
+test("herkennen op de server: een oude fout van de server telt op het startscherm niet mee", () => {
+  const server = createServer();
+  server.recognitionOffline = true; // van een eerdere poging
   const { app } = createApp({ server });
   const states = [];
   app.autoScan.setScanState = (state, message) => states.push([state, message]);
 
   app.autoScan.pauseAfterUnknown(0);
 
-  assert.deepEqual(states, [["unknown", AutoScanController.MESSAGES.offline]]);
-  assert.equal(AutoScanController.MESSAGES.offline, "Herkennen werkt nu niet: geen verbinding met de server. Zoek je naam met de knop hieronder.");
+  assert.deepEqual(states, [["unknown", AutoScanController.MESSAGES.notRecognizedSetup]]);
 });
 
-test("herkennen op de server: zonder verbinding zegt het cameravenster dat na het zoeken", async () => {
+test("herkennen op de server: zonder verbinding stopt het cameravenster meteen en zegt het dat", async () => {
+  const server = offlineFaceServer();
+  const { app, view } = createApp({ server });
+  app.faceDemo.readFace = async () => DESCRIPTOR;
+  app.face.faceSession = 5;
+  app.face.faceMode = "recognize";
+
+  await app.face.scanForFace(5, 60000);
+
+  assert.equal(view.$("#faceStatus").textContent, FaceController.OFFLINE_MESSAGE);
+  assert.equal(server.calls.length, 1, "na de eerste keer zonder verbinding vraagt het venster niet opnieuw");
+});
+
+test("herkennen op de server: een oude fout van de server telt in het cameravenster niet mee", async () => {
   const server = createServer({ face: null });
-  server.recognitionOffline = true;
+  server.recognitionOffline = true; // van een eerdere scan
   const { app, view } = createApp({ server });
   app.face.faceSession = 5;
   app.face.faceMode = "recognize";
 
   await app.face.scanForFace(5, 0);
 
-  assert.equal(view.$("#faceStatus").textContent, FaceController.OFFLINE_MESSAGE);
+  assert.notEqual(view.$("#faceStatus").textContent, FaceController.OFFLINE_MESSAGE);
+  assert.match(view.$("#faceStatus").textContent, /^Niet herkend/);
 });
 
 // ------------------------------------------------------------------
@@ -183,6 +217,43 @@ test("herkennen op de server: gaat er tijdens het opzoeken een ander venster ope
 
   assert.deepEqual(app.recognized, []);
   assert.equal(view.toasts.at(-1).message, BadgeController.CLOSE_WINDOW_FIRST);
+});
+
+test("herkennen op de server: opent een collega intussen zijn eigen productvenster, dan vervangt een laat antwoord dat niet", async () => {
+  let release;
+  const server = createServer({ badge: () => new Promise((resolve) => { release = () => resolve({ ok: true, employeeId: "employee-1" }); }) });
+  const { app, view } = createApp({ server });
+
+  const pending = app.recognizeBadge("04A1B2C3");
+  await flush();
+  app.selectedEmployeeId = "mw-mark";
+  app.openModalElement = view.$("#employeeProductsModal");
+  release();
+  await pending;
+
+  assert.deepEqual(app.recognized, []);
+  assert.equal(app.selectedEmployeeId, "mw-mark");
+});
+
+test("herkennen op de server: bij twee scans kort na elkaar telt alleen de laatste", async () => {
+  let release;
+  let calls = 0;
+  const server = createServer({
+    badge: () => {
+      calls += 1;
+      if (calls === 1) return new Promise((resolve) => { release = () => resolve({ ok: true, employeeId: "employee-1" }); });
+      return { ok: true, employeeId: "mw-mark" };
+    }
+  });
+  const { app } = createApp({ server });
+
+  const first = app.recognizeBadge("04A1B2C3");
+  await flush();
+  await app.recognizeBadge("AABBCCDD");
+  release();
+  await first;
+
+  assert.deepEqual(app.recognized, [["mw-mark", "badge"]]);
 });
 
 // ------------------------------------------------------------------
@@ -281,6 +352,48 @@ test("herkennen op de server: ServerMode geeft bij de pas de melding van de serv
   assert.deepEqual(pulls, []);
   assert.deepEqual(await mode.linkBadge("mw-mark", "AABBCCDD"), { ok: true });
   assert.deepEqual(pulls, ["pull"]);
+});
+
+test("herkennen op de server: een foutpagina van de proxy of te lang geen antwoord telt als geen verbinding", async () => {
+  // Een container die opnieuw start: de proxy geeft een pagina die geen JSON is.
+  const unreadable = (status) => async () => ({ ok: false, status, json: async () => { throw new SyntaxError("geen JSON"); } });
+  for (const status of [502, 503, 504, 404]) {
+    const api = new ServerApi("/api", unreadable(status));
+    api.csrf = "sleutel";
+    const error = await api.recognizeBadge("04A1B2C3").then(() => null, (thrown) => thrown);
+    assert.equal(error.status, status);
+    assert.equal(error.unreadable, true);
+    assert.equal(ServerError.isUnreachable(error), true, `status ${status}`);
+  }
+  assert.equal(ServerError.isUnreachable(new ServerError(429, "Te veel verzoeken.")), false, "een leesbaar antwoord van de API");
+  assert.equal(ServerError.isUnreachable(new ServerError(409, "Deze pas is al gekoppeld aan iemand anders. Vraag het de beheerder.")), false);
+  assert.equal(ServerError.isUnreachable(new ServerError(0, "Geen verbinding met de server.")), true);
+
+  // Geen antwoord: na de tijdslimiet volgt status 0 en wordt het verzoek afgebroken.
+  let signal = null;
+  const hanging = new ServerApi("/api", (url, options) => { signal = options.signal; return new Promise(() => {}); });
+  hanging.csrf = "sleutel";
+  const started = Date.now();
+  const error = await hanging.request("POST", "/recognize/badge", { code: "04A1B2C3" }, { timeoutMs: 30 }).then(() => null, (thrown) => thrown);
+  assert.equal(error.status, 0);
+  assert.equal(signal.aborted, true);
+  assert.ok(Date.now() - started < 2000);
+  assert.equal(ServerApi.RECOGNITION_TIMEOUT_MS, 5000);
+});
+
+test("herkennen op de server: ServerMode geeft bij een foutpagina van de proxy de melding over de verbinding", async () => {
+  const proxyError = () => new ServerError(502, "De server gaf een antwoord dat niet te lezen is.", { unreadable: true });
+  const api = {
+    recognizeFace: async () => { throw new ServerError(404, "De server gaf een antwoord dat niet te lezen is.", { unreadable: true }); },
+    recognizeBadge: async () => { throw proxyError(); },
+    linkBadge: async () => { throw proxyError(); }
+  };
+  const mode = createMode(api);
+
+  assert.equal(await mode.recognizeFace(DESCRIPTOR), null);
+  assert.equal(mode.recognitionOffline, true);
+  assert.deepEqual(await mode.recognizeBadge("04A1B2C3"), { ok: false, message: ServerMode.MESSAGES.badgeOffline });
+  assert.deepEqual(await mode.linkBadge("mw-mark", "AABBCCDD"), { ok: false, message: ServerMode.MESSAGES.linkOffline });
 });
 
 test("herkennen op de server: ServerApi stuurt alleen de kenmerken of het pasnummer naar de juiste adressen", async () => {

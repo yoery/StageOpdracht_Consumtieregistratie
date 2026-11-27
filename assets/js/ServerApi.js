@@ -15,10 +15,20 @@
  *   - ServerMode: inloggen, uitloggen, tablets en de synchronisatie met AFAS.
  */
 export class ServerError extends Error {
-  constructor(status, message) {
+  // `unreadable`: het antwoord kwam niet van de API (bijvoorbeeld een foutpagina van de proxy terwijl
+  // de container opnieuw start).
+  constructor(status, message, { unreadable = false } = {}) {
     super(message);
     this.name = "ServerError";
     this.status = status;
+    this.unreadable = unreadable;
+  }
+
+  // Is de server niet (goed) bereikbaar? Geen verbinding, te lang geen antwoord, een fout op de server
+  // of een antwoord dat niet van de API komt. Een leesbare 4xx van de API (zoals "Te veel verzoeken")
+  // is een gewoon antwoord.
+  static isUnreachable(error) {
+    return error?.status === 0 || error?.status >= 500 || error?.unreadable === true;
   }
 }
 
@@ -57,19 +67,23 @@ export class ServerApi {
     return this.request("POST", "/changes", { changes });
   }
 
+  // Hoe lang herkennen en koppelen mogen duren. Iemand staat voor de tablet te wachten: duurt het
+  // langer, dan telt het als geen verbinding (status 0) en zegt de tablet dat.
+  static RECOGNITION_TIMEOUT_MS = 5000;
+
   // Wie is dit gezicht? Alleen de kenmerken van het gezicht voor de camera gaan mee.
   recognizeFace(descriptor) {
-    return this.request("POST", "/recognize/face", { descriptor: Array.from(descriptor) });
+    return this.request("POST", "/recognize/face", { descriptor: Array.from(descriptor) }, { timeoutMs: ServerApi.RECOGNITION_TIMEOUT_MS });
   }
 
   // Van wie is deze pas?
   recognizeBadge(code) {
-    return this.request("POST", "/recognize/badge", { code });
+    return this.request("POST", "/recognize/badge", { code }, { timeoutMs: ServerApi.RECOGNITION_TIMEOUT_MS });
   }
 
   // Koppelt een pas aan een medewerker zonder pas.
   linkBadge(employeeId, code) {
-    return this.request("POST", "/badge/link", { employeeId, code });
+    return this.request("POST", "/badge/link", { employeeId, code }, { timeoutMs: ServerApi.RECOGNITION_TIMEOUT_MS });
   }
 
   devices() {
@@ -98,7 +112,7 @@ export class ServerApi {
     return this.request("POST", "/afas/sync", {}, { passFailure: true });
   }
 
-  async request(method, path, body = null, { passFailure = false } = {}) {
+  async request(method, path, body = null, { passFailure = false, timeoutMs = 0 } = {}) {
     // Na opstarten zonder verbinding is de sleutel van de sessie nog niet bekend. Die wordt dan
     // eerst opgehaald, anders weigert de server ieder schrijvend verzoek.
     if (method !== "GET" && !this.csrf && path !== "/login") {
@@ -113,27 +127,32 @@ export class ServerApi {
       if (this.csrf) headers["X-CSRF-Token"] = this.csrf;
     }
 
-    let response;
-    try {
-      response = await this.fetch(this.base + path, {
-        method,
-        headers,
-        body: body === null ? undefined : JSON.stringify(body),
-        credentials: "same-origin",
-        cache: "no-store"
-      });
-    } catch (error) {
-      throw new ServerError(0, "Geen verbinding met de server.");
-    }
+    const send = async (signal) => {
+      let response;
+      try {
+        response = await this.fetch(this.base + path, {
+          method,
+          headers,
+          body: body === null ? undefined : JSON.stringify(body),
+          credentials: "same-origin",
+          cache: "no-store",
+          ...(signal ? { signal } : {})
+        });
+      } catch (error) {
+        throw new ServerError(0, "Geen verbinding met de server.");
+      }
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = null;
+      }
+      return { response, data };
+    };
+    const { response, data } = timeoutMs > 0 ? await this.withTimeout(send, timeoutMs) : await send(null);
 
-    let data = null;
-    try {
-      data = await response.json();
-    } catch (error) {
-      data = null;
-    }
     if (!data || typeof data !== "object") {
-      throw new ServerError(response.status, "De server gaf een antwoord dat niet te lezen is.");
+      throw new ServerError(response.status, "De server gaf een antwoord dat niet te lezen is.", { unreadable: true });
     }
     // De sleutel van de sessie verandert bij inloggen en uitloggen. Het antwoord noemt hem dan.
     if ("csrf" in data) this.csrf = data.csrf || null;
@@ -142,5 +161,23 @@ export class ServerApi {
       throw new ServerError(response.status, typeof data.message === "string" ? data.message : "Het verzoek is mislukt.");
     }
     return data;
+  }
+
+  // Voert `send` uit, maar wacht hooguit `timeoutMs`. Daarna wordt het verzoek afgebroken en volgt
+  // een ServerError met status 0, zoals bij geen verbinding.
+  async withTimeout(send, timeoutMs) {
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    let timer;
+    const expired = new Promise((resolve, reject) => {
+      timer = setTimeout(() => {
+        controller?.abort();
+        reject(new ServerError(0, "Geen verbinding met de server."));
+      }, timeoutMs);
+    });
+    try {
+      return await Promise.race([send(controller?.signal ?? null), expired]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

@@ -961,3 +961,111 @@ test('Pas koppelen: een pas van een ander, een tweede pas, een inactieve medewer
     $rejected = $server->call('POST', '/changes', '{"changes":[{"collection":"employees","id":"mw-sanne","data":{"id":"mw-sanne","active":true,"badgeId":"AABBCCDD"}}]}');
     same(['mw-sanne'], array_column($rejected->body['rejected'], 'id'));
 });
+
+/** Een wijziging van een gezichtsinstelling zoals een tablet hem stuurt (met kenmerken). */
+function faceChange(string $id, string $employeeId, float $value, string $enrolledAt, ?string $consentAt = null): array
+{
+    return ['collection' => 'faceEnrollments', 'id' => $id, 'data' => ['id' => $id, 'employeeId' => $employeeId, 'descriptor' => descriptor($value), 'enrolledAt' => $enrolledAt, 'consentAt' => $consentAt ?? $enrolledAt]];
+}
+
+test('Herkennen: een gezicht met een datum ver in de toekomst of een toestemming na het instellen telt niet', function (): void {
+    $server = new TestServer();
+    $server->becomeTablet();
+    $push = static fn (array ...$changes): array => array_column($server->call('POST', '/changes', json_encode(['changes' => $changes]))->body['rejected'], 'id');
+
+    // Een tablet met een verkeerde klok (een jaar vooruit), of een toestemming na het instellen: geweigerd.
+    same(['g-toekomst', 'g-toestemming'], $push(
+        faceChange('g-toekomst', 'mw-lotte', 0.2, '2027-11-26T09:00:00.000Z'),
+        faceChange('g-toestemming', 'mw-lotte', 0.2, '2026-11-26T08:00:00.000Z', '2026-11-26T08:30:00.000Z'),
+    ));
+    // Een paar uur vooruit (een klok die iets afwijkt) mag, zoals in de browser.
+    same([], $push(faceChange('g-lotte', 'mw-lotte', 0.2, '2026-11-26T11:00:00.000Z')));
+    same('mw-lotte', $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.2)]))->body['employeeId']);
+
+    // Staat zo'n instelling toch in de database, dan herkent ze niet.
+    $mark = $server->store->get('employees', 'mw-mark');
+    $mark->active = true;
+    $server->store->put('employees', 'mw-mark', $mark, testMoment());
+    storeFace($server, 'g-mark', 'mw-mark', descriptor(0.6), '2099-01-01T00:00:00.000Z');
+    same(null, $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.6)]))->body['employeeId']);
+});
+
+test('Herkennen: een nieuw gezicht van dezelfde medewerker vervangt het oude, in iedere volgorde van de wachtrij', function (): void {
+    $server = new TestServer();
+    storeFace($server, 'g-oud', 'mw-lotte', descriptor(0.1));
+    $server->becomeTablet();
+
+    // Eerst het nieuwe gezicht, daarna het uitzetten van het oude: het oude is dan al weg, en dat is goed.
+    $response = $server->call('POST', '/changes', json_encode(['changes' => [
+        faceChange('g-nieuw', 'mw-lotte', 0.4, '2026-11-26T08:00:00.000Z'),
+        ['collection' => 'faceEnrollments', 'id' => 'g-oud', 'data' => null],
+    ]]));
+    same([], $response->body['rejected']);
+    same(['g-nieuw'], array_map(static fn (stdClass $entry): string => $entry->id, $server->store->all('faceEnrollments')));
+    same(null, $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.1)]))->body['employeeId'], 'het oude gezicht herkent niet meer');
+    same('mw-lotte', $server->call('POST', '/recognize/face', json_encode(['descriptor' => descriptor(0.4)]))->body['employeeId']);
+
+    // Zonder uitzetten in de wachtrij haalt de server het oude gezicht zelf weg.
+    same([], array_column($server->call('POST', '/changes', json_encode(['changes' => [faceChange('g-derde', 'mw-lotte', 0.7, '2026-11-26T08:30:00.000Z')]]))->body['rejected'], 'id'));
+    same(['g-derde'], array_map(static fn (stdClass $entry): string => $entry->id, $server->store->all('faceEnrollments')));
+});
+
+test('Pas: laat de beheerder het veld badgeId weg, dan blijft de pas staan, met een leeg veld gaat de pas eraf', function (): void {
+    $server = new TestServer();
+    $server->loginAsAdmin();
+    $lotte = $server->store->get('employees', 'mw-lotte');
+    $withoutBadge = clone $lotte;
+    unset($withoutBadge->badgeId);
+    $withoutBadge->name = 'Lotte van Dijk-de Vries';
+
+    same([], $server->call('POST', '/changes', json_encode(['changes' => [['collection' => 'employees', 'id' => 'mw-lotte', 'data' => $withoutBadge]]]))->body['rejected']);
+    same(['Lotte van Dijk-de Vries', '04A1B2C3'], [$server->store->get('employees', 'mw-lotte')->name, $server->store->get('employees', 'mw-lotte')->badgeId]);
+
+    $withoutBadge->badgeId = '';
+    same([], $server->call('POST', '/changes', json_encode(['changes' => [['collection' => 'employees', 'id' => 'mw-lotte', 'data' => $withoutBadge]]]))->body['rejected']);
+    same('', $server->store->get('employees', 'mw-lotte')->badgeId);
+});
+
+test('Database: een transactie neemt meteen het schrijfrecht, zodat een ander verzoek ertussen haar niet laat mislukken', function (): void {
+    $file = sys_get_temp_dir() . '/consumptie-transactie-' . bin2hex(random_bytes(6)) . '.sqlite';
+    try {
+        $a = Database::connect('sqlite:' . $file);
+        $b = Database::connect('sqlite:' . $file);
+        $b->exec('PRAGMA busy_timeout = 200');
+        $store = new RecordStore($a);
+        $store->put('points', 'punt-1', record('{"id":"punt-1","name":"Hoofdkantoor"}'));
+
+        // Terwijl A leest en daarna schrijft, probeert B (een ander verzoek, zoals het tellen van de
+        // verzoeken om te herkennen) te schrijven. B wacht dan, A lukt. Vroeger lukte B en mislukte A
+        // met "database is locked".
+        $blocked = false;
+        Database::transaction($a, function () use ($store, $b, &$blocked): void {
+            $point = $store->get('points', 'punt-1');
+            try {
+                $b->exec("INSERT INTO login_attempts (attempt_key, attempted_at) VALUES ('k', '2026-11-26T09:00:00Z')");
+            } catch (PDOException) {
+                $blocked = true;
+            }
+            $point->name = 'Kantine';
+            $store->put('points', 'punt-1', $point);
+        });
+        ok($blocked, 'B mocht schrijven midden in de transactie van A');
+        same('Kantine', $store->get('points', 'punt-1')->name);
+
+        // Daarna kan B gewoon schrijven, en een fout in een transactie draait alles terug.
+        $b->exec("INSERT INTO login_attempts (attempt_key, attempted_at) VALUES ('k', '2026-11-26T09:00:00Z')");
+        throws(RuntimeException::class, static fn () => Database::transaction($a, static function () use ($store): void {
+            $store->put('points', 'punt-2', record('{"id":"punt-2","name":"Werkplaats"}'));
+            throw new RuntimeException('mislukt');
+        }));
+        same(null, $store->get('points', 'punt-2'));
+        same('Kantine', $store->get('points', 'punt-1')->name);
+    } finally {
+        $a = $b = $store = null;
+        foreach (['', '-wal', '-shm'] as $suffix) {
+            if (is_file($file . $suffix)) {
+                unlink($file . $suffix);
+            }
+        }
+    }
+});

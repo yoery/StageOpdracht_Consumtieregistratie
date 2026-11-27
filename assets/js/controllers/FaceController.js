@@ -449,6 +449,8 @@ export class FaceController extends ControllerPart {
     const wake = this.faceMode === "wake";
     this.setFaceStatus("Zoeken naar een bekend gezicht…");
     this.faceDemo.resetConfirmation();
+    // Of de server niet bereikbaar was, telt alleen voor deze scan (niet een fout van een eerdere keer).
+    if (this.app.server) this.app.server.recognitionOffline = false;
 
     while (session === this.faceSession && Date.now() < deadline) {
       const descriptor = await this.faceDemo.readFace(video);
@@ -471,6 +473,8 @@ export class FaceController extends ControllerPart {
         this.app.continueAfterRecognition(employeeId, "face");
         return;
       }
+      // Geen verbinding met de server: meteen stoppen en dat zeggen, in plaats van door te zoeken.
+      if (descriptor && this.app.server?.recognitionOffline) break;
 
       let status = "Geen gezicht gevonden. Kijk recht naar de camera boven het scherm.";
       if (candidate) status = "Bijna herkend. Blijf even rustig in het kader kijken.";
@@ -481,7 +485,7 @@ export class FaceController extends ControllerPart {
 
     if (session !== this.faceSession) return;
     if (wake) {
-      this.endWakeScan(FaceController.WAKE_MESSAGES.notRecognized);
+      this.endWakeScan(this.app.server?.recognitionOffline ? FaceController.OFFLINE_MESSAGE : FaceController.WAKE_MESSAGES.notRecognized);
       return;
     }
     this.stopCameraAfterTimeout();
